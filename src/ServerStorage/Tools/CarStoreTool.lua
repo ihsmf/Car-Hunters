@@ -200,7 +200,26 @@ function Tool.Install(carId, assetId, yaw)
 	return true
 end
 
+local running = false
+
+-- runs in the background: the Command Bar returns at once, progress is printed to Output
 function Tool.InstallAll()
+	if running then
+		print("[CarStore] already running, watch the Output window")
+		return
+	end
+	running = true
+	print("[CarStore] started in background - this takes a few minutes, progress is in Output. Do not stop the play/edit session.")
+	task.spawn(function()
+		local ok, err = pcall(Tool.InstallAllNow)
+		running = false
+		if not ok then
+			warn("[CarStore] failed: " .. tostring(err))
+		end
+	end)
+end
+
+function Tool.InstallAllNow()
 	local done, failed = 0, {}
 	for _, def in ipairs(CarConfig.List) do
 		local ok = false
@@ -215,6 +234,7 @@ function Tool.InstallAll()
 		else
 			table.insert(failed, def.id)
 		end
+		task.wait()
 	end
 	print(string.format("[CarStore] installed %d/%d store models", done, #CarConfig.List))
 	if #failed > 0 then

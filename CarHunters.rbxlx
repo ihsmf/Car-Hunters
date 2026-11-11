@@ -1361,7 +1361,7 @@ local Kinds = {
 }
 
 return Kinds
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXDD280F57A970410BB40C0F80D5D0E610"><Properties><string name="Name">ExhaustFx</string><ProtectedString name="Source">-- Rarity-based exhaust for cars parked in a garage. Rarer = denser, brighter, flashier.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXA7C469B48414411DB81FCB9DC280FF81"><Properties><string name="Name">ExhaustFx</string><ProtectedString name="Source">-- Rarity-based exhaust for cars parked in a garage. Rarer = denser, brighter, flashier.
 local CollectionService = game:GetService("CollectionService")
 local Kinds = require(script.Parent:WaitForChild("VehicleKinds"))
 
@@ -3150,7 +3150,7 @@ function Zone.Start()
 end
 
 return Zone
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXE9A0529CB02F4169AC5C4E6F01C38966"><Properties><string name="Name">WarpService</string><ProtectedString name="Source">-- Teleport buttons: home garage or any unlocked district. Server-validated.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX88D2AE3FB8A04307B8C2ABB52F35ADC5"><Properties><string name="Name">WarpService</string><ProtectedString name="Source">-- Teleport buttons: home garage or any unlocked district. Server-validated.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
@@ -4882,7 +4882,7 @@ function Prefabs.Building(kind, parent, cf, w, d, h, pal, rng)
 end
 
 return Prefabs
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4634C7898B3646E7A5E1E83C91FF022F"><Properties><string name="Name">CarStoreTool</string><ProtectedString name="Source">-- Installs real car models from the Roblox Creator Store (free models) into ReplicatedStorage.CarModels.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4CAEB2D9D3C4466993CE340DF92360A5"><Properties><string name="Name">CarStoreTool</string><ProtectedString name="Source">-- Installs real car models from the Roblox Creator Store (free models) into ReplicatedStorage.CarModels.
 -- Run in Studio (edit mode), View &gt; Command Bar:
 --   require(game.ServerStorage.Tools.CarStoreTool).InstallAll()
 --   require(game.ServerStorage.Tools.CarStoreTool).Install("bmv_m3", 2629351758)   -- any other asset id
@@ -5084,7 +5084,26 @@ function Tool.Install(carId, assetId, yaw)
 	return true
 end
 
+local running = false
+
+-- runs in the background: the Command Bar returns at once, progress is printed to Output
 function Tool.InstallAll()
+	if running then
+		print("[CarStore] already running, watch the Output window")
+		return
+	end
+	running = true
+	print("[CarStore] started in background - this takes a few minutes, progress is in Output. Do not stop the play/edit session.")
+	task.spawn(function()
+		local ok, err = pcall(Tool.InstallAllNow)
+		running = false
+		if not ok then
+			warn("[CarStore] failed: " .. tostring(err))
+		end
+	end)
+end
+
+function Tool.InstallAllNow()
 	local done, failed = 0, {}
 	for _, def in ipairs(CarConfig.List) do
 		local ok = false
@@ -5099,6 +5118,7 @@ function Tool.InstallAll()
 		else
 			table.insert(failed, def.id)
 		end
+		task.wait()
 	end
 	print(string.format("[CarStore] installed %d/%d store models", done, #CarConfig.List))
 	if #failed &gt; 0 then
@@ -6709,7 +6729,7 @@ function Fx.Hit(dir, flashFrame)
 end
 
 return Fx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX64DA4C34C9694E3ABB8EC0591C7AB15E"><Properties><string name="Name">CineFx</string><ProtectedString name="Source">-- Cinematic toolkit: camera shake / zoom / takeover, letterbox, darken, flash, glitch, big titles.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX541FECAA2D6F46B4B9882DDE750EEF5B"><Properties><string name="Name">CineFx</string><ProtectedString name="Source">-- Cinematic toolkit: camera shake / zoom / takeover, letterbox, darken, flash, glitch, big titles.
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
@@ -6921,7 +6941,7 @@ function Cine.Reset(t)
 end
 
 return Cine
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0C93C834299245658FD094B4FD54EFF3"><Properties><string name="Name">DeathFx</string><ProtectedString name="Source">-- WRECKED! sequence: impact flash, heavy shake, glitch, grayscale-red grade, crane-up camera, countdown.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXBC8BB46DF6A94B48B306A46401781356"><Properties><string name="Name">DeathFx</string><ProtectedString name="Source">-- WRECKED! sequence: impact flash, heavy shake, glitch, grayscale-red grade, crane-up camera, countdown.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -7007,7 +7027,7 @@ function DeathFx.Recover()
 end
 
 return DeathFx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXB768A2A5D9BB4AD6B86F39A16C491A20"><Properties><string name="Name">SpeedLanes</string><ProtectedString name="Source">-- Speed lanes: boost WalkSpeed on orange strips, animate chevrons, little FOV kick.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXF0C0B29FB2924CEDA345EBB3EA6C94A7"><Properties><string name="Name">SpeedLanes</string><ProtectedString name="Source">-- Speed lanes: boost WalkSpeed on orange strips, animate chevrons, little FOV kick.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
