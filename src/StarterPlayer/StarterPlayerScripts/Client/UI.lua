@@ -763,9 +763,14 @@ local function refreshHint()
 	end
 end
 
+UI.Hooks = {}
+
 function UI.Refresh()
 	if not store.State then
 		return
+	end
+	for _, fn in ipairs(UI.Hooks) do
+		fn(store.State, state.open)
 	end
 	refreshHud()
 	refreshThrow()
@@ -851,6 +856,16 @@ function UI.Init(storeModule, actionTable)
 		refreshHud()
 	end)
 	UI.Refresh()
+end
+
+-- toolkit for the other UI modules (UIExtra, Markers, Minimap)
+function UI.Kit()
+	return {
+		new = new, toy = toy, text = text, corner = corner, stroke = stroke, gradient = gradient, list = list, clear = clear,
+		tween = tween, pill = pill, lift = lift, panelShell = panelShell, scroller = scroller, carViewport = carViewport,
+		P = P, HEAD = HEAD, BODY = BODY, root = root, gui = gui, hud = hud, panels = panels, state = state, store = store,
+		actions = actions, PART_ICON = PART_ICON,
+	}
 end
 
 return UI

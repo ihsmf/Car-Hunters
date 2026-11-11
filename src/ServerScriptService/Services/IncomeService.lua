@@ -45,7 +45,7 @@ function Income.Recalc(player)
 	end
 	local _, _, _, mult = CarConfig.IndexStats(s.data.discovered or {})
 	s.indexMult = mult
-	s.income = math.floor(inc * mult + 0.5)
+	s.income = math.floor(inc * mult * S.Shop.IncomeMult(s) + 0.5)
 	s.collectionValue = value
 	local ls = player:FindFirstChild("leaderstats")
 	if ls then

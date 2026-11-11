@@ -82,6 +82,11 @@ CarConfig.LegacyIds = {
 	neon_specter = "lamborgini_hurakan", hyper_nova = "tezla_cybertrak", quantum_drift = "mazeratti_mc20", eclipse_titan = "lamborgini_aventadoor",
 }
 
+-- exclusive cars: never drop from the trap, granted by a game pass
+CarConfig.Exclusive = {
+	{ id = "golden_magnat_gt", name = "Golden Magnat GT", rarity = "Legendary", style = "supercar", income = 2000, body = C(232, 178, 50), accent = C(20, 20, 24), chrome = true, neon = C(255, 210, 90), exclusive = true, tag = "Only for true magnates." },
+}
+
 CarConfig.List = list
 CarConfig.ById = {}
 CarConfig.ByRarity = { Common = {}, Uncommon = {}, Rare = {}, Epic = {}, Legendary = {} }
@@ -91,6 +96,13 @@ for i, def in ipairs(list) do
 	def.maxLevel = CarConfig.MaxLevel
 	CarConfig.ById[def.id] = def
 	table.insert(CarConfig.ByRarity[def.rarity], def)
+end
+
+for _, def in ipairs(CarConfig.Exclusive) do
+	def.value = def.income * CarConfig.ValueMultiplier
+	def.maxLevel = CarConfig.MaxLevel
+	def.order = 1000
+	CarConfig.ById[def.id] = def
 end
 
 CarConfig.DropChances = {

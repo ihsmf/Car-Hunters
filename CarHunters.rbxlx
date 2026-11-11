@@ -119,6 +119,11 @@ CarConfig.LegacyIds = {
 	neon_specter = "lamborgini_hurakan", hyper_nova = "tezla_cybertrak", quantum_drift = "mazeratti_mc20", eclipse_titan = "lamborgini_aventadoor",
 }
 
+-- exclusive cars: never drop from the trap, granted by a game pass
+CarConfig.Exclusive = {
+	{ id = "golden_magnat_gt", name = "Golden Magnat GT", rarity = "Legendary", style = "supercar", income = 2000, body = C(232, 178, 50), accent = C(20, 20, 24), chrome = true, neon = C(255, 210, 90), exclusive = true, tag = "Only for true magnates." },
+}
+
 CarConfig.List = list
 CarConfig.ById = {}
 CarConfig.ByRarity = { Common = {}, Uncommon = {}, Rare = {}, Epic = {}, Legendary = {} }
@@ -128,6 +133,13 @@ for i, def in ipairs(list) do
 	def.maxLevel = CarConfig.MaxLevel
 	CarConfig.ById[def.id] = def
 	table.insert(CarConfig.ByRarity[def.rarity], def)
+end
+
+for _, def in ipairs(CarConfig.Exclusive) do
+	def.value = def.income * CarConfig.ValueMultiplier
+	def.maxLevel = CarConfig.MaxLevel
+	def.order = 1000
+	CarConfig.ById[def.id] = def
 end
 
 CarConfig.DropChances = {
@@ -291,10 +303,10 @@ return EconomyConfig
 local MapConfig = {}
 
 MapConfig.Seed = 12345
-MapConfig.MapHalfWidth = 230
-MapConfig.StartZ = -340
-MapConfig.EndZ = 1150
-MapConfig.PlazaEndZ = 66
+MapConfig.MapHalfWidth = 190
+MapConfig.StartZ = -330
+MapConfig.EndZ = 1056
+MapConfig.PlazaEndZ = 70
 MapConfig.DecorationDensity = 0.75
 MapConfig.GraphicsQuality = "MobileFriendly"
 MapConfig.Cartoon = true
@@ -306,33 +318,40 @@ MapConfig.TunnelLength = 50
 MapConfig.EntryHalfWidth = 60
 MapConfig.GateHalfWidth = 30
 MapConfig.EntryZ = 74
-MapConfig.PromenadeHalfWidth = 100
+MapConfig.PromenadeHalfWidth = 68
 
 MapConfig.BasePlot = { x = 110, z = 95 }
 MapConfig.BaseCount = 8
 MapConfig.BaseCenters = {
-	{ x = -160, z = -285 }, { x = 160, z = -285 },
-	{ x = -160, z = -185 }, { x = 160, z = -185 },
-	{ x = -160, z = -85 },  { x = 160, z = -85 },
-	{ x = -160, z = 15 },   { x = 160, z = 15 },
+	{ x = -125, z = -275 }, { x = 125, z = -275 },
+	{ x = -125, z = -177 }, { x = 125, z = -177 },
+	{ x = -125, z = -79 },  { x = 125, z = -79 },
+	{ x = -125, z = 19 },   { x = 125, z = 19 },
 }
+
+-- centre of the plaza, between the garages
+MapConfig.Shop = { x = -38, z = -128, yaw = -math.pi / 2 } -- faces the running lanes (+X)
+MapConfig.DonateStall = { x = 38, z = -128, yaw = math.pi / 2 }
+MapConfig.ContractBoard = { x = -30, z = 48 }
+MapConfig.Leaderboard = { x = 34, z = 50 }
+MapConfig.NoNeon = true -- map decor uses lit materials only where something is a real light source
 
 -- Speed lanes: player WalkSpeed boost while standing on them (never cross roads)
 MapConfig.WalkSpeed = 18
 MapConfig.LaneSpeed = 48
-MapConfig.LaneHalfWidth = 5
+MapConfig.LaneWidth = 6 -- each running lane; two lanes side by side, opposite directions
 
 MapConfig.ZoneOrder = { "city", "highway", "industrial", "neon" }
 
 MapConfig.Gates = {
-	{ zone = "highway", z = 340 },
-	{ zone = "industrial", z = 610 },
-	{ zone = "neon", z = 880 },
+	{ zone = "highway", z = 318 },
+	{ zone = "industrial", z = 564 },
+	{ zone = "neon", z = 810 },
 }
 
 MapConfig.Zones = {
 	city = {
-		id = "city", name = "CITY DISTRICT", zMin = 84, zMax = 330, roads = { 1, 2 }, hitDamage = 999,
+		id = "city", name = "CITY DISTRICT", zMin = 84, zMax = 310, roads = { 1, 2 }, hitDamage = 999,
 		palette = {
 			ground = C(110, 205, 95), road = C(62, 64, 72), sidewalk = C(222, 212, 192), curb = C(180, 172, 156),
 			accent = C(255, 160, 50), accent2 = C(60, 170, 230),
@@ -340,7 +359,7 @@ MapConfig.Zones = {
 		},
 	},
 	highway = {
-		id = "highway", name = "HIGHWAY DISTRICT", zMin = 350, zMax = 600, roads = { 3, 4 }, hitDamage = 999,
+		id = "highway", name = "HIGHWAY DISTRICT", zMin = 326, zMax = 556, roads = { 3, 4 }, hitDamage = 999,
 		palette = {
 			ground = C(126, 146, 116), road = C(50, 52, 58), sidewalk = C(176, 178, 184), curb = C(140, 142, 150),
 			accent = C(255, 210, 40), accent2 = C(230, 70, 60),
@@ -348,7 +367,7 @@ MapConfig.Zones = {
 		},
 	},
 	industrial = {
-		id = "industrial", name = "INDUSTRIAL DISTRICT", zMin = 620, zMax = 870, roads = { 5, 6 }, hitDamage = 999,
+		id = "industrial", name = "INDUSTRIAL DISTRICT", zMin = 572, zMax = 802, roads = { 5, 6 }, hitDamage = 999,
 		palette = {
 			ground = C(150, 136, 116), road = C(52, 50, 50), sidewalk = C(168, 160, 148), curb = C(120, 114, 104),
 			accent = C(255, 120, 30), accent2 = C(255, 220, 60),
@@ -356,11 +375,11 @@ MapConfig.Zones = {
 		},
 	},
 	neon = {
-		id = "neon", name = "NEON DISTRICT", zMin = 890, zMax = 1140, roads = { 7, 8 }, hitDamage = 999,
+		id = "neon", name = "NIGHT DISTRICT", zMin = 818, zMax = 1048, roads = { 7, 8 }, hitDamage = 999,
 		palette = {
-			ground = C(16, 30, 44), road = C(16, 18, 26), sidewalk = C(30, 52, 70), curb = C(40, 200, 220),
-			accent = C(255, 60, 120), accent2 = C(40, 240, 255),
-			buildings = { C(20, 44, 70), C(14, 30, 52), C(30, 60, 64), C(18, 24, 36), C(40, 50, 80) },
+			ground = C(46, 52, 62), road = C(30, 32, 38), sidewalk = C(96, 100, 110), curb = C(70, 74, 84),
+			accent = C(255, 170, 60), accent2 = C(90, 190, 255),
+			buildings = { C(60, 70, 88), C(44, 52, 66), C(84, 74, 70), C(38, 42, 52), C(70, 84, 100) },
 		},
 	},
 }
@@ -371,21 +390,21 @@ MapConfig.Plaza = {
 }
 
 MapConfig.Roads = {
-	{ id = 1, zone = "city", z = 160, width = 36, lanesPerSide = 2, laneWidth = 8, median = 4,
+	{ id = 1, zone = "city", z = 150, width = 36, lanesPerSide = 2, laneWidth = 8, median = 4,
 		speed = { 30, 40 }, spacing = { 70, 95 }, kinds = { "compact", "sedan", "taxi", "van" } },
-	{ id = 2, zone = "city", z = 265, width = 36, lanesPerSide = 2, laneWidth = 8, median = 4,
+	{ id = 2, zone = "city", z = 245, width = 36, lanesPerSide = 2, laneWidth = 8, median = 4,
 		speed = { 34, 44 }, spacing = { 65, 90 }, kinds = { "compact", "sedan", "taxi", "van" } },
-	{ id = 3, zone = "highway", z = 420, width = 40, lanesPerSide = 2, laneWidth = 9, median = 4,
+	{ id = 3, zone = "highway", z = 395, width = 40, lanesPerSide = 2, laneWidth = 9, median = 4,
 		speed = { 52, 66 }, spacing = { 70, 95 }, kinds = { "sedan", "sport", "minibus", "supercar" } },
-	{ id = 4, zone = "highway", z = 530, width = 40, lanesPerSide = 2, laneWidth = 9, median = 4,
+	{ id = 4, zone = "highway", z = 488, width = 40, lanesPerSide = 2, laneWidth = 9, median = 4,
 		speed = { 55, 70 }, spacing = { 65, 90 }, kinds = { "sedan", "sport", "minibus", "supercar" } },
-	{ id = 5, zone = "industrial", z = 690, width = 38, lanesPerSide = 2, laneWidth = 8.5, median = 4,
+	{ id = 5, zone = "industrial", z = 640, width = 38, lanesPerSide = 2, laneWidth = 8.5, median = 4,
 		speed = { 42, 58 }, spacing = { 75, 100 }, kinds = { "truck", "pickup", "service" } },
-	{ id = 6, zone = "industrial", z = 800, width = 38, lanesPerSide = 2, laneWidth = 8.5, median = 4,
+	{ id = 6, zone = "industrial", z = 733, width = 38, lanesPerSide = 2, laneWidth = 8.5, median = 4,
 		speed = { 45, 60 }, spacing = { 70, 95 }, kinds = { "truck", "pickup", "service" } },
-	{ id = 7, zone = "neon", z = 960, width = 40, lanesPerSide = 2, laneWidth = 9, median = 4,
+	{ id = 7, zone = "neon", z = 886, width = 40, lanesPerSide = 2, laneWidth = 9, median = 4,
 		speed = { 68, 84 }, spacing = { 70, 95 }, kinds = { "proto", "supercar", "sport" } },
-	{ id = 8, zone = "neon", z = 1070, width = 40, lanesPerSide = 2, laneWidth = 9, median = 4,
+	{ id = 8, zone = "neon", z = 979, width = 40, lanesPerSide = 2, laneWidth = 9, median = 4,
 		speed = { 72, 90 }, spacing = { 65, 90 }, kinds = { "proto", "supercar", "sport" } },
 }
 
@@ -449,22 +468,32 @@ function MapConfig.ZoneBlocks(zoneId)
 end
 
 -- rectangles {x1, x2, z1, z2}
+-- Running lanes: pairs of dark lanes with white arrows. Each lane = { x1, x2, z1, z2, dx, dz } where (dx,dz) is
+-- the arrow direction; the boost only works while running that way.
 function MapConfig.SpeedLanes()
 	if MapConfig._lanes then
 		return MapConfig._lanes
 	end
-	local w = MapConfig.LaneHalfWidth
-	local out = { { -w, w, MapConfig.StartZ + 20, MapConfig.EntryZ + 8 } }
-	local inner = MapConfig.BaseCenters[1].x
+	local w, g = MapConfig.LaneWidth, 0.5
+	local out = {}
+	local function pairZ(z1, z2)
+		table.insert(out, { -g - w, -g, z1, z2, 0, 1 }) -- left lane: away from the garages
+		table.insert(out, { g, g + w, z1, z2, 0, -1 }) -- right lane: back home
+	end
+	pairZ(MapConfig.StartZ + 14, MapConfig.EntryZ + 8)
 	for i = 1, #MapConfig.BaseCenters, 2 do
 		local z = MapConfig.BaseCenters[i].z
-		table.insert(out, { inner + MapConfig.BasePlot.x / 2 + 2, -w, z - w, z + w })
-		table.insert(out, { w, -inner - MapConfig.BasePlot.x / 2 - 2, z - w, z + w })
+		local edge = math.abs(MapConfig.BaseCenters[i].x) - MapConfig.BasePlot.x / 2 - 1
+		for _, sx in ipairs({ -1, 1 }) do
+			local x1, x2 = math.min(sx * edge, sx * (g + w + 1)), math.max(sx * edge, sx * (g + w + 1))
+			table.insert(out, { x1, x2, z + g, z + g + w, -sx, 0 }) -- to the centre
+			table.insert(out, { x1, x2, z - g - w, z - g, sx, 0 }) -- to the garage
+		end
 	end
 	for _, zid in ipairs(MapConfig.ZoneOrder) do
 		for _, b in ipairs(MapConfig.ZoneBlocks(zid)) do
 			if b[2] - b[1] &gt; 16 then
-				table.insert(out, { -w, w, b[1] + 3, b[2] - 3 })
+				pairZ(b[1] + 3, b[2] - 3)
 			end
 		end
 	end
@@ -472,13 +501,18 @@ function MapConfig.SpeedLanes()
 	return out
 end
 
-function MapConfig.OnSpeedLane(pos)
+-- returns the lane under pos (or nil)
+function MapConfig.LaneAt(pos)
 	for _, r in ipairs(MapConfig.SpeedLanes()) do
 		if pos.X &gt;= r[1] and pos.X &lt;= r[2] and pos.Z &gt;= r[3] and pos.Z &lt;= r[4] then
-			return true
+			return r
 		end
 	end
-	return false
+	return nil
+end
+
+function MapConfig.OnSpeedLane(pos)
+	return MapConfig.LaneAt(pos) ~= nil
 end
 
 function MapConfig.Validate()
@@ -524,6 +558,12 @@ Net.Names = {
 	"AutoPark",
 	"TrafficHit",
 	"Teleport",
+	"BuyPerk",
+	"Donate",
+	"DonateFx",
+	"HotDrop",
+	"BankFx",
+	"PickupFx",
 }
 
 function Net.Folder()
@@ -582,31 +622,36 @@ PartConfig.PartForRarity = {
 
 PartConfig.SpawnTables = {
 	city = {
+		road = { { "tire", 50 }, { "engine", 40 }, { "turbo", 10 } },
 		safe = { { "bolts", 85 }, { "tire", 15 } },
 		risky = { { "bolts", 50 }, { "tire", 45 }, { "engine", 5 } },
 	},
 	highway = {
+		road = { { "engine", 50 }, { "turbo", 40 }, { "core", 10 } },
 		safe = { { "tire", 70 }, { "engine", 30 } },
 		risky = { { "tire", 30 }, { "engine", 60 }, { "turbo", 10 } },
 	},
 	industrial = {
+		road = { { "engine", 25 }, { "turbo", 55 }, { "core", 20 } },
 		safe = { { "engine", 80 }, { "turbo", 20 } },
 		risky = { { "engine", 55 }, { "turbo", 45 } },
 	},
 	neon = {
+		road = { { "turbo", 45 }, { "core", 55 } },
 		safe = { { "turbo", 75 }, { "core", 25 } },
 		risky = { { "turbo", 40 }, { "core", 60 } },
 	},
 }
 
 PartConfig.PointCounts = {
-	city = { safe = 18, risky = 8 },
-	highway = { safe = 16, risky = 8 },
-	industrial = { safe = 16, risky = 8 },
-	neon = { safe = 14, risky = 8 },
+	city = { safe = 14, risky = 8, road = 4 },
+	highway = { safe = 12, risky = 8, road = 4 },
+	industrial = { safe = 12, risky = 8, road = 4 },
+	neon = { safe = 10, risky = 8, road = 4 },
 }
 
-PartConfig.Cooldowns = { safe = { 55, 85 }, risky = { 70, 110 } }
+PartConfig.Cooldowns = { safe = { 45, 70 }, risky = { 60, 95 }, road = { 50, 80 } }
+PartConfig.CrateAmount = { road = 2 } -- road crates hold several parts
 
 return PartConfig
 </ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX19"><Properties><string name="Name">PartVisual</string><ProtectedString name="Source">local PartConfig = require(script.Parent.PartConfig)
@@ -723,7 +768,7 @@ return PartVisual
 local en = {
 	hud_money = "Money", hud_income = "Income", hud_zone = "District", hud_carry = "Backpack",
 	zone_plaza = "Safe Plaza", zone_city = "City", zone_highway = "Highway",
-	zone_industrial = "Industrial", zone_neon = "Neon",
+	zone_industrial = "Industrial", zone_neon = "Night",
 	part_bolts = "Bolts", part_tire = "Tire", part_engine = "Engine", part_turbo = "Turbo", part_core = "Core",
 	rarity_Common = "Common", rarity_Uncommon = "Uncommon", rarity_Rare = "Rare", rarity_Epic = "Epic", rarity_Legendary = "Legendary",
 	btn_throw = "THROW!", btn_garage = "GARAGE", btn_zones = "TELEPORT", btn_index = "CARS", btn_close = "X",
@@ -745,7 +790,7 @@ local en = {
 	zones_title = "City Map", zones_open = "Unlocked", zones_locked = "Locked", zones_need_prev = "Unlock previous first",
 	zones_cost = "Price", zones_value = "Collection value", zones_done = "Every district is open. You rule the streets!",
 	zone_desc_city = "Calm streets. Bolts and tires.", zone_desc_highway = "Fast lanes. Tires, engines, turbos.",
-	zone_desc_industrial = "Heavy trucks. Engines and turbos.", zone_desc_neon = "Hyper traffic. Turbos and cores.",
+	zone_desc_industrial = "Heavy trucks. Engines and turbos.", zone_desc_neon = "Night racers. Turbos and cores.",
 	tut_find = "Grab a glowing part - one car hit = WRECKED!",
 	tut_return = "Run back to the plaza to bank your loot!",
 	tut_throw = "Go to the trap in your garage and press THROW!",
@@ -766,6 +811,17 @@ local en = {
 	n_needPrev = "Unlock the previous district first.", n_needValue = "Collection value too low.",
 	n_full = "Server is full.", n_moved = "Car moved.", n_removed = "Car unparked.",
 	n_sold = "Sold %s for $%s", n_autoParked = "Best cars parked!",
+	n_perkBought = "%s upgraded to Lv %d!", n_donateThanks = "Thank you! %s is yours!", n_donateOff = "This item is not on sale yet.",
+	n_hotDropMine = "HOT DROP! +%d %s - now run home!", n_contractDone = "Contract done! +$%s",
+	n_banked2 = "Banked %d parts (+%d combo bonus, x%s) +$%s",
+	shop_title = "PIT STOP", shop_buy = "BUY", shop_max = "MAX", shop_lv = "Lv %d/%d",
+	donate_title = "GOLDEN MAGNATE", donate_boost = "BOOSTS", donate_pack = "PACKS", donate_pass = "PASSES", donate_owned = "OWNED",
+	contracts_title = "CONTRACTS", combo = "COMBO x%s", combo_hint = "Run home to bank!", speed_bonus = "Speed bonus: %ds",
+	hot_drop = "HOT DROP", hot_drop_in = "Hot Drop incoming: %s in %ds", hot_drop_taken = "%s grabbed the Hot Drop!",
+	hot_drop_called = "%s called a Hot Drop!", airbag = "AIRBAG SAVED YOU!", map_base = "MY GARAGE", map_shop = "PIT STOP",
+	map_donate = "MAGNATE", map_contracts = "CONTRACTS", btn_magnate = "SHOP",
+	c_bank_part = "Bring home %d %s from %s", c_combo = "Bank a run with combo x%s", c_speed = "Bank a run within %ds",
+	c_throw = "Throw %d parts into the trap", c_road = "Grab %d road crates", c_hotdrop = "Grab a Hot Drop",
 	lb_title = "TOP INCOME / SEC", free_garage = "FREE GARAGE", garage_of = "%s's Garage",
 	locked_sign = "LOCKED", income_sign = "INCOME",
 }
@@ -1361,7 +1417,45 @@ local Kinds = {
 }
 
 return Kinds
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXA7C469B48414411DB81FCB9DC280FF81"><Properties><string name="Name">ExhaustFx</string><ProtectedString name="Source">-- Rarity-based exhaust for cars parked in a garage. Rarer = denser, brighter, flashier.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX57730EE6232942919A81177547311DB5"><Properties><string name="Name">DonateConfig</string><ProtectedString name="Source">-- Golden Magnate stall. Prices in Robux. Grants are performed on the server (DonateService).
+local DonateConfig = {}
+
+DonateConfig.Products = {
+	{ id = "boost_income", tab = "boost", icon = "💸", name = "x2 Income", desc = "Double garage income for 30 min", price = 49, boost = "income", seconds = 1800 },
+	{ id = "boost_luck", tab = "boost", icon = "🍀", name = "x2 Luck", desc = "Much rarer cars from the trap for 15 min", price = 39, boost = "luck", seconds = 900 },
+	{ id = "pity", tab = "boost", icon = "🎯", name = "Sure Shot", desc = "Your next throw is Epic or better", price = 59 },
+	{ id = "hotdrop", tab = "boost", icon = "📦", name = "Call a Hot Drop", desc = "A rare crate lands in your best district right now", price = 25 },
+	{ id = "revive", tab = "boost", icon = "❤️", name = "Insurance", desc = "Get back the loot you lost in your last crash", price = 19 },
+	{ id = "cash_s", tab = "pack", icon = "💵", name = "Cash Stack", desc = "5 min of income (min $5K)", price = 25, cash = { 300, 5000 } },
+	{ id = "cash_m", tab = "pack", icon = "💰", name = "Cash Bag", desc = "20 min of income (min $25K)", price = 75, cash = { 1200, 25000 } },
+	{ id = "cash_l", tab = "pack", icon = "🏦", name = "Cash Vault", desc = "1 hour of income (min $100K)", price = 199, cash = { 3600, 100000 } },
+	{ id = "cash_xl", tab = "pack", icon = "👑", name = "Magnate Fortune", desc = "3 hours of income (min $500K)", price = 499, cash = { 10800, 500000 } },
+	{ id = "crate_engine", tab = "pack", icon = "⚙️", name = "Engine Crate", desc = "3 engines", price = 29, parts = { engine = 3 } },
+	{ id = "crate_turbo", tab = "pack", icon = "🌀", name = "Turbo Crate", desc = "3 turbos", price = 69, parts = { turbo = 3 } },
+	{ id = "crate_core", tab = "pack", icon = "⚡", name = "Core Crate", desc = "1 energy core + 2 turbos", price = 149, parts = { core = 1, turbo = 2 } },
+	{ id = "slots", tab = "pack", icon = "🅿️", name = "+3 Parking", desc = "Three more garage slots", price = 99, slots = 3 },
+}
+
+DonateConfig.Passes = {
+	{ id = "vip", tab = "pass", icon = "⭐", name = "VIP", desc = "x1.5 income forever + gold name tag", price = 299 },
+	{ id = "big_backpack", tab = "pass", icon = "🎒", name = "Huge Backpack", desc = "Double loot capacity", price = 149 },
+	{ id = "auto_collect", tab = "pass", icon = "🧲", name = "Mega Magnet", desc = "Double pickup radius", price = 199 },
+	{ id = "golden_car", tab = "pass", icon = "🏎️", name = "Golden Magnat GT", desc = "Exclusive gold supercar, earns $2K/s", price = 499 },
+	{ id = "double_contracts", tab = "pass", icon = "📜", name = "Contract Boss", desc = "x2 contract rewards", price = 149 },
+	{ id = "fast_trap", tab = "pass", icon = "⚡", name = "Fast Trap", desc = "Throw parts twice as often", price = 99 },
+}
+
+DonateConfig.ById = {}
+for _, list in ipairs({ DonateConfig.Products, DonateConfig.Passes }) do
+	for i, it in ipairs(list) do
+		it.order = i
+		it.isPass = list == DonateConfig.Passes
+		DonateConfig.ById[it.id] = it
+	end
+end
+
+return DonateConfig
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4DE83B7E0DD74FA99F1C9E8CB0575743"><Properties><string name="Name">ExhaustFx</string><ProtectedString name="Source">-- Rarity-based exhaust for cars parked in a garage. Rarer = denser, brighter, flashier.
 local CollectionService = game:GetService("CollectionService")
 local Kinds = require(script.Parent:WaitForChild("VehicleKinds"))
 
@@ -1447,6 +1541,52 @@ function ExhaustFx.Attach(model, def, rarityIndex)
 end
 
 return ExhaustFx
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX8E38CE1B602542E19583B3ABB0087569"><Properties><string name="Name">ProductIds</string><ProtectedString name="Source">-- Filled by tools/roblox_open_cloud.py (Open Cloud). 0 = not created yet: in Studio the purchase is simulated.
+return {
+	products = {
+		cash_s = 0, cash_m = 0, cash_l = 0, cash_xl = 0,
+		boost_income = 0, boost_luck = 0,
+		crate_engine = 0, crate_turbo = 0, crate_core = 0,
+		hotdrop = 0, pity = 0, revive = 0, slots = 0,
+	},
+	passes = {
+		vip = 0, big_backpack = 0, auto_collect = 0, golden_car = 0, double_contracts = 0, fast_trap = 0,
+	},
+}
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX6EF76B82378A4EB88D0E56B7DF30248E"><Properties><string name="Name">ShopConfig</string><ProtectedString name="Source">-- Pit Stop upgrades (in-game money). Effects are read on the server through ShopService.
+local ShopConfig = {}
+
+local function curve(base, growth, max)
+	local t = {}
+	for lvl = 1, max do
+		t[lvl] = math.floor(base * growth ^ (lvl - 1) / 50 + 0.5) * 50
+	end
+	return t
+end
+
+ShopConfig.Perks = {
+	{ id = "sneakers", icon = "👟", name = "Sneakers", desc = "+6% run speed", max = 5, costs = curve(800, 2.4, 5), per = 0.06 },
+	{ id = "backpack", icon = "🎒", name = "Backpack", desc = "+5 loot capacity", max = 5, costs = curve(1500, 2.5, 5), per = 5 },
+	{ id = "magnet", icon = "🧲", name = "Magnet", desc = "+2.5 studs pickup radius", max = 4, costs = curve(2000, 2.6, 4), per = 2.5 },
+	{ id = "airbag", icon = "🛡️", name = "Airbag", desc = "Survive one car hit (recharges)", max = 3, costs = { 25000, 100000, 400000 }, cooldowns = { 180, 120, 60 } },
+	{ id = "scanner", icon = "📡", name = "Scanner", desc = "Lv1: rare parts on the map. Lv2: Hot Drop alert 15s early", max = 2, costs = { 15000, 120000 } },
+	{ id = "lucky", icon = "🍀", name = "Lucky Trap", desc = "+1.5% better car rarity", max = 5, costs = curve(5000, 3, 5), per = 0.015 },
+	{ id = "turbo", icon = "💰", name = "Turbo Garage", desc = "+8% garage income", max = 5, costs = curve(10000, 3, 5), per = 0.08 },
+	{ id = "quick", icon = "⏱️", name = "Quick Start", desc = "Faster respawn, longer spawn shield", max = 3, costs = curve(4000, 3, 3), respawn = { 2.4, 1.9, 1.4 } },
+}
+
+ShopConfig.ById = {}
+for i, p in ipairs(ShopConfig.Perks) do
+	p.order = i
+	ShopConfig.ById[p.id] = p
+end
+
+function ShopConfig.NextCost(id, level)
+	local p = ShopConfig.ById[id]
+	return p and p.costs[(level or 0) + 1] or nil
+end
+
+return ShopConfig
 </ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX26"><Properties><string name="Name">Remotes</string></Properties><Item class="RemoteEvent" referent="RBX1036"><Properties><string name="Name">AutoPark</string></Properties></Item><Item class="RemoteEvent" referent="RBX1035"><Properties><string name="Name">SellCar</string></Properties></Item><Item class="RemoteEvent" referent="RBX1"><Properties><string name="Name">StateUpdate</string></Properties></Item><Item class="RemoteEvent" referent="RBX2"><Properties><string name="Name">MoneySync</string></Properties></Item><Item class="RemoteEvent" referent="RBX3"><Properties><string name="Name">Notify</string></Properties></Item><Item class="RemoteEvent" referent="RBX4"><Properties><string name="Name">ThrowPart</string></Properties></Item><Item class="RemoteEvent" referent="RBX5"><Properties><string name="Name">ThrowResult</string></Properties></Item><Item class="RemoteEvent" referent="RBX6"><Properties><string name="Name">PlaceCar</string></Properties></Item><Item class="RemoteEvent" referent="RBX7"><Properties><string name="Name">RemoveCar</string></Properties></Item><Item class="RemoteEvent" referent="RBX8"><Properties><string name="Name">UpgradeCar</string></Properties></Item><Item class="RemoteEvent" referent="RBX9"><Properties><string name="Name">BuySlot</string></Properties></Item><Item class="RemoteEvent" referent="RBX10"><Properties><string name="Name">UnlockZone</string></Properties></Item><Item class="RemoteEvent" referent="RBX11"><Properties><string name="Name">HitFx</string></Properties></Item></Item></Item><Item class="ServerScriptService" referent="RBX40"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Script" referent="RBX28"><Properties><string name="Name">ServerBootstrap</string><token name="RunContext">0</token><ProtectedString name="Source">local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
@@ -1536,7 +1676,8 @@ local Services = ServerScriptService:WaitForChild("Services")
 local S = {}
 local names = { Data = "DataService", Inventory = "InventoryService", Base = "BaseService", PartSpawn = "PartSpawnService",
 	Traffic = "TrafficService", Capture = "CaptureService", Cars = "CarCollectionService", Income = "IncomeService",
-	Upgrade = "UpgradeService", Zone = "ZoneService", Warp = "WarpService" }
+	Upgrade = "UpgradeService", Zone = "ZoneService", Warp = "WarpService", Shop = "ShopService", Donate = "DonateService",
+	HotDrop = "HotDropService", Contracts = "ContractService" }
 for key, moduleName in pairs(names) do
 	S[key] = require(Services:WaitForChild(moduleName))
 end
@@ -1556,16 +1697,21 @@ Net.Get("UnlockZone").OnServerEvent:Connect(function(p, z) S.Zone.Unlock(p, z) e
 Net.Get("SellCar").OnServerEvent:Connect(function(p, uid) S.Cars.Sell(p, uid) end)
 Net.Get("AutoPark").OnServerEvent:Connect(function(p) S.Cars.AutoPark(p) end)
 Net.Get("Teleport").OnServerEvent:Connect(function(p, dest) S.Warp.Go(p, dest) end)
+Net.Get("BuyPerk").OnServerEvent:Connect(function(p, id) S.Shop.Buy(p, id) end)
+Net.Get("Donate").OnServerEvent:Connect(function(p, id) S.Donate.Request(p, id) end)
 
 local function hookCharacter(player, char)
 	local hum = char:WaitForChild("Humanoid", 10)
 	if not hum then return end
-	hum.WalkSpeed = MapConfig.WalkSpeed
-	S.Traffic.Protect(player, EconomyConfig.SpawnProtection)
+	local sess = S.Data.Get(player)
+	hum.WalkSpeed = sess and S.Shop.WalkSpeed(sess) or MapConfig.WalkSpeed
+	hum.BreakJointsOnDeath = false -- the client ragdolls the body (DeathFx)
+	S.Traffic.Protect(player, sess and S.Shop.SpawnShield(sess) or EconomyConfig.SpawnProtection)
 	task.defer(function() S.Inventory.EnsureNotStuck(player) end)
 	hum.Died:Connect(function()
 		S.Inventory.OnDeath(player)
-		task.delay(Players.RespawnTime, function()
+		local sess2 = S.Data.Get(player)
+		task.delay(sess2 and S.Shop.RespawnTime(sess2) or Players.RespawnTime, function()
 			if player.Parent and player.Character == char then
 				player:LoadCharacter()
 			end
@@ -1642,8 +1788,8 @@ local Base = {}
 local S
 local bases = {}
 
-local PAD_LOCKED = Color3.fromRGB(45, 46, 54)
-local PAD_FREE = Color3.fromRGB(50, 120, 180)
+local PAD_LOCKED = Color3.fromRGB(46, 48, 54)
+local PAD_FREE = Color3.fromRGB(86, 90, 98)
 
 function Base.Init(hub)
 	S = hub
@@ -1676,18 +1822,14 @@ function Base.Start()
 end
 
 local function setPad(pad, state, rarityColor)
+	pad.Material = Enum.Material.SmoothPlastic
+	pad.Transparency = 0
 	if state == "locked" then
 		pad.Color = PAD_LOCKED
-		pad.Material = Enum.Material.SmoothPlastic
-		pad.Transparency = 0
 	elseif state == "free" then
 		pad.Color = PAD_FREE
-		pad.Material = Enum.Material.SmoothPlastic
-		pad.Transparency = 0
 	else
-		pad.Color = rarityColor
-		pad.Material = Enum.Material.Neon
-		pad.Transparency = 0.35
+		pad.Color = rarityColor:Lerp(Color3.fromRGB(70, 74, 82), 0.55) -- tinted bay, the car itself carries the colour
 	end
 end
 
@@ -1922,7 +2064,9 @@ function Capture.Throw(player, partId)
 	s.busy = true
 	S.Inventory.SpendBanked(player, partId, 1)
 	local pityUsed = d.pity &gt;= EconomyConfig.PityThreshold - 1
-	local rarity, def = Capture.Roll(partId, rng:NextNumber(), rng:NextNumber(), d.pity)
+	local shift = S.Shop.LuckShift(s)
+	local r1 = 1 - (1 - rng:NextNumber()) * (1 - shift) -- luck pushes the roll towards rarer cars
+	local rarity, def = Capture.Roll(partId, r1, rng:NextNumber(), d.pity)
 	if CarConfig.IsHighTier(rarity) then
 		d.pity = 0
 	else
@@ -1939,16 +2083,18 @@ function Capture.Throw(player, partId)
 	local slot = firstFreeSlot(d)
 	table.insert(d.cars, { uid = uid, typeId = def.id, level = 1, parkedSlot = slot })
 	d.stats.throws = d.stats.throws + 1
-	s.hidden[uid] = os.clock() + EconomyConfig.ThrowAnimTime + 0.1
+	local animTime = S.Shop.ThrowCooldown(s)
+	s.hidden[uid] = os.clock() + animTime + 0.1
 
 	S.Income.Recalc(player)
 	Net.Get("ThrowResult"):FireClient(player, {
 		partId = partId, typeId = def.id, uid = uid, rarity = rarity, slot = slot,
-		animTime = EconomyConfig.ThrowAnimTime, isNew = isNew, bonus = bonus, pityUsed = pityUsed,
+		animTime = animTime, speed = EconomyConfig.ThrowAnimTime / animTime, isNew = isNew, bonus = bonus, pityUsed = pityUsed,
 	})
 	S.Data.Push(player)
 
-	task.delay(EconomyConfig.ThrowAnimTime + 0.15, function()
+	S.Contracts.Progress(player, "throw", 1)
+	task.delay(animTime + 0.15, function()
 		s.busy = false
 		s.hidden[uid] = nil
 		if player.Parent then
@@ -2134,12 +2280,13 @@ local Net = require(Shared:WaitForChild("Net"))
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
+local ShopConfig = require(Shared:WaitForChild("ShopConfig"))
 
 local DataService = {}
 local S
 
 local STORE_NAME = "CarHunters_Profiles_v1"
-local SCHEMA_VERSION = 2
+local SCHEMA_VERSION = 3
 local LOCK_TIMEOUT = 120
 local SERVER_ID = (game.JobId ~= "" and game.JobId) or ("studio-" .. HttpService:GenerateGUID(false))
 
@@ -2158,6 +2305,10 @@ local function newProfile(isNew)
 		discovered = {},
 		pity = 0,
 		saveCount = 0,
+		perks = {},
+		boosts = {},
+		receipts = {},
+		contracts = {},
 	}
 	if isNew then
 		for id, n in pairs(EconomyConfig.StarterParts) do
@@ -2237,6 +2388,44 @@ local function sanitize(raw)
 		p.discovered[c.typeId] = true
 	end
 	p.pity = math.min(toCount(raw.pity, 1e6), EconomyConfig.PityThreshold)
+	p.stats.contracts = type(raw.stats) == "table" and toCount(raw.stats.contracts, 1e9) or 0
+	if type(raw.perks) == "table" then
+		for _, def in ipairs(ShopConfig.Perks) do
+			local v = toCount(raw.perks[def.id], def.max)
+			if v &gt; 0 then
+				p.perks[def.id] = v
+			end
+		end
+	end
+	if type(raw.boosts) == "table" then
+		for _, id in ipairs({ "income", "luck" }) do
+			local t = toCount(raw.boosts[id], 4e9)
+			if t &gt; os.time() then
+				p.boosts[id] = t
+			end
+		end
+	end
+	if type(raw.receipts) == "table" then
+		for _, r in ipairs(raw.receipts) do
+			if type(r) == "string" and #r &lt;= 80 and #p.receipts &lt; 100 then
+				table.insert(p.receipts, r)
+			end
+		end
+	end
+	local KINDS = { bank_part = true, combo = true, speed = true, throw = true, road = true, hotdrop = true }
+	if type(raw.contracts) == "table" then
+		for _, c in ipairs(raw.contracts) do
+			if #p.contracts &lt; 3 and type(c) == "table" and KINDS[c.kind] and type(c.reward) == "table"
+				and PartConfig.Parts[c.reward.part] and Util.IsInt(c.n) and c.n &gt;= 1 and c.n &lt;= 20 then
+				table.insert(p.contracts, {
+					id = tostring(c.id), kind = c.kind, progress = math.min(toCount(c.progress, 20), c.n), n = c.n,
+					part = PartConfig.Parts[c.part] and c.part or nil, zone = type(c.zone) == "string" and c.zone or nil,
+					mult = tonumber(c.mult), seconds = tonumber(c.seconds),
+					reward = { money = toCount(c.reward.money, 1e12), part = c.reward.part, n = math.clamp(toCount(c.reward.n, 4), 1, 4) },
+				})
+			end
+		end
+	end
 	p.saveCount = toCount(raw.saveCount, 1e12)
 	return p
 end
@@ -2471,7 +2660,7 @@ function DataService.BuildState(s)
 		money = d.money,
 		parts = Util.CopyTable(d.parts),
 		carried = Util.CopyTable(s.carried),
-		carryCap = EconomyConfig.CarryCapacity,
+		carryCap = S.Shop.CarryCap(s),
 		zones = Util.CopyTable(d.unlockedZones),
 		slots = d.garageSlotCount,
 		cars = cars,
@@ -2483,6 +2672,14 @@ function DataService.BuildState(s)
 		discovered = Util.CopyTable(d.discovered),
 		pity = d.pity,
 		indexMult = s.indexMult or 1,
+		perks = Util.CopyTable(d.perks),
+		boosts = { income = math.max(0, (d.boosts.income or 0) - os.time()), luck = math.max(0, (d.boosts.luck or 0) - os.time()) },
+		passes = Util.CopyTable(s.passes or {}),
+		contracts = Util.CopyTable(d.contracts),
+		walkSpeed = S.Shop.WalkSpeed(s),
+		pickupRadius = S.Shop.PickupRadius(s),
+		airbagIn = S.Shop.AirbagReadyIn(s),
+		run = { picked = s.run and s.run.picked or 0, mult = s.run and s.run.mult or 1, firstAt = s.run and s.run.firstAt },
 	}
 end
 
@@ -2548,7 +2745,7 @@ function Income.Recalc(player)
 	end
 	local _, _, _, mult = CarConfig.IndexStats(s.data.discovered or {})
 	s.indexMult = mult
-	s.income = math.floor(inc * mult + 0.5)
+	s.income = math.floor(inc * mult * S.Shop.IncomeMult(s) + 0.5)
 	s.collectionValue = value
 	local ls = player:FindFirstChild("leaderstats")
 	if ls then
@@ -2616,6 +2813,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
+local Net = require(Shared:WaitForChild("Net"))
 
 local Inv = {}
 local S
@@ -2640,15 +2838,42 @@ function Inv.BankedTotal(s)
 	return n
 end
 
-function Inv.AddCarried(player, partId, n)
+-- combo tiers: parts picked up in one run without going home
+Inv.ComboTiers = { { 7, 3 }, { 4, 2 }, { 2, 1.5 } }
+Inv.SpeedBonusSeconds = 40
+
+local function comboMult(picked)
+	for _, t in ipairs(Inv.ComboTiers) do
+		if picked &gt;= t[1] then
+			return t[2]
+		end
+	end
+	return 1
+end
+Inv.ComboMult = comboMult
+
+-- zone = district the part came from (contracts), force = ignore the backpack limit (hot drops)
+function Inv.AddCarried(player, partId, n, zone, force)
 	local s = S.Data.Get(player)
 	if not s or not s.ready or not PartConfig.Parts[partId] then
 		return false
 	end
-	if Inv.CarriedTotal(s) + n &gt; EconomyConfig.CarryCapacity then
+	if not force and Inv.CarriedTotal(s) + n &gt; S.Shop.CarryCap(s) then
 		return false
 	end
 	s.carried[partId] = (s.carried[partId] or 0) + n
+	s.carriedZones = s.carriedZones or {}
+	s.carriedZones[partId] = s.carriedZones[partId] or {}
+	if zone then
+		s.carriedZones[partId][zone] = (s.carriedZones[partId][zone] or 0) + n
+	end
+	s.run = s.run or { picked = 0, mult = 1 }
+	if s.run.picked == 0 then
+		s.run.firstAt = workspace:GetServerTimeNow()
+		s.run.firstClock = os.clock()
+	end
+	s.run.picked = s.run.picked + n
+	s.run.mult = comboMult(s.run.picked)
 	S.Data.Push(player)
 	return true
 end
@@ -2658,16 +2883,41 @@ function Inv.Bank(player)
 	if not s or not s.ready then
 		return false
 	end
-	local moved = 0
+	local run = s.run or { picked = 0, mult = 1 }
+	local mult = run.mult or 1
+	local moved, bonus = 0, 0
+	local rng = Random.new()
+	local banked = {}
 	for id, n in pairs(s.carried) do
 		if n &gt; 0 then
-			s.data.parts[id] = (s.data.parts[id] or 0) + n
+			local extra = math.floor(n * (mult - 1))
+			if rng:NextNumber() &lt; n * (mult - 1) - extra then
+				extra = extra + 1
+			end
+			s.data.parts[id] = (s.data.parts[id] or 0) + n + extra
+			banked[id] = n
 			moved = moved + n
+			bonus = bonus + extra
 		end
 	end
+	local zones = s.carriedZones or {}
 	s.carried = {}
+	s.carriedZones = {}
+	s.run = { picked = 0, mult = 1 }
 	if moved &gt; 0 then
-		S.Data.Notify(player, "banked", nil, "good")
+		local secs = run.firstClock and (os.clock() - run.firstClock) or 999
+		local cash = 0
+		if secs &lt;= Inv.SpeedBonusSeconds then
+			cash = math.max(200, math.floor((s.income or 0) * 15))
+			s.data.money = math.min(s.data.money + cash, EconomyConfig.MaxMoney)
+		end
+		S.Data.Notify(player, "banked2", { moved, bonus, mult, cash }, "good")
+		Net.Get("BankFx"):FireClient(player, { moved = moved, bonus = bonus, mult = mult, cash = cash, parts = banked })
+		S.Contracts.Progress(player, "bank_part", moved, zones)
+		if mult &gt; 1 then
+			S.Contracts.Progress(player, "combo", mult)
+		end
+		S.Contracts.Progress(player, "speed", secs)
 		S.Data.Push(player)
 	end
 	return moved &gt; 0
@@ -2692,18 +2942,22 @@ function Inv.OnDeath(player)
 		return
 	end
 	s.data.stats.deaths = s.data.stats.deaths + 1
-	local lost = 0
+	local lost, lostTable = 0, {}
 	for id, n in pairs(s.carried) do
 		local l = math.floor(n * EconomyConfig.DeathLossFraction + 0.5)
 		if l &gt; 0 then
 			s.carried[id] = n - l
 			lost = lost + l
+			lostTable[id] = l
 		end
 	end
+	s.carriedZones = {}
+	s.run = { picked = 0, mult = 1 }
 	if lost &gt; 0 then
+		s.lastLost = lostTable -- the "Insurance" product can give it back
 		S.Data.Notify(player, "lost", { lost }, "error")
-		S.Data.Push(player)
 	end
+	S.Data.Push(player)
 end
 
 function Inv.EnsureNotStuck(player)
@@ -2748,6 +3002,7 @@ local Util = require(Shared:WaitForChild("Util"))
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local PartVisual = require(Shared:WaitForChild("PartVisual"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
+local Net = require(Shared:WaitForChild("Net"))
 
 local PartSpawn = {}
 local S
@@ -2774,6 +3029,8 @@ local function spawnAt(pt)
 	local model = PartVisual.Build(partId)
 	model:PivotTo(CFrame.new(pt.pos + Vector3.new(0, 3, 0)))
 	model:SetAttribute("PointId", pt.id)
+	model:SetAttribute("Risk", pt.risk)
+	model:SetAttribute("Amount", PartConfig.CrateAmount[pt.risk] or 1)
 	CollectionService:AddTag(model, "SpinBob")
 	model.Parent = drops
 	pt.model = model
@@ -2817,9 +3074,10 @@ function PartSpawn.Start()
 				spawnAt(pt)
 			end
 		end
-		local r2 = EconomyConfig.PickupRadius * EconomyConfig.PickupRadius
 		for _, player in ipairs(Players:GetPlayers()) do
 			local s = S.Data.Get(player)
+			local r = s and S.Shop.PickupRadius(s) or EconomyConfig.PickupRadius
+			local r2 = r * r
 			if s and s.ready then
 				local hrp = S.Data.GetRoot(player)
 				if hrp then
@@ -2828,7 +3086,8 @@ function PartSpawn.Start()
 						if pt.active then
 							local d = pt.pos - pos
 							if d.X * d.X + d.Z * d.Z &lt;= r2 and math.abs(d.Y) &lt; 12 then
-								if S.Inventory.CarriedTotal(s) &gt;= EconomyConfig.CarryCapacity then
+								local amount = PartConfig.CrateAmount[pt.risk] or 1
+								if S.Inventory.CarriedTotal(s) + amount &gt; S.Shop.CarryCap(s) then
 									if t - (warnedAt[player] or 0) &gt; 3 then
 										warnedAt[player] = t
 										S.Data.Notify(player, "carryFull", nil, "warn")
@@ -2841,8 +3100,12 @@ function PartSpawn.Start()
 										pt.model = nil
 									end
 									pt.readyAt = t + cooldownFor(pt.risk)
-									if S.Inventory.AddCarried(player, partId, 1) then
+									if S.Inventory.AddCarried(player, partId, amount, pt.zone) then
 										S.Data.Notify(player, "picked", { partId }, "pickup")
+										Net.Get("PickupFx"):FireClient(player, { partId = partId, amount = amount, pos = pt.pos, risk = pt.risk })
+										if pt.risk == "road" then
+											S.Contracts.Progress(player, "road", 1)
+										end
 									end
 								end
 							end
@@ -2903,6 +3166,13 @@ end
 -- Instant death: one touch = WRECKED, carried loot of this run is lost (InventoryService.OnDeath).
 local function wreck(player, s, hum, lane)
 	s.lastHit = os.clock()
+	if S.Shop.TryAirbag(s) then
+		-- airbag pops: knocked back, shielded for a moment, loot kept
+		s.protectedUntil = os.clock() + 1.5
+		Net.Get("HitFx"):FireClient(player, Vector3.new(lane and lane.dir or 1, 0, 0), "airbag")
+		S.Data.Push(player)
+		return
+	end
 	Net.Get("HitFx"):FireClient(player, Vector3.new(lane and lane.dir or 1, 0, 0), "wrecked")
 	hum.Health = 0
 end
@@ -3150,7 +3420,954 @@ function Zone.Start()
 end
 
 return Zone
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX88D2AE3FB8A04307B8C2ABB52F35ADC5"><Properties><string name="Name">WarpService</string><ProtectedString name="Source">-- Teleport buttons: home garage or any unlocked district. Server-validated.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX1343A8E3DE004AFFB22FA44C603C9076"><Properties><string name="Name">ContractService</string><ProtectedString name="Source">-- Contracts board: three active jobs per player, auto-claimed on completion and replaced.
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local MapConfig = require(Shared:WaitForChild("MapConfig"))
+local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
+
+local Contracts = {}
+local S
+local rng = Random.new()
+
+Contracts.Active = 3
+
+-- part types each district is known for (bank_part contracts ask for these)
+local ZONE_PARTS = {
+	city = { "bolts", "tire" }, highway = { "tire", "engine" }, industrial = { "engine", "turbo" }, neon = { "turbo", "core" },
+}
+
+function Contracts.Init(hub)
+	S = hub
+end
+
+local function bestZoneIndex(d)
+	local idx = 1
+	for i, z in ipairs(MapConfig.ZoneOrder) do
+		if d.unlockedZones[z] then
+			idx = i
+		end
+	end
+	return idx
+end
+
+local function rewardFor(s, weight)
+	local base = math.max(150, (s.income or 0) * 25) * weight
+	local d = s.data
+	local partPool = { "tire", "engine", "turbo", "core" }
+	local tier = math.clamp(bestZoneIndex(d), 1, 4)
+	return { money = math.floor(base / 10 + 0.5) * 10, part = partPool[tier], n = (weight &gt;= 2) and 2 or 1 }
+end
+
+function Contracts.New(s)
+	local d = s.data
+	local zi = bestZoneIndex(d)
+	local zone = MapConfig.ZoneOrder[rng:NextInteger(1, zi)]
+	local kinds = { "bank_part", "bank_part", "combo", "speed", "throw", "road", "hotdrop" }
+	local kind = kinds[rng:NextInteger(1, #kinds)]
+	-- avoid duplicate kinds on the board
+	for _ = 1, 6 do
+		local dup = false
+		for _, c in ipairs(d.contracts) do
+			if c.kind == kind then
+				dup = true
+			end
+		end
+		if not dup then
+			break
+		end
+		kind = kinds[rng:NextInteger(1, #kinds)]
+	end
+	local c = { id = HttpService:GenerateGUID(false), kind = kind, progress = 0 }
+	if kind == "bank_part" then
+		local pool = ZONE_PARTS[zone]
+		c.part = pool[rng:NextInteger(1, #pool)]
+		c.zone = zone
+		c.n = (c.part == "core") and 1 or rng:NextInteger(2, 4)
+		c.reward = rewardFor(s, 1 + c.n * 0.3)
+	elseif kind == "combo" then
+		c.n = 1
+		c.mult = (zi &gt;= 2) and 2 or 1.5
+		c.reward = rewardFor(s, 1.6)
+	elseif kind == "speed" then
+		c.n = 1
+		c.seconds = 40
+		c.reward = rewardFor(s, 1.4)
+	elseif kind == "throw" then
+		c.n = rng:NextInteger(3, 6)
+		c.reward = rewardFor(s, 1 + c.n * 0.15)
+	elseif kind == "road" then
+		c.n = rng:NextInteger(1, 3)
+		c.reward = rewardFor(s, 1.3 + c.n * 0.4)
+	else
+		c.n = 1
+		c.reward = rewardFor(s, 2.5)
+	end
+	return c
+end
+
+function Contracts.Fill(s)
+	local d = s.data
+	while #d.contracts &lt; Contracts.Active do
+		table.insert(d.contracts, Contracts.New(s))
+	end
+end
+
+local function complete(player, s, c, index)
+	local d = s.data
+	local mult = S.Shop.HasPass(s, "double_contracts") and 2 or 1
+	d.money = math.min(d.money + c.reward.money * mult, EconomyConfig.MaxMoney)
+	d.parts[c.reward.part] = (d.parts[c.reward.part] or 0) + c.reward.n * mult
+	d.stats.contracts = (d.stats.contracts or 0) + 1
+	table.remove(d.contracts, index)
+	S.Data.Notify(player, "contractDone", { c.reward.money * mult }, "good")
+	task.delay(3, function()
+		if player.Parent and S.Data.Get(player) == s then
+			Contracts.Fill(s)
+			S.Data.Push(player)
+		end
+	end)
+end
+
+-- event: "bank_part"(partId, n, zoneCounts) | "combo"(mult) | "speed"(seconds) | "throw" | "road" | "hotdrop"
+function Contracts.Progress(player, event, amount, extra)
+	local s = S.Data.Get(player)
+	if not s or not s.ready then
+		return
+	end
+	local d = s.data
+	local changed = false
+	for i = #d.contracts, 1, -1 do
+		local c = d.contracts[i]
+		local add = 0
+		if c.kind == event then
+			if event == "bank_part" then
+				-- extra = { [partId] = { [zone] = n } }
+				local byZone = extra and extra[c.part]
+				add = byZone and (byZone[c.zone] or 0) or 0
+			elseif event == "combo" then
+				add = (amount &gt;= c.mult) and 1 or 0
+			elseif event == "speed" then
+				add = (amount &lt;= c.seconds) and 1 or 0
+			else
+				add = amount or 1
+			end
+		end
+		if add &gt; 0 then
+			c.progress = math.min(c.n, c.progress + add)
+			changed = true
+			if c.progress &gt;= c.n then
+				complete(player, s, c, i)
+			end
+		end
+	end
+	if changed then
+		S.Data.Push(player)
+	end
+end
+
+function Contracts.Start()
+	Players.PlayerAdded:Connect(function(p)
+		task.delay(2, function()
+			local s = S.Data.Get(p)
+			if s and s.data then
+				Contracts.Fill(s)
+				S.Data.Push(p)
+			end
+		end)
+	end)
+	for _, p in ipairs(Players:GetPlayers()) do
+		local s = S.Data.Get(p)
+		if s and s.data then
+			Contracts.Fill(s)
+		end
+	end
+end
+
+return Contracts
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4386F1F0DC45482D9E12D13745541205"><Properties><string name="Name">DonateService</string><ProtectedString name="Source">-- Golden Magnate stall: developer products + game passes, with idempotent receipt processing.
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local MarketplaceService = game:GetService("MarketplaceService")
+local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local DonateConfig = require(Shared:WaitForChild("DonateConfig"))
+local ProductIds = require(Shared:WaitForChild("ProductIds"))
+local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
+local Net = require(Shared:WaitForChild("Net"))
+
+local Donate = {}
+local S
+local byProductId, byPassId = {}, {}
+
+function Donate.Init(hub)
+	S = hub
+	for key, id in pairs(ProductIds.products) do
+		if id and id &gt; 0 then
+			byProductId[id] = key
+		end
+	end
+	for key, id in pairs(ProductIds.passes) do
+		if id and id &gt; 0 then
+			byPassId[id] = key
+		end
+	end
+end
+
+local function hasReceipt(d, rid)
+	for _, r in ipairs(d.receipts) do
+		if r == rid then
+			return true
+		end
+	end
+	return false
+end
+
+local function remember(d, rid)
+	table.insert(d.receipts, rid)
+	while #d.receipts &gt; 100 do
+		table.remove(d.receipts, 1)
+	end
+end
+
+local function grantGoldenCar(player, s)
+	local d = s.data
+	for _, c in ipairs(d.cars) do
+		if c.typeId == "golden_magnat_gt" then
+			return
+		end
+	end
+	table.insert(d.cars, { uid = HttpService:GenerateGUID(false), typeId = "golden_magnat_gt", level = 1, parkedSlot = nil })
+	d.discovered.golden_magnat_gt = true
+	S.Cars.AutoPark(player)
+end
+
+-- applies one product; returns true when granted
+function Donate.Grant(player, key)
+	local s = S.Data.Get(player)
+	local item = DonateConfig.ById[key]
+	if not s or not s.ready or not item then
+		return false
+	end
+	local d = s.data
+	if item.boost then
+		local now = os.time()
+		d.boosts[item.boost] = math.max(d.boosts[item.boost] or 0, now) + item.seconds
+	elseif item.cash then
+		local amount = math.max(item.cash[2], math.floor((s.income or 0) * item.cash[1]))
+		d.money = math.min(d.money + amount, EconomyConfig.MaxMoney)
+	elseif item.parts then
+		for id, n in pairs(item.parts) do
+			d.parts[id] = (d.parts[id] or 0) + n
+		end
+	elseif item.slots then
+		local before = d.garageSlotCount
+		d.garageSlotCount = math.min(EconomyConfig.MaxSlots, before + item.slots)
+		local missing = item.slots - (d.garageSlotCount - before)
+		if missing &gt; 0 then -- already maxed: pay it out instead
+			d.money = math.min(d.money + missing * math.max(50000, (s.income or 0) * 600), EconomyConfig.MaxMoney)
+		end
+	elseif key == "pity" then
+		d.pity = math.max(d.pity, EconomyConfig.PityThreshold - 1)
+	elseif key == "hotdrop" then
+		S.HotDrop.SpawnFor(player)
+	elseif key == "revive" then
+		local lost = s.lastLost
+		if lost then
+			for id, n in pairs(lost) do
+				d.parts[id] = (d.parts[id] or 0) + n
+			end
+			s.lastLost = nil
+		else
+			d.parts.engine = (d.parts.engine or 0) + 2 -- nothing to restore: small consolation crate
+		end
+	end
+	S.Income.Recalc(player)
+	S.Base.RefreshAll(player)
+	S.Data.Notify(player, "donateThanks", { item.name }, "good")
+	Net.Get("DonateFx"):FireAllClients(player, key)
+	S.Data.Push(player)
+	return true
+end
+
+local function processReceipt(info)
+	local player = Players:GetPlayerByUserId(info.PlayerId)
+	local key = byProductId[info.ProductId]
+	if not player or not key then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	local s = S.Data.Get(player)
+	if not s or not s.ready then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	local d = s.data
+	if hasReceipt(d, info.PurchaseId) then
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+	if not Donate.Grant(player, key) then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	remember(d, info.PurchaseId)
+	if s.ephemeral then
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+	-- the receipt id is in the profile: a retry after a failed save will not grant twice
+	if S.Data.Save(player, false) then
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+	return Enum.ProductPurchaseDecision.NotProcessedYet
+end
+
+local function refreshPasses(player)
+	local s = S.Data.Get(player)
+	if not s then
+		return
+	end
+	s.passes = s.passes or {}
+	for key, id in pairs(ProductIds.passes) do
+		if id &gt; 0 and not s.passes[key] then
+			local ok, owns = pcall(MarketplaceService.UserOwnsGamePassAsync, MarketplaceService, player.UserId, id)
+			if ok and owns then
+				s.passes[key] = true
+			end
+		end
+	end
+	if s.passes.golden_car then
+		grantGoldenCar(player, s)
+	end
+	player:SetAttribute("VIP", s.passes.vip == true)
+	S.Income.Recalc(player)
+	S.Shop.ApplyCharacter(player)
+	S.Data.Push(player)
+end
+Donate.RefreshPasses = refreshPasses
+
+function Donate.Request(player, key)
+	local item = type(key) == "string" and DonateConfig.ById[key]
+	if not item or not S.Data.RateLimit(player, "donate", 1) then
+		return
+	end
+	local id = item.isPass and ProductIds.passes[key] or ProductIds.products[key]
+	if id and id &gt; 0 then
+		if item.isPass then
+			MarketplaceService:PromptGamePassPurchase(player, id)
+		else
+			MarketplaceService:PromptProductPurchase(player, id)
+		end
+	elseif RunService:IsStudio() then
+		-- products are not created yet: simulate the purchase so everything can be tested in Studio
+		local s = S.Data.Get(player)
+		if item.isPass then
+			if s then
+				s.passes = s.passes or {}
+				s.passes[key] = true
+				refreshPasses(player)
+				S.Data.Notify(player, "donateThanks", { item.name }, "good")
+				Net.Get("DonateFx"):FireAllClients(player, key)
+			end
+		else
+			Donate.Grant(player, key)
+		end
+	else
+		S.Data.Notify(player, "donateOff", nil, "warn")
+	end
+end
+
+function Donate.Start()
+	MarketplaceService.ProcessReceipt = processReceipt
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, bought)
+		local key = byPassId[passId]
+		local s = S.Data.Get(player)
+		if bought and key and s then
+			s.passes = s.passes or {}
+			s.passes[key] = true
+			refreshPasses(player)
+			S.Data.Notify(player, "donateThanks", { DonateConfig.ById[key].name }, "good")
+			Net.Get("DonateFx"):FireAllClients(player, key)
+		end
+	end)
+	-- boosts expire: keep income in sync
+	task.spawn(function()
+		while true do
+			task.wait(5)
+			local now = os.time()
+			for _, player in ipairs(Players:GetPlayers()) do
+				local s = S.Data.Get(player)
+				if s and s.ready then
+					local active = {}
+					for id, t in pairs(s.data.boosts) do
+						if t &gt; now then
+							active[id] = true
+						end
+					end
+					local sig = (active.income and "i" or "") .. (active.luck and "l" or "")
+					if sig ~= (s.boostSig or "") then
+						s.boostSig = sig
+						S.Income.Recalc(player)
+						S.Data.Push(player)
+					end
+				end
+			end
+		end
+	end)
+	task.spawn(function()
+		local map = Workspace:WaitForChild("GeneratedMap", 60)
+		local stall = map and map:FindFirstChild("MagnateStall", true)
+		if not stall then
+			return
+		end
+		local prompt = stall:FindFirstChild("DonatePrompt")
+		if prompt then
+			local pp = Instance.new("ProximityPrompt")
+			pp.ActionText = "Shop"
+			pp.ObjectText = "Golden Magnate"
+			pp.HoldDuration = 0
+			pp.MaxActivationDistance = 14
+			pp.RequiresLineOfSight = false
+			pp.Parent = prompt
+		end
+		local spot = stall:FindFirstChild("NpcSpot")
+		if not spot then
+			return
+		end
+		local GOLD = Color3.fromRGB(232, 178, 50)
+		local npc, anims = S.Shop.MakeNpc("GoldenMagnate", {
+			skin = Color3.fromRGB(240, 196, 160), arms = GOLD, torso = GOLD, legs = Color3.fromRGB(30, 30, 36),
+		}, spot, function(n)
+			local CYL = Enum.PartType.Cylinder
+			local UP = CFrame.Angles(0, 0, math.pi / 2)
+			S.Shop.Attach(n, "Head", Vector3.new(0.12, 1.8, 1.8), CFrame.new(0, 0.62, 0) * UP, Color3.fromRGB(20, 20, 24), Enum.Material.SmoothPlastic, CYL)
+			S.Shop.Attach(n, "Head", Vector3.new(1.3, 1.15, 1.15), CFrame.new(0, 1.2, 0) * UP, Color3.fromRGB(20, 20, 24), Enum.Material.SmoothPlastic, CYL)
+			S.Shop.Attach(n, "Head", Vector3.new(0.3, 1.18, 1.18), CFrame.new(0, 0.85, 0) * UP, GOLD, Enum.Material.Metal, CYL)
+			S.Shop.Attach(n, "Head", Vector3.new(0.9, 0.2, 0.1), CFrame.new(0, -0.15, -0.6), Color3.fromRGB(240, 240, 240))
+			S.Shop.Attach(n, "UpperTorso", Vector3.new(0.35, 0.35, 0.1), CFrame.new(0, 0.3, -0.55), Color3.fromRGB(200, 30, 40))
+			local cane = S.Shop.Attach(n, "RightHand", Vector3.new(0.2, 3.4, 0.2), CFrame.new(0, -1.5, 0), Color3.fromRGB(30, 30, 34), Enum.Material.Metal)
+			if cane then
+				cane.Name = "Cane"
+			end
+			S.Shop.Attach(n, "RightHand", Vector3.new(0.5, 0.5, 0.5), CFrame.new(0, 0.2, 0), GOLD, Enum.Material.Metal, Enum.PartType.Ball)
+		end)
+		if npc then
+			npc:SetAttribute("Magnate", true)
+			-- the coin toss and sparkle are animated on the clients (MagnateFx); server just cheers now and then
+			task.spawn(function()
+				while npc.Parent do
+					task.wait(9 + math.random() * 5)
+					if anims and anims.wave then
+						anims.wave:Play()
+					end
+				end
+			end)
+		end
+	end)
+	Players.PlayerAdded:Connect(function(p)
+		task.delay(3, refreshPasses, p)
+	end)
+end
+
+return Donate
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXFA62C436404140829CDB2BE6962F4A6C"><Properties><string name="Name">HotDropService</string><ProtectedString name="Source">-- Hot Drop: every ~80 s a rare crate parachutes onto a dangerous spot. First player to grab it wins.
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Net = require(Shared:WaitForChild("Net"))
+local MapConfig = require(Shared:WaitForChild("MapConfig"))
+
+local HotDrop = {}
+local S
+local points = {}
+local current = nil
+local rng = Random.new()
+
+HotDrop.Interval = { 70, 100 }
+HotDrop.Lifetime = 45
+HotDrop.FallTime = 4
+HotDrop.EarlyWarning = 15
+
+function HotDrop.Init(hub)
+	S = hub
+end
+
+local function bestZone(player)
+	local s = player and S.Data.Get(player)
+	local best = "city"
+	if s and s.data then
+		for _, z in ipairs(MapConfig.ZoneOrder) do
+			if s.data.unlockedZones[z] then
+				best = z
+			end
+		end
+	end
+	return best
+end
+
+local function pickZone()
+	local zones = {}
+	for _, p in ipairs(Players:GetPlayers()) do
+		table.insert(zones, bestZone(p))
+	end
+	if #zones == 0 then
+		return nil
+	end
+	return zones[rng:NextInteger(1, #zones)]
+end
+
+local function pickPoint(zone)
+	local list = {}
+	for _, pt in ipairs(points) do
+		if pt.zone == zone and pt.risk ~= "safe" then
+			table.insert(list, pt)
+		end
+	end
+	if #list == 0 then
+		return nil
+	end
+	return list[rng:NextInteger(1, #list)]
+end
+
+local function crateModel(pos)
+	local m = Instance.new("Model")
+	m.Name = "HotDropCrate"
+	local box = Instance.new("Part")
+	box.Name = "Crate"
+	box.Size = Vector3.new(4, 4, 4)
+	box.Color = Color3.fromRGB(232, 178, 50)
+	box.Material = Enum.Material.DiamondPlate
+	box.Anchored, box.CanCollide, box.CanQuery, box.CanTouch = true, false, false, false
+	box.CFrame = CFrame.new(pos + Vector3.new(0, 2.2, 0))
+	box.Parent = m
+	for _, a in ipairs({ 0, 90 }) do
+		local band = Instance.new("Part")
+		band.Name = "Band"
+		band.Size = Vector3.new(4.1, 4.1, 0.6)
+		band.Color = Color3.fromRGB(30, 30, 34)
+		band.Material = Enum.Material.Metal
+		band.Anchored, band.CanCollide, band.CanQuery, band.CanTouch = true, false, false, false
+		band.CFrame = box.CFrame * CFrame.Angles(0, math.rad(a), 0)
+		band.Parent = m
+	end
+	local smoke = Instance.new("Attachment")
+	smoke.Name = "Smoke"
+	smoke.Position = Vector3.new(0, 2.2, 0)
+	smoke.Parent = box
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	e.Color = ColorSequence.new(Color3.fromRGB(255, 120, 60), Color3.fromRGB(255, 60, 40))
+	e.Size = NumberSequence.new(1.2, 5)
+	e.Transparency = NumberSequence.new(0.2, 1)
+	e.Lifetime = NumberRange.new(2.5, 3.5)
+	e.Speed = NumberRange.new(5, 8)
+	e.SpreadAngle = Vector2.new(10, 10)
+	e.Rate = 14
+	e.Acceleration = Vector3.new(0, 3, 0)
+	e.Parent = smoke
+	m.PrimaryPart = box
+	return m
+end
+
+local function clear(reason, winner)
+	if not current then
+		return
+	end
+	if current.model then
+		current.model:Destroy()
+	end
+	Net.Get("HotDrop"):FireAllClients({ kind = "end", id = current.id, reason = reason, winner = winner and winner.DisplayName })
+	current = nil
+end
+
+local function launch(zone, byPlayer)
+	if current then
+		clear("replaced")
+	end
+	local pt = pickPoint(zone)
+	if not pt then
+		return
+	end
+	local now = Workspace:GetServerTimeNow()
+	current = {
+		id = tostring(math.floor(now * 1000)), pos = pt.pos, zone = zone,
+		landAt = now + HotDrop.FallTime, expiresAt = now + HotDrop.FallTime + HotDrop.Lifetime,
+	}
+	local info = { kind = "start", id = current.id, pos = current.pos, zone = zone, landAt = current.landAt,
+		expiresAt = current.expiresAt, by = byPlayer and byPlayer.DisplayName }
+	Net.Get("HotDrop"):FireAllClients(info)
+	task.delay(HotDrop.FallTime, function()
+		if current and current.id == info.id then
+			current.model = crateModel(current.pos)
+			current.model.Parent = Workspace:FindFirstChild("RuntimeDrops") or Workspace
+			current.landed = true
+		end
+	end)
+end
+
+function HotDrop.SpawnFor(player)
+	launch(bestZone(player), player)
+end
+
+function HotDrop.Current()
+	return current
+end
+
+function HotDrop.Start()
+	local map = Workspace:WaitForChild("GeneratedMap")
+	for _, inst in ipairs(map:WaitForChild("PartSpawnPoints"):GetDescendants()) do
+		if inst:IsA("BasePart") and inst:GetAttribute("ZoneId") then
+			table.insert(points, { pos = inst.Position, zone = inst:GetAttribute("ZoneId"), risk = inst:GetAttribute("Risk") or "safe" })
+		end
+	end
+	-- scheduler with an early warning for scanner level 2 owners
+	task.spawn(function()
+		while true do
+			local wait = rng:NextNumber(HotDrop.Interval[1], HotDrop.Interval[2])
+			task.wait(wait - HotDrop.EarlyWarning)
+			local zone = pickZone()
+			if zone and not current then
+				for _, p in ipairs(Players:GetPlayers()) do
+					local s = S.Data.Get(p)
+					if s and S.Shop.Level(s, "scanner") &gt;= 2 then
+						Net.Get("HotDrop"):FireClient(p, { kind = "warn", zone = zone, inSeconds = HotDrop.EarlyWarning })
+					end
+				end
+				task.wait(HotDrop.EarlyWarning)
+				if not current then
+					launch(zone)
+				end
+			else
+				task.wait(HotDrop.EarlyWarning)
+			end
+		end
+	end)
+	RunService.Heartbeat:Connect(function()
+		if not current then
+			return
+		end
+		local now = Workspace:GetServerTimeNow()
+		if now &gt; current.expiresAt then
+			clear("expired")
+			return
+		end
+		if not current.landed then
+			return
+		end
+		for _, player in ipairs(Players:GetPlayers()) do
+			local s = S.Data.Get(player)
+			local hrp = s and s.ready and S.Data.GetRoot(player)
+			if hrp then
+				local d = hrp.Position - current.pos
+				local r = S.Shop.PickupRadius(s) + 1
+				if d.X * d.X + d.Z * d.Z &lt;= r * r and math.abs(d.Y) &lt; 12 then
+					local partId = (rng:NextNumber() &lt; 0.45) and "core" or "turbo"
+					local n = partId == "core" and 1 or 2
+					local given = S.Inventory.AddCarried(player, partId, n, current.zone, true)
+					if given then
+						S.Data.Notify(player, "hotDropMine", { n, partId }, "good")
+						S.Contracts.Progress(player, "hotdrop", 1)
+						clear("taken", player)
+						return
+					end
+				end
+			end
+		end
+	end)
+end
+
+return HotDrop
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXDB24B2C91B754349B0956B31C4CFE1E4"><Properties><string name="Name">ShopService</string><ProtectedString name="Source">-- Pit Stop: perks bought with in-game money + the mechanic NPC. All perk effects are read through this module.
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local ShopConfig = require(Shared:WaitForChild("ShopConfig"))
+local MapConfig = require(Shared:WaitForChild("MapConfig"))
+local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
+
+local Shop = {}
+local S
+
+function Shop.Init(hub)
+	S = hub
+end
+
+local function lvl(s, id)
+	return (s and s.data and s.data.perks and s.data.perks[id]) or 0
+end
+Shop.Level = lvl
+
+local function pass(s, id)
+	return s and s.passes and s.passes[id] == true
+end
+Shop.HasPass = pass
+
+local function boostActive(s, id)
+	local b = s and s.data and s.data.boosts
+	return b and (b[id] or 0) &gt; os.time()
+end
+Shop.BoostActive = boostActive
+
+---------------------------------------------------------------- effects
+function Shop.WalkSpeed(s)
+	return MapConfig.WalkSpeed * (1 + ShopConfig.ById.sneakers.per * lvl(s, "sneakers"))
+end
+
+function Shop.CarryCap(s)
+	local cap = EconomyConfig.CarryCapacity + ShopConfig.ById.backpack.per * lvl(s, "backpack")
+	return pass(s, "big_backpack") and cap * 2 or cap
+end
+
+function Shop.PickupRadius(s)
+	local r = EconomyConfig.PickupRadius + ShopConfig.ById.magnet.per * lvl(s, "magnet")
+	return pass(s, "auto_collect") and r * 2 or r
+end
+
+function Shop.IncomeMult(s)
+	local m = 1 + ShopConfig.ById.turbo.per * lvl(s, "turbo")
+	if pass(s, "vip") then
+		m = m * 1.5
+	end
+	if boostActive(s, "income") then
+		m = m * 2
+	end
+	return m
+end
+
+-- 0..1 shift towards rarer cars (applied to the roll's random number)
+function Shop.LuckShift(s)
+	local shift = ShopConfig.ById.lucky.per * lvl(s, "lucky")
+	if boostActive(s, "luck") then
+		shift = shift + 0.25
+	end
+	return math.min(shift, 0.6)
+end
+
+function Shop.RespawnTime(s)
+	local q = lvl(s, "quick")
+	return q &gt; 0 and ShopConfig.ById.quick.respawn[q] or 3
+end
+
+function Shop.SpawnShield(s)
+	return EconomyConfig.SpawnProtection + 0.5 * lvl(s, "quick")
+end
+
+function Shop.ThrowCooldown(s)
+	return pass(s, "fast_trap") and EconomyConfig.ThrowAnimTime * 0.5 or EconomyConfig.ThrowAnimTime
+end
+
+-- airbag: returns true if a car hit is absorbed
+function Shop.TryAirbag(s)
+	local l = lvl(s, "airbag")
+	if l &lt;= 0 then
+		return false
+	end
+	local now = os.clock()
+	if now &lt; (s.airbagReadyAt or 0) then
+		return false
+	end
+	s.airbagReadyAt = now + ShopConfig.ById.airbag.cooldowns[l]
+	return true
+end
+
+function Shop.AirbagReadyIn(s)
+	if lvl(s, "airbag") &lt;= 0 then
+		return nil
+	end
+	return math.max(0, (s.airbagReadyAt or 0) - os.clock())
+end
+
+---------------------------------------------------------------- buying
+function Shop.Buy(player, perkId)
+	local def = type(perkId) == "string" and ShopConfig.ById[perkId]
+	local s = S.Data.Get(player)
+	if not def or not s or not s.ready then
+		return
+	end
+	if not S.Data.RateLimit(player, "perk", 0.3) then
+		return
+	end
+	local d = s.data
+	local cur = d.perks[perkId] or 0
+	if cur &gt;= def.max then
+		S.Data.Notify(player, "maxLevel", nil, "warn")
+		return
+	end
+	local cost = def.costs[cur + 1]
+	if d.money &lt; cost then
+		S.Data.Notify(player, "noMoney", nil, "error")
+		return
+	end
+	d.money = d.money - cost
+	d.perks[perkId] = cur + 1
+	S.Data.Notify(player, "perkBought", { def.name, cur + 1 }, "good")
+	S.Income.Recalc(player)
+	Shop.ApplyCharacter(player)
+	S.Data.Push(player)
+end
+
+function Shop.ApplyCharacter(player)
+	local s = S.Data.Get(player)
+	local char = player.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if s and hum then
+		hum.WalkSpeed = Shop.WalkSpeed(s)
+	end
+end
+
+---------------------------------------------------------------- NPC
+local IDLE = "rbxassetid://507766388"
+local WAVE = "rbxassetid://507770239"
+local POINT = "rbxassetid://507770453"
+
+-- builds an R15 NPC from body colours + simple part accessories (no catalogue assets needed)
+function Shop.MakeNpc(name, colors, spot, dressUp)
+	local desc = Instance.new("HumanoidDescription")
+	desc.HeadColor = colors.skin
+	desc.LeftArmColor, desc.RightArmColor = colors.arms, colors.arms
+	desc.TorsoColor = colors.torso
+	desc.LeftLegColor, desc.RightLegColor = colors.legs, colors.legs
+	local ok, npc = pcall(function()
+		return Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
+	end)
+	if not ok or not npc then
+		warn("[NPC] could not build " .. name .. ": " .. tostring(npc))
+		return nil
+	end
+	npc.Name = name
+	local hum = npc:FindFirstChildOfClass("Humanoid")
+	hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	local root = npc:FindFirstChild("HumanoidRootPart")
+	local yaw = spot:GetAttribute("Yaw") or 0
+	npc:PivotTo(CFrame.new(spot.Position + Vector3.new(0, 3.1, 0)) * CFrame.Angles(0, yaw, 0))
+	for _, p in ipairs(npc:GetDescendants()) do
+		if p:IsA("BasePart") then
+			p.Anchored = p == root
+		end
+	end
+	if dressUp then
+		dressUp(npc)
+	end
+	npc.Parent = Workspace
+	local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
+	local function load(id)
+		local a = Instance.new("Animation")
+		a.AnimationId = id
+		local ok2, track = pcall(function()
+			return animator:LoadAnimation(a)
+		end)
+		return ok2 and track or nil
+	end
+	local idle = load(IDLE)
+	if idle then
+		idle.Looped = true
+		idle:Play()
+	end
+	return npc, { wave = load(WAVE), point = load(POINT), animator = animator, load = load }
+end
+
+-- weld a simple part accessory to a body part
+function Shop.Attach(npc, partName, size, offset, color, mat, shape)
+	local host = npc:FindFirstChild(partName)
+	if not host then
+		return nil
+	end
+	local p = Instance.new("Part")
+	p.Size = size
+	p.Color = color
+	p.Material = mat or Enum.Material.SmoothPlastic
+	if shape then
+		p.Shape = shape
+	end
+	p.CanCollide, p.CanQuery, p.CanTouch, p.Massless = false, false, false, true
+	p.CFrame = host.CFrame * offset
+	local w = Instance.new("WeldConstraint")
+	w.Part0, w.Part1 = host, p
+	w.Parent = p
+	p.Parent = npc
+	return p
+end
+
+local function makePrompt(part, text, object)
+	local pp = Instance.new("ProximityPrompt")
+	pp.ActionText = text
+	pp.ObjectText = object
+	pp.HoldDuration = 0
+	pp.MaxActivationDistance = 14
+	pp.RequiresLineOfSight = false
+	pp.Parent = part
+	return pp
+end
+
+function Shop.Start()
+	task.spawn(function()
+		local map = Workspace:WaitForChild("GeneratedMap", 60)
+		local shop = map and map:FindFirstChild("PitStopShop", true)
+		if not shop then
+			warn("[Shop] PitStopShop not found in GeneratedMap")
+			return
+		end
+		local prompt = shop:FindFirstChild("ShopPrompt")
+		if prompt then
+			makePrompt(prompt, "Open shop", "Pit Stop")
+		end
+		local spot = shop:FindFirstChild("NpcSpot")
+		if spot then
+			local npc, anims = Shop.MakeNpc("Mechanic", {
+				skin = Color3.fromRGB(234, 184, 146), arms = Color3.fromRGB(40, 90, 170),
+				torso = Color3.fromRGB(40, 90, 170), legs = Color3.fromRGB(30, 60, 120),
+			}, spot, function(n)
+				local CYL = Enum.PartType.Cylinder
+				Shop.Attach(n, "Head", Vector3.new(1.3, 0.35, 1.35), CFrame.new(0, 0.62, 0), Color3.fromRGB(214, 52, 44))
+				Shop.Attach(n, "Head", Vector3.new(0.9, 0.12, 0.7), CFrame.new(0, 0.5, -0.8), Color3.fromRGB(214, 52, 44))
+				Shop.Attach(n, "UpperTorso", Vector3.new(0.9, 0.5, 0.15), CFrame.new(0.4, 0.2, -0.55), Color3.fromRGB(255, 255, 255))
+				local wrench = Shop.Attach(n, "RightHand", Vector3.new(0.25, 1.6, 0.25), CFrame.new(0, -0.6, 0), Color3.fromRGB(190, 194, 200), Enum.Material.Metal)
+				if wrench then
+					wrench.Name = "Wrench"
+				end
+				Shop.Attach(n, "LeftHand", Vector3.new(0.4, 0.4, 0.4), CFrame.new(0, -0.2, 0), Color3.fromRGB(240, 240, 240), Enum.Material.Fabric, CYL)
+			end)
+			if npc and anims then
+				-- wave at players who walk up
+				task.spawn(function()
+					local cool = 0
+					while npc.Parent do
+						task.wait(0.5)
+						cool = cool - 0.5
+						if cool &lt;= 0 then
+							for _, p in ipairs(Players:GetPlayers()) do
+								local c = p.Character
+								local hrp = c and c:FindFirstChild("HumanoidRootPart")
+								if hrp and (hrp.Position - spot.Position).Magnitude &lt; 20 then
+									if anims.wave then
+										anims.wave:Play()
+									end
+									cool = 8
+									break
+								end
+							end
+						end
+					end
+				end)
+			end
+		end
+	end)
+	Players.PlayerAdded:Connect(function(p)
+		p.CharacterAdded:Connect(function()
+			task.defer(Shop.ApplyCharacter, p)
+		end)
+	end)
+end
+
+return Shop
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX232DEF09A0BD4030BE971FFE8FF29E0F"><Properties><string name="Name">WarpService</string><ProtectedString name="Source">-- Teleport buttons: home garage or any unlocked district. Server-validated.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
@@ -3517,8 +4734,7 @@ local function buildWorld(ctx)
 				local zone = MapConfig.ZoneAt(zm)
 				local col = (zone == "plaza") and C(140, 146, 160) or MapConfig.Zones[zone].palette.curb
 				Part(f.Buildings, "PerimeterWall", Vector3.new(4, 26, len), CFrame.new(sx * (HW + 2), 13, zm), col, M.Concrete)
-				local acc = (zone == "plaza") and MapConfig.Plaza.accent or MapConfig.Zones[zone].palette.accent
-				Part(f.Buildings, "WallTrim", Vector3.new(4.4, 0.6, len), CFrame.new(sx * (HW + 2), 26.3, zm), acc, M.Neon, { collide = false })
+				Part(f.Buildings, "WallCap", Vector3.new(4.6, 0.8, len), CFrame.new(sx * (HW + 2), 26.4, zm), C(120, 124, 132), M.Concrete, { collide = false })
 			end
 		end
 		for _, o in ipairs(openings) do
@@ -3528,7 +4744,9 @@ local function buildWorld(ctx)
 			local z0 = o[3].z
 			local zone = MapConfig.Zones[o[3].zone]
 			Part(f.Buildings, "TunnelLintel", Vector3.new(4, 16, W), CFrame.new(sx * (HW + 2), 18, z0), zone.palette.curb, M.Concrete)
-			Part(f.Buildings, "TunnelTrim", Vector3.new(4.4, 0.7, W), CFrame.new(sx * (HW + 2), 10.2, z0), zone.palette.accent, M.Neon, { collide = false })
+			for k = 0, 7 do
+				Part(f.Buildings, "TunnelHazard", Vector3.new(4.5, 0.9, W / 8), CFrame.new(sx * (HW + 2), 10.4, z0 - W / 2 + (k + 0.5) * W / 8), (k % 2 == 0) and C(255, 196, 40) or C(28, 28, 30), M.SmoothPlastic, { collide = false })
+			end
 			Part(f.Buildings, "TunnelCeiling", Vector3.new(TL, 2, W + 8), CFrame.new(sx * (HW + 2 + TL / 2), 11, z0), C(22, 22, 28), M.Concrete)
 			Part(f.Buildings, "TunnelWallA", Vector3.new(TL, 12, 2), CFrame.new(sx * (HW + 2 + TL / 2), 6, z0 + W / 2 + 1), C(22, 22, 28), M.Concrete)
 			Part(f.Buildings, "TunnelWallB", Vector3.new(TL, 12, 2), CFrame.new(sx * (HW + 2 + TL / 2), 6, z0 - W / 2 - 1), C(22, 22, 28), M.Concrete)
@@ -3543,7 +4761,9 @@ local function buildWorld(ctx)
 			local w, d, h = rr(ctx.rng, 24, 44), rr(ctx.rng, 24, 40), rr(ctx.rng, 40, 100)
 			local cx = sx * (HW + 92 + rr(ctx.rng, 0, 40))
 			local tower = Part(f.Buildings, "Backdrop", Vector3.new(d, h, w), CFrame.new(cx, h / 2 - 1, z), pick(ctx.rng, pal.buildings), M.SmoothPlastic, { cast = false })
-			Part(f.Buildings, "BackdropBand", Vector3.new(d + 0.3, 2, w * 0.8), CFrame.new(cx, h * 0.6, z), pal.accent, M.Neon, { cast = false, collide = false })
+			for y = 8, h - 6, 7 do
+				Part(f.Buildings, "BackdropWindows", Vector3.new(d + 0.2, 2.6, w * 0.8), CFrame.new(cx, y, z), C(70, 96, 120), M.Glass, { cast = false, collide = false, t = 0.1 })
+			end
 			z = z + 58 + rr(ctx.rng, 0, 14)
 		end
 	end
@@ -3553,13 +4773,12 @@ local function buildWorld(ctx)
 	end
 	Part(f.Buildings, "EndWallStart", Vector3.new(2 * HW + 8, 26, 4), CFrame.new(0, 13, zS - 2), C(140, 146, 160), M.Concrete)
 	Part(f.Buildings, "EndWallEnd", Vector3.new(2 * HW + 8, 26, 4), CFrame.new(0, 13, zE + 2), C(30, 50, 70), M.Concrete)
-	local fin = Part(f.Buildings, "EndSign", Vector3.new(120, 14, 1), CFrame.new(0, 19, zE - 0.5), C(10, 8, 20), M.SmoothPlastic)
+	local fin = Part(f.Buildings, "EndSign", Vector3.new(120, 14, 1), CFrame.new(0, 19, zE - 0.5), C(26, 30, 38), M.SmoothPlastic)
 	Label(fin, Enum.NormalId.Front, "END OF THE CITY", C(255, 210, 60))
 end
 
 local function buildBase(ctx, i)
 	local f = ctx.f
-	local P = MapConfig.Plaza
 	local bcf = BaseLayout.GetBaseCFrame(i)
 	local model = Instance.new("Model")
 	model.Name = string.format("Base%02d", i)
@@ -3567,78 +4786,137 @@ local function buildBase(ctx, i)
 	local function mk(name, size, off, color, mat, o)
 		return Part(model, name, size, bcf * CFrame.new(off), color, mat, o)
 	end
+	local CONCRETE, ASPHALT, STEEL, DARKSTEEL = C(176, 178, 182), C(78, 82, 90), C(150, 156, 166), C(52, 56, 64)
+	local BRICK, WHITE, HAZARD = C(168, 78, 62), C(242, 242, 238), C(255, 196, 40)
+	local PX, PZ = MapConfig.BasePlot.x / 2, MapConfig.BasePlot.z / 2
 
-	mk("Floor", Vector3.new(110, 1, 95), Vector3.new(0, 0, 0), P.floor, M.SmoothPlastic)
-	mk("EdgeFront", Vector3.new(0.6, 0.1, 95), Vector3.new(54.7, 0.55, 0), P.accent, M.Neon, { collide = false })
-	mk("EdgeL", Vector3.new(110, 0.1, 0.6), Vector3.new(0, 0.55, 47.2), P.accent, M.Neon, { collide = false })
-	mk("EdgeR", Vector3.new(110, 0.1, 0.6), Vector3.new(0, 0.55, -47.2), P.accent, M.Neon, { collide = false })
-	mk("BackWall", Vector3.new(2, 14, 95), Vector3.new(-54, 7, 0), C(38, 40, 50), M.SmoothPlastic)
-	mk("WallGlowTop", Vector3.new(2.2, 0.6, 95), Vector3.new(-54, 14.3, 0), P.accent, M.Neon, { collide = false })
-	mk("GlassL", Vector3.new(110, 5, 0.6), Vector3.new(0, 3, 47.5), C(150, 205, 240), M.Glass, { t = 0.5 })
-	mk("GlassR", Vector3.new(110, 5, 0.6), Vector3.new(0, 3, -47.5), C(150, 205, 240), M.Glass, { t = 0.5 })
-
-	local sign = mk("OwnerSign", Vector3.new(1, 5, 34), Vector3.new(-53, 11.5, 0), C(14, 16, 24), M.SmoothPlastic)
-	local l1 = Label(sign, Enum.NormalId.Right, "FREE GARAGE", C(255, 255, 255))
-	local screen = mk("IncomeScreen", Vector3.new(1, 4.6, 24), Vector3.new(-53, 5.2, 0), C(10, 12, 18), M.SmoothPlastic)
-	local l2 = Label(screen, Enum.NormalId.Right, "", C(90, 255, 140))
-
+	-- floor and markings
+	mk("Floor", Vector3.new(PX * 2, 1, PZ * 2), Vector3.new(0, 0, 0), CONCRETE, M.Concrete)
+	mk("Apron", Vector3.new(14, 1.02, PZ * 2), Vector3.new(PX - 7, 0.005, 0), C(196, 198, 200), M.Concrete)
+	for z = -PZ + 4, PZ - 4, 8 do
+		mk("LaneDash", Vector3.new(0.5, 0.04, 4), Vector3.new(BaseLayout.LaneX, 0.53, z), HAZARD, M.SmoothPlastic, { collide = false, cast = false })
+	end
 	local slots = Instance.new("Folder")
 	slots.Name = "Slots"
 	slots.Parent = model
 	for n = 1, BaseLayout.SlotCount do
 		local p = BaseLayout.SlotLocal(n)
-		local pad = Part(slots, "Slot" .. n, Vector3.new(22, 0.2, 12), bcf * CFrame.new(p.X, 0.6, p.Z), C(45, 46, 54), M.SmoothPlastic, { collide = false })
-		local num = Label(pad, Enum.NormalId.Top, tostring(n), C(255, 255, 255))
-		num.TextTransparency = 0.55
+		local pad = Part(slots, "Slot" .. n, Vector3.new(22, 0.06, 12.4), bcf * CFrame.new(p.X, 0.53, p.Z), ASPHALT, M.SmoothPlastic, { collide = false, cast = false })
+		local num = Label(pad, Enum.NormalId.Top, tostring(n), WHITE)
+		num.TextTransparency = 0.35
 		num.Rotation = 90
-		mk("SlotLineA", Vector3.new(22, 0.06, 0.4), Vector3.new(p.X, 0.53, p.Z + 6.6), C(235, 235, 240), M.SmoothPlastic, { collide = false, cast = false })
-		mk("SlotLineB", Vector3.new(22, 0.06, 0.4), Vector3.new(p.X, 0.53, p.Z - 6.6), C(235, 235, 240), M.SmoothPlastic, { collide = false, cast = false })
-	end
-	for z = -44, 44, 8 do
-		mk("LaneDash", Vector3.new(0.5, 0.06, 4), Vector3.new(BaseLayout.LaneX, 0.53, z), C(255, 210, 70), M.SmoothPlastic, { collide = false, cast = false })
-	end
-	mk("Canopy", Vector3.new(44, 0.4, 95), Vector3.new(-30, 15.2, 0), C(200, 230, 255), M.Glass, { t = 0.6, collide = false })
-	mk("CanopyFrameF", Vector3.new(1, 1, 95), Vector3.new(-8.5, 15.2, 0), C(40, 44, 56), M.Metal, { collide = false })
-	for _, z in ipairs({ -46.5, 0, 46.5 }) do
-		mk("CanopyBeam", Vector3.new(44, 1, 1), Vector3.new(-30, 15.2, z), C(40, 44, 56), M.Metal, { collide = false })
-		mk("CanopyPost", Vector3.new(1, 14.6, 1), Vector3.new(-8.5, 7.8, z), C(40, 44, 56), M.Metal)
-	end
-	mk("CanopyGlow", Vector3.new(0.4, 0.3, 95), Vector3.new(-8.5, 14.5, 0), P.accent, M.Neon, { collide = false, cast = false })
-	for _, z in ipairs({ -44, 44 }) do
-		Prefabs.Planter(model, bcf:PointToWorldSpace(Vector3.new(46, 0.5, z * 0.82)), C(232, 226, 216))
+		for _, s in ipairs({ -1, 1 }) do
+			mk("SlotLine", Vector3.new(22, 0.04, 0.35), Vector3.new(p.X, 0.58, p.Z + s * 6.4), WHITE, M.SmoothPlastic, { collide = false, cast = false })
+		end
+		mk("WheelStop", Vector3.new(0.7, 0.45, 5), Vector3.new(p.X - 10, 0.72, p.Z), HAZARD, M.SmoothPlastic, { collide = false })
 	end
 
+	-- building: brick back wall with roller doors, concrete side walls, corrugated roof on steel columns
+	mk("BackWall", Vector3.new(2, 18, PZ * 2), Vector3.new(-PX + 1, 9, 0), BRICK, M.Brick)
+	mk("BackWallCap", Vector3.new(2.6, 1, PZ * 2 + 0.6), Vector3.new(-PX + 1, 18.5, 0), DARKSTEEL, M.Metal)
+	for _, z in ipairs({ -30, 0, 30 }) do
+		mk("RollerDoor", Vector3.new(0.4, 10, 16), Vector3.new(-PX + 2.2, 5.2, z), C(204, 208, 214), M.DiamondPlate)
+		for y = 1, 9, 1.4 do
+			mk("DoorRib", Vector3.new(0.2, 0.18, 16), Vector3.new(-PX + 2.45, y, z), C(160, 164, 172), M.Metal, { collide = false, cast = false })
+		end
+		mk("DoorFrame", Vector3.new(0.6, 1, 17.2), Vector3.new(-PX + 2.3, 10.5, z), DARKSTEEL, M.Metal)
+	end
+	for _, s in ipairs({ -1, 1 }) do
+		mk("SideWall", Vector3.new(58, 8, 1.6), Vector3.new(-PX + 29, 4, s * (PZ - 0.8)), C(200, 200, 196), M.Concrete)
+		mk("SideWallStripe", Vector3.new(58, 0.8, 1.7), Vector3.new(-PX + 29, 7.6, s * (PZ - 0.8)), C(40, 120, 200), M.SmoothPlastic)
+		for x = 2, PX - 4, 8 do
+			mk("Bollard", Vector3.new(0.9, 2.6, 0.9), Vector3.new(x, 1.8, s * (PZ - 0.8)), HAZARD, M.SmoothPlastic)
+		end
+	end
+	local roofX0, roofX1 = -PX, 6
+	local rw = roofX1 - roofX0
+	mk("Roof", Vector3.new(rw, 0.6, PZ * 2 + 2), Vector3.new((roofX0 + roofX1) / 2, 16.4, 0), C(198, 202, 208), M.Metal)
+	for z = -PZ, PZ, 4 do
+		mk("RoofRib", Vector3.new(rw, 0.4, 0.5), Vector3.new((roofX0 + roofX1) / 2, 16.9, z), C(170, 175, 184), M.Metal, { collide = false, cast = false })
+	end
+	mk("RoofFascia", Vector3.new(1, 2.4, PZ * 2 + 2), Vector3.new(roofX1, 15.8, 0), C(40, 120, 200), M.SmoothPlastic)
+	for _, z in ipairs({ -PZ + 1.5, -15, 15, PZ - 1.5 }) do
+		mk("Column", Vector3.new(1.4, 15.8, 1.4), Vector3.new(roofX1 - 0.8, 7.9, z), STEEL, M.Metal)
+		mk("ColumnBase", Vector3.new(2.2, 0.8, 2.2), Vector3.new(roofX1 - 0.8, 0.9, z), DARKSTEEL, M.Metal)
+	end
+	for _, z in ipairs({ -30, 0, 30 }) do
+		local lamp = mk("CeilingLight", Vector3.new(14, 0.3, 1.2), Vector3.new(-22, 15.9, z), C(255, 246, 225), M.Neon, { collide = false, cast = false, light = true })
+		local pl = Instance.new("SurfaceLight")
+		pl.Face = Enum.NormalId.Bottom
+		pl.Range = 22
+		pl.Brightness = 1.2
+		pl.Angle = 110
+		pl.Color = C(255, 240, 215)
+		pl.Parent = lamp
+	end
+
+	-- owner sign + income board on the back wall (BaseService writes into their SurfaceGuis)
+	local sign = mk("OwnerSign", Vector3.new(1, 5, 40), Vector3.new(-PX + 2.4, 13.2, 0), C(26, 30, 38), M.SmoothPlastic)
+	Label(sign, Enum.NormalId.Right, "FREE GARAGE", C(255, 255, 255))
+	mk("OwnerSignFrame", Vector3.new(0.8, 5.8, 40.8), Vector3.new(-PX + 2.2, 13.2, 0), HAZARD, M.SmoothPlastic)
+	local screen = mk("IncomeScreen", Vector3.new(1, 3, 22), Vector3.new(-PX + 2.4, 19.6, 0), C(16, 18, 22), M.SmoothPlastic)
+	Label(screen, Enum.NormalId.Right, "", C(110, 230, 140))
+
+	-- the trap: a car lift with a magnetic crane
 	local t = BaseLayout.TrapLocal
-	local pad = mk("TrapPad", Vector3.new(0.5, 18, 18), Vector3.new(t.X, 0.75, t.Z), C(40, 230, 255), M.Neon, { shape = CYL, collide = false })
-	pad.CFrame = bcf * CFrame.new(t.X, 0.75, t.Z) * UPRIGHT
-	local inner = mk("TrapInner", Vector3.new(0.6, 11, 11), Vector3.new(t.X, 0.8, t.Z), C(18, 26, 44), M.SmoothPlastic, { shape = CYL, collide = false })
-	inner.CFrame = bcf * CFrame.new(t.X, 0.8, t.Z) * UPRIGHT
-	mk("TrapArchL", Vector3.new(1.6, 12, 1.6), Vector3.new(t.X, 6.5, t.Z + 9.5), C(200, 205, 215), M.Metal)
-	mk("TrapArchR", Vector3.new(1.6, 12, 1.6), Vector3.new(t.X, 6.5, t.Z - 9.5), C(200, 205, 215), M.Metal)
-	local top = mk("TrapArchTop", Vector3.new(1.6, 2.2, 21), Vector3.new(t.X, 13, t.Z), C(30, 34, 46), M.Metal)
-	Label(top, Enum.NormalId.Right, "DROP PART", C(40, 230, 255))
-	mk("TrapArchGlow", Vector3.new(1.0, 0.5, 19), Vector3.new(t.X, 11.7, t.Z), C(40, 230, 255), M.Neon, { collide = false })
+	mk("TrapPad", Vector3.new(18, 0.7, 18), Vector3.new(t.X, 0.85, t.Z), C(96, 100, 108), M.DiamondPlate)
+	for k = 0, 7 do
+		for _, s in ipairs({ -1, 1 }) do
+			local c = (k % 2 == 0) and HAZARD or C(28, 28, 30)
+			mk("Hazard", Vector3.new(2.25, 0.06, 0.8), Vector3.new(t.X - 7.9 + k * 2.25, 1.23, t.Z + s * 8.6), c, M.SmoothPlastic, { collide = false, cast = false })
+			mk("Hazard", Vector3.new(0.8, 0.06, 2.25), Vector3.new(t.X + s * 8.6, 1.23, t.Z - 7.9 + k * 2.25), c, M.SmoothPlastic, { collide = false, cast = false })
+		end
+	end
+	for _, sx in ipairs({ -1, 1 }) do
+		for _, sz in ipairs({ -1, 1 }) do
+			mk("LiftPost", Vector3.new(1.4, 14, 1.4), Vector3.new(t.X + sx * 9.4, 7, t.Z + sz * 9.4), C(220, 70, 50), M.Metal)
+		end
+		mk("LiftBeam", Vector3.new(1.2, 1.2, 20.2), Vector3.new(t.X + sx * 9.4, 14.2, t.Z), C(220, 70, 50), M.Metal)
+	end
+	mk("CraneBeam", Vector3.new(20.2, 1.4, 1.4), Vector3.new(t.X, 14.6, t.Z), DARKSTEEL, M.Metal)
+	mk("CraneCable", Vector3.new(0.25, 3.6, 0.25), Vector3.new(t.X, 12.2, t.Z), C(30, 30, 30), M.Metal, { collide = false })
+	local magnet = mk("TrapMagnet", Vector3.new(1.4, 6, 6), Vector3.new(t.X, 9.8, t.Z), C(70, 74, 82), M.Metal, { shape = CYL, collide = false })
+	magnet.CFrame = bcf * CFrame.new(t.X, 9.8, t.Z) * UPRIGHT
+	local trapSign = mk("TrapSign", Vector3.new(0.5, 2.4, 12), Vector3.new(t.X + 9.6, 12.2, t.Z), C(26, 30, 38), M.SmoothPlastic)
+	Label(trapSign, Enum.NormalId.Right, "THROW PARTS HERE", HAZARD)
 
+	-- vehicle entrance: roller door in a frame, new cars roll out of it
 	local pl = BaseLayout.PortalLocal
-	mk("PortalL", Vector3.new(3, 14, 3), Vector3.new(pl.X, 7.5, pl.Z + 9.5), C(30, 34, 46), M.Metal)
-	mk("PortalR", Vector3.new(3, 14, 3), Vector3.new(pl.X, 7.5, pl.Z - 9.5), C(30, 34, 46), M.Metal)
-	local ptop = mk("PortalTop", Vector3.new(3, 3, 22), Vector3.new(pl.X, 15.5, pl.Z), C(30, 34, 46), M.Metal)
-	Label(ptop, Enum.NormalId.Right, "VEHICLE ENTRANCE", C(255, 200, 60))
-	mk("PortalField", Vector3.new(0.6, 12, 16), Vector3.new(pl.X, 7.5, pl.Z), C(255, 190, 40), M.Neon, { t = 0.78, collide = false })
+	for _, s in ipairs({ -1, 1 }) do
+		mk("PortalPost", Vector3.new(2, 13, 2), Vector3.new(pl.X, 6.5, pl.Z + s * 9.5), BRICK, M.Brick)
+	end
+	local header = mk("PortalHeader", Vector3.new(2.4, 3, 21), Vector3.new(pl.X, 14.2, pl.Z), DARKSTEEL, M.Metal)
+	Label(header, Enum.NormalId.Right, "VEHICLE IN", WHITE)
+	mk("PortalDoor", Vector3.new(0.4, 12, 17), Vector3.new(pl.X - 0.6, 6.6, pl.Z), C(204, 208, 214), M.DiamondPlate, { collide = false })
 
+	-- terminal (opens the garage menu) = tool chest with a screen
 	local tm = BaseLayout.TerminalLocal
-	local term = mk("Terminal", Vector3.new(4, 8, 7), Vector3.new(tm.X, 4.5, tm.Z), C(30, 34, 46), M.Metal)
-	Label(term, Enum.NormalId.Right, "GARAGE", C(255, 255, 255))
-	mk("TerminalGlow", Vector3.new(4.2, 0.5, 7.2), Vector3.new(tm.X, 8.7, tm.Z), P.accent, M.Neon, { collide = false })
+	mk("Terminal", Vector3.new(4, 5, 7), Vector3.new(tm.X, 3, tm.Z), C(200, 40, 40), M.SmoothPlastic)
+	for d = 0, 3 do
+		mk("Drawer", Vector3.new(4.1, 0.15, 6.4), Vector3.new(tm.X, 1.4 + d * 1.1, tm.Z), C(150, 30, 30), M.SmoothPlastic, { collide = false, cast = false })
+	end
+	local scr = mk("TerminalScreen", Vector3.new(0.4, 3, 5), Vector3.new(tm.X, 7.2, tm.Z), C(16, 18, 22), M.SmoothPlastic)
+	Label(scr, Enum.NormalId.Right, "GARAGE", WHITE)
+
+	-- workshop clutter along the back wall
+	local rng = ctx.rng
+	Prefabs.TireStack(model, bcf:PointToWorldSpace(Vector3.new(-PX + 5, 0.5, -PZ + 5)), rng)
+	Prefabs.TireStack(model, bcf:PointToWorldSpace(Vector3.new(-PX + 5, 0.5, PZ - 5)), rng)
+	for k = 0, 2 do
+		local b = mk("Barrel", Vector3.new(3.4, 3, 3), Vector3.new(-PX + 4, 2.2, -PZ + 10 + k * 3.2), (k == 1) and C(40, 110, 190) or C(200, 60, 50), M.Metal, { shape = CYL })
+		b.CFrame = bcf * CFrame.new(-PX + 4, 2.2, -PZ + 10 + k * 3.2) * UPRIGHT
+	end
+	mk("Workbench", Vector3.new(4, 0.5, 9), Vector3.new(-PX + 4, 3.4, PZ - 14), C(150, 104, 64), M.Wood)
+	mk("WorkbenchLegs", Vector3.new(3.6, 3, 8.6), Vector3.new(-PX + 4, 1.6, PZ - 14), DARKSTEEL, M.Metal)
+	mk("Vise", Vector3.new(1.2, 1, 1.4), Vector3.new(-PX + 4, 4.1, PZ - 17), C(40, 90, 160), M.Metal)
 
 	local sp = Instance.new("SpawnLocation")
 	sp.Name = "Spawn"
 	sp.Size = Vector3.new(8, 0.4, 8)
-	sp.CFrame = bcf * CFrame.new(BaseLayout.SpawnLocal.X, 0.7, BaseLayout.SpawnLocal.Z)
+	sp.CFrame = bcf * CFrame.new(BaseLayout.SpawnLocal.X, 0.6, BaseLayout.SpawnLocal.Z)
 	sp.Anchored = true
 	sp.Neutral = true
 	sp.Duration = 0
-	sp.Enabled = true
 	sp.Transparency = 1
 	sp.CanCollide = false
 	sp.Parent = model
@@ -3647,9 +4925,8 @@ local function buildBase(ctx, i)
 	local cars = Instance.new("Folder")
 	cars.Name = "Cars"
 	cars.Parent = model
-
-	Prefabs.Lamp(model, bcf:PointToWorldSpace(Vector3.new(53, 0.5, 44)), 3, P.accent, 0)
-	Prefabs.Lamp(model, bcf:PointToWorldSpace(Vector3.new(53, 0.5, -44)), 3, P.accent, 0)
+	Prefabs.Lamp(model, bcf:PointToWorldSpace(Vector3.new(PX - 1.5, 0.5, PZ - 3)), 1, C(255, 230, 180), math.pi)
+	Prefabs.Lamp(model, bcf:PointToWorldSpace(Vector3.new(PX - 1.5, 0.5, -PZ + 3)), 1, C(255, 230, 180), math.pi)
 	model.Parent = f.Bases
 end
 
@@ -3662,6 +4939,110 @@ local function nearBaseRow(z, pad)
 	return false
 end
 
+-- Pit Stop: upgrade shop with a mechanic NPC (NPC itself is spawned by ShopService at runtime)
+local function buildShop(ctx)
+	local f = ctx.f
+	local cfg = MapConfig.Shop
+	local cf = CFrame.new(cfg.x, 0.2, cfg.z) * CFrame.Angles(0, cfg.yaw, 0) -- local -Z = front
+	local m = Instance.new("Model")
+	m.Name = "PitStopShop"
+	local function mk(name, size, off, color, mat, o)
+		return Part(m, name, size, cf * CFrame.new(off), color, mat, o)
+	end
+	local W, D, H = 34, 22, 13
+	local RED, WHITE, DARK2, GLASS2 = C(214, 52, 44), C(244, 242, 236), C(36, 40, 48), C(150, 200, 230)
+	mk("Slab", Vector3.new(W + 8, 0.6, D + 12), Vector3.new(0, 0.1, -4), C(210, 206, 198), M.Concrete)
+	mk("Body", Vector3.new(W, H, D), Vector3.new(0, H / 2 + 0.4, 6), WHITE, M.SmoothPlastic)
+	mk("BaseStripe", Vector3.new(W + 0.2, 1.4, D + 0.2), Vector3.new(0, 1.1, 6), DARK2, M.SmoothPlastic)
+	mk("RoofCap", Vector3.new(W + 1.4, 1.2, D + 1.4), Vector3.new(0, H + 1, 6), RED, M.SmoothPlastic)
+	-- shop window and counter opening
+	mk("Window", Vector3.new(W - 10, 6, 0.3), Vector3.new(0, 6.2, 6 - D / 2 - 0.05), GLASS2, M.Glass, { t = 0.35 })
+	for x = -W / 2 + 5, W / 2 - 5, (W - 10) / 4 do
+		mk("Mullion", Vector3.new(0.4, 6, 0.5), Vector3.new(x, 6.2, 6 - D / 2 - 0.1), DARK2, M.Metal)
+	end
+	mk("Counter", Vector3.new(W - 8, 3.6, 3), Vector3.new(0, 2.2, 6 - D / 2 - 1.6), RED, M.SmoothPlastic)
+	mk("CounterTop", Vector3.new(W - 7, 0.4, 3.6), Vector3.new(0, 4.2, 6 - D / 2 - 1.6), C(60, 64, 72), M.Metal)
+	-- striped awning
+	for k = 0, 9 do
+		local c = (k % 2 == 0) and RED or WHITE
+		local x = -W / 2 + (k + 0.5) * (W / 10)
+		Part(m, "Awning", Vector3.new(W / 10, 0.4, 7), cf * CFrame.new(x, 10.4, 6 - D / 2 - 3.2) * CFrame.Angles(math.rad(-16), 0, 0), c, M.SmoothPlastic, { collide = false })
+	end
+	-- big sign
+	local sign = mk("ShopSign", Vector3.new(W - 4, 4.6, 0.6), Vector3.new(0, H + 4, 6 - D / 2 + 1), DARK2, M.SmoothPlastic)
+	Label(sign, Enum.NormalId.Front, "PIT STOP  UPGRADES", C(255, 210, 63))
+	for _, s in ipairs({ -1, 1 }) do
+		mk("SignLeg", Vector3.new(0.6, 3, 0.6), Vector3.new(s * (W / 2 - 4), H + 1.4, 6 - D / 2 + 1), DARK2, M.Metal)
+	end
+	-- props: tire rack, oil cans, a lifted showcase engine
+	Prefabs.TireStack(m, cf:PointToWorldSpace(Vector3.new(-W / 2 - 1, 0.4, -5)), ctx.rng)
+	Prefabs.TireStack(m, cf:PointToWorldSpace(Vector3.new(W / 2 + 1, 0.4, -5)), ctx.rng)
+	for k = 0, 2 do
+		mk("OilCan", Vector3.new(1.2, 1.6, 1), Vector3.new(-6 + k * 1.6, 5.2, 6 - D / 2 - 1.4), ({ C(255, 196, 40), C(40, 120, 200), C(50, 160, 80) })[k + 1], M.SmoothPlastic)
+	end
+	local npcSpot = mk("NpcSpot", Vector3.new(2, 0.2, 2), Vector3.new(0, 0.5, 6 - D / 2 + 1.5), WHITE, M.SmoothPlastic, { t = 1, collide = false })
+	npcSpot:SetAttribute("Yaw", cfg.yaw)
+	local prompt = mk("ShopPrompt", Vector3.new(6, 6, 2), Vector3.new(0, 3.5, 6 - D / 2 - 4), WHITE, M.SmoothPlastic, { t = 1, collide = false })
+	CollectionService:AddTag(prompt, "ShopPrompt")
+	for _, s in ipairs({ -1, 1 }) do
+		local lamp = mk("ShopLamp", Vector3.new(0.6, 0.6, 0.6), Vector3.new(s * 8, 9.8, 6 - D / 2 - 2), C(255, 240, 210), M.Neon, { light = true, collide = false })
+		local l = Instance.new("PointLight")
+		l.Range = 16
+		l.Brightness = 1.4
+		l.Color = C(255, 230, 190)
+		l.Parent = lamp
+	end
+	m.Parent = f.Buildings
+end
+
+-- Golden Magnate donation stall (the animated NPC is spawned by DonateService)
+local function buildDonateStall(ctx)
+	local f = ctx.f
+	local cfg = MapConfig.DonateStall
+	local cf = CFrame.new(cfg.x, 0.2, cfg.z) * CFrame.Angles(0, cfg.yaw, 0)
+	local m = Instance.new("Model")
+	m.Name = "MagnateStall"
+	local function mk(name, size, off, color, mat, o)
+		return Part(m, name, size, cf * CFrame.new(off), color, mat, o)
+	end
+	local GOLD, DEEP, CREAM, WOOD = C(232, 178, 50), C(28, 32, 44), C(250, 240, 214), C(110, 70, 40)
+	mk("Rug", Vector3.new(18, 0.12, 14), Vector3.new(0, 0.15, -2), C(150, 30, 40), M.Fabric, { collide = false })
+	mk("Counter", Vector3.new(14, 4, 3.4), Vector3.new(0, 2.2, -4), WOOD, M.Wood)
+	mk("CounterTop", Vector3.new(14.6, 0.5, 4), Vector3.new(0, 4.4, -4), GOLD, M.Metal, { refl = 0.25 })
+	mk("BackPanel", Vector3.new(14, 11, 1), Vector3.new(0, 5.7, 4), DEEP, M.SmoothPlastic)
+	for _, s in ipairs({ -1, 1 }) do
+		mk("Pillar", Vector3.new(1.2, 13, 1.2), Vector3.new(s * 7.4, 6.5, 4), GOLD, M.Metal, { refl = 0.2 })
+		mk("PillarFront", Vector3.new(1, 11, 1), Vector3.new(s * 7.4, 5.5, -5.6), GOLD, M.Metal, { refl = 0.2 })
+	end
+	for k = 0, 6 do
+		local c = (k % 2 == 0) and GOLD or CREAM
+		Part(m, "Canopy", Vector3.new(16 / 7, 0.4, 11), cf * CFrame.new(-8 + (k + 0.5) * 16 / 7, 12.2, -0.8) * CFrame.Angles(math.rad(-10), 0, 0), c, M.SmoothPlastic, { collide = false })
+	end
+	local sign = mk("StallSign", Vector3.new(13, 3, 0.5), Vector3.new(0, 14.4, 4), DEEP, M.SmoothPlastic)
+	Label(sign, Enum.NormalId.Front, "GOLDEN MAGNATE", GOLD)
+	-- treasure: coin piles and gold bars
+	for k = 0, 4 do
+		local c = mk("Coins", Vector3.new(0.6, 1.4, 1.4), Vector3.new(-5 + k * 2.4, 5, -4), GOLD, M.Metal, { shape = CYL, refl = 0.3, collide = false })
+		c.CFrame = cf * CFrame.new(-5 + k * 2.4, 4.95 + (k % 2) * 0.3, -4) * UPRIGHT
+	end
+	for k = 0, 2 do
+		mk("GoldBar", Vector3.new(2, 0.7, 1), Vector3.new(-1.5 + k * 1.5, 1.2 + (k == 1 and 0.7 or 0), 1.5), GOLD, M.Metal, { refl = 0.35 })
+	end
+	local spot = mk("NpcSpot", Vector3.new(2, 0.2, 2), Vector3.new(0, 0.5, 1.6), CREAM, M.SmoothPlastic, { t = 1, collide = false })
+	spot:SetAttribute("Yaw", cfg.yaw)
+	local prompt = mk("DonatePrompt", Vector3.new(6, 6, 2), Vector3.new(0, 3.5, -7), CREAM, M.SmoothPlastic, { t = 1, collide = false })
+	CollectionService:AddTag(prompt, "DonatePrompt")
+	local glow = mk("StallLight", Vector3.new(0.6, 0.6, 0.6), Vector3.new(0, 11.4, -3), C(255, 220, 150), M.Neon, { light = true, collide = false })
+	local l = Instance.new("PointLight")
+	l.Range = 18
+	l.Brightness = 1.6
+	l.Color = C(255, 210, 120)
+	l.Parent = glow
+	m.Parent = f.Buildings
+end
+
+local SHOWCASE_Z = (MapConfig.BaseCenters[1].z + MapConfig.BaseCenters[3].z) / 2
+
 local function buildPlaza(ctx)
 	local f = ctx.f
 	local P = MapConfig.Plaza
@@ -3671,66 +5052,46 @@ local function buildPlaza(ctx)
 	local zm = (zS + zE) / 2
 	Part(f.Ground, "PlazaGround", Vector3.new(2 * HW, 2, len), CFrame.new(0, -1, zm), P.ground, M.Grass)
 	Part(f.Ground, "Promenade", Vector3.new(2 * PW, 0.4, len - 6), CFrame.new(0, 0, zm - 1), P.paving, M.Concrete)
-	local band = 0
-	for z = zS + 10, zE - 20, 20 do
-		band = band + 1
-		if band % 2 == 0 then
-			Part(f.Ground, "PavingBand", Vector3.new(2 * PW - 4, 0.06, 10), CFrame.new(0, 0.23, z), C(250, 240, 222), M.Concrete, { collide = false, cast = false })
-		end
+	-- paving pattern: large slabs with thin joints
+	for z = zS + 8, zE - 8, 12 do
+		Part(f.Ground, "PavingJoint", Vector3.new(2 * PW - 2, 0.04, 0.25), CFrame.new(0, 0.22, z), C(208, 200, 186), M.SmoothPlastic, { collide = false, cast = false })
 	end
 	for _, s in ipairs({ -1, 1 }) do
-		Part(f.Ground, "PromenadeEdge", Vector3.new(1.2, 0.5, len - 6), CFrame.new(s * PW, 0.25, zm - 1), C(255, 210, 63), M.SmoothPlastic, { collide = false })
+		Part(f.Ground, "Curb", Vector3.new(1.2, 0.6, len - 6), CFrame.new(s * PW, 0.3, zm - 1), C(150, 150, 146), M.Concrete)
 	end
 
 	for i = 1, MapConfig.BaseCount do
 		buildBase(ctx, i)
 	end
+	buildShop(ctx)
+	buildDonateStall(ctx)
 
-	-- entry arch (checkered finish-line style)
+	-- entry arch: steel truss with a checkered finish banner
 	for _, s in ipairs({ -1, 1 }) do
-		Part(f.Buildings, "ArchPillar", Vector3.new(6, 24, 6), CFrame.new(s * 62, 12, zE - 4), C(255, 59, 59), M.SmoothPlastic)
-		Part(f.Buildings, "ArchGlow", Vector3.new(1, 22, 1), CFrame.new(s * 58.8, 12, zE - 7.2), C(255, 210, 63), M.Neon, { collide = false })
+		Part(f.Buildings, "ArchPillar", Vector3.new(3, 24, 3), CFrame.new(s * 40, 12, zE - 4), C(52, 56, 64), M.Metal)
+		Part(f.Buildings, "ArchFoot", Vector3.new(5, 1.2, 5), CFrame.new(s * 40, 0.6, zE - 4), C(120, 124, 132), M.Concrete)
 	end
-	local beam = Part(f.Buildings, "ArchBeam", Vector3.new(130, 6, 8), CFrame.new(0, 24, zE - 4), C(27, 31, 42), M.SmoothPlastic)
+	local beam = Part(f.Buildings, "ArchBeam", Vector3.new(83, 5, 3), CFrame.new(0, 24, zE - 4), C(26, 30, 38), M.SmoothPlastic)
 	Label(beam, Enum.NormalId.Front, "CAR HUNTERS", C(255, 210, 63))
-	Label(beam, Enum.NormalId.Back, "SAFE PLAZA", C(52, 208, 88))
-	Prefabs.Checker(f.Buildings, CFrame.new(0, 20.6, zE - 4), 130, 1.6, 8.4)
+	Label(beam, Enum.NormalId.Back, "SAFE ZONE", C(255, 255, 255))
+	Prefabs.Checker(f.Buildings, CFrame.new(0, 20.4, zE - 4), 80, 2.4, 2.8)
 
-	-- showcase: legendary cars on podiums + fountain, off the central speed lane
-	local legends = CarConfig.ByRarity.Legendary
-	local spots = { Vector3.new(-55, 0, -235), Vector3.new(55, 0, -235), Vector3.new(55, 0, -135) }
-	for k, pos in ipairs(spots) do
-		local def = legends[k]
-		Part(f.StreetProps, "Podium", Vector3.new(1.2, 20, 20), CFrame.new(pos.X, 0.8, pos.Z) * UPRIGHT, C(27, 31, 42), M.SmoothPlastic, { shape = CYL })
-		Part(f.StreetProps, "PodiumRing", Vector3.new(0.3, 21, 21), CFrame.new(pos.X, 1.45, pos.Z) * UPRIGHT, def.neon or P.accent, M.Neon, { shape = CYL, collide = false })
-		local car = VehicleFactory.BuildCar(def)
-		car:PivotTo(CFrame.new(pos.X, 1.5, pos.Z) * CFrame.Angles(0, math.rad(35 + k * 40), 0))
-		car.Parent = f.StreetProps
-		CollectionService:AddTag(car, "Turntable")
-		Prefabs.Count = Prefabs.Count + 1
+	-- leaderboard + contracts board near the exit
+	local lb = MapConfig.Leaderboard
+	for _, s in ipairs({ -1, 1 }) do
+		Part(f.StreetProps, "LBPost", Vector3.new(1, 14, 1), CFrame.new(lb.x + s * 9, 7, lb.z), C(52, 56, 64), M.Metal)
 	end
-	Prefabs.Fountain(f.StreetProps, Vector3.new(-55, 0.2, -135), P.accent)
-	local sb = Part(f.StreetProps, "ShowcaseSign", Vector3.new(40, 6, 1), CFrame.new(0, 16, -262), C(27, 31, 42), M.SmoothPlastic)
-	Label(sb, Enum.NormalId.Front, "COLLECT THEM ALL", C(255, 210, 63))
-	Part(f.StreetProps, "ShowcasePostL", Vector3.new(1, 14, 1), CFrame.new(-18, 7, -262), C(27, 31, 42), M.Metal)
-	Part(f.StreetProps, "ShowcasePostR", Vector3.new(1, 14, 1), CFrame.new(18, 7, -262), C(27, 31, 42), M.Metal)
-
-	Prefabs.DistrictSign(f.StreetProps, Vector3.new(-62, 0, 40), "GRAB PARTS - RUN HOME - THROW ON THE TRAP", C(46, 168, 255), 0)
-
-	local lbPos = Vector3.new(62, 0, 44)
-	Part(f.StreetProps, "LBPostL", Vector3.new(1, 12, 1), CFrame.new(lbPos.X - 15, 6, lbPos.Z), C(27, 31, 42), M.Metal)
-	Part(f.StreetProps, "LBPostR", Vector3.new(1, 12, 1), CFrame.new(lbPos.X + 15, 6, lbPos.Z), C(27, 31, 42), M.Metal)
-	local lb = Part(f.StreetProps, "Leaderboard", Vector3.new(36, 20, 1), CFrame.new(lbPos.X, 18, lbPos.Z), C(27, 31, 42), M.SmoothPlastic)
+	local board = Part(f.StreetProps, "Leaderboard", Vector3.new(20, 12, 0.8), CFrame.new(lb.x, 14, lb.z), C(26, 30, 38), M.SmoothPlastic)
 	local gui = Instance.new("SurfaceGui")
 	gui.Name = "Gui"
 	gui.Face = Enum.NormalId.Front
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	gui.PixelsPerStud = 24
+	gui.PixelsPerStud = 30
 	gui.LightInfluence = 0
-	gui.Parent = lb
+	gui.Parent = board
 	local title = Instance.new("TextLabel")
 	title.Name = "Title"
-	title.Size = UDim2.fromScale(1, 0.18)
+	title.Size = UDim2.fromScale(1, 0.2)
 	title.BackgroundTransparency = 1
 	title.Font = Enum.Font.LuckiestGuy
 	title.TextScaled = true
@@ -3739,8 +5100,8 @@ local function buildPlaza(ctx)
 	title.Parent = gui
 	local rows = Instance.new("TextLabel")
 	rows.Name = "Rows"
-	rows.Position = UDim2.fromScale(0.04, 0.2)
-	rows.Size = UDim2.fromScale(0.92, 0.76)
+	rows.Position = UDim2.fromScale(0.05, 0.22)
+	rows.Size = UDim2.fromScale(0.9, 0.74)
 	rows.BackgroundTransparency = 1
 	rows.Font = Enum.Font.FredokaOne
 	rows.TextSize = 26
@@ -3749,65 +5110,79 @@ local function buildPlaza(ctx)
 	rows.TextColor3 = C(255, 255, 255)
 	rows.Text = ""
 	rows.Parent = gui
-	Part(f.StreetProps, "LBTrim", Vector3.new(37, 0.7, 1.4), CFrame.new(lbPos.X, 28.2, lbPos.Z), C(255, 210, 63), M.Neon, { collide = false })
+	local cb = MapConfig.ContractBoard
+	for _, s in ipairs({ -1, 1 }) do
+		Part(f.StreetProps, "CBPost", Vector3.new(0.8, 9, 0.8), CFrame.new(cb.x + s * 7, 4.5, cb.z), C(110, 70, 40), M.Wood)
+	end
+	local cboard = Part(f.StreetProps, "ContractBoard", Vector3.new(15, 7, 0.6), CFrame.new(cb.x, 7, cb.z), C(140, 96, 56), M.Wood)
+	Label(cboard, Enum.NormalId.Front, "CONTRACTS", C(255, 240, 200))
+	CollectionService:AddTag(cboard, "ContractBoard")
 
+	-- greenery and street furniture, kept clear of the running lanes and garage connectors
 	local rng = ctx.rng
 	local lampV = 1
-	for z = zS + 20, zE - 20, 40 do
-		if not nearBaseRow(z, 10) then
+	for z = zS + 16, zE - 16, 32 do
+		if not nearBaseRow(z, 12) then
 			for _, s in ipairs({ -1, 1 }) do
-				Prefabs.Lamp(f.StreetProps, Vector3.new(s * (PW - 8), 0.4, z), lampV, P.accent, (s &lt; 0) and 0 or math.pi)
+				Prefabs.Lamp(f.StreetProps, Vector3.new(s * (PW - 4), 0.4, z), lampV, C(255, 228, 180), (s &lt; 0) and 0 or math.pi)
 			end
-			lampV = lampV % 3 + 1
+			lampV = lampV % 2 + 1
 		end
 	end
-	for z = zS + 30, zE - 30, 50 do
-		if not nearBaseRow(z, 14) then
+	for z = zS + 24, zE - 24, 30 do
+		local nearShop = math.abs(z - MapConfig.Shop.z) &lt; 22 or math.abs(z - SHOWCASE_Z) &lt; 14
+		if not nearBaseRow(z, 14) and not nearShop then
 			for _, s in ipairs({ -1, 1 }) do
-				Prefabs.Tree(f.StreetProps, Vector3.new(s * (PW - 22), 0.4, z), rng, "tree")
-				Prefabs.Bench(f.StreetProps, Vector3.new(s * (PW - 30), 0.4, z + 12), (s &lt; 0) and math.pi / 2 or -math.pi / 2)
+				Prefabs.Tree(f.StreetProps, Vector3.new(s * (PW - 14), 0.4, z), rng, "tree")
+				Prefabs.Bench(f.StreetProps, Vector3.new(s * 18, 0.4, z + 8), (s &lt; 0) and math.pi / 2 or -math.pi / 2)
+				Prefabs.FlowerBed(f.StreetProps, Vector3.new(s * 34, 0.2, z), 6, 10, rng)
 			end
 		end
 	end
-	for _, z in ipairs({ -310, -40 }) do
-		for _, s in ipairs({ -1, 1 }) do
-			Prefabs.FlowerBed(f.StreetProps, Vector3.new(s * 30, 0.2, z), 8, 14, rng)
-		end
-	end
-	for _, s in ipairs({ -1, 1 }) do
-		Prefabs.TireStack(f.StreetProps, Vector3.new(s * 24, 0.2, 48), rng)
-		Prefabs.TireStack(f.StreetProps, Vector3.new(s * 30, 0.2, 54), rng)
+	-- legendary showcase between the first garage rows
+	local legends = CarConfig.ByRarity.Legendary
+	for k, x in ipairs({ -30, 30 }) do
+		local def = legends[k]
+		local z = SHOWCASE_Z
+		Part(f.StreetProps, "Podium", Vector3.new(1.2, 18, 18), CFrame.new(x, 0.8, z) * UPRIGHT, C(40, 44, 52), M.Metal, { shape = CYL })
+		Part(f.StreetProps, "PodiumRim", Vector3.new(0.4, 18.6, 18.6), CFrame.new(x, 1.2, z) * UPRIGHT, C(232, 178, 50), M.Metal, { shape = CYL, collide = false })
+		local car = VehicleFactory.BuildCar(def)
+		car:PivotTo(CFrame.new(x, 1.5, z) * CFrame.Angles(0, math.rad(40 + k * 90), 0))
+		car.Parent = f.StreetProps
+		CollectionService:AddTag(car, "Turntable")
+		Prefabs.Count = Prefabs.Count + 1
 	end
 end
 
+-- Running lanes: dark asphalt strips, white separator, white arrows. One lane each way.
 local function buildSpeedLanes(ctx)
 	local f = ctx.f
-	local ORANGE, YELLOW = C(255, 138, 31), C(255, 210, 63)
-	for i, r in ipairs(MapConfig.SpeedLanes()) do
+	local LANE, WHITE = C(54, 56, 62), C(245, 245, 245)
+	for _, r in ipairs(MapConfig.SpeedLanes()) do
 		local w, l = r[2] - r[1], r[4] - r[3]
 		local cx, cz = (r[1] + r[2]) / 2, (r[3] + r[4]) / 2
-		local alongZ = l &gt;= w
-		local y = (cz &lt; MapConfig.EntryZ) and 0.32 or 0.2
-		local lane = Part(f.StreetProps, "SpeedLane", Vector3.new(w, 0.12, l), CFrame.new(cx, y, cz), ORANGE, M.Neon, { collide = false, cast = false })
-		lane.Transparency = 0.15
-		lane:SetAttribute("LaneIndex", i)
-		CollectionService:AddTag(lane, "SpeedLane")
+		local alongZ = r[5] == 0
+		local y = (cz &lt; MapConfig.EntryZ and math.abs(cx) &lt; MapConfig.PromenadeHalfWidth) and 0.26 or 0.1
+		local lane = Part(f.StreetProps, "RunLane", Vector3.new(w, 0.12, l), CFrame.new(cx, y, cz), LANE, M.SmoothPlastic, { collide = false, cast = false })
+		CollectionService:AddTag(lane, "RunLane")
+		-- white edge lines
 		for _, s in ipairs({ -1, 1 }) do
-			local edge = alongZ and Vector3.new(0.5, 0.14, l) or Vector3.new(w, 0.14, 0.5)
-			local off = alongZ and Vector3.new(s * (w / 2 + 0.25), 0, 0) or Vector3.new(0, 0, s * (l / 2 + 0.25))
-			Part(f.StreetProps, "SpeedLaneEdge", edge, CFrame.new(cx, y + 0.02, cz) + off, YELLOW, M.SmoothPlastic, { collide = false, cast = false })
+			local size = alongZ and Vector3.new(0.3, 0.04, l) or Vector3.new(w, 0.04, 0.3)
+			local off = alongZ and Vector3.new(s * (w / 2 - 0.25), 0, 0) or Vector3.new(0, 0, s * (l / 2 - 0.25))
+			Part(f.StreetProps, "LaneLine", size, CFrame.new(cx, y + 0.08, cz) + off, WHITE, M.SmoothPlastic, { collide = false, cast = false })
 		end
-		-- chevrons
-		local n = math.floor(math.max(w, l) / 9)
+		-- arrows: shaft + two head strokes, every 14 studs
+		local dir = Vector3.new(r[5], 0, r[6])
+		local yaw = math.atan2(-dir.X, -dir.Z)
+		local span = alongZ and l or w
+		local n = math.max(1, math.floor(span / 14))
 		for k = 0, n - 1 do
 			local t = (k + 0.5) / n
-			local p = alongZ and Vector3.new(cx, y + 0.04, r[3] + t * l) or Vector3.new(r[1] + t * w, y + 0.04, cz)
+			local p = alongZ and Vector3.new(cx, y + 0.08, r[3] + t * l) or Vector3.new(r[1] + t * w, y + 0.08, cz)
+			local acf = CFrame.new(p) * CFrame.Angles(0, yaw, 0) -- local -Z = arrow direction
+			Part(f.StreetProps, "Arrow", Vector3.new(0.7, 0.04, 4), acf * CFrame.new(0, 0, 0.6), WHITE, M.SmoothPlastic, { collide = false, cast = false })
 			for _, s in ipairs({ -1, 1 }) do
-				local rot = alongZ and CFrame.Angles(0, s * math.rad(40), 0) or CFrame.Angles(0, math.rad(90) + s * math.rad(40), 0)
-				local off = alongZ and Vector3.new(s * 1.4, 0, 0) or Vector3.new(0, 0, s * 1.4)
-				local ch = Part(f.StreetProps, "Chevron", Vector3.new(0.8, 0.06, 4.2), CFrame.new(p + off) * rot, YELLOW, M.Neon, { collide = false, cast = false })
-				ch:SetAttribute("Phase", t)
-				CollectionService:AddTag(ch, "SpeedChevron")
+				Part(f.StreetProps, "ArrowHead", Vector3.new(0.7, 0.04, 2.4), acf * CFrame.new(s * 0.75, 0, -1.6) * CFrame.Angles(0, s * math.rad(40), 0), WHITE, M.SmoothPlastic, { collide = false, cast = false })
 			end
 		end
 	end
@@ -3821,13 +5196,13 @@ local function buildGate(ctx, gate, zone)
 	local len = HW - gw
 	for _, s in ipairs({ -1, 1 }) do
 		Part(f.ZoneGates, "Fence", Vector3.new(len, 10, 4), CFrame.new(s * (gw + len / 2), 5, gz), pal.curb, M.Metal)
-		Part(f.ZoneGates, "FenceNeon", Vector3.new(len, 0.6, 4.4), CFrame.new(s * (gw + len / 2), 10.3, gz), pal.accent, M.Neon, { collide = false })
+		Part(f.ZoneGates, "FenceCap", Vector3.new(len, 0.6, 4.4), CFrame.new(s * (gw + len / 2), 10.3, gz), C(52, 56, 64), M.Metal, { collide = false })
 		Part(f.ZoneGates, "GatePillar", Vector3.new(4, 20, 5), CFrame.new(s * (gw + 2), 10, gz), C(30, 34, 46), M.Metal)
 	end
 	local beam = Part(f.ZoneGates, "GateBeam", Vector3.new(2 * gw + 8, 4, 5), CFrame.new(0, 22, gz), C(20, 22, 32), M.Metal)
 	Label(beam, Enum.NormalId.Front, zone.name, pal.accent)
 	Label(beam, Enum.NormalId.Back, zone.name, pal.accent)
-	local barrier = Part(f.ZoneGates, "GateBarrier_" .. zone.id, Vector3.new(2 * gw, 20, 1.5), CFrame.new(0, 10, gz), C(255, 60, 60), M.Neon, { t = 0.5 })
+	local barrier = Part(f.ZoneGates, "GateBarrier_" .. zone.id, Vector3.new(2 * gw, 20, 1.5), CFrame.new(0, 10, gz), C(214, 52, 44), M.SmoothPlastic)
 	barrier:SetAttribute("ZoneId", zone.id)
 	CollectionService:AddTag(barrier, "ZoneGate")
 	Label(barrier, Enum.NormalId.Front, "LOCKED", C(255, 255, 255))
@@ -3842,7 +5217,7 @@ local function buildEntryFence(ctx, zone)
 	local len = HW - ow
 	for _, s in ipairs({ -1, 1 }) do
 		Part(f.ZoneGates, "EntryFence", Vector3.new(len, 8, 3), CFrame.new(s * (ow + len / 2), 4, ez + 1.5), pal.curb, M.Metal)
-		Part(f.ZoneGates, "EntryFenceNeon", Vector3.new(len, 0.5, 3.4), CFrame.new(s * (ow + len / 2), 8.2, ez + 1.5), pal.accent, M.Neon, { collide = false })
+		Part(f.ZoneGates, "EntryFenceCap", Vector3.new(len, 0.5, 3.4), CFrame.new(s * (ow + len / 2), 8.2, ez + 1.5), C(52, 56, 64), M.Metal, { collide = false })
 	end
 end
 
@@ -3856,9 +5231,6 @@ local function buildRoad(ctx, road, pal, zid)
 		Part(f.Roads, "EdgeLine", Vector3.new(len, 0.05, 0.5), CFrame.new(0, 0.22, z0 + s * (W / 2 - 0.8)), WHITE, M.SmoothPlastic, { collide = false, cast = false })
 		Part(f.Roads, "MedianLine", Vector3.new(len, 0.05, 0.35), CFrame.new(0, 0.22, z0 + s * (M_ / 2 + 0.5)), YELLOW, M.SmoothPlastic, { collide = false, cast = false })
 		Part(f.Sidewalks, "Sidewalk", Vector3.new(2 * HW, 1.6, MapConfig.SidewalkWidth), CFrame.new(0, 0, z0 + s * (W / 2 + MapConfig.SidewalkWidth / 2)), pal.sidewalk, M.Concrete)
-		if zid == "neon" then
-			Part(f.StreetProps, "NeonEdge", Vector3.new(2 * HW, 0.15, 0.3), CFrame.new(0, 0.86, z0 + s * (W / 2 + 0.2)), pal.accent, M.Neon, { collide = false, cast = false })
-		end
 		if road.lanesPerSide &gt;= 2 then
 			local zl = z0 + s * (M_ / 2 + road.laneWidth)
 			for x = -HW + 6, HW - 6, 14 do
@@ -3954,15 +5326,15 @@ local function buildRoad(ctx, road, pal, zid)
 		end
 	elseif zid == "neon" then
 		for x = -(HW - 30), HW - 30, 80 do
-			Prefabs.HoloRing(f.StreetProps, Vector3.new(x, 16, z0), (x % 160 == 0) and pal.accent or pal.accent2, 12)
+			Prefabs.Lamp(f.StreetProps, Vector3.new(x, 0.8, z0), 2, C(255, 200, 140), 0)
 		end
 	end
 	if zid == "highway" then
 		for _, s in ipairs({ -1, 1 }) do
 			local x = s * 75
 			Part(f.Buildings, "OverpassDeck", Vector3.new(14, 2, W + 28), CFrame.new(x, 16, z0), C(150, 154, 162), M.Concrete)
-			Part(f.Buildings, "OverpassRailA", Vector3.new(0.6, 1.4, W + 28), CFrame.new(x - 6.7, 17.7, z0), pal.accent, M.Neon, { collide = false })
-			Part(f.Buildings, "OverpassRailB", Vector3.new(0.6, 1.4, W + 28), CFrame.new(x + 6.7, 17.7, z0), pal.accent, M.Neon, { collide = false })
+			Part(f.Buildings, "OverpassRailA", Vector3.new(0.6, 1.4, W + 28), CFrame.new(x - 6.7, 17.7, z0), C(190, 192, 198), M.Metal, { collide = false })
+			Part(f.Buildings, "OverpassRailB", Vector3.new(0.6, 1.4, W + 28), CFrame.new(x + 6.7, 17.7, z0), C(190, 192, 198), M.Metal, { collide = false })
 			for _, k in ipairs({ -1, 1 }) do
 				Part(f.Buildings, "OverpassPillar", Vector3.new(6, 15, 6), CFrame.new(x, 7.5, z0 + k * (W / 2 + 12)), C(130, 134, 142), M.Concrete)
 			end
@@ -4022,7 +5394,7 @@ local function placeBlock(ctx, blk, pal, zid)
 	local pathCol = (zid == "neon") and C(44, 36, 78) or ((zid == "industrial") and C(150, 142, 128) or pal.sidewalk)
 	Part(f.Ground, "BlockPath", Vector3.new(26, 0.12, depth), CFrame.new(0, 0.06, (zA + zB) / 2), pathCol, M.Concrete, { collide = false })
 	for _, s in ipairs({ -1, 1 }) do
-		Part(f.Ground, "BlockPathEdge", Vector3.new(0.8, 0.16, depth), CFrame.new(s * 13.4, 0.08, (zA + zB) / 2), (zid == "neon") and pal.accent or C(250, 246, 238), (zid == "neon") and M.Neon or M.Concrete, { collide = false, cast = false })
+		Part(f.Ground, "BlockPathEdge", Vector3.new(0.8, 0.16, depth), CFrame.new(s * 13.4, 0.08, (zA + zB) / 2), C(250, 246, 238), M.Concrete, { collide = false, cast = false })
 	end
 	if depth &gt; 50 then
 		if zid == "city" or zid == "highway" then
@@ -4066,8 +5438,7 @@ local function placeBlock(ctx, blk, pal, zid)
 		local x = rr(rng, 14, 85) * (rng() &lt; 0.5 and -1 or 1)
 		local z = rr(rng, zA + 6, zB - 6)
 		if zid == "neon" then
-			Part(f.StreetProps, "NeonPost", Vector3.new(0.8, 6, 0.8), CFrame.new(x, 3.4, z), pal.curb, M.Metal)
-			Part(f.StreetProps, "NeonOrb", Vector3.new(1.8, 1.8, 1.8), CFrame.new(x, 6.8, z), pick(rng, { pal.accent, pal.accent2 }), M.Neon, { shape = Enum.PartType.Ball, collide = false })
+			Prefabs.Lamp(f.StreetProps, Vector3.new(x, 0.4, z), 3, C(255, 200, 140), 0)
 		elseif zid == "industrial" then
 			Part(f.StreetProps, "Barrel", Vector3.new(3, 3.6, 3), CFrame.new(x, 2.2, z), pick(rng, { C(200, 70, 50), C(70, 110, 190) }), M.Metal, { shape = CYL }).CFrame = CFrame.new(x, 2.2, z) * UPRIGHT
 		else
@@ -4082,12 +5453,12 @@ local function placeBlock(ctx, blk, pal, zid)
 	end
 	if zid == "neon" then
 		local zc = (zA + zB) / 2
-		for _, s in ipairs({ -1, 1 }) do
-			Part(f.StreetProps, "NeonArchPillar", Vector3.new(2, 18, 2), CFrame.new(s * 42, 9, zc), C(20, 30, 50), M.Metal)
-			Part(f.StreetProps, "NeonArchGlow", Vector3.new(0.5, 18, 0.5), CFrame.new(s * 42 - s * 1.1, 9, zc), pal.accent, M.Neon, { collide = false })
+		for _, sx in ipairs({ -1, 1 }) do
+			Part(f.StreetProps, "BannerPost", Vector3.new(1.2, 18, 1.2), CFrame.new(sx * 22, 9, zc), C(52, 56, 64), M.Metal)
 		end
-		Part(f.StreetProps, "NeonArchTop", Vector3.new(86, 2, 3), CFrame.new(0, 19, zc), C(20, 30, 50), M.Metal)
-		Part(f.StreetProps, "NeonArchTopGlow", Vector3.new(86, 0.5, 3.4), CFrame.new(0, 17.8, zc), pal.accent2, M.Neon, { collide = false })
+		local ban = Part(f.StreetProps, "Banner", Vector3.new(40, 4, 0.5), CFrame.new(0, 16, zc), C(30, 34, 44), M.SmoothPlastic)
+		Label(ban, Enum.NormalId.Front, "NIGHT RACERS ONLY", C(255, 170, 60))
+		Label(ban, Enum.NormalId.Back, "DRIVE SAFE", C(255, 255, 255))
 	end
 end
 
@@ -4100,7 +5471,7 @@ local function genSpawnPoints(ctx, zid, blocks, roads)
 	local idc = 0
 	local function addPoint(x, y, z, risk)
 		idc = idc + 1
-		local p = Part(f.PartSpawnPoints, string.format("SP_%s_%s_%02d", zid, risk, idc), Vector3.new(2, 0.4, 2), CFrame.new(x, y + 0.2, z), (risk == "risky") and C(255, 80, 80) or C(80, 255, 140), M.Neon, { t = 0.85, collide = false })
+		local p = Part(f.PartSpawnPoints, string.format("SP_%s_%s_%02d", zid, risk, idc), Vector3.new(2, 0.4, 2), CFrame.new(x, y + 0.2, z), C(255, 255, 255), M.SmoothPlastic, { t = 1, collide = false })
 		p:SetAttribute("ZoneId", zid)
 		p:SetAttribute("Risk", risk)
 		table.insert(placed, { x = x, z = z })
@@ -4121,6 +5492,15 @@ local function genSpawnPoints(ctx, zid, blocks, roads)
 				addPoint(x + rr(rng, -12, 12), MapConfig.SidewalkTopY, r.z, "risky")
 				rcount = rcount + 1
 			end
+		end
+	end
+
+	-- scrap crates right on the traffic lanes: the best loot, the worst place to stand
+	for _, r in ipairs(roads) do
+		local lanes = TrafficMath.RoadLanes[r.id]
+		for k = 1, (counts.road or 0) / #roads do
+			local lane = lanes[(k - 1) % #lanes + 1]
+			addPoint(rr(rng, -(HW - 40), HW - 40), MapConfig.RoadTopY, lane.z, "road")
 		end
 	end
 
@@ -4182,10 +5562,6 @@ local function buildZone(ctx, zid)
 	if zid == "industrial" then
 		Prefabs.Crane(f.Buildings, Vector3.new(-(HW + 40), 0, (zone.zMin + zone.zMax) / 2 - 60), 0, pal.accent2)
 		Prefabs.Crane(f.Buildings, Vector3.new(HW + 40, 0, (zone.zMin + zone.zMax) / 2 + 60), math.pi, pal.accent)
-	elseif zid == "neon" then
-		for k = 1, 6 do
-			Prefabs.HoloRing(f.StreetProps, Vector3.new(((k % 2 == 0) and 1 or -1) * rr(ctx.rng, 20, 80), rr(ctx.rng, 24, 40), zone.zMin + k * 48), (k % 2 == 0) and pal.accent or pal.accent2, rr(ctx.rng, 10, 18))
-		end
 	end
 	genSpawnPoints(ctx, zid, blocks, roads)
 end
@@ -4252,6 +5628,9 @@ function Prefabs.Part(parent, name, size, cf, color, mat, o)
 	p.Anchored = true
 	p.Color = color
 	mat = mat or M.SmoothPlastic
+	if MapConfig.NoNeon and mat == M.Neon and not o.light then
+		mat = M.SmoothPlastic -- only real light sources glow
+	end
 	if MapConfig.Cartoon and (mat == M.Concrete or mat == M.Asphalt or mat == M.Grass or mat == M.Wood) then
 		mat = M.SmoothPlastic -- clean toy look
 	end
@@ -4328,20 +5707,41 @@ local CYL = Enum.PartType.Cylinder
 local BALL = Enum.PartType.Ball
 local UPRIGHT = CFrame.Angles(0, 0, math.pi / 2)
 
+local lampLights = 0
+local function addLight(part, range)
+	if lampLights &gt;= 70 then
+		return -- keep the light count mobile-friendly
+	end
+	lampLights = lampLights + 1
+	local l = Instance.new("PointLight")
+	l.Range = range or 14
+	l.Brightness = 1.1
+	l.Color = Color3.fromRGB(255, 220, 170)
+	l.Shadows = false
+	l.Parent = part
+end
+
 function Prefabs.Lamp(parent, pos, variant, glow, facing)
 	local cf = CFrame.new(pos) * CFrame.Angles(0, facing or 0, 0)
+	local warm = Color3.fromRGB(255, 236, 200)
+	local POLE = C(52, 56, 64)
+	Part(parent, "LampBase", Vector3.new(1.4, 0.8, 1.4), cf * CFrame.new(0, 0.4, 0), POLE, M.Metal)
 	if variant == 1 then
-		Part(parent, "LampPole", Vector3.new(0.7, 12, 0.7), cf * CFrame.new(0, 6, 0), DARK, M.Metal)
-		Part(parent, "LampArm", Vector3.new(4, 0.5, 0.5), cf * CFrame.new(2, 12, 0), DARK, M.Metal)
-		Part(parent, "LampHead", Vector3.new(1.8, 0.6, 1.2), cf * CFrame.new(4, 11.7, 0), glow, M.Neon)
+		Part(parent, "LampPole", Vector3.new(0.6, 12, 0.6), cf * CFrame.new(0, 6, 0), POLE, M.Metal)
+		Part(parent, "LampArm", Vector3.new(4, 0.4, 0.4), cf * CFrame.new(2, 12, 0), POLE, M.Metal)
+		Part(parent, "LampHousing", Vector3.new(2, 0.5, 1.2), cf * CFrame.new(4, 11.9, 0), POLE, M.Metal)
+		addLight(Part(parent, "LampHead", Vector3.new(1.6, 0.15, 0.9), cf * CFrame.new(4, 11.6, 0), warm, M.Neon, { light = true }), 16)
 	elseif variant == 2 then
-		Part(parent, "LampPole", Vector3.new(0.8, 13, 0.8), cf * CFrame.new(0, 6.5, 0), DARK, M.Metal)
-		Part(parent, "LampArmL", Vector3.new(7, 0.5, 0.5), cf * CFrame.new(0, 13, 0) * CFrame.Angles(0, math.pi / 2, 0), DARK, M.Metal)
-		Part(parent, "LampHeadL", Vector3.new(1.4, 0.5, 1.4), cf * CFrame.new(0, 12.7, 3.4), glow, M.Neon)
-		Part(parent, "LampHeadR", Vector3.new(1.4, 0.5, 1.4), cf * CFrame.new(0, 12.7, -3.4), glow, M.Neon)
+		Part(parent, "LampPole", Vector3.new(0.7, 13, 0.7), cf * CFrame.new(0, 6.5, 0), POLE, M.Metal)
+		Part(parent, "LampArmL", Vector3.new(7, 0.4, 0.4), cf * CFrame.new(0, 13, 0) * CFrame.Angles(0, math.pi / 2, 0), POLE, M.Metal)
+		for _, z in ipairs({ 3.4, -3.4 }) do
+			Part(parent, "LampHousing", Vector3.new(1.4, 0.5, 1.4), cf * CFrame.new(0, 12.9, z), POLE, M.Metal)
+			addLight(Part(parent, "LampHead", Vector3.new(1.1, 0.15, 1.1), cf * CFrame.new(0, 12.6, z), warm, M.Neon, { light = true }), 14)
+		end
 	else
-		Part(parent, "LampPole", Vector3.new(0.6, 8, 0.6), cf * CFrame.new(0, 4, 0), DARK, M.Metal)
-		Part(parent, "LampGlobe", Vector3.new(2.4, 2.4, 2.4), cf * CFrame.new(0, 9.2, 0), glow, M.Neon, { shape = BALL, t = 0.1 })
+		Part(parent, "LampPole", Vector3.new(0.5, 8, 0.5), cf * CFrame.new(0, 4, 0), POLE, M.Metal)
+		Part(parent, "LampCap", Vector3.new(2.2, 0.4, 2.2), cf * CFrame.new(0, 10.4, 0), POLE, M.Metal)
+		addLight(Part(parent, "LampGlobe", Vector3.new(1.8, 2.2, 1.8), cf * CFrame.new(0, 9.1, 0), warm, M.Glass, { t = 0.2 }), 12)
 	end
 end
 
@@ -4882,7 +6282,7 @@ function Prefabs.Building(kind, parent, cf, w, d, h, pal, rng)
 end
 
 return Prefabs
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4CAEB2D9D3C4466993CE340DF92360A5"><Properties><string name="Name">CarStoreTool</string><ProtectedString name="Source">-- Installs real car models from the Roblox Creator Store (free models) into ReplicatedStorage.CarModels.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX351D3E452FB849698CA8AE37ABB9DA08"><Properties><string name="Name">CarStoreTool</string><ProtectedString name="Source">-- Installs real car models from the Roblox Creator Store (free models) into ReplicatedStorage.CarModels.
 -- Run in Studio (edit mode), View &gt; Command Bar:
 --   require(game.ServerStorage.Tools.CarStoreTool).InstallAll()
 --   require(game.ServerStorage.Tools.CarStoreTool).Install("bmv_m3", 2629351758)   -- any other asset id
@@ -4997,7 +6397,9 @@ local function sanitize(car)
 	end
 	for _, d in ipairs(car:GetDescendants()) do
 		if d:IsA("BasePart") then
-			if d.Transparency &gt;= 0.99 and not d:FindFirstChildWhichIsA("Decal") then
+			if d.Name == "WheelMarker" then
+				d.CanCollide = false
+			elseif d.Transparency &gt;= 0.99 and not d:FindFirstChildWhichIsA("Decal") then
 				d:Destroy() -- hitboxes, wheel colliders, seat blocks
 			else
 				d.Anchored = true
@@ -5013,6 +6415,123 @@ local function sanitize(car)
 		end
 	end
 	return parts
+end
+
+---------------------------------------------------------------- wheels
+-- Store cars often keep their visible wheels in transparent collider parts or spawn them from chassis
+-- scripts (which we strip). We remember where the wheels are and rebuild any wheel that is missing.
+local WHEEL_NAMES = { "^fl$", "^fr$", "^rl$", "^rr$", "^lf$", "^rf$", "^lr$", "^wheel", "^tire", "^tyre", "^rim", "wheel$" }
+
+local function isWheelName(n)
+	n = string.lower(n)
+	for _, pat in ipairs(WHEEL_NAMES) do
+		if string.find(n, pat) then
+			return true
+		end
+	end
+	return false
+end
+
+local function wheelCandidates(car)
+	local out = {}
+	for _, d in ipairs(car:GetDescendants()) do
+		if d:IsA("BasePart") then
+			local named = isWheelName(d.Name) or (d.Parent and isWheelName(d.Parent.Name))
+			local sz = d.Size
+			local dims = { sz.X, sz.Y, sz.Z }
+			table.sort(dims)
+			local roundish = dims[3] &gt; 0.6 and dims[2] / dims[3] &gt; 0.8 and dims[1] &lt; dims[3] * 0.85
+			if named and roundish then
+				local pos = d.Position
+				local merged = false
+				for _, w in ipairs(out) do
+					if (w.pos - pos).Magnitude &lt; dims[3] * 0.6 then
+						w.r = math.max(w.r, dims[3] / 2)
+						merged = true
+						break
+					end
+				end
+				if not merged then
+					table.insert(out, { pos = pos, r = dims[3] / 2 })
+				end
+			end
+		end
+	end
+	return out
+end
+
+local function guessWheels(car, forward)
+	local bb, size = car:GetBoundingBox()
+	local f = forward
+	local right = f:Cross(Vector3.yAxis).Unit
+	local len = math.abs(size:Dot(Vector3.new(math.abs(f.X), 0, math.abs(f.Z))))
+	local wid = math.abs(size:Dot(Vector3.new(math.abs(right.X), 0, math.abs(right.Z))))
+	local r = math.clamp(size.Y * 0.2, 0.9, 2.2)
+	local bottom = bb.Position.Y - size.Y / 2
+	local out = {}
+	for _, a in ipairs({ 0.33, -0.33 }) do
+		for _, s in ipairs({ -1, 1 }) do
+			local p = Vector3.new(bb.Position.X, bottom + r, bb.Position.Z) + f * (len * a) + right * s * (wid / 2 - r * 0.45)
+			table.insert(out, { pos = p, r = r })
+		end
+	end
+	return out
+end
+
+local function hasVisibleAt(car, pos, r)
+	for _, d in ipairs(car:GetDescendants()) do
+		if d:IsA("BasePart") and d.Transparency &lt; 0.9 and d.Name ~= "AddedWheel" then
+			local lp = d.CFrame:PointToObjectSpace(pos)
+			local h = d.Size / 2
+			local m = r * 0.35
+			if math.abs(lp.X) &lt;= h.X + m and math.abs(lp.Y) &lt;= h.Y + m and math.abs(lp.Z) &lt;= h.Z + m then
+				local dims = { d.Size.X, d.Size.Y, d.Size.Z }
+				table.sort(dims)
+				-- wheel-sized: not a thin trim strip, not the whole body shell whose box covers the arch
+				if dims[2] &gt;= r * 0.9 and dims[3] &lt;= r * 4 then
+					return true
+				end
+			end
+		end
+	end
+	return false
+end
+
+local function addWheel(car, pos, r, right)
+	local folder = car:FindFirstChild("AddedWheels") or Instance.new("Model")
+	folder.Name = "AddedWheels"
+	folder.Parent = car
+	local axis = CFrame.lookAt(pos, pos + right) * CFrame.Angles(0, math.rad(90), 0) -- cylinder X axis = right
+	local function cyl(name, d, w, color, mat, off)
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Shape = Enum.PartType.Cylinder
+		p.Size = Vector3.new(w, d, d)
+		p.CFrame = axis * CFrame.new(off or 0, 0, 0)
+		p.Color = color
+		p.Material = mat
+		p.Anchored, p.CanCollide, p.CanTouch, p.CanQuery, p.Massless = true, false, false, false, true
+		p.Parent = folder
+		return p
+	end
+	local w = math.max(0.7, r * 0.75)
+	cyl("Tire", r * 2, w, Color3.fromRGB(24, 24, 28), Enum.Material.SmoothPlastic)
+	cyl("Rim", r * 1.3, w + 0.06, Color3.fromRGB(196, 200, 208), Enum.Material.Metal)
+	cyl("Hub", r * 0.45, w + 0.12, Color3.fromRGB(60, 62, 70), Enum.Material.Metal)
+end
+
+-- returns how many wheels had to be rebuilt
+local function ensureWheels(car, forward, known)
+	local right = forward:Cross(Vector3.yAxis).Unit
+	local wheels = (known and #known &gt;= 3) and known or guessWheels(car, forward)
+	local added = 0
+	for _, w in ipairs(wheels) do
+		if not hasVisibleAt(car, w.pos, w.r) then
+			addWheel(car, w.pos, w.r, right)
+			added = added + 1
+		end
+	end
+	return added
 end
 
 local function flat(v)
@@ -5043,6 +6562,17 @@ function Tool.Install(carId, assetId, yaw)
 	end
 	local car, seat, holder = pickCar(objs)
 	local forward = seat and flat(seat.CFrame.LookVector) or Vector3.new(0, 0, -1)
+	-- markers survive sanitize/normalize so wheel positions stay in the car's own frame
+	for _, w in ipairs(wheelCandidates(car)) do
+		local mk = Instance.new("Part")
+		mk.Name = "WheelMarker"
+		mk.Size = Vector3.one * 0.2
+		mk.Position = w.pos
+		mk.Anchored = true
+		mk.Transparency = 0.5
+		mk:SetAttribute("R", w.r)
+		mk.Parent = car
+	end
 	local parts = sanitize(car)
 	if parts == 0 then
 		holder:Destroy()
@@ -5054,6 +6584,14 @@ function Tool.Install(carId, assetId, yaw)
 		normalize(car, Vector3.new(1, 0, 0))
 		_, size = car:GetBoundingBox()
 	end
+	local known = {}
+	for _, mk in ipairs(car:GetChildren()) do
+		if mk.Name == "WheelMarker" then
+			table.insert(known, { pos = mk.Position, r = mk:GetAttribute("R") })
+			mk:Destroy()
+		end
+	end
+	local added = ensureWheels(car, Vector3.new(0, 0, -1), known)
 	local len, wid = size.Z, size.X
 	if len / math.max(wid, 0.1) &lt; 1.4 or len / math.max(wid, 0.1) &gt; 4.5 or len / math.max(size.Y, 0.1) &lt; 1.5 or parts &gt; Tool.MaxParts then
 		holder:Destroy()
@@ -5080,7 +6618,7 @@ function Tool.Install(carId, assetId, yaw)
 	if holder ~= car then
 		holder:Destroy()
 	end
-	print(string.format("[CarStore] %-22s &lt;- asset %s  (%d parts)", carId, tostring(assetId), parts))
+	print(string.format("[CarStore] %-22s &lt;- asset %s  (%d parts%s)", carId, tostring(assetId), parts, added &gt; 0 and (", rebuilt " .. added .. " wheels") or ""))
 	return true
 end
 
@@ -5126,6 +6664,33 @@ function Tool.InstallAllNow()
 	end
 	print("[CarStore] check them: require(game.ServerStorage.Tools.CarModelTool).Preview()  - nose must point along +X.")
 	print("[CarStore] wrong way round? require(game.ServerStorage.Tools.CarStoreTool).Flip('car_id')")
+end
+
+-- repair wheels on models that are already installed (store or Blender)
+function Tool.FixWheels()
+	local root = ReplicatedStorage:FindFirstChild("CarModels")
+	if not root then
+		return
+	end
+	local fixed = 0
+	for _, m in ipairs(root:GetChildren()) do
+		if m:IsA("Model") and CarConfig.ById[m.Name] then
+			local old = m:FindFirstChild("AddedWheels")
+			if old then
+				old:Destroy()
+			end
+			local _, size = m:GetBoundingBox()
+			local yaw = math.rad(m:GetAttribute("Yaw") or 0)
+			local fwd = size.Z &gt;= size.X and Vector3.new(0, 0, -1) or Vector3.new(1, 0, 0)
+			fwd = (CFrame.Angles(0, yaw, 0) * CFrame.new(fwd)).Position
+			local n = ensureWheels(m, flat(fwd), nil)
+			if n &gt; 0 then
+				fixed = fixed + 1
+				print(string.format("[CarStore] %s: rebuilt %d wheels", m.Name, n))
+			end
+		end
+	end
+	print(string.format("[CarStore] FixWheels done, %d models repaired", fixed))
 end
 
 function Tool.Flip(carId)
@@ -6498,9 +8063,14 @@ local function refreshHint()
 	end
 end
 
+UI.Hooks = {}
+
 function UI.Refresh()
 	if not store.State then
 		return
+	end
+	for _, fn in ipairs(UI.Hooks) do
+		fn(store.State, state.open)
 	end
 	refreshHud()
 	refreshThrow()
@@ -6588,6 +8158,16 @@ function UI.Init(storeModule, actionTable)
 	UI.Refresh()
 end
 
+-- toolkit for the other UI modules (UIExtra, Markers, Minimap)
+function UI.Kit()
+	return {
+		new = new, toy = toy, text = text, corner = corner, stroke = stroke, gradient = gradient, list = list, clear = clear,
+		tween = tween, pill = pill, lift = lift, panelShell = panelShell, scroller = scroller, carViewport = carViewport,
+		P = P, HEAD = HEAD, BODY = BODY, root = root, gui = gui, hud = hud, panels = panels, state = state, store = store,
+		actions = actions, PART_ICON = PART_ICON,
+	}
+end
+
 return UI
 </ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX51"><Properties><string name="Name">WorldFx</string><ProtectedString name="Source">local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -6617,7 +8197,7 @@ local function applyGate(part)
 	local zone = part:GetAttribute("ZoneId")
 	local unlocked = store.State and store.State.zones and store.State.zones[zone] == true
 	part.CanCollide = not unlocked
-	part.Transparency = unlocked and 1 or 0.5
+	part.Transparency = unlocked and 1 or 0
 	for _, g in ipairs(part:GetChildren()) do
 		if g:IsA("SurfaceGui") then
 			g.Enabled = not unlocked
@@ -6729,7 +8309,7 @@ function Fx.Hit(dir, flashFrame)
 end
 
 return Fx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX541FECAA2D6F46B4B9882DDE750EEF5B"><Properties><string name="Name">CineFx</string><ProtectedString name="Source">-- Cinematic toolkit: camera shake / zoom / takeover, letterbox, darken, flash, glitch, big titles.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXD88B20678C84488DAC35D304D483B45D"><Properties><string name="Name">CineFx</string><ProtectedString name="Source">-- Cinematic toolkit: camera shake / zoom / takeover, letterbox, darken, flash, glitch, big titles.
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
@@ -6941,7 +8521,7 @@ function Cine.Reset(t)
 end
 
 return Cine
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXBC8BB46DF6A94B48B306A46401781356"><Properties><string name="Name">DeathFx</string><ProtectedString name="Source">-- WRECKED! sequence: impact flash, heavy shake, glitch, grayscale-red grade, crane-up camera, countdown.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7B675B053DB943DF93D8FCA7C7E14FBA"><Properties><string name="Name">DeathFx</string><ProtectedString name="Source">-- WRECKED! sequence: impact flash, heavy shake, glitch, grayscale-red grade, crane-up camera, countdown.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -7027,47 +8607,41 @@ function DeathFx.Recover()
 end
 
 return DeathFx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXF0C0B29FB2924CEDA345EBB3EA6C94A7"><Properties><string name="Name">SpeedLanes</string><ProtectedString name="Source">-- Speed lanes: boost WalkSpeed on orange strips, animate chevrons, little FOV kick.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX1EAFB7B26DB3434DBA2E3C6131EE6B3E"><Properties><string name="Name">SpeedLanes</string><ProtectedString name="Source">-- Running lanes: dark strips with white arrows. Boost only while running the way the arrows point.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
-local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MapConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("MapConfig"))
 
 local SpeedLanes = {}
-local ORANGE, YELLOW, WHITE = Color3.fromRGB(255, 138, 31), Color3.fromRGB(255, 210, 63), Color3.fromRGB(255, 255, 255)
+SpeedLanes.Boosting = false
 
-function SpeedLanes.Start()
+function SpeedLanes.Start(getBaseSpeed)
 	local player = Players.LocalPlayer
-	local onLane = false
 	local fov = 70
-	local lastAnim = 0
 	RunService.Heartbeat:Connect(function(dt)
 		local char = player.Character
 		local hum = char and char:FindFirstChildOfClass("Humanoid")
 		local hrp = char and char:FindFirstChild("HumanoidRootPart")
 		local cam = Workspace.CurrentCamera
-		if hum and hrp and hum.Health &gt; 0 then
-			local p = hrp.Position
-			local now = p.Y &lt; 8 and MapConfig.OnSpeedLane(p)
-			if now ~= onLane then
-				onLane = now
-				hum.WalkSpeed = now and MapConfig.LaneSpeed or MapConfig.WalkSpeed
+		local boost = false
+		if hum and hrp and hum.Health &gt; 0 and hrp.Position.Y &lt; 8 then
+			local lane = MapConfig.LaneAt(hrp.Position)
+			local md = hum.MoveDirection
+			if lane and md.Magnitude &gt; 0.1 and (md.X * lane[5] + md.Z * lane[6]) &gt; 0.5 then
+				boost = true
+			end
+			local base = getBaseSpeed and getBaseSpeed() or MapConfig.WalkSpeed
+			local want = boost and (MapConfig.LaneSpeed + (base - MapConfig.WalkSpeed)) or base
+			if math.abs(hum.WalkSpeed - want) &gt; 0.01 then
+				hum.WalkSpeed = want
 			end
 		end
+		SpeedLanes.Boosting = boost
 		if cam and cam.CameraType == Enum.CameraType.Custom then
-			fov = fov + ((onLane and 82 or 70) - fov) * math.min(1, dt * 4)
+			fov = fov + ((boost and 80 or 70) - fov) * math.min(1, dt * 5)
 			cam.FieldOfView = fov
-		end
-		if os.clock() - lastAnim &lt; 0.08 then
-			return
-		end
-		lastAnim = os.clock()
-		local t = lastAnim * 1.6
-		for _, ch in ipairs(CollectionService:GetTagged("SpeedChevron")) do
-			local ph = (t - (ch:GetAttribute("Phase") or 0) * 4) % 1
-			ch.Color = ph &lt; 0.18 and WHITE or (ph &lt; 0.45 and YELLOW or ORANGE)
 		end
 	end)
 end

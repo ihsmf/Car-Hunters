@@ -39,6 +39,13 @@ end
 -- Instant death: one touch = WRECKED, carried loot of this run is lost (InventoryService.OnDeath).
 local function wreck(player, s, hum, lane)
 	s.lastHit = os.clock()
+	if S.Shop.TryAirbag(s) then
+		-- airbag pops: knocked back, shielded for a moment, loot kept
+		s.protectedUntil = os.clock() + 1.5
+		Net.Get("HitFx"):FireClient(player, Vector3.new(lane and lane.dir or 1, 0, 0), "airbag")
+		S.Data.Push(player)
+		return
+	end
 	Net.Get("HitFx"):FireClient(player, Vector3.new(lane and lane.dir or 1, 0, 0), "wrecked")
 	hum.Health = 0
 end

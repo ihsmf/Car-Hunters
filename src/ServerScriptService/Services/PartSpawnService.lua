@@ -9,6 +9,7 @@ local Util = require(Shared:WaitForChild("Util"))
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local PartVisual = require(Shared:WaitForChild("PartVisual"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
+local Net = require(Shared:WaitForChild("Net"))
 
 local PartSpawn = {}
 local S
@@ -35,6 +36,8 @@ local function spawnAt(pt)
 	local model = PartVisual.Build(partId)
 	model:PivotTo(CFrame.new(pt.pos + Vector3.new(0, 3, 0)))
 	model:SetAttribute("PointId", pt.id)
+	model:SetAttribute("Risk", pt.risk)
+	model:SetAttribute("Amount", PartConfig.CrateAmount[pt.risk] or 1)
 	CollectionService:AddTag(model, "SpinBob")
 	model.Parent = drops
 	pt.model = model
@@ -78,9 +81,10 @@ function PartSpawn.Start()
 				spawnAt(pt)
 			end
 		end
-		local r2 = EconomyConfig.PickupRadius * EconomyConfig.PickupRadius
 		for _, player in ipairs(Players:GetPlayers()) do
 			local s = S.Data.Get(player)
+			local r = s and S.Shop.PickupRadius(s) or EconomyConfig.PickupRadius
+			local r2 = r * r
 			if s and s.ready then
 				local hrp = S.Data.GetRoot(player)
 				if hrp then
@@ -89,7 +93,8 @@ function PartSpawn.Start()
 						if pt.active then
 							local d = pt.pos - pos
 							if d.X * d.X + d.Z * d.Z <= r2 and math.abs(d.Y) < 12 then
-								if S.Inventory.CarriedTotal(s) >= EconomyConfig.CarryCapacity then
+								local amount = PartConfig.CrateAmount[pt.risk] or 1
+								if S.Inventory.CarriedTotal(s) + amount > S.Shop.CarryCap(s) then
 									if t - (warnedAt[player] or 0) > 3 then
 										warnedAt[player] = t
 										S.Data.Notify(player, "carryFull", nil, "warn")
@@ -102,8 +107,12 @@ function PartSpawn.Start()
 										pt.model = nil
 									end
 									pt.readyAt = t + cooldownFor(pt.risk)
-									if S.Inventory.AddCarried(player, partId, 1) then
+									if S.Inventory.AddCarried(player, partId, amount, pt.zone) then
 										S.Data.Notify(player, "picked", { partId }, "pickup")
+										Net.Get("PickupFx"):FireClient(player, { partId = partId, amount = amount, pos = pt.pos, risk = pt.risk })
+										if pt.risk == "road" then
+											S.Contracts.Progress(player, "road", 1)
+										end
 									end
 								end
 							end

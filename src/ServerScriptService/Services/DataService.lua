@@ -10,12 +10,13 @@ local Net = require(Shared:WaitForChild("Net"))
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
+local ShopConfig = require(Shared:WaitForChild("ShopConfig"))
 
 local DataService = {}
 local S
 
 local STORE_NAME = "CarHunters_Profiles_v1"
-local SCHEMA_VERSION = 2
+local SCHEMA_VERSION = 3
 local LOCK_TIMEOUT = 120
 local SERVER_ID = (game.JobId ~= "" and game.JobId) or ("studio-" .. HttpService:GenerateGUID(false))
 
@@ -34,6 +35,10 @@ local function newProfile(isNew)
 		discovered = {},
 		pity = 0,
 		saveCount = 0,
+		perks = {},
+		boosts = {},
+		receipts = {},
+		contracts = {},
 	}
 	if isNew then
 		for id, n in pairs(EconomyConfig.StarterParts) do
@@ -113,6 +118,44 @@ local function sanitize(raw)
 		p.discovered[c.typeId] = true
 	end
 	p.pity = math.min(toCount(raw.pity, 1e6), EconomyConfig.PityThreshold)
+	p.stats.contracts = type(raw.stats) == "table" and toCount(raw.stats.contracts, 1e9) or 0
+	if type(raw.perks) == "table" then
+		for _, def in ipairs(ShopConfig.Perks) do
+			local v = toCount(raw.perks[def.id], def.max)
+			if v > 0 then
+				p.perks[def.id] = v
+			end
+		end
+	end
+	if type(raw.boosts) == "table" then
+		for _, id in ipairs({ "income", "luck" }) do
+			local t = toCount(raw.boosts[id], 4e9)
+			if t > os.time() then
+				p.boosts[id] = t
+			end
+		end
+	end
+	if type(raw.receipts) == "table" then
+		for _, r in ipairs(raw.receipts) do
+			if type(r) == "string" and #r <= 80 and #p.receipts < 100 then
+				table.insert(p.receipts, r)
+			end
+		end
+	end
+	local KINDS = { bank_part = true, combo = true, speed = true, throw = true, road = true, hotdrop = true }
+	if type(raw.contracts) == "table" then
+		for _, c in ipairs(raw.contracts) do
+			if #p.contracts < 3 and type(c) == "table" and KINDS[c.kind] and type(c.reward) == "table"
+				and PartConfig.Parts[c.reward.part] and Util.IsInt(c.n) and c.n >= 1 and c.n <= 20 then
+				table.insert(p.contracts, {
+					id = tostring(c.id), kind = c.kind, progress = math.min(toCount(c.progress, 20), c.n), n = c.n,
+					part = PartConfig.Parts[c.part] and c.part or nil, zone = type(c.zone) == "string" and c.zone or nil,
+					mult = tonumber(c.mult), seconds = tonumber(c.seconds),
+					reward = { money = toCount(c.reward.money, 1e12), part = c.reward.part, n = math.clamp(toCount(c.reward.n, 4), 1, 4) },
+				})
+			end
+		end
+	end
 	p.saveCount = toCount(raw.saveCount, 1e12)
 	return p
 end
@@ -347,7 +390,7 @@ function DataService.BuildState(s)
 		money = d.money,
 		parts = Util.CopyTable(d.parts),
 		carried = Util.CopyTable(s.carried),
-		carryCap = EconomyConfig.CarryCapacity,
+		carryCap = S.Shop.CarryCap(s),
 		zones = Util.CopyTable(d.unlockedZones),
 		slots = d.garageSlotCount,
 		cars = cars,
@@ -359,6 +402,14 @@ function DataService.BuildState(s)
 		discovered = Util.CopyTable(d.discovered),
 		pity = d.pity,
 		indexMult = s.indexMult or 1,
+		perks = Util.CopyTable(d.perks),
+		boosts = { income = math.max(0, (d.boosts.income or 0) - os.time()), luck = math.max(0, (d.boosts.luck or 0) - os.time()) },
+		passes = Util.CopyTable(s.passes or {}),
+		contracts = Util.CopyTable(d.contracts),
+		walkSpeed = S.Shop.WalkSpeed(s),
+		pickupRadius = S.Shop.PickupRadius(s),
+		airbagIn = S.Shop.AirbagReadyIn(s),
+		run = { picked = s.run and s.run.picked or 0, mult = s.run and s.run.mult or 1, firstAt = s.run and s.run.firstAt },
 	}
 end
 

@@ -5,6 +5,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
+local Net = require(Shared:WaitForChild("Net"))
 
 local Inv = {}
 local S
@@ -29,15 +30,42 @@ function Inv.BankedTotal(s)
 	return n
 end
 
-function Inv.AddCarried(player, partId, n)
+-- combo tiers: parts picked up in one run without going home
+Inv.ComboTiers = { { 7, 3 }, { 4, 2 }, { 2, 1.5 } }
+Inv.SpeedBonusSeconds = 40
+
+local function comboMult(picked)
+	for _, t in ipairs(Inv.ComboTiers) do
+		if picked >= t[1] then
+			return t[2]
+		end
+	end
+	return 1
+end
+Inv.ComboMult = comboMult
+
+-- zone = district the part came from (contracts), force = ignore the backpack limit (hot drops)
+function Inv.AddCarried(player, partId, n, zone, force)
 	local s = S.Data.Get(player)
 	if not s or not s.ready or not PartConfig.Parts[partId] then
 		return false
 	end
-	if Inv.CarriedTotal(s) + n > EconomyConfig.CarryCapacity then
+	if not force and Inv.CarriedTotal(s) + n > S.Shop.CarryCap(s) then
 		return false
 	end
 	s.carried[partId] = (s.carried[partId] or 0) + n
+	s.carriedZones = s.carriedZones or {}
+	s.carriedZones[partId] = s.carriedZones[partId] or {}
+	if zone then
+		s.carriedZones[partId][zone] = (s.carriedZones[partId][zone] or 0) + n
+	end
+	s.run = s.run or { picked = 0, mult = 1 }
+	if s.run.picked == 0 then
+		s.run.firstAt = workspace:GetServerTimeNow()
+		s.run.firstClock = os.clock()
+	end
+	s.run.picked = s.run.picked + n
+	s.run.mult = comboMult(s.run.picked)
 	S.Data.Push(player)
 	return true
 end
@@ -47,16 +75,41 @@ function Inv.Bank(player)
 	if not s or not s.ready then
 		return false
 	end
-	local moved = 0
+	local run = s.run or { picked = 0, mult = 1 }
+	local mult = run.mult or 1
+	local moved, bonus = 0, 0
+	local rng = Random.new()
+	local banked = {}
 	for id, n in pairs(s.carried) do
 		if n > 0 then
-			s.data.parts[id] = (s.data.parts[id] or 0) + n
+			local extra = math.floor(n * (mult - 1))
+			if rng:NextNumber() < n * (mult - 1) - extra then
+				extra = extra + 1
+			end
+			s.data.parts[id] = (s.data.parts[id] or 0) + n + extra
+			banked[id] = n
 			moved = moved + n
+			bonus = bonus + extra
 		end
 	end
+	local zones = s.carriedZones or {}
 	s.carried = {}
+	s.carriedZones = {}
+	s.run = { picked = 0, mult = 1 }
 	if moved > 0 then
-		S.Data.Notify(player, "banked", nil, "good")
+		local secs = run.firstClock and (os.clock() - run.firstClock) or 999
+		local cash = 0
+		if secs <= Inv.SpeedBonusSeconds then
+			cash = math.max(200, math.floor((s.income or 0) * 15))
+			s.data.money = math.min(s.data.money + cash, EconomyConfig.MaxMoney)
+		end
+		S.Data.Notify(player, "banked2", { moved, bonus, mult, cash }, "good")
+		Net.Get("BankFx"):FireClient(player, { moved = moved, bonus = bonus, mult = mult, cash = cash, parts = banked })
+		S.Contracts.Progress(player, "bank_part", moved, zones)
+		if mult > 1 then
+			S.Contracts.Progress(player, "combo", mult)
+		end
+		S.Contracts.Progress(player, "speed", secs)
 		S.Data.Push(player)
 	end
 	return moved > 0
@@ -81,18 +134,22 @@ function Inv.OnDeath(player)
 		return
 	end
 	s.data.stats.deaths = s.data.stats.deaths + 1
-	local lost = 0
+	local lost, lostTable = 0, {}
 	for id, n in pairs(s.carried) do
 		local l = math.floor(n * EconomyConfig.DeathLossFraction + 0.5)
 		if l > 0 then
 			s.carried[id] = n - l
 			lost = lost + l
+			lostTable[id] = l
 		end
 	end
+	s.carriedZones = {}
+	s.run = { picked = 0, mult = 1 }
 	if lost > 0 then
+		s.lastLost = lostTable -- the "Insurance" product can give it back
 		S.Data.Notify(player, "lost", { lost }, "error")
-		S.Data.Push(player)
 	end
+	S.Data.Push(player)
 end
 
 function Inv.EnsureNotStuck(player)

@@ -87,7 +87,8 @@ local Services = ServerScriptService:WaitForChild("Services")
 local S = {}
 local names = { Data = "DataService", Inventory = "InventoryService", Base = "BaseService", PartSpawn = "PartSpawnService",
 	Traffic = "TrafficService", Capture = "CaptureService", Cars = "CarCollectionService", Income = "IncomeService",
-	Upgrade = "UpgradeService", Zone = "ZoneService", Warp = "WarpService" }
+	Upgrade = "UpgradeService", Zone = "ZoneService", Warp = "WarpService", Shop = "ShopService", Donate = "DonateService",
+	HotDrop = "HotDropService", Contracts = "ContractService" }
 for key, moduleName in pairs(names) do
 	S[key] = require(Services:WaitForChild(moduleName))
 end
@@ -107,16 +108,21 @@ Net.Get("UnlockZone").OnServerEvent:Connect(function(p, z) S.Zone.Unlock(p, z) e
 Net.Get("SellCar").OnServerEvent:Connect(function(p, uid) S.Cars.Sell(p, uid) end)
 Net.Get("AutoPark").OnServerEvent:Connect(function(p) S.Cars.AutoPark(p) end)
 Net.Get("Teleport").OnServerEvent:Connect(function(p, dest) S.Warp.Go(p, dest) end)
+Net.Get("BuyPerk").OnServerEvent:Connect(function(p, id) S.Shop.Buy(p, id) end)
+Net.Get("Donate").OnServerEvent:Connect(function(p, id) S.Donate.Request(p, id) end)
 
 local function hookCharacter(player, char)
 	local hum = char:WaitForChild("Humanoid", 10)
 	if not hum then return end
-	hum.WalkSpeed = MapConfig.WalkSpeed
-	S.Traffic.Protect(player, EconomyConfig.SpawnProtection)
+	local sess = S.Data.Get(player)
+	hum.WalkSpeed = sess and S.Shop.WalkSpeed(sess) or MapConfig.WalkSpeed
+	hum.BreakJointsOnDeath = false -- the client ragdolls the body (DeathFx)
+	S.Traffic.Protect(player, sess and S.Shop.SpawnShield(sess) or EconomyConfig.SpawnProtection)
 	task.defer(function() S.Inventory.EnsureNotStuck(player) end)
 	hum.Died:Connect(function()
 		S.Inventory.OnDeath(player)
-		task.delay(Players.RespawnTime, function()
+		local sess2 = S.Data.Get(player)
+		task.delay(sess2 and S.Shop.RespawnTime(sess2) or Players.RespawnTime, function()
 			if player.Parent and player.Character == char then
 				player:LoadCharacter()
 			end

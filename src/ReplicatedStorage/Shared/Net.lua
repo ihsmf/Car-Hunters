@@ -19,6 +19,12 @@ Net.Names = {
 	"AutoPark",
 	"TrafficHit",
 	"Teleport",
+	"BuyPerk",
+	"Donate",
+	"DonateFx",
+	"HotDrop",
+	"BankFx",
+	"PickupFx",
 }
 
 function Net.Folder()

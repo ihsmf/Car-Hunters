@@ -77,7 +77,9 @@ function Capture.Throw(player, partId)
 	s.busy = true
 	S.Inventory.SpendBanked(player, partId, 1)
 	local pityUsed = d.pity >= EconomyConfig.PityThreshold - 1
-	local rarity, def = Capture.Roll(partId, rng:NextNumber(), rng:NextNumber(), d.pity)
+	local shift = S.Shop.LuckShift(s)
+	local r1 = 1 - (1 - rng:NextNumber()) * (1 - shift) -- luck pushes the roll towards rarer cars
+	local rarity, def = Capture.Roll(partId, r1, rng:NextNumber(), d.pity)
 	if CarConfig.IsHighTier(rarity) then
 		d.pity = 0
 	else
@@ -94,16 +96,18 @@ function Capture.Throw(player, partId)
 	local slot = firstFreeSlot(d)
 	table.insert(d.cars, { uid = uid, typeId = def.id, level = 1, parkedSlot = slot })
 	d.stats.throws = d.stats.throws + 1
-	s.hidden[uid] = os.clock() + EconomyConfig.ThrowAnimTime + 0.1
+	local animTime = S.Shop.ThrowCooldown(s)
+	s.hidden[uid] = os.clock() + animTime + 0.1
 
 	S.Income.Recalc(player)
 	Net.Get("ThrowResult"):FireClient(player, {
 		partId = partId, typeId = def.id, uid = uid, rarity = rarity, slot = slot,
-		animTime = EconomyConfig.ThrowAnimTime, isNew = isNew, bonus = bonus, pityUsed = pityUsed,
+		animTime = animTime, speed = EconomyConfig.ThrowAnimTime / animTime, isNew = isNew, bonus = bonus, pityUsed = pityUsed,
 	})
 	S.Data.Push(player)
 
-	task.delay(EconomyConfig.ThrowAnimTime + 0.15, function()
+	S.Contracts.Progress(player, "throw", 1)
+	task.delay(animTime + 0.15, function()
 		s.busy = false
 		s.hidden[uid] = nil
 		if player.Parent then
