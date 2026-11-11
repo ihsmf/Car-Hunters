@@ -41,7 +41,37 @@ local list = {
 	{ id = "tezla_cybertrak", name = "Tezla Cybertrak", rarity = "Legendary", style = "pickup", income = 650, body = C(176, 180, 186), accent = C(20, 20, 24), chrome = true, tag = "Low-poly from the future." },
 	{ id = "mazeratti_mc20", name = "Mazeratti MC-Twenty", rarity = "Legendary", style = "supercar", income = 800, body = C(240, 240, 236), accent = C(30, 60, 160), neon = C(110, 150, 255), tag = "Carbon, thunder, style." },
 	{ id = "lamborgini_aventadoor", name = "Lamborgini Aventadoor", rarity = "Legendary", style = "proto", income = 1000, body = C(255, 150, 10), accent = C(20, 20, 24), neon = C(255, 190, 40), spoiler = true, tag = "The final hunt." },
+	-- ---- wave 2
+	{ id = "fiat_500", name = "Fiyat Five-Hundo", rarity = "Common", style = "compact", income = 2, body = C(150, 220, 190), accent = C(240, 240, 240), tag = "Espresso-sized." },
+	{ id = "mini_kooper", name = "Mini Kooper", rarity = "Common", style = "compact", income = 3, body = C(200, 30, 40), accent = C(240, 240, 240), tag = "Go-kart with a roof." },
+	{ id = "volksvagen_gulf", name = "Volksvagen Gulf GTI", rarity = "Common", style = "compact", income = 4, body = C(236, 236, 236), accent = C(200, 30, 30), tag = "The hot hatch original." },
+	{ id = "hunda_civik", name = "Hunda Civik Type-Arr", rarity = "Common", style = "sedan", income = 5, body = C(250, 250, 250), accent = C(200, 30, 30), spoiler = true, tag = "VTEC just kicked in." },
+	{ id = "jeap_rangler", name = "Jeap Rangler", rarity = "Uncommon", style = "suv", income = 9, body = C(250, 190, 20), accent = C(20, 20, 24), tag = "Roads are optional." },
+	{ id = "mazta_miyata", name = "Mazta Miyata", rarity = "Uncommon", style = "sport", income = 11, body = C(220, 30, 30), accent = C(20, 20, 24), tag = "The answer is always Miyata." },
+	{ id = "subaroo_wrx", name = "Subaroo WRX", rarity = "Uncommon", style = "sedan", income = 13, body = C(20, 70, 180), accent = C(220, 180, 60), spoiler = true, tag = "Born on gravel." },
+	{ id = "chevy_kamaro", name = "Chevy Kamaro", rarity = "Uncommon", style = "muscle", income = 14, body = C(255, 200, 0), accent = C(20, 20, 24), tag = "More than meets the eye." },
+	{ id = "toyoda_supera", name = "Toyoda Supera", rarity = "Rare", style = "sport", income = 28, body = C(255, 110, 20), accent = C(20, 20, 24), spoiler = true, tag = "Ten-second legend." },
+	{ id = "chevy_korvette", name = "Chevy Korvette", rarity = "Rare", style = "sport", income = 36, body = C(210, 20, 30), accent = C(20, 20, 24), tag = "American thunder." },
+	{ id = "nisan_gtr", name = "Nisan GT-Arr", rarity = "Rare", style = "sport", income = 45, body = C(236, 236, 240), accent = C(20, 20, 24), spoiler = true, tag = "They call it the monster." },
+	{ id = "porshe_911", name = "Porshe Nine-Eleven", rarity = "Rare", style = "sport", income = 48, body = C(255, 200, 0), accent = C(20, 20, 24), tag = "Engine in the trunk. On purpose." },
+	{ id = "bentli_kontinental", name = "Bentli Kontinental", rarity = "Epic", style = "sport", income = 110, body = C(110, 16, 30), accent = C(200, 200, 210), tag = "A mansion that does 200." },
+	{ id = "rolz_fantom", name = "Rolz-Roice Fantom", rarity = "Epic", style = "sedan", income = 140, body = C(240, 236, 222), accent = C(200, 200, 210), chrome = false, tag = "Quiet money." },
+	{ id = "maklaren_p1", name = "MakLaren P-One", rarity = "Epic", style = "supercar", income = 170, body = C(0, 150, 200), accent = C(20, 20, 24), spoiler = true, tag = "Built in a wind tunnel." },
+	{ id = "ferarri_488", name = "Ferarri Four-Ate-Ate", rarity = "Epic", style = "supercar", income = 190, body = C(220, 16, 20), accent = C(20, 20, 24), tag = "Red goes faster." },
+	{ id = "ferarri_laferarri", name = "Ferarri LaFerarri", rarity = "Legendary", style = "proto", income = 600, body = C(190, 0, 16), accent = C(20, 20, 24), neon = C(255, 60, 40), tag = "The The-Car." },
+	{ id = "pagany_wyra", name = "Pagany Wyra", rarity = "Legendary", style = "proto", income = 750, body = C(120, 140, 165), accent = C(20, 20, 24), chrome = true, tag = "Art that breaks the wind." },
+	{ id = "konigseg_agera", name = "Konigseg Agera", rarity = "Legendary", style = "proto", income = 900, body = C(244, 244, 244), accent = C(20, 20, 24), neon = C(60, 160, 255), spoiler = true, tag = "The ghost of speed." },
+	{ id = "bugati_shiron", name = "Bugati Shiron", rarity = "Legendary", style = "proto", income = 1200, body = C(20, 70, 180), accent = C(20, 20, 24), neon = C(60, 140, 255), tag = "The king of top speed." },
 }
+do -- show order: rarity, then income
+	local idx = { Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5 }
+	table.sort(list, function(a, b)
+		if idx[a.rarity] ~= idx[b.rarity] then
+			return idx[a.rarity] < idx[b.rarity]
+		end
+		return a.income < b.income
+	end)
+end
 
 -- old save ids -> new ids (same rarity and income slot)
 CarConfig.LegacyIds = {
@@ -156,13 +186,13 @@ function CarConfig.Validate()
 	local errors = {}
 	local count = 0
 	for _, r in ipairs(CarConfig.RarityOrder) do
-		if #CarConfig.ByRarity[r] ~= 4 then
-			table.insert(errors, r .. ": expected 4 cars, got " .. #CarConfig.ByRarity[r])
+		if #CarConfig.ByRarity[r] ~= #CarConfig.ByRarity.Common or #CarConfig.ByRarity[r] < 4 then
+			table.insert(errors, r .. ": uneven car count " .. #CarConfig.ByRarity[r])
 		end
 		count = count + #CarConfig.ByRarity[r]
 	end
-	if count ~= 20 then
-		table.insert(errors, "expected 20 cars, got " .. count)
+	if count ~= #list then
+		table.insert(errors, "car count mismatch " .. count)
 	end
 	for partId, row in pairs(CarConfig.DropChances) do
 		local sum = 0

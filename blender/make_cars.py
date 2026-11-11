@@ -231,6 +231,109 @@ CARS = {
         extras={"intake": True, "caliper": (0.1, 0.2, 0.8, 1)})),
 }
 
+G_BOX = dict(top=[(0, .48), (.008, .96), (.03, 1.0), (.61, 1.0), (.665, .64), (.985, .61), (1, .55)], cab=(.008, .03, .61, .665),
+             side=(.04, .645), pillars=[.22, .44], doors=[.22, .44, .63], tumble=0.93, box=0.3, edge=0.05, sm=0.004, psm=0.008,
+             belt=[(0, .60), (1, .59)], plan=[(0, .97), (.01, 1), (.99, 1), (1, .97)], axle=(.17, .82))
+HATCH = dict(top=[(0, .50), (.02, .84), (.10, .99), (.50, .98), (.72, .62), (.95, .56), (1, .44)], cab=(.02, .10, .50, .72),
+             side=(.09, .69), pillars=[.40], doors=[.40, .66], axle=(.18, .82), tumble=0.78)
+MID2 = dict(top=[(0, .58), (.03, .70), (.26, .82), (.44, 1.0), (.50, 1.0), (.76, .56), (.96, .38), (1, .30)], cab=(.26, .44, .50, .76), side=(.42, .72))
+EX2 = [it("Chrome", EL, .5, .1, .13, .14), it("Chrome", EL, .66, .1, .13, .14)]
+CARS.update({
+    # ---- Common
+    "fiat_500": dict(kind="compact", L=10.2, color=rgb(150, 220, 190), spec=base(**HATCH, sm=0.035, roof="contrast",
+        front=[it("HeadLight", EL, .66, .80, .28, .30, frame="Chrome"), it("HeadLight", EL, .70, .46, .16, .16), it("Chrome", RR, 0, .62, .5, .05, .1), it("Trim", s_trap(.8), 0, .16, .9, .2)],
+        rear=[it("TailLight", s_rr(.4), .82, .70, .2, .4), PLATE])),
+    "mini_kooper": dict(kind="compact", L=10.8, color=rgb(200, 30, 40), spec=base(**HATCH, roof="contrast", box=0.5, sm=0.012, edge=0.08, stripes=(13, 13),
+        front=[it("Trim", s_hex(.4), 0, .44, .7, .5, frame="Chrome"), it("HeadLight", EL, .72, .78, .3, .36, frame="Chrome"), it("HeadLight", EL, .5, .2, .12, .14)],
+        rear=[it("TailLight", s_rr(.3), .84, .64, .16, .44, frame="Chrome"), PLATE, it("Chrome", EL, 0, .08, .12, .12)])),
+    "volksvagen_gulf": dict(kind="compact", color=rgb(236, 236, 236), spec=base(**HATCH,
+        front=[it("Trim", s_rr(.3), 0, .74, 1.0, .14), it("TailLight", RR, 0, .66, 1.0, .025, .09), it("HeadLight", s_slant(.15), .74, .76, .44, .2), it("Trim", s_trap(.8), 0, .22, 1.3, .26)],
+        rear=[it("TailLight", s_wedge(.4), .76, .80, .4, .2), PLATE] + EX2, extras={"spoiler": "lip"})),
+    "hunda_civik": dict(kind="sedan", color=rgb(250, 250, 250), spec=sedan(sm=0.014,
+        front=[it("Trim", s_trap(.7), 0, .62, 1.3, .2), it("HeadLight", s_wedge(.6), .72, .74, .44, .18), it("Trim", s_hex(.4), 0, .22, .8, .3), it("Trim", s_slant(.3), .78, .22, .28, .3)],
+        rear=[it("TailLight", s_wedge(.6), .7, .8, .5, .26), PLATE] + [it("Chrome", EL, u, .1, .1, .12) for u in (-.1, 0, .1)],
+        extras={"wing": True, "lip": True, "caliper": (0.85, 0.05, 0.05, 1)})),
+    # ---- Uncommon
+    "jeap_rangler": dict(kind="suv", color=rgb(250, 190, 20), H=6.3, spec=suv(**G_BOX, roof="black", pillar_mat="Trim",
+        front=[it("Trim", s_rr(.4), u, .64, .07, .4) for u in (-.36, -.24, -.12, 0, .12, .24, .36)] + [it("HeadLight", EL, .72, .66, .28, .42, .1), it("Trim", RR, 0, .1, 2.0, .18, .2)],
+        rear=[it("TailLight", RR, .84, .5, .16, .2), it("Trim", RR, 0, .1, 2.0, .16, .2)],
+        extras={"spare": True, "flare": "Trim", "indicators": True})),
+    "mazta_miyata": dict(kind="sport", L=12.4, H=3.8, color=rgb(220, 30, 30), spec=coupe(roof="black", pillar_mat="Trim", sm=0.03,
+        front=[it("Trim", EL, 0, .34, .8, .36), it("HeadLight", EL, .72, .84, .34, .2), it("HeadLight", EL, .78, .4, .12, .14)],
+        rear=[it("TailLight", EL, .72, .76, .4, .26), PLATE, it("Chrome", EL, .5, .1, .13, .14)])),
+    "subaroo_wrx": dict(kind="sedan", color=rgb(20, 70, 180), spec=sedan(sm=0.016,
+        front=[it("Trim", s_hex(.38), 0, .58, .7, .36, frame="Chrome"), it("HeadLight", s_wedge(.5), .72, .74, .44, .22), it("Trim", s_trap(.8), 0, .16, .8, .2), it("HeadLight", EL, .78, .2, .14, .16)],
+        rear=[it("TailLight", s_wedge(.5), .72, .8, .46, .24), PLATE] + EX2 + [it("Chrome", EL, -.5, .1, .13, .14), it("Chrome", EL, -.66, .1, .13, .14)],
+        extras={"scoop": True, "wing": True})),
+    "chevy_kamaro": dict(kind="muscle", color=rgb(255, 200, 0), spec=coupe(
+        top=[(0, .62), (.02, .70), (.15, .72), (.29, .98), (.46, .98), (.60, .70), (.97, .66), (1, .56)], cab=(.15, .29, .46, .60),
+        side=(.27, .58), doors=[.34, .56], stripes=(12, 13), box=0.5, edge=0.1, sm=0.014, tumble=0.70, belt=[(0, .66), (1, .64)],
+        plan=[(0, .90), (.03, 1), (.96, 1), (1, .86)], axle=(.2, .83),
+        front=[it("Trim", s_rr(.25), 0, .74, 1.86, .16), it("HeadLight", s_slant(.1), .76, .74, .3, .1, .1), it("Trim", s_hex(.42), 0, .30, 1.3, .44), it("HeadLight", RR, .8, .34, .16, .06)],
+        rear=[it("TailLight", s_rr(.3), .62, .74, .26, .14), it("TailLight", s_rr(.3), .86, .74, .18, .14), PLATE, it("Chrome", RR, .6, .06, .2, .1)],
+        extras={"spoiler": "lip", "caliper": (0.85, 0.05, 0.05, 1)})),
+    # ---- Rare
+    "toyoda_supera": dict(kind="sport", color=rgb(255, 110, 20), spec=coupe(sm=0.03, tumble=0.68,
+        front=[it("Trim", s_trap(.7), 0, .28, .6, .4), it("Trim", s_slant(.3), .7, .26, .34, .34), it("HeadLight", s_wedge(.4), .7, .84, .44, .2)],
+        rear=[it("Trim", RR, 0, .74, 1.8, .26, .04)] + [it("TailLight", EL, u, .74, .16, .22, .09) for u in (.48, .68, .86)] + [PLATE, it("Chrome", EL, .6, .08, .2, .16)],
+        extras={"wing": True, "caliper": (0.1, 0.1, 0.1, 1)}, spokes=6)),
+    "chevy_korvette": dict(kind="sport", color=rgb(210, 20, 30), spec=coupe(
+        top=[(0, .54), (.03, .66), (.08, .70), (.27, .97), (.38, .97), (.55, .64), (.94, .56), (1, .40)],
+        cab=(.08, .27, .38, .55), side=(.22, .52), doors=[.30, .50], sm=0.012, box=0.55, edge=0.1, tumble=0.66, axle=(.17, .80),
+        front=[it("Trim", s_trap(.6), 0, .36, 1.0, .4), it("HeadLight", s_wedge(.7), .74, .84, .4, .2), it("Trim", RR, 0, .08, 1.5, .08)],
+        rear=[it("TailLight", s_slant(.2), u, .78, .16, .18) for u in (.5, .76)] + [PLATE] + [it("Chrome", RR, u, .1, .1, .12) for u in (-.18, -.06, .06, .18)],
+        extras={"spoiler": "lip", "caliper": (1, 0.8, 0.05, 1), "lip": True}, spokes=10)),
+    "nisan_gtr": dict(kind="sport", H=4.2, color=rgb(236, 236, 240), spec=coupe(sm=0.012, box=0.5, edge=0.1, tumble=0.74,
+        front=[it("Trim", s_hex(.4), 0, .36, 1.0, .56), it("HeadLight", s_slant(.8), .76, .86, .22, .2), it("HeadLight", RR, .7, .3, .2, .05)],
+        rear=[it("TailLight", EL, u, .76, .17, .24, .09, frame="Trim") for u in (.52, .78)] + [PLATE] + EX2 + [it("Chrome", EL, -.5, .1, .13, .14), it("Chrome", EL, -.66, .1, .13, .14)],
+        extras={"wing": True, "caliper": (1, 0.6, 0.05, 1), "lip": True}, spokes=6)),
+    "porshe_911": dict(kind="sport", color=rgb(255, 200, 0), spec=coupe(
+        top=[(0, .50), (.03, .62), (.12, .72), (.36, .98), (.48, .98), (.64, .64), (.94, .52), (1, .40)], cab=(.12, .36, .48, .64),
+        side=(.28, .61), doors=[.38, .59], sm=0.034, tumble=0.66, axle=(.16, .80), plan=[(0, .84), (.05, .99), (.3, 1), (.7, .95), (.94, .9), (1, .74)],
+        front=[it("HeadLight", EL, .72, .92, .3, .3), it("Trim", s_rr(.3), 0, .2, .7, .22), it("Trim", s_rr(.3), .72, .2, .36, .22), it("HeadLight", RR, .72, .36, .3, .04)],
+        rear=[it("TailLight", s_rr(.4), 0, .82, 1.8, .07), it("Trim", s_rr(.2), 0, .62, 1.2, .16, .04), PLATE] + EX2 + [it("Chrome", EL, -.5, .1, .13, .14), it("Chrome", EL, -.66, .1, .13, .14)],
+        extras={"spoiler": "lip", "caliper": (0.85, 0.05, 0.05, 1)}, spokes=10)),
+    # ---- Epic
+    "bentli_kontinental": dict(kind="sport", H=4.4, L=15.6, color=rgb(110, 16, 30), spec=coupe(sm=0.03,
+        front=[it("Trim", s_rr(.2), 0, .52, .7, .6, frame="Chrome"), it("HeadLight", EL, .58, .76, .2, .3, frame="Chrome"), it("HeadLight", EL, .82, .78, .14, .22, frame="Chrome"), it("Trim", s_rr(.3), .7, .2, .4, .2)],
+        rear=[it("TailLight", EL, .68, .76, .44, .2, frame="Chrome"), PLATE, it("Chrome", EL, .6, .1, .26, .14), it("Chrome", EL, -.6, .1, .26, .14)],
+        extras={"vents": True}, spokes=10)),
+    "rolz_fantom": dict(kind="sedan", L=17.5, H=5.3, W=6.6, color=rgb(240, 236, 222), spec=sedan(
+        top=[(0, .54), (.02, .64), (.15, .66), (.24, .98), (.40, 1.0), (.56, .98), (.66, .66), (.97, .64), (1, .56)], cab=(.15, .24, .56, .66),
+        side=(.22, .64), pillars=[.42], doors=[.24, .42, .62], sm=0.01, box=0.45, edge=0.08, tumble=0.84, stripes=(12, 14),
+        belt=[(0, .62), (1, .60)], plan=[(0, .92), (.02, 1), (.97, 1), (1, .9)],
+        front=[it("Chrome", s_rr(.08), 0, .56, .5, .78, .14)] + [it("Trim", RR, u, .54, .035, .64, .16) for u in (-.18, -.09, 0, .09, .18)]
+              + [it("HeadLight", s_rr(.2), .7, .74, .36, .14), it("HeadLight", EL, .72, .5, .12, .16), it("Chrome", RR, 0, .1, 1.7, .08)],
+        rear=[it("TailLight", s_rr(.3), .8, .66, .14, .34, frame="Chrome"), it("Chrome", RR, 0, .1, 1.7, .08), PLATE], spokes=10)),
+    "maklaren_p1": dict(kind="supercar", color=rgb(0, 150, 200), spec=mid(sm=0.03, tumble=0.62, pillar_mat="Trim", roof="black",
+        front=[it("HeadLight", s_wedge(.8), .7, .8, .44, .3), it("Trim", s_wedge(.6), .68, .56, .5, .2), it("Trim", s_trap(.7), 0, .18, .9, .2)],
+        rear=[it("Trim", s_rr(.2), 0, .5, 1.84, .6, .04), it("TailLight", s_rr(.4), 0, .86, 1.7, .05, .08), it("Chrome", s_trap(.8), 0, .34, .26, .2, .1)],
+        extras={"intake": True, "wing": True, "caliper": (1, 0.5, 0, 1)})),
+    "ferarri_488": dict(kind="supercar", color=rgb(220, 16, 20), spec=mid(sm=0.026,
+        front=[it("Trim", s_trap(.7), .46, .26, .6, .36), it("HeadLight", s_slant(1.2), .8, .84, .16, .22), it("Trim", RR, 0, .08, 1.2, .07)],
+        rear=[it("TailLight", EL, .72, .78, .2, .3, .09, frame="Trim"), it("Trim", s_hex(.42), 0, .4, 1.5, .36, .04), PLATE] + [it("Chrome", EL, u, .34, .14, .18) for u in (.3,)],
+        extras={"intake": True, "caliper": (1, 0.8, 0.05, 1)})),
+    # ---- Legendary
+    "ferarri_laferarri": dict(kind="proto", color=rgb(190, 0, 16), spec=mid(**MID2, sm=0.02, roof="black", pillar_mat="Trim", tumble=0.60,
+        front=[it("Trim", s_trap(.6), 0, .3, .5, .44), it("Trim", s_slant(.4), .62, .3, .5, .4), it("HeadLight", s_slant(1.4), .82, .86, .14, .2)],
+        rear=[it("TailLight", EL, .76, .8, .18, .26, .09), it("Trim", s_hex(.42), 0, .44, 1.7, .5, .04), it("TailLight", RR, 0, .3, .08, .2, .09)] + [it("Chrome", EL, u, .5, .14, .16) for u in (.34,)],
+        extras={"intake": True, "caliper": (1, 0.8, 0.05, 1)})),
+    "pagany_wyra": dict(kind="proto", color=rgb(120, 140, 165), spec=mid(sm=0.03, tumble=0.60, metal=True,
+        front=[it("Trim", EL, 0, .3, .8, .36), it("HeadLight", EL, .7, .86, .12, .16), it("HeadLight", EL, .84, .8, .12, .16), it("Trim", EL, .74, .34, .26, .26)],
+        rear=[it("TailLight", EL, .56, .8, .14, .2, .09), it("TailLight", EL, .76, .8, .14, .2, .09), it("TailLight", EL, .92, .76, .1, .14, .09), it("Trim", EL, 0, .42, 1.3, .5, .04)]
+             + [it("Chrome", EL, u, v, .09, .13, .12) for u in (-.055, .055) for v in (.36, .5)],
+        extras={"intake": True, "caliper": (0.6, 0.1, 0.1, 1)})),
+    "konigseg_agera": dict(kind="proto", color=rgb(244, 244, 244), spec=mid(**MID2, sm=0.024, pillar_mat="Trim", tumble=0.58, stripes=(13, 13),
+        front=[it("HeadLight", s_wedge(.5), .76, .82, .3, .3), it("Trim", s_trap(.7), 0, .24, .7, .3), it("Trim", EL, .72, .26, .3, .26)],
+        rear=[it("TailLight", s_slant(.6), .74, .82, .36, .1), it("Trim", s_hex(.42), 0, .42, 1.8, .5, .04), it("Chrome", s_trap(.7), 0, .3, .3, .22, .1)],
+        extras={"intake": True, "wing": True, "caliper": (0.1, 0.4, 0.9, 1)})),
+    "bugati_shiron": dict(kind="proto", color=rgb(20, 70, 180), spec=mid(sm=0.034, roof="black", pillar_mat="Trim", tumble=0.64, stripes=(14, 14),
+        plan=[(0, .88), (.04, 1), (.3, 1), (.62, .98), (.92, .95), (1, .78)],
+        front=[it("Trim", EL, 0, .46, .3, .62, frame="Chrome")] + [it("HeadLight", s_rr(.3), u, .8, .09, .12) for u in (.5, .62, .74, .86)] + [it("Trim", s_rr(.3), .66, .3, .5, .3)],
+        rear=[it("TailLight", s_rr(.4), 0, .84, 1.84, .07, .08), it("Trim", s_rr(.2), 0, .46, 1.84, .5, .04), it("Chrome", s_rr(.3), 0, .2, .5, .16, .1)],
+        extras={"intake": True, "caliper": (0.2, 0.5, 1, 1)})),
+})
+
 # traffic kind -> (design id, overrides)
 TRAFFIC = {
     "compact": ("furd_fiasta", {}), "sedan": ("awdi_a4", {}), "taxi": ("mursides_e", {"taxi": True}), "van": ("dodje_caravon", {}),
@@ -457,7 +560,7 @@ def build_car(cid, design, color=None, low=False, over=None, dims=None):
             if rg + 0.004 < fm < rr and S.get("rearglass", True):
                 return "Glass"
             if rr <= fm <= rf and S["roof"] != "body":
-                return "Glass" if S["roof"] == "glass" else "Trim"
+                return {"glass": "Glass", "contrast": "Stripe"}.get(S["roof"], "Trim")
         if gh and j == 10 and S["pillar_mat"] == "Trim" and rg < fm < wsb:
             return "Trim"
         tt = S.get("top_trim")

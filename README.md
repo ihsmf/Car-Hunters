@@ -54,7 +54,7 @@ Roblox-игра: бегай по опасным дорогам, собирай �
 
 ## 3D-модели из Blender — один ручной шаг
 
-Модели строит `blender/make_cars.py`: кузов по реальным пропорциям и силуэту каждого типа машины, остекление со стойками, линии дверей, арки, литые диски с суппортами, узнаваемые «лица» — формы решёток, фар и фонарей. 20 коллекционных (~10k треугольников) и 11 машин трафика в облегчённом LOD (~6.5k), построенных на тех же кузовах.
+Модели строит `blender/make_cars.py`: кузов по реальным пропорциям и силуэту каждого типа машины, остекление со стойками, линии дверей, арки, литые диски с суппортами, узнаваемые «лица» — формы решёток, фар и фонарей. 40 коллекционных (~10k треугольников) и 11 машин трафика в облегчённом LOD (~6.5k), построенных на тех же кузовах.
 
 **Про права.** Машины *вдохновлены* настоящими: узнаются по силуэту и общим чертам, но на них нет логотипов, эмблем и настоящих названий. Названия пародийные и лежат в одном месте — таблица `list` в `src/ReplicatedStorage/Shared/CarConfig.lua`, поле `name`.
 
@@ -66,8 +66,18 @@ Roblox-игра: бегай по опасным дорогам, собирай �
 | Epic | Mursides G-Vagon · Awdi R-Ate · Jagwar F-Tipe · Mazeratti GranTurizmo |
 | Legendary | Lamborgini Hurakan · Tezla Cybertrak · Mazeratti MC-Twenty · Lamborgini Aventadoor |
 
-![collection](docs/renders/collection.png)
-![rear](docs/renders/collection_rear.png)
+Вторая волна (ещё 20, итого 40 машин — по 8 на редкость):
+
+| Редкость | Машины |
+|---|---|
+| Common | Fiyat Five-Hundo · Mini Kooper · Volksvagen Gulf GTI · Hunda Civik Type-Arr |
+| Uncommon | Jeap Rangler · Mazta Miyata · Subaroo WRX · Chevy Kamaro |
+| Rare | Toyoda Supera · Chevy Korvette · Nisan GT-Arr · Porshe Nine-Eleven |
+| Epic | Bentli Kontinental · Rolz-Roice Fantom · MakLaren P-One · Ferarri Four-Ate-Ate |
+| Legendary | Ferarri LaFerarri · Pagany Wyra · Konigseg Agera · Bugati Shiron |
+
+![collection](docs/renders/collection.jpg)
+![rear](docs/renders/collection_rear.jpg)
 
 Roblox не позволяет вшить меши в `.rbxlx` без загрузки в ваш аккаунт, поэтому импорт делаете вы (бесплатно):
 
@@ -85,7 +95,7 @@ Roblox не позволяет вшить меши в `.rbxlx` без загру
 
 ## Настоящие модели из Roblox Creator Store (внешний сервис)
 
-Вместо моделей из Blender можно поставить готовые бесплатные модели реальных машин из Creator Store. Для каждой из 20 машин подобраны 1–4 варианта (список ID — `Tool.Candidates` в `src/ServerStorage/Tools/CarStoreTool.lua`).
+Вместо моделей из Blender можно поставить готовые бесплатные модели реальных машин из Creator Store. Для каждой из 40 машин подобраны 1–4 варианта (список ID — `Tool.Candidates` в `src/ServerStorage/Tools/CarStoreTool.lua`).
 
 ![store](docs/renders/store_cars.png)
 
