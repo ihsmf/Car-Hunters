@@ -827,15 +827,35 @@ function UI.Init(storeModule, actionTable)
 	if Workspace.CurrentCamera then
 		Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale)
 	end
-	makeSound("ping", "rbxasset://sounds/electronicpingshort.wav", 0.45, 1.2)
-	makeSound("click", "rbxasset://sounds/button.wav", 0.35)
-	makeSound("open", "rbxasset://sounds/swoosh.wav", 0.25, 1.3)
-	makeSound("fanfare", "rbxasset://sounds/victory.wav", 0.5)
-	makeSound("err", "rbxasset://sounds/uuhhh.mp3", 0.3, 1.2)
-	makeSound("throw", "rbxasset://sounds/snap.mp3", 0.6)
-	makeSound("hit", "rbxasset://sounds/collide.wav", 0.9, 0.8)
-	makeSound("boom", "rbxasset://sounds/Rocket shot.wav", 0.7, 0.7)
-	makeSound("whoosh", "rbxasset://sounds/swoosh.wav", 0.6, 0.8)
+	-- ElevenLabs SFX when uploaded (SoundIds), otherwise Roblox built-in sounds
+	local SoundIds = require(Shared:WaitForChild("SoundIds"))
+	local FALLBACK = {
+		click = { "rbxasset://sounds/button.wav", 0.35 }, open = { "rbxasset://sounds/swoosh.wav", 0.25, 1.3 },
+		err = { "rbxasset://sounds/uuhhh.mp3", 0.3, 1.2 }, ping = { "rbxasset://sounds/electronicpingshort.wav", 0.45, 1.2 },
+		throw = { "rbxasset://sounds/swoosh.wav", 0.6, 1.4 }, clank = { "rbxasset://sounds/clickfast.wav", 0.6, 0.6 },
+		charge = { "rbxasset://sounds/electronicpingshort.wav", 0.3, 0.5 }, reveal = { "rbxasset://sounds/Rocket shot.wav", 0.6, 0.8 },
+		revealBig = { "rbxasset://sounds/Rocket shot.wav", 0.8, 0.6 }, land = { "rbxasset://sounds/collide.wav", 0.8, 0.6 },
+		drive = { "rbxasset://sounds/swoosh.wav", 0.4, 0.6 }, pickup = { "rbxasset://sounds/electronicpingshort.wav", 0.5, 1.5 },
+		pickupBig = { "rbxasset://sounds/electronicpingshort.wav", 0.6, 1.1 }, bank = { "rbxasset://sounds/victory.wav", 0.35, 1.3 },
+		bankCombo = { "rbxasset://sounds/victory.wav", 0.5 }, combo = { "rbxasset://sounds/electronicpingshort.wav", 0.5, 1.8 },
+		cash = { "rbxasset://sounds/victory.wav", 0.5, 1.2 }, siren = { "rbxasset://sounds/electronicpingshort.wav", 0.6, 0.7 },
+		crash = { "rbxasset://sounds/collide.wav", 0.9, 0.8 }, wrecked = { "rbxasset://sounds/uuhhh.mp3", 0.5 },
+		airbag = { "rbxasset://sounds/Rocket shot.wav", 0.5, 1.6 }, whoosh = { "rbxasset://sounds/swoosh.wav", 0.6, 0.8 },
+		fanfare = { "rbxasset://sounds/victory.wav", 0.5 }, hit = { "rbxasset://sounds/collide.wav", 0.9, 0.8 },
+		boom = { "rbxasset://sounds/Rocket shot.wav", 0.7, 0.7 },
+	}
+	for name, fb in pairs(FALLBACK) do
+		local id = SoundIds[name]
+		if id and id > 0 then
+			makeSound(name, "rbxassetid://" .. id, fb[2] + 0.15, 1)
+		else
+			makeSound(name, fb[1], fb[2], fb[3])
+		end
+	end
+	if SoundIds.ambience and SoundIds.ambience > 0 then
+		local amb = new("Sound", { Name = "Ambience", SoundId = "rbxassetid://" .. SoundIds.ambience, Volume = 0.25, Looped = true }, SoundService)
+		amb:Play()
+	end
 	buildHud()
 	buildThrow()
 	buildTeleport()
