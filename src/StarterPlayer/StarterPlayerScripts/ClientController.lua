@@ -18,6 +18,10 @@ local Guidance = require(Client:WaitForChild("Guidance"))
 local CineFx = require(Client:WaitForChild("CineFx"))
 local DeathFx = require(Client:WaitForChild("DeathFx"))
 local SpeedLanes = require(Client:WaitForChild("SpeedLanes"))
+local UIExtra = require(Client:WaitForChild("UIExtra"))
+local Markers = require(Client:WaitForChild("Markers"))
+local Minimap = require(Client:WaitForChild("Minimap"))
+local ClientFx = require(Client:WaitForChild("ClientFx"))
 
 local player = Players.LocalPlayer
 Strings.SetLocale(player.LocaleId)
@@ -31,6 +35,8 @@ local actions = {
 	Unlock = function(zoneId) Net.Get("UnlockZone"):FireServer(zoneId) end,
 	Sell = function(uid) Net.Get("SellCar"):FireServer(uid) end,
 	AutoPark = function() Net.Get("AutoPark"):FireServer() end,
+	BuyPerk = function(id) Net.Get("BuyPerk"):FireServer(id) end,
+	Donate = function(id) Net.Get("Donate"):FireServer(id) end,
 	Teleport = function(dest)
 		UI.Sfx("whoosh")
 		CineFx.Flash(Color3.fromRGB(46, 168, 255), 0.2, 0.5)
@@ -46,17 +52,33 @@ TrapFx.SetSfx(UI.Sfx)
 WorldFx.Start(Store)
 TrafficRenderer.Start()
 Guidance.Start(Store)
-SpeedLanes.Start()
+SpeedLanes.Start(function()
+	return Store.State and Store.State.walkSpeed or MapConfig.WalkSpeed
+end)
+UIExtra.Init(UI)
+ClientFx.Init(UI)
+Markers.Start(UI.Kit(), UIExtra)
+Minimap.Start(UI.Kit(), UIExtra)
+UI.Refresh()
+
+Net.Get("HotDrop").OnClientEvent:Connect(function(info) UIExtra.OnHotDrop(info) end)
+Net.Get("PickupFx").OnClientEvent:Connect(function(info) ClientFx.Pickup(info) end)
+Net.Get("BankFx").OnClientEvent:Connect(function(info) ClientFx.Bank(info) end)
+Net.Get("DonateFx").OnClientEvent:Connect(function(buyer, key) ClientFx.Donate(buyer, key) end)
 
 Net.Get("StateUpdate").OnClientEvent:Connect(function(state) Store.Set(state) end)
 Net.Get("MoneySync").OnClientEvent:Connect(function(m, inc, val) Store.SetMoney(m, inc, val) end)
 Net.Get("Notify").OnClientEvent:Connect(function(payload)
-	if payload and payload.key == "lost" then
+	if payload and (payload.key == "lost" or payload.key == "picked" or payload.key == "banked2" or payload.key == "banked") then
 		return -- shown by the WRECKED screen
 	end
 	UI.Notify(payload)
 end)
 Net.Get("HitFx").OnClientEvent:Connect(function(dir, kind)
+	if kind == "airbag" then
+		ClientFx.Airbag(dir or Vector3.new(1, 0, 0))
+		return
+	end
 	local lost = Store.State and Util.CopyTable(Store.State.carried) or {}
 	UI.TogglePanel(nil)
 	UI.HideReveal()

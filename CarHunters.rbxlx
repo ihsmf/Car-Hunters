@@ -1417,7 +1417,7 @@ local Kinds = {
 }
 
 return Kinds
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX57730EE6232942919A81177547311DB5"><Properties><string name="Name">DonateConfig</string><ProtectedString name="Source">-- Golden Magnate stall. Prices in Robux. Grants are performed on the server (DonateService).
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX16B00096C04D44498C279D5E3E40529A"><Properties><string name="Name">DonateConfig</string><ProtectedString name="Source">-- Golden Magnate stall. Prices in Robux. Grants are performed on the server (DonateService).
 local DonateConfig = {}
 
 DonateConfig.Products = {
@@ -1455,7 +1455,7 @@ for _, list in ipairs({ DonateConfig.Products, DonateConfig.Passes }) do
 end
 
 return DonateConfig
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4DE83B7E0DD74FA99F1C9E8CB0575743"><Properties><string name="Name">ExhaustFx</string><ProtectedString name="Source">-- Rarity-based exhaust for cars parked in a garage. Rarer = denser, brighter, flashier.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXB2964B2D9E704F36BF881CA729FDFBD4"><Properties><string name="Name">ExhaustFx</string><ProtectedString name="Source">-- Rarity-based exhaust for cars parked in a garage. Rarer = denser, brighter, flashier.
 local CollectionService = game:GetService("CollectionService")
 local Kinds = require(script.Parent:WaitForChild("VehicleKinds"))
 
@@ -1541,7 +1541,7 @@ function ExhaustFx.Attach(model, def, rarityIndex)
 end
 
 return ExhaustFx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX8E38CE1B602542E19583B3ABB0087569"><Properties><string name="Name">ProductIds</string><ProtectedString name="Source">-- Filled by tools/roblox_open_cloud.py (Open Cloud). 0 = not created yet: in Studio the purchase is simulated.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4F6893D1DD4940A6BDB41CFD0E28C407"><Properties><string name="Name">ProductIds</string><ProtectedString name="Source">-- Filled by tools/roblox_open_cloud.py (Open Cloud). 0 = not created yet: in Studio the purchase is simulated.
 return {
 	products = {
 		cash_s = 0, cash_m = 0, cash_l = 0, cash_xl = 0,
@@ -1553,7 +1553,7 @@ return {
 		vip = 0, big_backpack = 0, auto_collect = 0, golden_car = 0, double_contracts = 0, fast_trap = 0,
 	},
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX6EF76B82378A4EB88D0E56B7DF30248E"><Properties><string name="Name">ShopConfig</string><ProtectedString name="Source">-- Pit Stop upgrades (in-game money). Effects are read on the server through ShopService.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXAD53270EE1B7424E8867072D9E462245"><Properties><string name="Name">ShopConfig</string><ProtectedString name="Source">-- Pit Stop upgrades (in-game money). Effects are read on the server through ShopService.
 local ShopConfig = {}
 
 local function curve(base, growth, max)
@@ -3420,7 +3420,7 @@ function Zone.Start()
 end
 
 return Zone
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX1343A8E3DE004AFFB22FA44C603C9076"><Properties><string name="Name">ContractService</string><ProtectedString name="Source">-- Contracts board: three active jobs per player, auto-claimed on completion and replaced.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX792A1257E1B64D99B768B82DF6BC8D47"><Properties><string name="Name">ContractService</string><ProtectedString name="Source">-- Contracts board: three active jobs per player, auto-claimed on completion and replaced.
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -3588,7 +3588,7 @@ function Contracts.Start()
 end
 
 return Contracts
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4386F1F0DC45482D9E12D13745541205"><Properties><string name="Name">DonateService</string><ProtectedString name="Source">-- Golden Magnate stall: developer products + game passes, with idempotent receipt processing.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX842654A88D3D4900AFB03A22133AA5A6"><Properties><string name="Name">DonateService</string><ProtectedString name="Source">-- Golden Magnate stall: developer products + game passes, with idempotent receipt processing.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -3872,7 +3872,7 @@ function Donate.Start()
 end
 
 return Donate
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXFA62C436404140829CDB2BE6962F4A6C"><Properties><string name="Name">HotDropService</string><ProtectedString name="Source">-- Hot Drop: every ~80 s a rare crate parachutes onto a dangerous spot. First player to grab it wins.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX33DD6893D5BA4E3ABA1BEDFC6790ADCD"><Properties><string name="Name">HotDropService</string><ProtectedString name="Source">-- Hot Drop: every ~80 s a rare crate parachutes onto a dangerous spot. First player to grab it wins.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -4082,7 +4082,7 @@ function HotDrop.Start()
 end
 
 return HotDrop
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXDB24B2C91B754349B0956B31C4CFE1E4"><Properties><string name="Name">ShopService</string><ProtectedString name="Source">-- Pit Stop: perks bought with in-game money + the mechanic NPC. All perk effects are read through this module.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7C0E54C27CF54AE4B48E9F084FCB89E4"><Properties><string name="Name">ShopService</string><ProtectedString name="Source">-- Pit Stop: perks bought with in-game money + the mechanic NPC. All perk effects are read through this module.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -4367,7 +4367,7 @@ function Shop.Start()
 end
 
 return Shop
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX232DEF09A0BD4030BE971FFE8FF29E0F"><Properties><string name="Name">WarpService</string><ProtectedString name="Source">-- Teleport buttons: home garage or any unlocked district. Server-validated.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX9D1046711D5745499F54CA73E91C3262"><Properties><string name="Name">WarpService</string><ProtectedString name="Source">-- Teleport buttons: home garage or any unlocked district. Server-validated.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
@@ -6282,7 +6282,7 @@ function Prefabs.Building(kind, parent, cf, w, d, h, pal, rng)
 end
 
 return Prefabs
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX351D3E452FB849698CA8AE37ABB9DA08"><Properties><string name="Name">CarStoreTool</string><ProtectedString name="Source">-- Installs real car models from the Roblox Creator Store (free models) into ReplicatedStorage.CarModels.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXCE63A97E01664D5C8405C7E632A8FB8D"><Properties><string name="Name">CarStoreTool</string><ProtectedString name="Source">-- Installs real car models from the Roblox Creator Store (free models) into ReplicatedStorage.CarModels.
 -- Run in Studio (edit mode), View &gt; Command Bar:
 --   require(game.ServerStorage.Tools.CarStoreTool).InstallAll()
 --   require(game.ServerStorage.Tools.CarStoreTool).Install("bmv_m3", 2629351758)   -- any other asset id
@@ -6723,6 +6723,10 @@ local Guidance = require(Client:WaitForChild("Guidance"))
 local CineFx = require(Client:WaitForChild("CineFx"))
 local DeathFx = require(Client:WaitForChild("DeathFx"))
 local SpeedLanes = require(Client:WaitForChild("SpeedLanes"))
+local UIExtra = require(Client:WaitForChild("UIExtra"))
+local Markers = require(Client:WaitForChild("Markers"))
+local Minimap = require(Client:WaitForChild("Minimap"))
+local ClientFx = require(Client:WaitForChild("ClientFx"))
 
 local player = Players.LocalPlayer
 Strings.SetLocale(player.LocaleId)
@@ -6736,6 +6740,8 @@ local actions = {
 	Unlock = function(zoneId) Net.Get("UnlockZone"):FireServer(zoneId) end,
 	Sell = function(uid) Net.Get("SellCar"):FireServer(uid) end,
 	AutoPark = function() Net.Get("AutoPark"):FireServer() end,
+	BuyPerk = function(id) Net.Get("BuyPerk"):FireServer(id) end,
+	Donate = function(id) Net.Get("Donate"):FireServer(id) end,
 	Teleport = function(dest)
 		UI.Sfx("whoosh")
 		CineFx.Flash(Color3.fromRGB(46, 168, 255), 0.2, 0.5)
@@ -6751,17 +6757,33 @@ TrapFx.SetSfx(UI.Sfx)
 WorldFx.Start(Store)
 TrafficRenderer.Start()
 Guidance.Start(Store)
-SpeedLanes.Start()
+SpeedLanes.Start(function()
+	return Store.State and Store.State.walkSpeed or MapConfig.WalkSpeed
+end)
+UIExtra.Init(UI)
+ClientFx.Init(UI)
+Markers.Start(UI.Kit(), UIExtra)
+Minimap.Start(UI.Kit(), UIExtra)
+UI.Refresh()
+
+Net.Get("HotDrop").OnClientEvent:Connect(function(info) UIExtra.OnHotDrop(info) end)
+Net.Get("PickupFx").OnClientEvent:Connect(function(info) ClientFx.Pickup(info) end)
+Net.Get("BankFx").OnClientEvent:Connect(function(info) ClientFx.Bank(info) end)
+Net.Get("DonateFx").OnClientEvent:Connect(function(buyer, key) ClientFx.Donate(buyer, key) end)
 
 Net.Get("StateUpdate").OnClientEvent:Connect(function(state) Store.Set(state) end)
 Net.Get("MoneySync").OnClientEvent:Connect(function(m, inc, val) Store.SetMoney(m, inc, val) end)
 Net.Get("Notify").OnClientEvent:Connect(function(payload)
-	if payload and payload.key == "lost" then
+	if payload and (payload.key == "lost" or payload.key == "picked" or payload.key == "banked2" or payload.key == "banked") then
 		return -- shown by the WRECKED screen
 	end
 	UI.Notify(payload)
 end)
 Net.Get("HitFx").OnClientEvent:Connect(function(dir, kind)
+	if kind == "airbag" then
+		ClientFx.Airbag(dir or Vector3.new(1, 0, 0))
+		return
+	end
 	local lost = Store.State and Util.CopyTable(Store.State.carried) or {}
 	UI.TogglePanel(nil)
 	UI.HideReveal()
@@ -7561,7 +7583,7 @@ local function buildHud()
 	hud.hint = text(hint, { Text = "", Font = BODY, TextSize = 20, TextColor3 = P.ink, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1) })
 
 	-- side buttons (minimum: 3)
-	local side = new("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.42, 0), Size = UDim2.fromOffset(122, 3 * 104 + 24), BackgroundTransparency = 1 }, root)
+	local side = new("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 226), Size = UDim2.fromOffset(122, 3 * 104 + 24), BackgroundTransparency = 1 }, root)
 	list(side, Enum.FillDirection.Vertical, 12)
 	toy(side, { Text = T("btn_teleport"), Icon = "🚀", Color = P.blue, Size = UDim2.fromOffset(122, 104), LayoutOrder = 1, OnClick = function() UI.TogglePanel("teleport") end })
 	toy(side, { Text = T("btn_garage"), Icon = "🏁", Color = P.orange, Size = UDim2.fromOffset(122, 104), LayoutOrder = 2, OnClick = function() UI.TogglePanel("garage") end })
@@ -7575,7 +7597,7 @@ local function buildHud()
 		AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -24), OnClick = function() UI.TogglePanel("throw") end })
 	hud.throw.holder.Visible = false
 
-	hud.toasts = new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 120), Size = UDim2.fromOffset(600, 200), BackgroundTransparency = 1, ZIndex = 50 }, root)
+	hud.toasts = new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 170), Size = UDim2.fromOffset(600, 200), BackgroundTransparency = 1, ZIndex = 50 }, root)
 	list(hud.toasts, Enum.FillDirection.Vertical, 6, Enum.HorizontalAlignment.Center)
 	hud.flash = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = P.red, BackgroundTransparency = 1, ZIndex = 40, Active = false }, gui)
 end
@@ -8309,7 +8331,7 @@ function Fx.Hit(dir, flashFrame)
 end
 
 return Fx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXD88B20678C84488DAC35D304D483B45D"><Properties><string name="Name">CineFx</string><ProtectedString name="Source">-- Cinematic toolkit: camera shake / zoom / takeover, letterbox, darken, flash, glitch, big titles.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXA5B485559F0049DB8E5F795E52E52016"><Properties><string name="Name">CineFx</string><ProtectedString name="Source">-- Cinematic toolkit: camera shake / zoom / takeover, letterbox, darken, flash, glitch, big titles.
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
@@ -8521,7 +8543,225 @@ function Cine.Reset(t)
 end
 
 return Cine
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7B675B053DB943DF93D8FCA7C7E14FBA"><Properties><string name="Name">DeathFx</string><ProtectedString name="Source">-- WRECKED! sequence: impact flash, heavy shake, glitch, grayscale-red grade, crane-up camera, countdown.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXE08FA0586BF844069365CF24E233193A"><Properties><string name="Name">ClientFx</string><ProtectedString name="Source">-- Small feedback effects: pickups, banking, donations, airbag, the Golden Magnate's coin toss.
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local PartConfig = require(Shared:WaitForChild("PartConfig"))
+local CarConfig = require(Shared:WaitForChild("CarConfig"))
+local Cine = require(script.Parent:WaitForChild("CineFx"))
+
+local Fx = {}
+local K, UI
+local C = Color3.fromRGB
+local GOLD = C(232, 178, 50)
+local SPARK = "rbxasset://textures/particles/sparkles_main.dds"
+
+local function tw(o, t, props, style, dir)
+	local x = TweenService:Create(o, TweenInfo.new(t, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out), props)
+	x:Play()
+	return x
+end
+
+local function anchor(pos)
+	local p = Instance.new("Part")
+	p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+	p.Transparency = 1
+	p.Size = Vector3.one
+	p.Position = pos
+	p.Parent = Workspace
+	return p
+end
+
+function Fx.Burst(pos, color, count, speed)
+	local p = anchor(pos)
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = SPARK
+	e.Color = ColorSequence.new(color)
+	e.LightEmission = 0.6
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(1, 0) })
+	e.Lifetime = NumberRange.new(0.5, 0.9)
+	e.Speed = NumberRange.new(speed or 14, (speed or 14) * 1.6)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Drag = 4
+	e.Rate = 0
+	e.ZOffset = 1
+	e.Parent = p
+	e:Emit(count or 20)
+	task.delay(1.6, function()
+		p:Destroy()
+	end)
+end
+
+-- floating world text
+function Fx.Float(pos, text, color)
+	local p = anchor(pos)
+	local bb = K.new("BillboardGui", { Adornee = p, AlwaysOnTop = true, Size = UDim2.fromOffset(200, 50), LightInfluence = 0 }, K.gui.Parent)
+	local l = K.text(bb, { Text = text, TextSize = 30, TextColor3 = color, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, Outline = 3 })
+	local sc = K.new("UIScale", { Scale = 0.3 }, l)
+	tw(sc, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
+	tw(p, 1.1, { Position = pos + Vector3.new(0, 6, 0) })
+	task.delay(0.7, function()
+		tw(l, 0.4, { TextTransparency = 1 })
+	end)
+	task.delay(1.2, function()
+		bb:Destroy()
+		p:Destroy()
+	end)
+end
+
+function Fx.Pickup(info)
+	local def = PartConfig.Parts[info.partId]
+	local color = def and CarConfig.Rarities[def.rarity].color or GOLD
+	Fx.Burst(info.pos + Vector3.new(0, 3, 0), color, info.risk == "road" and 40 or 22)
+	Fx.Float(info.pos + Vector3.new(0, 5, 0), "+" .. info.amount .. " " .. (K.PART_ICON[info.partId] or ""), color)
+	if info.risk == "road" then
+		Cine.Shake(0.4, 0.2)
+	end
+	UI.Sfx(info.risk == "road" and "pickupBig" or "pickup")
+end
+
+-- icons fly from the middle of the screen into the parts row
+function Fx.Bank(info)
+	local target = UDim2.fromOffset(120, 108)
+	local i = 0
+	for id, n in pairs(info.parts or {}) do
+		for _ = 1, math.min(n, 4) do
+			i = i + 1
+			local delayT = i * 0.06
+			task.delay(delayT, function()
+				local l = K.text(K.root, { Text = K.PART_ICON[id] or "⚙️", Font = K.BODY, TextSize = 40, AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.new(0.5, math.random(-60, 60), 0.55, math.random(-30, 30)), Size = UDim2.fromOffset(50, 50),
+					TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 45 })
+				tw(l, 0.55, { Position = target, TextSize = 22 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+				task.delay(0.56, function()
+					l:Destroy()
+				end)
+			end)
+		end
+	end
+	local msg = "+" .. info.moved
+	if info.bonus &gt; 0 then
+		msg = msg .. "  +" .. info.bonus .. " COMBO"
+	end
+	local big = K.text(K.root, { Text = msg, TextSize = 46, TextColor3 = K.P.yellow, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45),
+		Size = UDim2.fromOffset(700, 60), TextXAlignment = Enum.TextXAlignment.Center, Outline = 4, ZIndex = 45 })
+	local sc = K.new("UIScale", { Scale = 0.2 }, big)
+	tw(sc, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
+	task.delay(1.3, function()
+		tw(big, 0.3, { TextTransparency = 1 })
+		task.wait(0.32)
+		big:Destroy()
+	end)
+	if info.cash and info.cash &gt; 0 then
+		UI.Toast("⏱ SPEED BONUS +$" .. info.cash, "good")
+	end
+	UI.Sfx(info.bonus &gt; 0 and "bankCombo" or "bank")
+end
+
+-- golden coin rain over the screen (buyer) / gold burst (everyone else)
+function Fx.Donate(buyer, key)
+	if buyer == Players.LocalPlayer then
+		for k = 1, 26 do
+			task.delay(k * 0.03, function()
+				local l = K.text(K.gui, { Text = "🪙", Font = K.BODY, TextSize = math.random(26, 44), Position = UDim2.new(math.random(), 0, -0.1, 0),
+					Size = UDim2.fromOffset(50, 50), ZIndex = 55 })
+				tw(l, 1.4 + math.random() * 0.6, { Position = UDim2.new(l.Position.X.Scale, 0, 1.1, 0), Rotation = math.random(-200, 200) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+				task.delay(2.1, function()
+					l:Destroy()
+				end)
+			end)
+		end
+		Cine.Flash(GOLD, 0.6, 0.6)
+		UI.Sfx("cash")
+	end
+	local c = buyer and buyer.Character
+	local hrp = c and c:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		Fx.Burst(hrp.Position + Vector3.new(0, 3, 0), GOLD, 50, 20)
+	end
+end
+
+function Fx.Airbag(dir)
+	local c = Players.LocalPlayer.Character
+	local hrp = c and c:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		hrp.AssemblyLinearVelocity = dir.Unit * 60 + Vector3.new(0, 35, 0)
+		Fx.Burst(hrp.Position, C(255, 255, 255), 40, 18)
+	end
+	Cine.Shake(1.6, 0.4)
+	Cine.Flash(C(255, 255, 255), 0.3, 0.4)
+	UI.Toast("🛡️ AIRBAG SAVED YOU!", "warn")
+	UI.Sfx("airbag")
+end
+
+-- the Golden Magnate flips a coin and his hat sparkles
+local function magnate()
+	local npc
+	repeat
+		task.wait(2)
+		for _, m in ipairs(Workspace:GetChildren()) do
+			if m:IsA("Model") and m:GetAttribute("Magnate") then
+				npc = m
+			end
+		end
+	until npc
+	local hand = npc:FindFirstChild("RightHand")
+	local head = npc:FindFirstChild("Head")
+	if head then
+		local att = Instance.new("Attachment")
+		att.Position = Vector3.new(0, 1.4, 0)
+		att.Parent = head
+		local e = Instance.new("ParticleEmitter")
+		e.Texture = SPARK
+		e.Color = ColorSequence.new(GOLD)
+		e.LightEmission = 0.8
+		e.Size = NumberSequence.new(0.35, 0)
+		e.Lifetime = NumberRange.new(0.6, 1)
+		e.Speed = NumberRange.new(1, 2)
+		e.SpreadAngle = Vector2.new(180, 180)
+		e.Rate = 4
+		e.Parent = att
+	end
+	while npc.Parent and hand do
+		task.wait(3 + math.random() * 2)
+		local coin = Instance.new("Part")
+		coin.Shape = Enum.PartType.Cylinder
+		coin.Size = Vector3.new(0.12, 0.9, 0.9)
+		coin.Color = GOLD
+		coin.Material = Enum.Material.Metal
+		coin.Reflectance = 0.3
+		coin.Anchored, coin.CanCollide, coin.CanQuery, coin.CanTouch = true, false, false, false
+		local p0 = hand.Position + Vector3.new(0, 0.6, 0)
+		coin.CFrame = CFrame.new(p0)
+		coin.Parent = Workspace
+		local t0 = os.clock()
+		local conn
+		conn = RunService.RenderStepped:Connect(function()
+			local a = (os.clock() - t0) / 0.9
+			if a &gt;= 1 or not coin.Parent then
+				conn:Disconnect()
+				coin:Destroy()
+				return
+			end
+			local h = math.sin(a * math.pi) * 5
+			coin.CFrame = CFrame.new(p0 + Vector3.new(0, h, 0)) * CFrame.Angles(a * 25, 0, 0)
+		end)
+	end
+end
+
+function Fx.Init(ui)
+	UI = ui
+	K = UI.Kit()
+	task.spawn(magnate)
+end
+
+return Fx
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX07D49C0564ED4804AE37A283BA256CC1"><Properties><string name="Name">DeathFx</string><ProtectedString name="Source">-- WRECKED! sequence: impact flash, heavy shake, glitch, grayscale-red grade, crane-up camera, countdown.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -8607,7 +8847,378 @@ function DeathFx.Recover()
 end
 
 return DeathFx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX1EAFB7B26DB3434DBA2E3C6131EE6B3E"><Properties><string name="Name">SpeedLanes</string><ProtectedString name="Source">-- Running lanes: dark strips with white arrows. Boost only while running the way the arrows point.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX228A8E77A4194C3EACDAAE03A82D31EA"><Properties><string name="Name">Markers</string><ProtectedString name="Source">-- World markers (always on top) + an edge arrow pointing to the current objective.
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Strings = require(Shared:WaitForChild("Strings"))
+local MapConfig = require(Shared:WaitForChild("MapConfig"))
+local BaseLayout = require(Shared:WaitForChild("BaseLayout"))
+
+local T = Strings.T
+local C = Color3.fromRGB
+local Markers = {}
+local K, store, extra
+local folder, arrow, arrowLabel
+local marks = {}
+
+local function anchorAt(name, pos)
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch = true, false, false, false
+	p.Transparency = 1
+	p.Size = Vector3.one * 0.2
+	p.Position = pos
+	p.Parent = folder
+	return p
+end
+
+-- icon bubble + label + distance
+local function makeMark(id, icon, label, color, pos, maxDist)
+	local adornee = anchorAt("M_" .. id, pos)
+	local bb = K.new("BillboardGui", { Name = "Mark_" .. id, Adornee = adornee, AlwaysOnTop = true, Size = UDim2.fromOffset(150, 74),
+		StudsOffsetWorldSpace = Vector3.new(0, 4, 0), MaxDistance = maxDist or 2000, LightInfluence = 0, ResetOnSpawn = false }, K.gui.Parent)
+	local bubble = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.fromOffset(42, 42), BackgroundColor3 = color }, bb)
+	K.corner(bubble, 21)
+	K.stroke(bubble, K.P.ink, 3)
+	K.text(bubble, { Text = icon, Font = K.BODY, TextSize = 24, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
+	local l = K.text(bb, { Text = label, TextSize = 16, Position = UDim2.fromOffset(0, 44), Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2 })
+	local d = K.text(bb, { Text = "", Font = K.BODY, TextSize = 13, Position = UDim2.fromOffset(0, 60), Size = UDim2.new(1, 0, 0, 14), TextXAlignment = Enum.TextXAlignment.Center })
+	local scale = K.new("UIScale", {}, bubble)
+	local m = { id = id, bb = bb, adornee = adornee, label = l, dist = d, color = color, icon = icon, scale = scale, text = label }
+	marks[id] = m
+	return m
+end
+
+local function removeMark(id)
+	local m = marks[id]
+	if m then
+		m.bb:Destroy()
+		m.adornee:Destroy()
+		marks[id] = nil
+	end
+end
+
+function Markers.SetPos(id, pos)
+	local m = marks[id]
+	if m then
+		m.adornee.Position = pos
+	end
+end
+
+local function ensureBase()
+	local st = store.State
+	if not st or not st.baseIndex then
+		return
+	end
+	local pos = BaseLayout.ToWorld(st.baseIndex, BaseLayout.TrapLocal) + Vector3.new(0, 10, 0)
+	if not marks.base then
+		makeMark("base", "🏠", T("map_base"), K.P.orange, pos)
+	else
+		Markers.SetPos("base", pos)
+	end
+end
+
+local scanned = {}
+local function refreshScanner()
+	local st = store.State
+	local level = st and st.perks and st.perks.scanner or 0
+	local drops = Workspace:FindFirstChild("RuntimeDrops")
+	local seen = {}
+	if level &gt;= 1 and drops then
+		for _, m in ipairs(drops:GetChildren()) do
+			local pid = m:GetAttribute("PartId")
+			local root = m:FindFirstChild("Root")
+			if root and (pid == "turbo" or pid == "core") then
+				local key = "rare_" .. tostring(m:GetAttribute("PointId"))
+				seen[key] = true
+				if not marks[key] then
+					makeMark(key, pid == "core" and "⚡" or "🌀", "", pid == "core" and C(255, 176, 32) or C(255, 77, 109), root.Position, 420)
+				end
+			end
+		end
+	end
+	for key in pairs(scanned) do
+		if not seen[key] then
+			removeMark(key)
+		end
+	end
+	scanned = seen
+end
+
+-- the objective arrow: hot drop &gt; carry loot home &gt; nothing
+local function objective()
+	local hot = extra.HotDrop()
+	if hot and hot.kind == "start" and marks.hot then
+		return marks.hot
+	end
+	if store.CarriedTotal() &gt; 0 and marks.base then
+		return marks.base
+	end
+	return nil
+end
+
+function Markers.Start(kit, extraModule)
+	K = kit
+	store = K.store
+	extra = extraModule
+	folder = Instance.new("Folder")
+	folder.Name = "MarkerAnchors"
+	folder.Parent = Workspace
+	makeMark("shop", "🔧", T("map_shop"), K.P.red, Vector3.new(MapConfig.Shop.x, 18, MapConfig.Shop.z), 260)
+	makeMark("donate", "👑", T("map_donate"), C(232, 178, 50), Vector3.new(MapConfig.DonateStall.x, 16, MapConfig.DonateStall.z), 260)
+	makeMark("contracts", "📜", T("map_contracts"), C(170, 120, 70), Vector3.new(MapConfig.ContractBoard.x, 12, MapConfig.ContractBoard.z), 160)
+
+	arrow = K.new("Frame", { Name = "ObjectiveArrow", AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(64, 64), BackgroundTransparency = 1, Visible = false, ZIndex = 30 }, K.gui)
+	local tri = K.text(arrow, { Text = "➤", Font = K.BODY, TextSize = 52, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 30, TextColor3 = K.P.orange })
+	K.new("UIStroke", { Color = K.P.ink, Thickness = 3 }, tri)
+	arrowLabel = tri
+
+	store.Changed.Event:Connect(ensureBase)
+	local t = 0
+	RunService.RenderStepped:Connect(function(dt)
+		t = t + dt
+		local cam = Workspace.CurrentCamera
+		local char = Players.LocalPlayer.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		if not cam or not hrp then
+			return
+		end
+		-- hot drop marker follows the event
+		local hot = extra.HotDrop()
+		if hot and hot.kind == "start" then
+			if not marks.hot then
+				makeMark("hot", "📦", T("hot_drop"), K.P.red, hot.pos + Vector3.new(0, 6, 0))
+			end
+			marks.hot.scale.Scale = 1 + 0.15 * math.sin(t * 8)
+		elseif marks.hot then
+			removeMark("hot")
+		end
+		-- distances
+		for _, m in pairs(marks) do
+			local d = (m.adornee.Position - hrp.Position).Magnitude
+			m.dist.Text = (d &gt; 12) and (math.floor(d) .. " m") or ""
+		end
+		-- edge arrow
+		local obj = objective()
+		if obj then
+			local p, onScreen = cam:WorldToViewportPoint(obj.adornee.Position)
+			local vp = cam.ViewportSize
+			if onScreen and p.Z &gt; 0 and p.X &gt; 40 and p.X &lt; vp.X - 40 and p.Y &gt; 40 and p.Y &lt; vp.Y - 40 then
+				arrow.Visible = false
+			else
+				local cx, cy = vp.X / 2, vp.Y / 2
+				local dx, dy = p.X - cx, p.Y - cy
+				if p.Z &lt; 0 then
+					dx, dy = -dx, -dy
+				end
+				local ang = math.atan2(dy, dx)
+				local rx, ry = cx - 70, cy - 70
+				local s = math.min(rx / math.max(math.abs(math.cos(ang)), 1e-3), ry / math.max(math.abs(math.sin(ang)), 1e-3))
+				arrow.Position = UDim2.fromOffset(cx + math.cos(ang) * s, cy + math.sin(ang) * s)
+				arrow.Rotation = math.deg(ang)
+				arrowLabel.TextColor3 = obj.color
+				arrow.Visible = true
+			end
+		else
+			arrow.Visible = false
+		end
+	end)
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			ensureBase()
+			refreshScanner()
+		end
+	end)
+end
+
+return Markers
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX981E034008A24BB1B8FA570F42072105"><Properties><string name="Name">Minimap</string><ProtectedString name="Source">-- Minimap: districts, roads, running lanes, garages, shops, players, hot drop. Tap to toggle the full map.
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local MapConfig = require(Shared:WaitForChild("MapConfig"))
+local BaseLayout = require(Shared:WaitForChild("BaseLayout"))
+
+local C = Color3.fromRGB
+local Minimap = {}
+local K, store, extra
+local frame, content, me, hotIcon, baseIcons
+local dots = {}
+local big = false
+
+local HW = MapConfig.MapHalfWidth
+local Z0, Z1 = MapConfig.StartZ, MapConfig.EndZ
+local SMALL = { size = 190, window = 260 } -- pixels, studs shown across the small map
+
+-- world (x, z) -&gt; content pixel; +Z is up on the map
+local function px(x, z, s)
+	return (x + HW) * s, (Z1 - z) * s
+end
+
+local function rect(parent, x1, z1, x2, z2, color, s, z, corner)
+	local ax, ay = px(math.min(x1, x2), math.max(z1, z2), s)
+	local f = K.new("Frame", { Position = UDim2.fromOffset(ax, ay), Size = UDim2.fromOffset(math.abs(x2 - x1) * s, math.abs(z2 - z1) * s),
+		BackgroundColor3 = color, BorderSizePixel = 0, ZIndex = z or 3 }, parent)
+	if corner then
+		K.corner(f, corner)
+	end
+	return f
+end
+
+local function icon(parent, emoji, color, size)
+	local f = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(size or 20, size or 20), BackgroundColor3 = color, ZIndex = 8 }, parent)
+	K.corner(f, (size or 20) / 2)
+	K.stroke(f, K.P.ink, 2)
+	K.text(f, { Text = emoji, Font = K.BODY, TextSize = (size or 20) * 0.62, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 9 })
+	return f
+end
+
+local function place(obj, x, z, s)
+	local a, b = px(x, z, s)
+	obj.Position = UDim2.fromOffset(a, b)
+end
+
+-- draws the static map at scale s (pixels per stud)
+local function draw(s)
+	if content then
+		content:Destroy()
+	end
+	content = K.new("Frame", { Size = UDim2.fromOffset(2 * HW * s, (Z1 - Z0) * s), BackgroundColor3 = C(110, 180, 96), BorderSizePixel = 0, ZIndex = 2 }, frame)
+	rect(content, -HW, Z0, HW, MapConfig.EntryZ, MapConfig.Plaza.ground, s, 2)
+	rect(content, -MapConfig.PromenadeHalfWidth, Z0, MapConfig.PromenadeHalfWidth, MapConfig.EntryZ, MapConfig.Plaza.paving, s, 3)
+	for _, zid in ipairs(MapConfig.ZoneOrder) do
+		local z = MapConfig.Zones[zid]
+		rect(content, -HW, z.zMin - 10, HW, z.zMax + 8, z.palette.ground, s, 2)
+	end
+	for _, r in ipairs(MapConfig.Roads) do
+		rect(content, -HW, r.z - r.width / 2, HW, r.z + r.width / 2, C(56, 58, 66), s, 4)
+		rect(content, -HW, r.z - 0.6, HW, r.z + 0.6, C(255, 210, 63), s, 5)
+	end
+	for _, l in ipairs(MapConfig.SpeedLanes()) do
+		rect(content, l[1], l[3], l[2], l[4], C(54, 56, 62), s, 5)
+	end
+	baseIcons = {}
+	for i, c in ipairs(MapConfig.BaseCenters) do
+		local b = rect(content, c.x - MapConfig.BasePlot.x / 2, c.z - MapConfig.BasePlot.z / 2, c.x + MapConfig.BasePlot.x / 2, c.z + MapConfig.BasePlot.z / 2, C(150, 154, 162), s, 4, 4)
+		baseIcons[i] = b
+	end
+	place(icon(content, "🔧", K.P.red, 18), MapConfig.Shop.x, MapConfig.Shop.z, s)
+	place(icon(content, "👑", C(232, 178, 50), 18), MapConfig.DonateStall.x, MapConfig.DonateStall.z, s)
+	place(icon(content, "📜", C(170, 120, 70), 16), MapConfig.ContractBoard.x, MapConfig.ContractBoard.z, s)
+	for _, g in ipairs(MapConfig.Gates) do
+		local open = store.State and store.State.zones and store.State.zones[g.zone]
+		rect(content, -MapConfig.GateHalfWidth, g.z - 2, MapConfig.GateHalfWidth, g.z + 2, open and C(90, 200, 110) or K.P.red, s, 6)
+		if not open then
+			place(icon(content, "🔒", K.P.red, 16), 0, g.z, s)
+		end
+	end
+	hotIcon = icon(content, "📦", K.P.red, 22)
+	hotIcon.Visible = false
+	dots = {}
+	me = K.new("TextLabel", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(22, 22), BackgroundTransparency = 1, Text = "▲",
+		Font = K.BODY, TextSize = 20, TextColor3 = K.P.white, ZIndex = 12 }, content)
+	K.new("UIStroke", { Color = K.P.ink, Thickness = 2.5 }, me)
+	return s
+end
+
+local scale = 1
+local function setMode(isBig)
+	big = isBig
+	if big then
+		local vp = Workspace.CurrentCamera.ViewportSize
+		local h = math.min(vp.Y * 0.8, 820)
+		scale = h / (Z1 - Z0)
+		frame.Size = UDim2.fromOffset(2 * HW * scale, h)
+		frame.AnchorPoint = Vector2.new(0.5, 0.5)
+		frame.Position = UDim2.fromScale(0.5, 0.5)
+	else
+		scale = SMALL.size / SMALL.window
+		frame.Size = UDim2.fromOffset(SMALL.size, SMALL.size)
+		frame.AnchorPoint = Vector2.new(1, 0)
+		frame.Position = UDim2.new(1, -16, 0, 16)
+	end
+	draw(scale)
+end
+
+function Minimap.Start(kit, extraModule)
+	K = kit
+	store = K.store
+	extra = extraModule
+	frame = K.new("TextButton", { Name = "Minimap", Text = "", AutoButtonColor = false, BackgroundColor3 = C(40, 44, 52), ClipsDescendants = true, ZIndex = 2 }, K.gui)
+	K.corner(frame, 18)
+	K.stroke(frame, K.P.ink, 4)
+	frame.Activated:Connect(function()
+		setMode(not big)
+	end)
+	setMode(false)
+	store.Changed.Event:Connect(function()
+		draw(scale)
+	end)
+	RunService.RenderStepped:Connect(function()
+		local char = Players.LocalPlayer.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		frame.Visible = K.state.open == nil or big
+		if not hrp or not content then
+			return
+		end
+		local pos = hrp.Position
+		place(me, pos.X, pos.Z, scale)
+		local look = hrp.CFrame.LookVector
+		me.Rotation = math.deg(math.atan2(look.X, look.Z))
+		if not big then
+			local a, b = px(pos.X, pos.Z, scale)
+			content.Position = UDim2.fromOffset(SMALL.size / 2 - a, SMALL.size / 2 - b)
+		else
+			content.Position = UDim2.new()
+		end
+		-- own garage highlight
+		local st = store.State
+		for i, b in ipairs(baseIcons) do
+			b.BackgroundColor3 = (st and st.baseIndex == i) and K.P.orange or C(150, 154, 162)
+		end
+		-- other players
+		local seen = {}
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p ~= Players.LocalPlayer then
+				local c = p.Character
+				local r = c and c:FindFirstChild("HumanoidRootPart")
+				if r then
+					local d = dots[p]
+					if not d or not d.Parent then
+						d = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(9, 9), BackgroundColor3 = K.P.blue, ZIndex = 10 }, content)
+						K.corner(d, 5)
+						K.stroke(d, K.P.white, 1.5)
+						dots[p] = d
+					end
+					place(d, r.Position.X, r.Position.Z, scale)
+					seen[p] = true
+				end
+			end
+		end
+		for p, d in pairs(dots) do
+			if not seen[p] then
+				d:Destroy()
+				dots[p] = nil
+			end
+		end
+		local hot = extra.HotDrop()
+		hotIcon.Visible = hot ~= nil and hot.kind == "start"
+		if hotIcon.Visible then
+			place(hotIcon, hot.pos.X, hot.pos.Z, scale)
+		end
+	end)
+end
+
+return Minimap
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX869E1249067D430FA319055407D25FF4"><Properties><string name="Name">SpeedLanes</string><ProtectedString name="Source">-- Running lanes: dark strips with white arrows. Boost only while running the way the arrows point.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -8647,4 +9258,347 @@ function SpeedLanes.Start(getBaseSpeed)
 end
 
 return SpeedLanes
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXA08C33851B434A81919EF848D11F2771"><Properties><string name="Name">UIExtra</string><ProtectedString name="Source">-- Extra HUD + panels: Pit Stop perks, Golden Magnate donations, combo meter, contracts, hot drop banner, boosts.
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Strings = require(Shared:WaitForChild("Strings"))
+local Util = require(Shared:WaitForChild("Util"))
+local ShopConfig = require(Shared:WaitForChild("ShopConfig"))
+local DonateConfig = require(Shared:WaitForChild("DonateConfig"))
+local MapConfig = require(Shared:WaitForChild("MapConfig"))
+local PartConfig = require(Shared:WaitForChild("PartConfig"))
+
+local T = Strings.T
+local C = Color3.fromRGB
+local X = {}
+local K, UI
+local P
+local w = {}
+local hot = nil -- current hot drop info
+local donateTab = "boost"
+
+local function fmtTime(sec)
+	sec = math.max(0, math.floor(sec))
+	return string.format("%d:%02d", math.floor(sec / 60), sec % 60)
+end
+
+---------------------------------------------------------------- Pit Stop
+local function buildShop()
+	local p = K.panelShell("shop", T("shop_title"), 900, 580, P.red)
+	local grid = K.new("ScrollingFrame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8,
+		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 22 }, p.content)
+	K.new("UIGridLayout", { CellSize = UDim2.fromOffset(204, 214), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder }, grid)
+	w.shopGrid = grid
+end
+
+local function refreshShop(st, open)
+	if open ~= "shop" then
+		return
+	end
+	K.clear(w.shopGrid)
+	for _, def in ipairs(ShopConfig.Perks) do
+		local lvl = st.perks and st.perks[def.id] or 0
+		local cost = ShopConfig.NextCost(def.id, lvl)
+		local card = K.new("Frame", { BackgroundColor3 = P.white, LayoutOrder = def.order, ZIndex = 23 }, w.shopGrid)
+		K.corner(card, 20)
+		K.stroke(card, P.ink, 3)
+		K.text(card, { Text = def.icon, Font = K.BODY, TextSize = 40, Size = UDim2.new(1, 0, 0, 48), Position = UDim2.fromOffset(0, 6), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
+		K.text(card, { Text = string.upper(def.name), TextSize = 20, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(0, 54), Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
+		K.text(card, { Text = def.desc, Font = K.BODY, TextSize = 14, TextColor3 = P.muted, TextWrapped = true, Position = UDim2.fromOffset(8, 78), Size = UDim2.new(1, -16, 0, 36), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
+		local pips = K.new("Frame", { Position = UDim2.new(0.5, 0, 0, 118), AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(def.max * 22, 14), BackgroundTransparency = 1, ZIndex = 24 }, card)
+		K.list(pips, Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Center)
+		for i = 1, def.max do
+			local pip = K.new("Frame", { Size = UDim2.fromOffset(16, 14), BackgroundColor3 = (i &lt;= lvl) and P.green or C(220, 222, 226), ZIndex = 25 }, pips)
+			K.corner(pip, 5)
+			K.stroke(pip, P.ink, 1.5)
+		end
+		local can = cost and K.store.Money &gt;= cost
+		K.toy(card, { Text = cost and ("$" .. Util.FormatNumber(cost)) or T("shop_max"), Sub = cost and T("shop_buy") or nil,
+			Color = cost and (can and P.green or P.grey) or P.yellow, Size = UDim2.fromOffset(176, 62), AnchorPoint = Vector2.new(0.5, 1),
+			Position = UDim2.new(0.5, 0, 1, -6), ZIndex = 25, TextSize = 22, SubSize = 13,
+			OnClick = function()
+				if cost then
+					K.actions.BuyPerk(def.id)
+				end
+			end })
+	end
+end
+
+---------------------------------------------------------------- Golden Magnate
+local GOLD = C(232, 178, 50)
+local function buildDonate()
+	local p = K.panelShell("donate", T("donate_title"), 920, 600, GOLD)
+	local tabs = K.new("Frame", { Size = UDim2.new(1, 0, 0, 56), BackgroundTransparency = 1, ZIndex = 22 }, p.content)
+	K.list(tabs, Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Center)
+	w.donateTabs = {}
+	for i, tab in ipairs({ "boost", "pack", "pass" }) do
+		w.donateTabs[tab] = K.toy(tabs, { Text = T("donate_" .. tab), Color = P.grey, Size = UDim2.fromOffset(170, 52), LayoutOrder = i, ZIndex = 23, TextSize = 20,
+			OnClick = function()
+				donateTab = tab
+				UI.Refresh()
+			end })
+	end
+	local grid = K.new("ScrollingFrame", { Position = UDim2.fromOffset(0, 66), Size = UDim2.new(1, 0, 1, -66), BackgroundTransparency = 1, BorderSizePixel = 0,
+		ScrollBarThickness = 8, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 22 }, p.content)
+	K.new("UIGridLayout", { CellSize = UDim2.fromOffset(204, 200), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder }, grid)
+	w.donateGrid = grid
+end
+
+local function refreshDonate(st, open)
+	if open ~= "donate" then
+		return
+	end
+	for tab, b in pairs(w.donateTabs) do
+		b.SetColor(tab == donateTab and GOLD or P.grey)
+	end
+	K.clear(w.donateGrid)
+	local items = donateTab == "pass" and DonateConfig.Passes or DonateConfig.Products
+	for _, it in ipairs(items) do
+		if it.tab == donateTab then
+			local owned = it.isPass and st.passes and st.passes[it.id]
+			local card = K.new("Frame", { BackgroundColor3 = C(255, 250, 236), LayoutOrder = it.order, ZIndex = 23 }, w.donateGrid)
+			K.corner(card, 20)
+			K.stroke(card, GOLD, 4)
+			K.text(card, { Text = it.icon, Font = K.BODY, TextSize = 40, Size = UDim2.new(1, 0, 0, 48), Position = UDim2.fromOffset(0, 6), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
+			K.text(card, { Text = string.upper(it.name), TextSize = 19, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(0, 54), Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
+			local desc = it.desc
+			if it.boost and st.boosts and (st.boosts[it.boost] or 0) &gt; 0 then
+				desc = desc .. "\nActive: " .. fmtTime(st.boosts[it.boost])
+			end
+			K.text(card, { Text = desc, Font = K.BODY, TextSize = 14, TextColor3 = P.muted, TextWrapped = true, Position = UDim2.fromOffset(8, 78), Size = UDim2.new(1, -16, 0, 50), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
+			K.toy(card, { Text = owned and T("donate_owned") or ("R$ " .. it.price), Color = owned and P.grey or GOLD, Size = UDim2.fromOffset(176, 58),
+				AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), ZIndex = 25, TextSize = 24,
+				OnClick = function()
+					if not owned then
+						K.actions.Donate(it.id)
+					end
+				end })
+		end
+	end
+end
+
+---------------------------------------------------------------- HUD widgets
+local function buildHud()
+	local root = K.root
+	-- gold shop button under the parts row
+	w.shopBtn = K.toy(root, { Name = "MagnateBtn", Text = T("btn_magnate"), Icon = "👑", Color = GOLD, Size = UDim2.fromOffset(96, 84),
+		Position = UDim2.fromOffset(18, 178), OnClick = function() UI.TogglePanel("donate") end })
+	-- active boosts strip next to the money pill
+	w.boosts = K.new("Frame", { Position = UDim2.fromOffset(276, 24), Size = UDim2.fromOffset(240, 50), BackgroundTransparency = 1 }, root)
+	K.list(w.boosts, Enum.FillDirection.Horizontal, 6)
+	-- combo meter (bottom left, above the jump area of mobile thumbstick? left of THROW)
+	local combo = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -140), Size = UDim2.fromOffset(300, 74), BackgroundColor3 = P.ink, Visible = false }, root)
+	K.corner(combo, 20)
+	K.stroke(combo, P.white, 3)
+	w.combo = combo
+	w.comboText = K.text(combo, { Text = "", TextSize = 34, TextColor3 = P.yellow, Position = UDim2.fromOffset(14, 4), Size = UDim2.new(1, -28, 0, 38), TextXAlignment = Enum.TextXAlignment.Center })
+	local bar = K.new("Frame", { Position = UDim2.fromOffset(14, 46), Size = UDim2.new(1, -28, 0, 12), BackgroundColor3 = C(70, 74, 84) }, combo)
+	K.corner(bar, 6)
+	w.comboFill = K.new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = P.orange }, bar)
+	K.corner(w.comboFill, 6)
+	w.comboSub = K.text(combo, { Text = "", Font = K.BODY, TextSize = 13, TextColor3 = P.white, Position = UDim2.fromOffset(14, 58), Size = UDim2.new(1, -28, 0, 14), TextXAlignment = Enum.TextXAlignment.Center })
+	w.comboScale = K.new("UIScale", {}, combo)
+	-- contracts widget (left, below the shop button)
+	local cw = K.new("Frame", { Position = UDim2.fromOffset(18, 272), Size = UDim2.fromOffset(300, 10), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = C(255, 248, 232), BackgroundTransparency = 0.05 }, root)
+	K.corner(cw, 16)
+	K.stroke(cw, P.ink, 3)
+	K.new("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 8) }, cw)
+	K.list(cw, Enum.FillDirection.Vertical, 4)
+	K.text(cw, { Text = "📜 " .. T("contracts_title"), TextSize = 18, TextColor3 = C(140, 96, 56), Outline = false, Size = UDim2.new(1, 0, 0, 22), LayoutOrder = 0 })
+	w.contracts = cw
+	w.contractRows = {}
+	-- hot drop banner
+	local hb = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 118), Size = UDim2.fromOffset(420, 44), BackgroundColor3 = P.red, Visible = false }, root)
+	K.corner(hb, 14)
+	K.stroke(hb, P.ink, 3)
+	w.hot = hb
+	w.hotText = K.text(hb, { Text = "", TextSize = 22, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
+end
+
+local CONTRACT_PART = function(c)
+	return PartConfig.Parts[c.part] and (K.PART_ICON[c.part] .. " " .. T("part_" .. c.part)) or ""
+end
+
+local function contractText(c)
+	if c.kind == "bank_part" then
+		return T("c_bank_part", c.n, CONTRACT_PART(c), T("zone_" .. tostring(c.zone)))
+	elseif c.kind == "combo" then
+		return T("c_combo", tostring(c.mult))
+	elseif c.kind == "speed" then
+		return T("c_speed", c.seconds or 40)
+	elseif c.kind == "throw" then
+		return T("c_throw", c.n)
+	elseif c.kind == "road" then
+		return T("c_road", c.n)
+	end
+	return T("c_hotdrop")
+end
+
+local function refreshHud(st)
+	-- boosts
+	K.clear(w.boosts)
+	for _, b in ipairs({ { "income", "💸 x2" }, { "luck", "🍀 x2" } }) do
+		local left = st.boosts and st.boosts[b[1]] or 0
+		if left &gt; 0 then
+			K.pill(w.boosts, b[2] .. " " .. fmtTime(left), GOLD, { H = 34, TextSize = 18 })
+		end
+	end
+	if st.passes and st.passes.vip then
+		K.pill(w.boosts, "⭐ VIP", GOLD, { H = 34, TextSize = 18 })
+	end
+	-- contracts
+	for _, r in ipairs(w.contractRows) do
+		r:Destroy()
+	end
+	w.contractRows = {}
+	for i, c in ipairs(st.contracts or {}) do
+		local row = K.new("Frame", { Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, LayoutOrder = i }, w.contracts)
+		K.text(row, { Text = contractText(c), Font = K.BODY, TextSize = 14, TextColor3 = P.ink, TextWrapped = true, Size = UDim2.new(1, -60, 0, 22), RichText = false })
+		K.text(row, { Text = string.format("%d/%d", c.progress, c.n), TextSize = 16, TextColor3 = P.ink, Outline = false, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.fromOffset(56, 22), TextXAlignment = Enum.TextXAlignment.Right })
+		local bar = K.new("Frame", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 8), BackgroundColor3 = C(226, 218, 200) }, row)
+		K.corner(bar, 4)
+		local fill = K.new("Frame", { Size = UDim2.fromScale(c.progress / c.n, 1), BackgroundColor3 = P.green }, bar)
+		K.corner(fill, 4)
+		table.insert(w.contractRows, row)
+	end
+	w.contracts.Visible = #(st.contracts or {}) &gt; 0 and K.state.open == nil
+	w.shopBtn.holder.Visible = K.state.open == nil
+end
+
+local NEXT_TIER = { { 2, 1.5 }, { 4, 2 }, { 7, 3 } }
+local lastMult = 1
+
+local function tick()
+	local st = K.store.State
+	if not st then
+		return
+	end
+	local run = st.run or {}
+	local picked = run.picked or 0
+	w.combo.Visible = picked &gt; 0 and K.state.open == nil
+	if picked &gt; 0 then
+		local mult = run.mult or 1
+		local nextAt, prevAt = nil, 0
+		for _, t in ipairs(NEXT_TIER) do
+			if picked &lt; t[1] then
+				nextAt = t[1]
+				break
+			end
+			prevAt = t[1]
+		end
+		w.comboText.Text = T("combo", tostring(mult))
+		w.comboFill.Size = UDim2.fromScale(nextAt and (picked - prevAt) / (nextAt - prevAt) or 1, 1)
+		local elapsed = run.firstAt and (Workspace:GetServerTimeNow() - run.firstAt) or 999
+		local left = 40 - elapsed
+		w.comboSub.Text = left &gt; 0 and (T("combo_hint") .. "  ⏱ " .. T("speed_bonus", math.ceil(left))) or T("combo_hint")
+		if mult &gt; lastMult then
+			w.comboScale.Scale = 1.35
+			K.tween(w.comboScale, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
+			UI.Sfx("combo")
+		end
+		lastMult = mult
+	else
+		lastMult = 1
+	end
+	if hot then
+		local now = Workspace:GetServerTimeNow()
+		if hot.kind == "warn" then
+			local left = hot.at - now
+			w.hot.Visible = left &gt; 0
+			w.hotText.Text = T("hot_drop_in", T("zone_" .. hot.zone), math.ceil(left))
+		else
+			local landing = hot.landAt - now
+			local left = hot.expiresAt - now
+			w.hot.Visible = left &gt; 0
+			w.hotText.Text = "📦 " .. T("hot_drop") .. ": " .. string.upper(T("zone_" .. hot.zone)) .. "  " .. (landing &gt; 0 and ("⬇ " .. math.ceil(landing)) or ("⏱ " .. math.ceil(left)))
+		end
+		if not w.hot.Visible then
+			hot = nil
+		end
+	else
+		w.hot.Visible = false
+	end
+end
+
+function X.OnHotDrop(info)
+	if info.kind == "warn" then
+		hot = { kind = "warn", zone = info.zone, at = Workspace:GetServerTimeNow() + info.inSeconds }
+	elseif info.kind == "start" then
+		hot = info
+		if info.by then
+			UI.Toast(T("hot_drop_called", info.by), "warn")
+		end
+		UI.Sfx("siren")
+	elseif info.kind == "end" then
+		if hot and hot.id == info.id then
+			hot = nil
+		end
+		if info.reason == "taken" and info.winner then
+			UI.Toast(T("hot_drop_taken", info.winner), "info")
+		end
+	end
+end
+
+function X.HotDrop()
+	return hot
+end
+
+function X.Init(ui)
+	UI = ui
+	K = UI.Kit()
+	P = K.P
+	buildShop()
+	buildDonate()
+	buildHud()
+	table.insert(UI.Hooks, function(st, open)
+		refreshShop(st, open)
+		refreshDonate(st, open)
+		refreshHud(st)
+	end)
+	K.store.MoneyChanged.Event:Connect(function()
+		local st = K.store.State
+		if st and K.state.open == "shop" then
+			refreshShop(st, "shop")
+		end
+	end)
+	-- walk up to the NPCs
+	ProximityPromptService.PromptTriggered:Connect(function(prompt)
+		local n = prompt.Parent and prompt.Parent.Name
+		if n == "ShopPrompt" then
+			UI.TogglePanel("shop")
+		elseif n == "DonatePrompt" then
+			UI.TogglePanel("donate")
+		end
+	end)
+	local acc = 0
+	RunService.Heartbeat:Connect(function(dt)
+		acc = acc + dt
+		if acc &gt;= 0.1 then
+			acc = 0
+			tick()
+		end
+	end)
+	-- boost timers count down locally between state pushes
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			local st = K.store.State
+			if st and st.boosts then
+				for k, v in pairs(st.boosts) do
+					st.boosts[k] = math.max(0, v - 1)
+				end
+				refreshHud(st)
+				if K.state.open == "donate" then
+					refreshDonate(st, "donate")
+				end
+			end
+		end
+	end)
+end
+
+return X
 </ProtectedString></Properties></Item></Item></Item></Item></roblox>
