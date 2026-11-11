@@ -26,7 +26,7 @@ local function applyGate(part)
 	local zone = part:GetAttribute("ZoneId")
 	local unlocked = store.State and store.State.zones and store.State.zones[zone] == true
 	part.CanCollide = not unlocked
-	part.Transparency = unlocked and 1 or 0.5
+	part.Transparency = unlocked and 1 or 0
 	for _, g in ipairs(part:GetChildren()) do
 		if g:IsA("SurfaceGui") then
 			g.Enabled = not unlocked

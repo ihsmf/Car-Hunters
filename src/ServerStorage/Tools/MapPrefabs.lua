@@ -22,6 +22,9 @@ function Prefabs.Part(parent, name, size, cf, color, mat, o)
 	p.Anchored = true
 	p.Color = color
 	mat = mat or M.SmoothPlastic
+	if MapConfig.NoNeon and mat == M.Neon and not o.light then
+		mat = M.SmoothPlastic -- only real light sources glow
+	end
 	if MapConfig.Cartoon and (mat == M.Concrete or mat == M.Asphalt or mat == M.Grass or mat == M.Wood) then
 		mat = M.SmoothPlastic -- clean toy look
 	end
@@ -98,20 +101,41 @@ local CYL = Enum.PartType.Cylinder
 local BALL = Enum.PartType.Ball
 local UPRIGHT = CFrame.Angles(0, 0, math.pi / 2)
 
+local lampLights = 0
+local function addLight(part, range)
+	if lampLights >= 70 then
+		return -- keep the light count mobile-friendly
+	end
+	lampLights = lampLights + 1
+	local l = Instance.new("PointLight")
+	l.Range = range or 14
+	l.Brightness = 1.1
+	l.Color = Color3.fromRGB(255, 220, 170)
+	l.Shadows = false
+	l.Parent = part
+end
+
 function Prefabs.Lamp(parent, pos, variant, glow, facing)
 	local cf = CFrame.new(pos) * CFrame.Angles(0, facing or 0, 0)
+	local warm = Color3.fromRGB(255, 236, 200)
+	local POLE = C(52, 56, 64)
+	Part(parent, "LampBase", Vector3.new(1.4, 0.8, 1.4), cf * CFrame.new(0, 0.4, 0), POLE, M.Metal)
 	if variant == 1 then
-		Part(parent, "LampPole", Vector3.new(0.7, 12, 0.7), cf * CFrame.new(0, 6, 0), DARK, M.Metal)
-		Part(parent, "LampArm", Vector3.new(4, 0.5, 0.5), cf * CFrame.new(2, 12, 0), DARK, M.Metal)
-		Part(parent, "LampHead", Vector3.new(1.8, 0.6, 1.2), cf * CFrame.new(4, 11.7, 0), glow, M.Neon)
+		Part(parent, "LampPole", Vector3.new(0.6, 12, 0.6), cf * CFrame.new(0, 6, 0), POLE, M.Metal)
+		Part(parent, "LampArm", Vector3.new(4, 0.4, 0.4), cf * CFrame.new(2, 12, 0), POLE, M.Metal)
+		Part(parent, "LampHousing", Vector3.new(2, 0.5, 1.2), cf * CFrame.new(4, 11.9, 0), POLE, M.Metal)
+		addLight(Part(parent, "LampHead", Vector3.new(1.6, 0.15, 0.9), cf * CFrame.new(4, 11.6, 0), warm, M.Neon, { light = true }), 16)
 	elseif variant == 2 then
-		Part(parent, "LampPole", Vector3.new(0.8, 13, 0.8), cf * CFrame.new(0, 6.5, 0), DARK, M.Metal)
-		Part(parent, "LampArmL", Vector3.new(7, 0.5, 0.5), cf * CFrame.new(0, 13, 0) * CFrame.Angles(0, math.pi / 2, 0), DARK, M.Metal)
-		Part(parent, "LampHeadL", Vector3.new(1.4, 0.5, 1.4), cf * CFrame.new(0, 12.7, 3.4), glow, M.Neon)
-		Part(parent, "LampHeadR", Vector3.new(1.4, 0.5, 1.4), cf * CFrame.new(0, 12.7, -3.4), glow, M.Neon)
+		Part(parent, "LampPole", Vector3.new(0.7, 13, 0.7), cf * CFrame.new(0, 6.5, 0), POLE, M.Metal)
+		Part(parent, "LampArmL", Vector3.new(7, 0.4, 0.4), cf * CFrame.new(0, 13, 0) * CFrame.Angles(0, math.pi / 2, 0), POLE, M.Metal)
+		for _, z in ipairs({ 3.4, -3.4 }) do
+			Part(parent, "LampHousing", Vector3.new(1.4, 0.5, 1.4), cf * CFrame.new(0, 12.9, z), POLE, M.Metal)
+			addLight(Part(parent, "LampHead", Vector3.new(1.1, 0.15, 1.1), cf * CFrame.new(0, 12.6, z), warm, M.Neon, { light = true }), 14)
+		end
 	else
-		Part(parent, "LampPole", Vector3.new(0.6, 8, 0.6), cf * CFrame.new(0, 4, 0), DARK, M.Metal)
-		Part(parent, "LampGlobe", Vector3.new(2.4, 2.4, 2.4), cf * CFrame.new(0, 9.2, 0), glow, M.Neon, { shape = BALL, t = 0.1 })
+		Part(parent, "LampPole", Vector3.new(0.5, 8, 0.5), cf * CFrame.new(0, 4, 0), POLE, M.Metal)
+		Part(parent, "LampCap", Vector3.new(2.2, 0.4, 2.2), cf * CFrame.new(0, 10.4, 0), POLE, M.Metal)
+		addLight(Part(parent, "LampGlobe", Vector3.new(1.8, 2.2, 1.8), cf * CFrame.new(0, 9.1, 0), warm, M.Glass, { t = 0.2 }), 12)
 	end
 end
 

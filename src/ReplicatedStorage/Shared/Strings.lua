@@ -3,7 +3,7 @@ local Strings = {}
 local en = {
 	hud_money = "Money", hud_income = "Income", hud_zone = "District", hud_carry = "Backpack",
 	zone_plaza = "Safe Plaza", zone_city = "City", zone_highway = "Highway",
-	zone_industrial = "Industrial", zone_neon = "Neon",
+	zone_industrial = "Industrial", zone_neon = "Night",
 	part_bolts = "Bolts", part_tire = "Tire", part_engine = "Engine", part_turbo = "Turbo", part_core = "Core",
 	rarity_Common = "Common", rarity_Uncommon = "Uncommon", rarity_Rare = "Rare", rarity_Epic = "Epic", rarity_Legendary = "Legendary",
 	btn_throw = "THROW!", btn_garage = "GARAGE", btn_zones = "TELEPORT", btn_index = "CARS", btn_close = "X",
@@ -25,7 +25,7 @@ local en = {
 	zones_title = "City Map", zones_open = "Unlocked", zones_locked = "Locked", zones_need_prev = "Unlock previous first",
 	zones_cost = "Price", zones_value = "Collection value", zones_done = "Every district is open. You rule the streets!",
 	zone_desc_city = "Calm streets. Bolts and tires.", zone_desc_highway = "Fast lanes. Tires, engines, turbos.",
-	zone_desc_industrial = "Heavy trucks. Engines and turbos.", zone_desc_neon = "Hyper traffic. Turbos and cores.",
+	zone_desc_industrial = "Heavy trucks. Engines and turbos.", zone_desc_neon = "Night racers. Turbos and cores.",
 	tut_find = "Grab a glowing part - one car hit = WRECKED!",
 	tut_return = "Run back to the plaza to bank your loot!",
 	tut_throw = "Go to the trap in your garage and press THROW!",

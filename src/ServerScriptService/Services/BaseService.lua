@@ -16,8 +16,8 @@ local Base = {}
 local S
 local bases = {}
 
-local PAD_LOCKED = Color3.fromRGB(45, 46, 54)
-local PAD_FREE = Color3.fromRGB(50, 120, 180)
+local PAD_LOCKED = Color3.fromRGB(46, 48, 54)
+local PAD_FREE = Color3.fromRGB(86, 90, 98)
 
 function Base.Init(hub)
 	S = hub
@@ -50,18 +50,14 @@ function Base.Start()
 end
 
 local function setPad(pad, state, rarityColor)
+	pad.Material = Enum.Material.SmoothPlastic
+	pad.Transparency = 0
 	if state == "locked" then
 		pad.Color = PAD_LOCKED
-		pad.Material = Enum.Material.SmoothPlastic
-		pad.Transparency = 0
 	elseif state == "free" then
 		pad.Color = PAD_FREE
-		pad.Material = Enum.Material.SmoothPlastic
-		pad.Transparency = 0
 	else
-		pad.Color = rarityColor
-		pad.Material = Enum.Material.Neon
-		pad.Transparency = 0.35
+		pad.Color = rarityColor:Lerp(Color3.fromRGB(70, 74, 82), 0.55) -- tinted bay, the car itself carries the colour
 	end
 end
 
