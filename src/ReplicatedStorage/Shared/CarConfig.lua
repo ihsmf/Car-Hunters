@@ -19,27 +19,37 @@ CarConfig.ValueMultiplier = 40
 CarConfig.UpgradeCostBase = 0.5
 CarConfig.UpgradeCostGrowth = 1.35
 
+-- Fictional parody cars: inspired by familiar body styles, no real names, logos or badges.
 local list = {
-	{ id = "rusty_compact", name = "Rusty Compact", rarity = "Common", style = "compact", income = 2, body = C(176, 108, 70), accent = C(80, 60, 48), tag = "Held together by hope." },
-	{ id = "pocket_hatch", name = "Pocket Hatch", rarity = "Common", style = "compact", income = 3, body = C(120, 210, 180), accent = C(255, 255, 255), tag = "Tiny, cheerful, always parks." },
-	{ id = "dusty_sedan", name = "Dusty Sedan", rarity = "Common", style = "sedan", income = 4, body = C(160, 162, 170), accent = C(70, 72, 80), tag = "Grandpa's daily driver." },
-	{ id = "mule_pickup", name = "Mule Pickup", rarity = "Common", style = "pickup", income = 5, body = C(206, 170, 112), accent = C(90, 70, 50), tag = "Hauls anything, anywhere." },
-	{ id = "street_runner", name = "Street Runner", rarity = "Uncommon", style = "sedan", income = 8, body = C(60, 128, 236), accent = C(250, 250, 250), tag = "Quick off the line." },
-	{ id = "city_taxi", name = "City Taxi Mk2", rarity = "Uncommon", style = "taxi", income = 10, body = C(255, 206, 50), accent = C(30, 30, 30), tag = "The meter is always running." },
-	{ id = "cargo_hopper", name = "Cargo Hopper", rarity = "Uncommon", style = "van", income = 12, body = C(80, 180, 110), accent = C(240, 240, 240), tag = "Delivers before you order." },
-	{ id = "boulevard_gt", name = "Boulevard GT", rarity = "Uncommon", style = "sedan", income = 15, body = C(250, 146, 60), accent = C(40, 40, 46), spoiler = true, tag = "Sunday cruising, Monday racing." },
-	{ id = "night_phantom", name = "Night Phantom", rarity = "Rare", style = "sport", income = 25, body = C(34, 32, 44), accent = C(40, 200, 255), neon = C(40, 200, 255), tag = "Seen only after midnight." },
-	{ id = "iron_hauler", name = "Iron Hauler", rarity = "Rare", style = "truck", income = 32, body = C(118, 126, 140), accent = C(255, 160, 40), tag = "Eighteen tons of attitude." },
-	{ id = "redline_coupe", name = "Redline Coupe", rarity = "Rare", style = "sport", income = 40, body = C(225, 46, 52), accent = C(255, 255, 255), spoiler = true, tag = "Lives at the rev limiter." },
-	{ id = "volt_cruiser", name = "Volt Cruiser", rarity = "Rare", style = "sedan", income = 50, body = C(50, 178, 184), accent = C(30, 40, 50), neon = C(60, 240, 255), tag = "Silent, smooth, electric." },
-	{ id = "turbo_vortex", name = "Turbo Vortex", rarity = "Epic", style = "sport", income = 100, body = C(255, 124, 36), accent = C(30, 30, 36), spoiler = true, neon = C(255, 150, 40), tag = "Spools up a storm." },
-	{ id = "chrome_viper", name = "Chrome Viper", rarity = "Epic", style = "supercar", income = 125, body = C(206, 214, 226), accent = C(40, 44, 52), chrome = true, tag = "Mirror finish, venom bite." },
-	{ id = "apex_predator", name = "Apex Predator", rarity = "Epic", style = "supercar", income = 150, body = C(36, 120, 70), accent = C(20, 20, 24), spoiler = true, neon = C(90, 255, 120), tag = "Top of the food chain." },
-	{ id = "solar_flare", name = "Solar Flare", rarity = "Epic", style = "supercar", income = 200, body = C(255, 214, 50), accent = C(210, 60, 30), neon = C(255, 190, 40), tag = "Too bright to look at." },
-	{ id = "neon_specter", name = "Neon Specter", rarity = "Legendary", style = "proto", income = 500, body = C(26, 30, 46), accent = C(40, 230, 255), neon = C(40, 230, 255), tag = "A ghost made of light." },
-	{ id = "hyper_nova", name = "Hyper Nova", rarity = "Legendary", style = "proto", income = 650, body = C(40, 20, 24), accent = C(255, 60, 90), neon = C(255, 60, 90), tag = "Born in a dying star." },
-	{ id = "quantum_drift", name = "Quantum Drift", rarity = "Legendary", style = "proto", income = 800, body = C(236, 240, 255), accent = C(80, 120, 255), neon = C(110, 150, 255), tag = "Everywhere at once." },
-	{ id = "eclipse_titan", name = "Eclipse Titan", rarity = "Legendary", style = "proto", income = 1000, body = C(18, 18, 22), accent = C(255, 190, 40), neon = C(255, 190, 40), tag = "The final hunt." },
+	{ id = "furd_fiasta", name = "Furd Fiasta", rarity = "Common", style = "compact", income = 2, body = C(40, 110, 220), accent = C(30, 30, 36), tag = "Small car, big dreams." },
+	{ id = "dodje_caravon", name = "Dodje Caravon", rarity = "Common", style = "van", income = 3, body = C(150, 30, 40), accent = C(30, 30, 36), tag = "Seats the whole crew." },
+	{ id = "furd_f150", name = "Furd F-One-Fifty", rarity = "Common", style = "pickup", income = 4, body = C(190, 196, 204), accent = C(30, 30, 36), tag = "Hauls anything, anywhere." },
+	{ id = "awdi_a4", name = "Awdi A-Four", rarity = "Common", style = "sedan", income = 5, body = C(196, 200, 206), accent = C(30, 30, 36), tag = "Four doors of pure order." },
+	{ id = "bmv_m3", name = "BMV M-Tree", rarity = "Uncommon", style = "sedan", income = 8, body = C(30, 90, 190), accent = C(20, 20, 24), tag = "Blinkers sold separately." },
+	{ id = "mursides_e", name = "Mursides E-Klass", rarity = "Uncommon", style = "sedan", income = 10, body = C(20, 20, 24), accent = C(200, 200, 210), tag = "The boss has arrived." },
+	{ id = "tezla_model3", name = "Tezla Model Tree", rarity = "Uncommon", style = "sedan", income = 12, body = C(236, 238, 242), accent = C(20, 20, 24), tag = "Silent, smooth, electric." },
+	{ id = "jagwar_xe", name = "Jagwar XE", rarity = "Uncommon", style = "sedan", income = 15, body = C(16, 70, 50), accent = C(200, 200, 210), tag = "Purrs on every corner." },
+	{ id = "furd_mustank", name = "Furd Mustank", rarity = "Rare", style = "muscle", income = 25, body = C(210, 40, 36), accent = C(240, 240, 240), spoiler = true, tag = "Wild horse on wheels." },
+	{ id = "dodje_chalenjer", name = "Dodje Chalenjer", rarity = "Rare", style = "muscle", income = 32, body = C(255, 120, 20), accent = C(20, 20, 24), tag = "Burnouts before breakfast." },
+	{ id = "ranje_rover", name = "Ranje Rover", rarity = "Rare", style = "suv", income = 40, body = C(232, 232, 228), accent = C(20, 20, 24), tag = "Royalty rides high." },
+	{ id = "bmv_m4", name = "BMV M-Fore", rarity = "Rare", style = "sport", income = 50, body = C(120, 190, 60), accent = C(20, 20, 24), spoiler = true, tag = "Lives at the rev limiter." },
+	{ id = "mursides_g", name = "Mursides G-Vagon", rarity = "Epic", style = "suv", income = 100, body = C(24, 26, 28), accent = C(200, 200, 210), tag = "A brick that outruns you." },
+	{ id = "awdi_r8", name = "Awdi R-Ate", rarity = "Epic", style = "supercar", income = 125, body = C(200, 204, 210), accent = C(20, 20, 24), chrome = true, tag = "Engine behind, world ahead." },
+	{ id = "jagwar_ftype", name = "Jagwar F-Tipe", rarity = "Epic", style = "sport", income = 150, body = C(150, 20, 30), accent = C(20, 20, 24), tag = "Long hood, loud roar." },
+	{ id = "mazeratti_gt", name = "Mazeratti GranTurizmo", rarity = "Epic", style = "sport", income = 200, body = C(20, 40, 90), accent = C(200, 200, 210), tag = "Opera on four wheels." },
+	{ id = "lamborgini_hurakan", name = "Lamborgini Hurakan", rarity = "Legendary", style = "supercar", income = 500, body = C(120, 220, 40), accent = C(20, 20, 24), neon = C(120, 255, 60), tag = "A storm with number plates." },
+	{ id = "tezla_cybertrak", name = "Tezla Cybertrak", rarity = "Legendary", style = "pickup", income = 650, body = C(176, 180, 186), accent = C(20, 20, 24), chrome = true, tag = "Low-poly from the future." },
+	{ id = "mazeratti_mc20", name = "Mazeratti MC-Twenty", rarity = "Legendary", style = "supercar", income = 800, body = C(240, 240, 236), accent = C(30, 60, 160), neon = C(110, 150, 255), tag = "Carbon, thunder, style." },
+	{ id = "lamborgini_aventadoor", name = "Lamborgini Aventadoor", rarity = "Legendary", style = "proto", income = 1000, body = C(255, 150, 10), accent = C(20, 20, 24), neon = C(255, 190, 40), spoiler = true, tag = "The final hunt." },
+}
+
+-- old save ids -> new ids (same rarity and income slot)
+CarConfig.LegacyIds = {
+	rusty_compact = "furd_fiasta", pocket_hatch = "dodje_caravon", dusty_sedan = "furd_f150", mule_pickup = "awdi_a4",
+	street_runner = "bmv_m3", city_taxi = "mursides_e", cargo_hopper = "tezla_model3", boulevard_gt = "jagwar_xe",
+	night_phantom = "furd_mustank", iron_hauler = "dodje_chalenjer", redline_coupe = "ranje_rover", volt_cruiser = "bmv_m4",
+	turbo_vortex = "mursides_g", chrome_viper = "awdi_r8", apex_predator = "jagwar_ftype", solar_flare = "mazeratti_gt",
+	neon_specter = "lamborgini_hurakan", hyper_nova = "tezla_cybertrak", quantum_drift = "mazeratti_mc20", eclipse_titan = "lamborgini_aventadoor",
 }
 
 CarConfig.List = list

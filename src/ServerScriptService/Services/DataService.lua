@@ -79,6 +79,9 @@ local function sanitize(raw)
 			if #p.cars >= EconomyConfig.MaxCars then
 				break
 			end
+			if type(c) == "table" and CarConfig.LegacyIds[c.typeId] then
+				c.typeId = CarConfig.LegacyIds[c.typeId]
+			end
 			if type(c) == "table" and type(c.uid) == "string" and #c.uid >= 8 and #c.uid <= 64
 				and not seenUid[c.uid] and CarConfig.ById[c.typeId] then
 				seenUid[c.uid] = true
@@ -100,6 +103,7 @@ local function sanitize(raw)
 	end
 	if type(raw.discovered) == "table" then
 		for id, v in pairs(raw.discovered) do
+			id = CarConfig.LegacyIds[id] or id
 			if v == true and CarConfig.ById[id] then
 				p.discovered[id] = true
 			end

@@ -1,4 +1,4 @@
-<roblox xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Meta name="ExplicitAutoJoints">true</Meta><Item class="Workspace" referent="RBX12"><Properties><string name="Name">Workspace</string><bool name="StreamingEnabled">false</bool></Properties></Item><Item class="Lighting" referent="RBX55"><Properties><string name="Name">Lighting</string></Properties></Item><Item class="ReplicatedStorage" referent="RBX27"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX1034"><Properties><string name="Name">CarModels</string></Properties><Item class="Model" referent="RBX1002"><Properties><string name="Name">rusty_compact</string></Properties></Item><Item class="Model" referent="RBX1003"><Properties><string name="Name">pocket_hatch</string></Properties></Item><Item class="Model" referent="RBX1004"><Properties><string name="Name">dusty_sedan</string></Properties></Item><Item class="Model" referent="RBX1005"><Properties><string name="Name">mule_pickup</string></Properties></Item><Item class="Model" referent="RBX1006"><Properties><string name="Name">street_runner</string></Properties></Item><Item class="Model" referent="RBX1007"><Properties><string name="Name">city_taxi</string></Properties></Item><Item class="Model" referent="RBX1008"><Properties><string name="Name">cargo_hopper</string></Properties></Item><Item class="Model" referent="RBX1009"><Properties><string name="Name">boulevard_gt</string></Properties></Item><Item class="Model" referent="RBX1010"><Properties><string name="Name">night_phantom</string></Properties></Item><Item class="Model" referent="RBX1011"><Properties><string name="Name">iron_hauler</string></Properties></Item><Item class="Model" referent="RBX1012"><Properties><string name="Name">redline_coupe</string></Properties></Item><Item class="Model" referent="RBX1013"><Properties><string name="Name">volt_cruiser</string></Properties></Item><Item class="Model" referent="RBX1014"><Properties><string name="Name">turbo_vortex</string></Properties></Item><Item class="Model" referent="RBX1015"><Properties><string name="Name">chrome_viper</string></Properties></Item><Item class="Model" referent="RBX1016"><Properties><string name="Name">apex_predator</string></Properties></Item><Item class="Model" referent="RBX1017"><Properties><string name="Name">solar_flare</string></Properties></Item><Item class="Model" referent="RBX1018"><Properties><string name="Name">neon_specter</string></Properties></Item><Item class="Model" referent="RBX1019"><Properties><string name="Name">hyper_nova</string></Properties></Item><Item class="Model" referent="RBX1020"><Properties><string name="Name">quantum_drift</string></Properties></Item><Item class="Model" referent="RBX1021"><Properties><string name="Name">eclipse_titan</string></Properties></Item><Item class="Folder" referent="RBX1033"><Properties><string name="Name">Traffic</string></Properties><Item class="Model" referent="RBX1022"><Properties><string name="Name">compact</string></Properties></Item><Item class="Model" referent="RBX1023"><Properties><string name="Name">sedan</string></Properties></Item><Item class="Model" referent="RBX1024"><Properties><string name="Name">taxi</string></Properties></Item><Item class="Model" referent="RBX1025"><Properties><string name="Name">van</string></Properties></Item><Item class="Model" referent="RBX1026"><Properties><string name="Name">minibus</string></Properties></Item><Item class="Model" referent="RBX1027"><Properties><string name="Name">sport</string></Properties></Item><Item class="Model" referent="RBX1028"><Properties><string name="Name">supercar</string></Properties></Item><Item class="Model" referent="RBX1029"><Properties><string name="Name">pickup</string></Properties></Item><Item class="Model" referent="RBX1030"><Properties><string name="Name">service</string></Properties></Item><Item class="Model" referent="RBX1031"><Properties><string name="Name">truck</string></Properties></Item><Item class="Model" referent="RBX1032"><Properties><string name="Name">proto</string></Properties></Item></Item></Item><Item class="Folder" referent="RBX25"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX13"><Properties><string name="Name">BaseLayout</string><ProtectedString name="Source">local MapConfig = require(script.Parent.MapConfig)
+<roblox xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Meta name="ExplicitAutoJoints">true</Meta><Item class="Workspace" referent="RBX12"><Properties><string name="Name">Workspace</string><bool name="StreamingEnabled">false</bool></Properties></Item><Item class="Lighting" referent="RBX55"><Properties><string name="Name">Lighting</string></Properties></Item><Item class="ReplicatedStorage" referent="RBX27"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX1034"><Properties><string name="Name">CarModels</string></Properties><Item class="Folder" referent="RBX1033"><Properties><string name="Name">Traffic</string></Properties><Item class="Model" referent="RBX1022"><Properties><string name="Name">compact</string></Properties></Item><Item class="Model" referent="RBX1023"><Properties><string name="Name">sedan</string></Properties></Item><Item class="Model" referent="RBX1024"><Properties><string name="Name">taxi</string></Properties></Item><Item class="Model" referent="RBX1025"><Properties><string name="Name">van</string></Properties></Item><Item class="Model" referent="RBX1026"><Properties><string name="Name">minibus</string></Properties></Item><Item class="Model" referent="RBX1027"><Properties><string name="Name">sport</string></Properties></Item><Item class="Model" referent="RBX1028"><Properties><string name="Name">supercar</string></Properties></Item><Item class="Model" referent="RBX1029"><Properties><string name="Name">pickup</string></Properties></Item><Item class="Model" referent="RBX1030"><Properties><string name="Name">service</string></Properties></Item><Item class="Model" referent="RBX1031"><Properties><string name="Name">truck</string></Properties></Item><Item class="Model" referent="RBX1032"><Properties><string name="Name">proto</string></Properties></Item></Item></Item><Item class="Folder" referent="RBX25"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX13"><Properties><string name="Name">BaseLayout</string><ProtectedString name="Source">local MapConfig = require(script.Parent.MapConfig)
 
 local BaseLayout = {}
 
@@ -56,27 +56,37 @@ CarConfig.ValueMultiplier = 40
 CarConfig.UpgradeCostBase = 0.5
 CarConfig.UpgradeCostGrowth = 1.35
 
+-- Fictional parody cars: inspired by familiar body styles, no real names, logos or badges.
 local list = {
-	{ id = "rusty_compact", name = "Rusty Compact", rarity = "Common", style = "compact", income = 2, body = C(176, 108, 70), accent = C(80, 60, 48), tag = "Held together by hope." },
-	{ id = "pocket_hatch", name = "Pocket Hatch", rarity = "Common", style = "compact", income = 3, body = C(120, 210, 180), accent = C(255, 255, 255), tag = "Tiny, cheerful, always parks." },
-	{ id = "dusty_sedan", name = "Dusty Sedan", rarity = "Common", style = "sedan", income = 4, body = C(160, 162, 170), accent = C(70, 72, 80), tag = "Grandpa's daily driver." },
-	{ id = "mule_pickup", name = "Mule Pickup", rarity = "Common", style = "pickup", income = 5, body = C(206, 170, 112), accent = C(90, 70, 50), tag = "Hauls anything, anywhere." },
-	{ id = "street_runner", name = "Street Runner", rarity = "Uncommon", style = "sedan", income = 8, body = C(60, 128, 236), accent = C(250, 250, 250), tag = "Quick off the line." },
-	{ id = "city_taxi", name = "City Taxi Mk2", rarity = "Uncommon", style = "taxi", income = 10, body = C(255, 206, 50), accent = C(30, 30, 30), tag = "The meter is always running." },
-	{ id = "cargo_hopper", name = "Cargo Hopper", rarity = "Uncommon", style = "van", income = 12, body = C(80, 180, 110), accent = C(240, 240, 240), tag = "Delivers before you order." },
-	{ id = "boulevard_gt", name = "Boulevard GT", rarity = "Uncommon", style = "sedan", income = 15, body = C(250, 146, 60), accent = C(40, 40, 46), spoiler = true, tag = "Sunday cruising, Monday racing." },
-	{ id = "night_phantom", name = "Night Phantom", rarity = "Rare", style = "sport", income = 25, body = C(34, 32, 44), accent = C(40, 200, 255), neon = C(40, 200, 255), tag = "Seen only after midnight." },
-	{ id = "iron_hauler", name = "Iron Hauler", rarity = "Rare", style = "truck", income = 32, body = C(118, 126, 140), accent = C(255, 160, 40), tag = "Eighteen tons of attitude." },
-	{ id = "redline_coupe", name = "Redline Coupe", rarity = "Rare", style = "sport", income = 40, body = C(225, 46, 52), accent = C(255, 255, 255), spoiler = true, tag = "Lives at the rev limiter." },
-	{ id = "volt_cruiser", name = "Volt Cruiser", rarity = "Rare", style = "sedan", income = 50, body = C(50, 178, 184), accent = C(30, 40, 50), neon = C(60, 240, 255), tag = "Silent, smooth, electric." },
-	{ id = "turbo_vortex", name = "Turbo Vortex", rarity = "Epic", style = "sport", income = 100, body = C(255, 124, 36), accent = C(30, 30, 36), spoiler = true, neon = C(255, 150, 40), tag = "Spools up a storm." },
-	{ id = "chrome_viper", name = "Chrome Viper", rarity = "Epic", style = "supercar", income = 125, body = C(206, 214, 226), accent = C(40, 44, 52), chrome = true, tag = "Mirror finish, venom bite." },
-	{ id = "apex_predator", name = "Apex Predator", rarity = "Epic", style = "supercar", income = 150, body = C(36, 120, 70), accent = C(20, 20, 24), spoiler = true, neon = C(90, 255, 120), tag = "Top of the food chain." },
-	{ id = "solar_flare", name = "Solar Flare", rarity = "Epic", style = "supercar", income = 200, body = C(255, 214, 50), accent = C(210, 60, 30), neon = C(255, 190, 40), tag = "Too bright to look at." },
-	{ id = "neon_specter", name = "Neon Specter", rarity = "Legendary", style = "proto", income = 500, body = C(26, 30, 46), accent = C(40, 230, 255), neon = C(40, 230, 255), tag = "A ghost made of light." },
-	{ id = "hyper_nova", name = "Hyper Nova", rarity = "Legendary", style = "proto", income = 650, body = C(40, 20, 24), accent = C(255, 60, 90), neon = C(255, 60, 90), tag = "Born in a dying star." },
-	{ id = "quantum_drift", name = "Quantum Drift", rarity = "Legendary", style = "proto", income = 800, body = C(236, 240, 255), accent = C(80, 120, 255), neon = C(110, 150, 255), tag = "Everywhere at once." },
-	{ id = "eclipse_titan", name = "Eclipse Titan", rarity = "Legendary", style = "proto", income = 1000, body = C(18, 18, 22), accent = C(255, 190, 40), neon = C(255, 190, 40), tag = "The final hunt." },
+	{ id = "furd_fiasta", name = "Furd Fiasta", rarity = "Common", style = "compact", income = 2, body = C(40, 110, 220), accent = C(30, 30, 36), tag = "Small car, big dreams." },
+	{ id = "dodje_caravon", name = "Dodje Caravon", rarity = "Common", style = "van", income = 3, body = C(150, 30, 40), accent = C(30, 30, 36), tag = "Seats the whole crew." },
+	{ id = "furd_f150", name = "Furd F-One-Fifty", rarity = "Common", style = "pickup", income = 4, body = C(190, 196, 204), accent = C(30, 30, 36), tag = "Hauls anything, anywhere." },
+	{ id = "awdi_a4", name = "Awdi A-Four", rarity = "Common", style = "sedan", income = 5, body = C(196, 200, 206), accent = C(30, 30, 36), tag = "Four doors of pure order." },
+	{ id = "bmv_m3", name = "BMV M-Tree", rarity = "Uncommon", style = "sedan", income = 8, body = C(30, 90, 190), accent = C(20, 20, 24), tag = "Blinkers sold separately." },
+	{ id = "mursides_e", name = "Mursides E-Klass", rarity = "Uncommon", style = "sedan", income = 10, body = C(20, 20, 24), accent = C(200, 200, 210), tag = "The boss has arrived." },
+	{ id = "tezla_model3", name = "Tezla Model Tree", rarity = "Uncommon", style = "sedan", income = 12, body = C(236, 238, 242), accent = C(20, 20, 24), tag = "Silent, smooth, electric." },
+	{ id = "jagwar_xe", name = "Jagwar XE", rarity = "Uncommon", style = "sedan", income = 15, body = C(16, 70, 50), accent = C(200, 200, 210), tag = "Purrs on every corner." },
+	{ id = "furd_mustank", name = "Furd Mustank", rarity = "Rare", style = "muscle", income = 25, body = C(210, 40, 36), accent = C(240, 240, 240), spoiler = true, tag = "Wild horse on wheels." },
+	{ id = "dodje_chalenjer", name = "Dodje Chalenjer", rarity = "Rare", style = "muscle", income = 32, body = C(255, 120, 20), accent = C(20, 20, 24), tag = "Burnouts before breakfast." },
+	{ id = "ranje_rover", name = "Ranje Rover", rarity = "Rare", style = "suv", income = 40, body = C(232, 232, 228), accent = C(20, 20, 24), tag = "Royalty rides high." },
+	{ id = "bmv_m4", name = "BMV M-Fore", rarity = "Rare", style = "sport", income = 50, body = C(120, 190, 60), accent = C(20, 20, 24), spoiler = true, tag = "Lives at the rev limiter." },
+	{ id = "mursides_g", name = "Mursides G-Vagon", rarity = "Epic", style = "suv", income = 100, body = C(24, 26, 28), accent = C(200, 200, 210), tag = "A brick that outruns you." },
+	{ id = "awdi_r8", name = "Awdi R-Ate", rarity = "Epic", style = "supercar", income = 125, body = C(200, 204, 210), accent = C(20, 20, 24), chrome = true, tag = "Engine behind, world ahead." },
+	{ id = "jagwar_ftype", name = "Jagwar F-Tipe", rarity = "Epic", style = "sport", income = 150, body = C(150, 20, 30), accent = C(20, 20, 24), tag = "Long hood, loud roar." },
+	{ id = "mazeratti_gt", name = "Mazeratti GranTurizmo", rarity = "Epic", style = "sport", income = 200, body = C(20, 40, 90), accent = C(200, 200, 210), tag = "Opera on four wheels." },
+	{ id = "lamborgini_hurakan", name = "Lamborgini Hurakan", rarity = "Legendary", style = "supercar", income = 500, body = C(120, 220, 40), accent = C(20, 20, 24), neon = C(120, 255, 60), tag = "A storm with number plates." },
+	{ id = "tezla_cybertrak", name = "Tezla Cybertrak", rarity = "Legendary", style = "pickup", income = 650, body = C(176, 180, 186), accent = C(20, 20, 24), chrome = true, tag = "Low-poly from the future." },
+	{ id = "mazeratti_mc20", name = "Mazeratti MC-Twenty", rarity = "Legendary", style = "supercar", income = 800, body = C(240, 240, 236), accent = C(30, 60, 160), neon = C(110, 150, 255), tag = "Carbon, thunder, style." },
+	{ id = "lamborgini_aventadoor", name = "Lamborgini Aventadoor", rarity = "Legendary", style = "proto", income = 1000, body = C(255, 150, 10), accent = C(20, 20, 24), neon = C(255, 190, 40), spoiler = true, tag = "The final hunt." },
+}
+
+-- old save ids -&gt; new ids (same rarity and income slot)
+CarConfig.LegacyIds = {
+	rusty_compact = "furd_fiasta", pocket_hatch = "dodje_caravon", dusty_sedan = "furd_f150", mule_pickup = "awdi_a4",
+	street_runner = "bmv_m3", city_taxi = "mursides_e", cargo_hopper = "tezla_model3", boulevard_gt = "jagwar_xe",
+	night_phantom = "furd_mustank", iron_hauler = "dodje_chalenjer", redline_coupe = "ranje_rover", volt_cruiser = "bmv_m4",
+	turbo_vortex = "mursides_g", chrome_viper = "awdi_r8", apex_predator = "jagwar_ftype", solar_flare = "mazeratti_gt",
+	neon_specter = "lamborgini_hurakan", hyper_nova = "tezla_cybertrak", quantum_drift = "mazeratti_mc20", eclipse_titan = "lamborgini_aventadoor",
 }
 
 CarConfig.List = list
@@ -1314,12 +1324,14 @@ local Kinds = {
 		box = { L = 9.0, H = 3.5, x = -2.4 }, color = C(235, 170, 40) },
 	truck = { L = 26, W = 7.6, H = 8.8, wr = 2.0, clear = 1.4, bodyH = 2.6, cabinL = 5.4, cabinH = 3.0, cabinX = 9.2, cabinW = 0.92,
 		box = { L = 17.0, H = 5.2, x = -3.6 }, sixWheels = true, color = C(170, 80, 70) },
+	suv = { L = 15.5, W = 6.8, H = 6.2, wr = 1.5, clear = 1.0, bodyH = 2.7, cabinL = 9.6, cabinH = 2.3, cabinX = -1.9, cabinW = 0.92, color = C(232, 232, 228) },
+	muscle = { L = 16.0, W = 6.8, H = 4.5, wr = 1.35, clear = 0.7, bodyH = 2.0, cabinL = 6.0, cabinH = 1.6, cabinX = -1.6, cabinW = 0.86, color = C(210, 40, 36) },
 	proto = { L = 15.8, W = 7.0, H = 3.7, wr = 1.2, clear = 0.5, bodyH = 1.5, cabinL = 5.2, cabinH = 1.6, cabinX = -0.6, cabinW = 0.78,
 		fins = true, canopyNeon = true, color = C(30, 30, 44) },
 }
 
 return Kinds
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX195D3338DAB1475B8234605D9858A6AB"><Properties><string name="Name">ExhaustFx</string><ProtectedString name="Source">-- Rarity-based exhaust for cars parked in a garage. Rarer = denser, brighter, flashier.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXC5875D37DFB24D2CB80B648BC3768D4D"><Properties><string name="Name">ExhaustFx</string><ProtectedString name="Source">-- Rarity-based exhaust for cars parked in a garage. Rarer = denser, brighter, flashier.
 local CollectionService = game:GetService("CollectionService")
 local Kinds = require(script.Parent:WaitForChild("VehicleKinds"))
 
@@ -2161,6 +2173,9 @@ local function sanitize(raw)
 			if #p.cars &gt;= EconomyConfig.MaxCars then
 				break
 			end
+			if type(c) == "table" and CarConfig.LegacyIds[c.typeId] then
+				c.typeId = CarConfig.LegacyIds[c.typeId]
+			end
 			if type(c) == "table" and type(c.uid) == "string" and #c.uid &gt;= 8 and #c.uid &lt;= 64
 				and not seenUid[c.uid] and CarConfig.ById[c.typeId] then
 				seenUid[c.uid] = true
@@ -2182,6 +2197,7 @@ local function sanitize(raw)
 	end
 	if type(raw.discovered) == "table" then
 		for id, v in pairs(raw.discovered) do
+			id = CarConfig.LegacyIds[id] or id
 			if v == true and CarConfig.ById[id] then
 				p.discovered[id] = true
 			end
@@ -3104,7 +3120,7 @@ function Zone.Start()
 end
 
 return Zone
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX29CFA158663B48458C0885E30CC568FE"><Properties><string name="Name">WarpService</string><ProtectedString name="Source">-- Teleport buttons: home garage or any unlocked district. Server-validated.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7481A8726338488484417C6A35DA44FE"><Properties><string name="Name">WarpService</string><ProtectedString name="Source">-- Teleport buttons: home garage or any unlocked district. Server-validated.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
@@ -3236,7 +3252,10 @@ end
 local C = Color3.fromRGB
 local LOOK = {
 	Body = { Enum.Material.SmoothPlastic, nil, 0, 0.05 },
-	Glass = { Enum.Material.Glass, C(30, 46, 62), 0.25, 0.2 },
+	Glass = { Enum.Material.Glass, C(18, 26, 34), 0.05, 0.25 },
+	Stripe = { Enum.Material.SmoothPlastic, nil, 0, 0.05 },
+	Caliper = { Enum.Material.SmoothPlastic, C(220, 40, 40), 0, 0 },
+	Plate = { Enum.Material.SmoothPlastic, C(236, 236, 230), 0, 0 },
 	Trim = { Enum.Material.SmoothPlastic, C(22, 22, 26), 0, 0 },
 	Chrome = { Enum.Material.Metal, C(222, 224, 232), 0, 0.35 },
 	Tire = { Enum.Material.SmoothPlastic, C(22, 22, 26), 0, 0 },
@@ -3292,11 +3311,11 @@ local function styleCar(model, def)
 						d.Material = Enum.Material.Metal
 						d.Reflectance = 0.4
 					end
+				elseif key == "Stripe" then
+					local b = def and def.body or Color3.new(1, 0, 0)
+					d.Color = (b.R + b.G + b.B &lt; 1.9) and C(242, 242, 242) or C(14, 14, 16)
 				elseif key == "Neon" then
 					d.Color = def and def.neon or Color3.fromRGB(40, 230, 255)
-				end
-				if key == "Rim" and def and def.neon then
-					d.Color = C(30, 30, 36)
 				end
 			end
 			d.Anchored = false
@@ -6424,7 +6443,7 @@ function Fx.Hit(dir, flashFrame)
 end
 
 return Fx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXC16F4B80B2C34E82A894393E8E42C6A5"><Properties><string name="Name">CineFx</string><ProtectedString name="Source">-- Cinematic toolkit: camera shake / zoom / takeover, letterbox, darken, flash, glitch, big titles.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXF014226D82834F86AB2704D201F6820C"><Properties><string name="Name">CineFx</string><ProtectedString name="Source">-- Cinematic toolkit: camera shake / zoom / takeover, letterbox, darken, flash, glitch, big titles.
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
@@ -6636,7 +6655,7 @@ function Cine.Reset(t)
 end
 
 return Cine
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX1A004E7CE83846BEA3905F59D68AB51E"><Properties><string name="Name">DeathFx</string><ProtectedString name="Source">-- WRECKED! sequence: impact flash, heavy shake, glitch, grayscale-red grade, crane-up camera, countdown.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX403CD79451D14D8587D5FF89F85ECE02"><Properties><string name="Name">DeathFx</string><ProtectedString name="Source">-- WRECKED! sequence: impact flash, heavy shake, glitch, grayscale-red grade, crane-up camera, countdown.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -6722,7 +6741,7 @@ function DeathFx.Recover()
 end
 
 return DeathFx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXB904903581A54737AFC412BE226CF9C2"><Properties><string name="Name">SpeedLanes</string><ProtectedString name="Source">-- Speed lanes: boost WalkSpeed on orange strips, animate chevrons, little FOV kick.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXA1C06B50BD794F2AA0615FF2BE756AFB"><Properties><string name="Name">SpeedLanes</string><ProtectedString name="Source">-- Speed lanes: boost WalkSpeed on orange strips, animate chevrons, little FOV kick.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")

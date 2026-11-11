@@ -73,7 +73,10 @@ end
 local C = Color3.fromRGB
 local LOOK = {
 	Body = { Enum.Material.SmoothPlastic, nil, 0, 0.05 },
-	Glass = { Enum.Material.Glass, C(30, 46, 62), 0.25, 0.2 },
+	Glass = { Enum.Material.Glass, C(18, 26, 34), 0.05, 0.25 },
+	Stripe = { Enum.Material.SmoothPlastic, nil, 0, 0.05 },
+	Caliper = { Enum.Material.SmoothPlastic, C(220, 40, 40), 0, 0 },
+	Plate = { Enum.Material.SmoothPlastic, C(236, 236, 230), 0, 0 },
 	Trim = { Enum.Material.SmoothPlastic, C(22, 22, 26), 0, 0 },
 	Chrome = { Enum.Material.Metal, C(222, 224, 232), 0, 0.35 },
 	Tire = { Enum.Material.SmoothPlastic, C(22, 22, 26), 0, 0 },
@@ -129,11 +132,11 @@ local function styleCar(model, def)
 						d.Material = Enum.Material.Metal
 						d.Reflectance = 0.4
 					end
+				elseif key == "Stripe" then
+					local b = def and def.body or Color3.new(1, 0, 0)
+					d.Color = (b.R + b.G + b.B < 1.9) and C(242, 242, 242) or C(14, 14, 16)
 				elseif key == "Neon" then
 					d.Color = def and def.neon or Color3.fromRGB(40, 230, 255)
-				end
-				if key == "Rim" and def and def.neon then
-					d.Color = C(30, 30, 36)
 				end
 			end
 			d.Anchored = false

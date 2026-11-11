@@ -15,6 +15,8 @@ local Kinds = {
 		box = { L = 9.0, H = 3.5, x = -2.4 }, color = C(235, 170, 40) },
 	truck = { L = 26, W = 7.6, H = 8.8, wr = 2.0, clear = 1.4, bodyH = 2.6, cabinL = 5.4, cabinH = 3.0, cabinX = 9.2, cabinW = 0.92,
 		box = { L = 17.0, H = 5.2, x = -3.6 }, sixWheels = true, color = C(170, 80, 70) },
+	suv = { L = 15.5, W = 6.8, H = 6.2, wr = 1.5, clear = 1.0, bodyH = 2.7, cabinL = 9.6, cabinH = 2.3, cabinX = -1.9, cabinW = 0.92, color = C(232, 232, 228) },
+	muscle = { L = 16.0, W = 6.8, H = 4.5, wr = 1.35, clear = 0.7, bodyH = 2.0, cabinL = 6.0, cabinH = 1.6, cabinX = -1.6, cabinW = 0.86, color = C(210, 40, 36) },
 	proto = { L = 15.8, W = 7.0, H = 3.7, wr = 1.2, clear = 0.5, bodyH = 1.5, cabinL = 5.2, cabinH = 1.6, cabinX = -0.6, cabinW = 0.78,
 		fins = true, canopyNeon = true, color = C(30, 30, 44) },
 }

@@ -44,5 +44,12 @@ for dp, _, fs in os.walk(src):
             if p.get('name') == 'Source': srcp = p
         if srcp is None: srcp = ET.SubElement(props(it), 'ProtectedString', {'name': 'Source'})
         srcp.text = open(os.path.join(dp, f), encoding='utf-8').read()
+# drop stale empty car placeholders (models are installed by CarModelTool.ApplyImported)
+rs = [c for c in doc.findall('Item') if c.get('class') == 'ReplicatedStorage'][0]
+cm = child(rs, 'CarModels')
+if cm is not None:
+    for c in list(cm.findall('Item')):
+        if c.get('class') == 'Model' and not c.findall('Item'):
+            cm.remove(c)
 tree.write(out, encoding='utf-8', xml_declaration=False)
 print('built', out, count)

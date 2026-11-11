@@ -1,15 +1,15 @@
-"""CAR HUNTERS - procedural car models for Roblox, built in Blender (bpy).
+"""CAR HUNTERS - car models for Roblox, built in Blender (bpy). Generator v2.
 
-Run:  blender -b -P blender/make_cars.py            (or: python3 blender/make_cars.py with `pip install bpy`)
-Out:  assets/cars/cars_collection.fbx  (20 collectible cars, one empty per car id)
-      assets/cars/cars_traffic.fbx     (11 traffic kinds)
-      assets/cars/<id>.fbx             (single cars, optional import)
-      docs/renders/*.png               (preview renders)
-Convention: nose points +X, wheels on Y=0 ground (Blender Z-up -> Roblox Y-up on export).
-Each car = parts split by material: Body, Glass, Trim, Chrome, Tire, Rim, HeadLight, TailLight, Neon.
-The Roblox side (ServerStorage.Tools.CarModelTool.ApplyImported) maps these names to Roblox materials.
+Run:  blender -b -P blender/make_cars.py     (or: python3 blender/make_cars.py with `pip install bpy`)
+      args after "--":  norender | notraffic | <car ids...>
+Out:  assets/cars/cars_collection.fbx (20 collectible cars), assets/cars/cars_traffic.fbx (11 traffic kinds),
+      assets/cars/<id>.fbx, docs/renders/*.png
+Cars are *inspired by* real-world body styles and design cues. No logos, badges or real names are modelled.
+Convention: nose +X, wheels on the ground plane. Parts are split by look:
+Body, Glass, Trim, Stripe, Chrome, Tire, Rim, Caliper, HeadLight, TailLight, Cargo
+(ServerStorage.Tools.CarModelTool.ApplyImported maps them to Roblox materials).
 """
-import math, os, random, sys
+import math, os, sys
 import bpy, bmesh
 from mathutils import Vector
 
@@ -19,55 +19,231 @@ RENDERS = os.path.join(ROOT, "docs", "renders")
 os.makedirs(OUT, exist_ok=True)
 os.makedirs(RENDERS, exist_ok=True)
 
-# ---------------------------------------------------------------- dimensions (studs, = VehicleKinds.lua)
+# ---------------------------------------------------------------- dimensions (studs) = VehicleKinds.lua
 KINDS = {
-    "compact": dict(L=11.5, W=5.8, H=4.6, wr=1.2, clear=0.7, fam="hatch"),
-    "sedan": dict(L=14.5, W=6.2, H=4.7, wr=1.3, clear=0.8, fam="sedan"),
-    "taxi": dict(L=14.5, W=6.2, H=4.7, wr=1.3, clear=0.8, fam="sedan", taxi=True),
-    "van": dict(L=14.5, W=6.6, H=6.6, wr=1.4, clear=0.9, fam="van"),
-    "minibus": dict(L=18, W=6.8, H=7.0, wr=1.4, clear=0.9, fam="bus"),
-    "sport": dict(L=14.8, W=6.6, H=3.9, wr=1.25, clear=0.55, fam="sport"),
-    "supercar": dict(L=15.2, W=7.0, H=3.5, wr=1.25, clear=0.45, fam="super"),
-    "pickup": dict(L=16.5, W=6.6, H=5.6, wr=1.5, clear=1.0, fam="pickup"),
-    "service": dict(L=15.5, W=6.6, H=6.2, wr=1.4, clear=0.9, fam="van", lightbar=True),
-    "truck": dict(L=26, W=7.6, H=8.8, wr=2.0, clear=1.4, fam="truck"),
-    "proto": dict(L=15.8, W=7.0, H=3.7, wr=1.25, clear=0.5, fam="super", neon=True),
+    "compact": dict(L=11.5, W=5.8, H=4.6, wr=1.2, clear=0.7), "sedan": dict(L=14.5, W=6.2, H=4.7, wr=1.3, clear=0.8),
+    "taxi": dict(L=14.5, W=6.2, H=4.7, wr=1.3, clear=0.8), "van": dict(L=14.5, W=6.6, H=6.6, wr=1.4, clear=0.9),
+    "minibus": dict(L=18, W=6.8, H=7.0, wr=1.4, clear=0.9), "sport": dict(L=14.8, W=6.6, H=3.9, wr=1.25, clear=0.55),
+    "supercar": dict(L=15.2, W=7.0, H=3.5, wr=1.25, clear=0.45), "pickup": dict(L=16.5, W=6.6, H=5.6, wr=1.5, clear=1.0),
+    "service": dict(L=15.5, W=6.6, H=6.2, wr=1.4, clear=0.9), "truck": dict(L=26, W=7.6, H=8.8, wr=2.0, clear=1.4),
+    "proto": dict(L=15.8, W=7.0, H=3.7, wr=1.25, clear=0.5), "suv": dict(L=15.5, W=6.8, H=6.2, wr=1.5, clear=1.0),
+    "muscle": dict(L=16.0, W=6.8, H=4.5, wr=1.35, clear=0.7),
 }
 
-# side profile per family. f: 0 = rear bumper, 1 = front bumper. belt = shoulder line (fraction of H).
-# cab = (rear glass base, roof rear, roof front, windshield base). panel = greenhouse part that is body, not glass.
-FAM = {
-    "hatch": dict(belt=[(0, .46), (.05, .57), (.5, .58), (.82, .56), (.95, .48), (1, .40)], cab=(.04, .14, .56, .74), axle=(.17, .83), plan=5),
-    "sedan": dict(belt=[(0, .42), (.06, .55), (.25, .57), (.75, .55), (.93, .48), (1, .38)], cab=(.20, .33, .60, .74), axle=(.19, .81), plan=6),
-    "sport": dict(belt=[(0, .50), (.08, .62), (.3, .64), (.7, .54), (.95, .40), (1, .32)], cab=(.16, .36, .55, .73), axle=(.18, .80), plan=6),
-    "super": dict(belt=[(0, .56), (.1, .66), (.35, .68), (.7, .48), (.95, .34), (1, .28)], cab=(.22, .42, .56, .78), axle=(.18, .80), plan=7),
-    "van": dict(belt=[(0, .50), (.1, .52), (.85, .52), (.95, .45), (1, .36)], cab=(.0, .02, .80, .93), axle=(.16, .80), plan=8, panel=.66),
-    "bus": dict(belt=[(0, .40), (.9, .40), (1, .34)], cab=(.0, .02, .93, .99), axle=(.15, .82), plan=9),
-    "pickup": dict(belt=[(0, .56), (.92, .56), (1, .46)], cab=(.43, .46, .64, .77), axle=(.17, .82), plan=7, bed=(.02, .42)),
-    "truck": dict(belt=[(0, .30), (.95, .30), (1, .26)], cab=(.73, .75, .95, .99), axle=(.12, .30, .86), plan=9, box=(.02, .70)),
-}
-
-# ---------------------------------------------------------------- collectible cars (= CarConfig.lua)
 def rgb(r, g, b):
     return (r / 255, g / 255, b / 255, 1)
 
-CARS = [
-    ("rusty_compact", "compact", rgb(176, 108, 70), {}), ("pocket_hatch", "compact", rgb(120, 210, 180), {"short": True}),
-    ("dusty_sedan", "sedan", rgb(160, 162, 170), {}), ("mule_pickup", "pickup", rgb(206, 170, 112), {}),
-    ("street_runner", "sedan", rgb(60, 128, 236), {"sporty": True}), ("city_taxi", "taxi", rgb(255, 206, 50), {}),
-    ("cargo_hopper", "van", rgb(80, 180, 110), {}), ("boulevard_gt", "sedan", rgb(250, 146, 60), {"spoiler": True, "sporty": True}),
-    ("night_phantom", "sport", rgb(34, 32, 44), {"neon": rgb(40, 200, 255)}), ("iron_hauler", "truck", rgb(118, 126, 140), {}),
-    ("redline_coupe", "sport", rgb(225, 46, 52), {"spoiler": True}), ("volt_cruiser", "sedan", rgb(50, 178, 184), {"neon": rgb(60, 240, 255)}),
-    ("turbo_vortex", "sport", rgb(255, 124, 36), {"spoiler": True, "neon": rgb(255, 150, 40)}), ("chrome_viper", "supercar", rgb(206, 214, 226), {"chrome": True}),
-    ("apex_predator", "supercar", rgb(36, 120, 70), {"spoiler": True, "neon": rgb(90, 255, 120)}), ("solar_flare", "supercar", rgb(255, 214, 50), {"neon": rgb(255, 190, 40)}),
-    ("neon_specter", "proto", rgb(26, 30, 46), {"neon": rgb(40, 230, 255)}), ("hyper_nova", "proto", rgb(40, 20, 24), {"neon": rgb(255, 60, 90), "spoiler": True}),
-    ("quantum_drift", "proto", rgb(236, 240, 255), {"neon": rgb(110, 150, 255)}), ("eclipse_titan", "proto", rgb(18, 18, 22), {"neon": rgb(255, 190, 40), "spoiler": True}),
-]
+# ---------------------------------------------------------------- fascia shapes (unit size, centred)
+def s_rr(rad=0.3, n=4):
+    pts = []
+    for cx, cy, a0 in ((0.5 - rad, 0.5 - rad, 0), (-0.5 + rad, 0.5 - rad, 90), (-0.5 + rad, -0.5 + rad, 180), (0.5 - rad, -0.5 + rad, 270)):
+        for k in range(n + 1):
+            a = math.radians(a0 + 90 * k / n)
+            pts.append((cx + rad * math.cos(a), cy + rad * math.sin(a)))
+    return pts
+
+def s_el(n=18):
+    return [(0.5 * math.cos(2 * math.pi * k / n), 0.5 * math.sin(2 * math.pi * k / n)) for k in range(n)]
+
+def s_hex(c=0.3):
+    return [(0.5, 0), (c, 0.5), (-c, 0.5), (-0.5, 0), (-c, -0.5), (c, -0.5)]
+
+def s_trap(k=0.7):  # k = bottom width / top width
+    return [(0.5, 0.5), (-0.5, 0.5), (-0.5 * k, -0.5), (0.5 * k, -0.5)]
+
+def s_slant(sk=0.3):  # outer (+u) edge raised by sk
+    return [(0.5, 0.5 + sk), (-0.5, 0.5), (-0.5, -0.5), (0.5, -0.5 + sk)]
+
+def s_wedge(sk=0.6):  # thin at inner end, tall at outer end
+    return [(0.5, 0.5), (-0.5, 0.5 - sk), (-0.5, -0.5 + sk * 0.2), (0.5, -0.5)]
+
+RR, EL, HEX = s_rr(), s_el(), s_hex()
+
+def it(mat, shape, cu, cv, su, sv, depth=0.07, frame=None):
+    return dict(mat=mat, shape=shape, cu=cu, cv=cv, su=su, sv=sv, depth=depth, frame=frame)
+
+PLATE = it("Plate", s_rr(0.1, 1), 0, 0.3, 0.3, 0.16, 0.04)
+
+# ---------------------------------------------------------------- body families
+def base(**kw):
+    d = dict(sm=0.02, psm=0.03, box=0.75, tumble=0.74, edge=0.14, belt=[(0, 0.60), (1, 0.56)], axle=(0.19, 0.82),
+             plan=[(0, 0.80), (0.04, 0.96), (0.25, 1), (0.75, 1), (0.95, 0.95), (1, 0.78)], pillars=[], doors=[],
+             roof="body", spokes=5, rim=0.74, wheel=1.0, front=[], rear=[], extras={}, stripes=None, pillar_mat="Body")
+    d.update(kw)
+    return d
+
+def sedan(**kw):
+    d = base(top=[(0, .52), (.02, .62), (.13, .66), (.30, .98), (.40, 1.0), (.56, .97), (.72, .64), (.96, .58), (1, .46)],
+             cab=(.13, .30, .56, .72), side=(.25, .69), pillars=[.45], doors=[.27, .45, .66])
+    d.update(kw)
+    return d
+
+def coupe(**kw):
+    d = base(top=[(0, .54), (.03, .66), (.11, .70), (.33, .98), (.46, .98), (.62, .66), (.96, .60), (1, .46)],
+             cab=(.11, .33, .46, .62), side=(.30, .59), pillars=[], doors=[.36, .56], tumble=0.72)
+    d.update(kw)
+    return d
+
+def mid(**kw):  # mid-engine supercar
+    d = base(top=[(0, .60), (.03, .72), (.26, .82), (.42, 1.0), (.52, 1.0), (.74, .58), (.96, .42), (1, .32)],
+             cab=(.26, .42, .52, .74), side=(.40, .70), doors=[.42, .66], tumble=0.66, belt=[(0, .66), (.5, .64), (1, .40)],
+             plan=[(0, .84), (.04, .99), (.3, 1), (.62, .97), (.92, .93), (1, .72)], axle=(.18, .81), rim=0.8, spokes=10, wheel=0.9,
+             extras={"intake": True, "caliper": (1, 0.8, 0.05, 1)})
+    d.update(kw)
+    return d
+
+def suv(**kw):
+    d = base(top=[(0, .50), (.015, .90), (.06, .99), (.58, 1.0), (.70, .66), (.97, .63), (1, .52)],
+             cab=(.015, .06, .58, .70), side=(.05, .68), pillars=[.24, .45], doors=[.24, .45, .65], tumble=0.84, box=0.55,
+             belt=[(0, .62), (1, .60)], plan=[(0, .90), (.03, .99), (.5, 1), (.96, .98), (1, .88)], axle=(.17, .82), rim=0.68)
+    d.update(kw)
+    return d
+
+# ---------------------------------------------------------------- the 20 collectibles
+G_LOWER = it("Trim", s_trap(0.8), 0, 0.14, 1.3, 0.2)
+CARS = {
+    # ---- Common
+    "furd_fiasta": dict(kind="compact", color=rgb(40, 110, 220), spec=base(
+        top=[(0, .50), (.02, .84), (.10, .99), (.50, .98), (.72, .62), (.95, .56), (1, .44)], cab=(.02, .10, .50, .72),
+        side=(.09, .69), pillars=[.26, .46], doors=[.26, .46, .66], axle=(.17, .82), tumble=0.78,
+        front=[it("Trim", s_hex(0.36), 0, .40, .95, .42, frame="Chrome"), it("HeadLight", s_slant(.5), .72, .86, .5, .2), G_LOWER],
+        rear=[it("TailLight", RR, .80, .86, .22, .36), PLATE])),
+    "dodje_caravon": dict(kind="van", color=rgb(150, 30, 40), spec=base(
+        top=[(0, .44), (.015, .88), (.07, .99), (.62, .98), (.82, .56), (.97, .50), (1, .40)], cab=(.015, .07, .62, .82),
+        side=(.06, .79), pillars=[.24, .46, .66], doors=[.24, .46, .66], axle=(.17, .82), tumble=0.86, box=0.55,
+        belt=[(0, .54), (1, .50)], plan=[(0, .90), (.03, .99), (.5, 1), (.94, .97), (1, .82)],
+        front=[it("Trim", s_rr(.2), 0, .62, 1.0, .26, frame="Chrome"), it("HeadLight", s_slant(.25), .74, .66, .44, .26), G_LOWER],
+        rear=[it("TailLight", s_rr(.2), .86, .62, .16, .5), PLATE])),
+    "furd_f150": dict(kind="pickup", color=rgb(190, 196, 204), spec=base(
+        top=[(0, .58), (.01, .64), (.37, .64), (.385, .98), (.44, 1.0), (.60, .98), (.69, .68), (.98, .66), (1, .58)],
+        cab=(.37, .385, .60, .69), side=(.40, .67), pillars=[.52], doors=[.40, .52, .65], axle=(.17, .83), tumble=0.86,
+        box=0.45, edge=0.08, sm=0.006, belt=[(0, .62), (1, .62)], plan=[(0, .94), (.02, 1), (.97, 1), (1, .92)], rim=0.66,
+        top_trim=(.03, .355),
+        front=[it("Trim", s_rr(.12), 0, .62, 1.05, .62, frame="Chrome"), it("Chrome", s_rr(.1), 0, .62, 1.0, .1, .1),
+               it("HeadLight", s_rr(.15), .80, .68, .3, .5), it("Trim", RR, 0, .1, 1.5, .14)],
+        rear=[it("TailLight", s_rr(.15), .88, .62, .14, .56), it("Trim", RR, 0, .08, 1.7, .14), PLATE],
+        extras={"flare": "Trim"})),
+    "awdi_a4": dict(kind="sedan", color=rgb(196, 200, 206), spec=sedan(
+        front=[it("Trim", s_hex(0.38), 0, .46, .78, .70, frame="Chrome"), it("HeadLight", s_slant(.2), .70, .80, .48, .2),
+               it("Trim", s_trap(.6), .74, .22, .34, .26)],
+        rear=[it("TailLight", s_slant(.1), .68, .80, .56, .16), it("TailLight", RR, 0, .82, .8, .05), PLATE])),
+    # ---- Uncommon
+    "bmv_m3": dict(kind="sedan", color=rgb(30, 90, 190), spec=sedan(
+        front=[it("Trim", s_rr(.35), .17, .58, .30, .40, frame="Chrome"), it("HeadLight", s_slant(.12), .66, .76, .50, .2),
+               it("Trim", s_trap(.7), 0, .16, .7, .22), it("Trim", s_slant(.3), .76, .2, .3, .24)],
+        rear=[it("TailLight", s_wedge(.5), .68, .80, .56, .24), PLATE, it("Chrome", EL, .5, .08, .12, .12), it("Chrome", EL, .66, .08, .12, .12)],
+        extras={"lip": True})),
+    "mursides_e": dict(kind="sedan", color=rgb(20, 20, 24), spec=sedan(
+        top=[(0, .52), (.02, .62), (.14, .66), (.30, .98), (.40, 1.0), (.55, .97), (.70, .64), (.96, .59), (1, .46)],
+        cab=(.14, .30, .55, .70), side=(.25, .67),
+        front=[it("Trim", s_trap(.8), 0, .52, .70, .48, frame="Chrome"), it("Chrome", RR, 0, .52, .66, .07, .1),
+               it("Chrome", EL, 0, .52, .2, .3, .12), it("HeadLight", s_slant(.25), .70, .76, .44, .24), it("Trim", s_trap(.6), .72, .18, .4, .2)],
+        rear=[it("TailLight", s_rr(.4), .66, .80, .6, .2), it("Chrome", RR, 0, .62, 1.0, .04), PLATE])),
+    "tezla_model3": dict(kind="sedan", color=rgb(236, 238, 242), spec=sedan(
+        top=[(0, .56), (.02, .68), (.09, .72), (.32, .99), (.50, .98), (.71, .60), (.95, .52), (1, .42)],
+        cab=(.09, .32, .50, .71), side=(.24, .68), pillars=[.44], doors=[.25, .44, .64], roof="glass", sm=0.03, spokes=10,
+        front=[it("HeadLight", s_wedge(.7), .70, .80, .46, .3), it("Trim", s_trap(.8), 0, .12, 1.1, .16)],
+        rear=[it("TailLight", s_wedge(.5), .70, .82, .5, .22), PLATE])),
+    "jagwar_xe": dict(kind="sedan", color=rgb(16, 70, 50), spec=sedan(
+        front=[it("Trim", s_rr(.45), 0, .50, .56, .46, frame="Chrome"), it("HeadLight", s_wedge(.6), .68, .80, .5, .2),
+               it("Trim", s_trap(.6), .74, .2, .34, .24)],
+        rear=[it("TailLight", s_wedge(.5), .68, .82, .56, .18), PLATE, it("Chrome", EL, .58, .08, .14, .12)])),
+    # ---- Rare
+    "furd_mustank": dict(kind="muscle", color=rgb(210, 40, 36), spec=coupe(
+        top=[(0, .58), (.03, .68), (.09, .72), (.34, .98), (.44, .98), (.60, .68), (.96, .64), (1, .52)],
+        cab=(.09, .34, .44, .60), side=(.26, .57), doors=[.36, .55], stripes=(13, 13), box=0.6,
+        plan=[(0, .86), (.04, .98), (.3, 1), (.75, 1), (.95, .96), (1, .84)],
+        front=[it("Trim", s_hex(0.4), 0, .50, 1.0, .46), it("HeadLight", s_slant(.2), .78, .62, .3, .3), it("Trim", s_trap(.7), 0, .12, 1.0, .14)],
+        rear=[it("Trim", RR, 0, .72, 1.8, .34, .04)] + [it("TailLight", s_rr(.2), u, .72, .09, .28, .09) for u in (.52, .66, .80)] + [PLATE, it("Chrome", EL, .62, .06, .16, .14)],
+        extras={"spoiler": "lip", "caliper": (0.8, 0.05, 0.05, 1)})),
+    "dodje_chalenjer": dict(kind="muscle", color=rgb(255, 120, 20), spec=coupe(
+        top=[(0, .62), (.02, .70), (.17, .72), (.29, .98), (.48, .98), (.60, .70), (.97, .68), (1, .58)],
+        cab=(.17, .29, .48, .60), side=(.27, .58), doors=[.34, .56], stripes=(12, 13), box=0.45, edge=0.1, sm=0.012, tumble=0.76,
+        belt=[(0, .64), (1, .62)], plan=[(0, .92), (.03, 1), (.97, 1), (1, .90)], axle=(.2, .83),
+        front=[it("Trim", s_rr(.25), 0, .66, 1.86, .34)] + [it("HeadLight", EL, u, .66, .16, .26, .1) for u in (.58, .80)] + [it("Trim", s_trap(.8), 0, .16, 1.2, .2)],
+        rear=[it("TailLight", s_rr(.3), 0, .70, 1.84, .2, .06), it("Trim", s_rr(.3), 0, .70, 1.6, .08, .08), PLATE,
+              it("Chrome", RR, .6, .06, .2, .1)],
+        extras={"scoop": True, "spoiler": "lip", "caliper": (0.1, 0.1, 0.1, 1)})),
+    "ranje_rover": dict(kind="suv", color=rgb(232, 232, 228), spec=suv(
+        roof="black", pillar_mat="Trim", sm=0.012, edge=0.08,
+        front=[it("Trim", s_rr(.2), 0, .78, .9, .2, frame="Chrome"), it("HeadLight", s_rr(.25), .74, .78, .42, .18),
+               it("Trim", s_rr(.2), 0, .2, 1.2, .2), it("Chrome", RR, 0, .06, 1.0, .06)],
+        rear=[it("TailLight", s_rr(.2), .88, .58, .1, .46), it("Trim", RR, 0, .70, 1.5, .08), PLATE, it("Chrome", RR, 0, .06, 1.0, .06)],
+        extras={"gill": True})),
+    "bmv_m4": dict(kind="sport", color=rgb(120, 190, 60), H=4.1, spec=coupe(
+        front=[it("Trim", s_rr(.3), .17, .50, .30, .66, frame="Chrome"), it("HeadLight", s_slant(.12), .68, .78, .46, .18),
+               it("Trim", s_slant(.3), .74, .24, .34, .3)],
+        rear=[it("TailLight", s_wedge(.5), .68, .80, .56, .22), PLATE] + [it("Chrome", EL, u, .08, .11, .12) for u in (.42, .56)],
+        extras={"spoiler": "lip", "caliper": (0.1, 0.3, 0.9, 1), "lip": True}, spokes=10)),
+    # ---- Epic
+    "mursides_g": dict(kind="suv", color=rgb(24, 26, 28), H=6.5, spec=suv(
+        top=[(0, .48), (.008, .96), (.03, 1.0), (.61, 1.0), (.665, .64), (.985, .61), (1, .55)], cab=(.008, .03, .61, .665),
+        side=(.04, .645), pillars=[.22, .44], doors=[.22, .44, .63], tumble=0.93, box=0.3, edge=0.05, sm=0.004, psm=0.008,
+        belt=[(0, .60), (1, .59)], plan=[(0, .97), (.01, 1), (.99, 1), (1, .97)], axle=(.17, .82),
+        front=[it("Trim", s_rr(.15), 0, .60, .62, .46, frame="Chrome")] + [it("Chrome", RR, 0, v, .58, .05, .1) for v in (.48, .60, .72)]
+              + [it("HeadLight", EL, .70, .62, .3, .44, .1, frame="Chrome"), it("Trim", RR, 0, .1, 1.9, .16)],
+        rear=[it("TailLight", RR, .82, .16, .26, .1), it("Trim", RR, 0, .1, 1.9, .14)],
+        extras={"spare": True, "flare": "Trim", "indicators": True, "molding": True, "rails": True})),
+    "awdi_r8": dict(kind="supercar", color=rgb(200, 204, 210), H=3.7, spec=mid(
+        sm=0.022, pillar_mat="Trim",
+        front=[it("Trim", s_hex(0.36), 0, .40, .74, .56), it("HeadLight", s_slant(.3), .72, .78, .42, .2), it("Trim", s_trap(.6), .72, .28, .4, .36)],
+        rear=[it("TailLight", s_slant(.1), .66, .80, .6, .14), it("Trim", RR, 0, .46, 1.7, .26, .04), PLATE] + [it("Chrome", EL, u, .1, .2, .14) for u in (.7,)],
+        extras={"intake": True, "caliper": (0.85, 0.05, 0.05, 1)})),
+    "jagwar_ftype": dict(kind="sport", color=rgb(150, 20, 30), spec=coupe(
+        top=[(0, .54), (.03, .66), (.08, .70), (.27, .97), (.38, .97), (.55, .66), (.94, .58), (1, .42)],
+        cab=(.08, .27, .38, .55), side=(.22, .52), doors=[.30, .50], sm=0.028, tumble=0.68, axle=(.17, .80),
+        front=[it("Trim", s_rr(.4), 0, .44, .66, .50, frame="Chrome"), it("HeadLight", s_wedge(.4), .76, .88, .3, .2), it("Trim", s_slant(.3), .76, .3, .3, .3)],
+        rear=[it("TailLight", s_wedge(.7), .64, .80, .66, .14), PLATE] + [it("Chrome", EL, u, .1, .13, .14) for u in (.3, .44)],
+        extras={"caliper": (0.85, 0.05, 0.05, 1)}, spokes=10)),
+    "mazeratti_gt": dict(kind="sport", color=rgb(20, 40, 90), H=4.0, spec=coupe(
+        top=[(0, .54), (.03, .66), (.12, .70), (.32, .98), (.44, .98), (.60, .66), (.95, .58), (1, .40)],
+        cab=(.12, .32, .44, .60), side=(.27, .57), doors=[.34, .55], sm=0.028,
+        front=[it("Trim", s_el(18), 0, .50, .62, .62, frame="Chrome")] + [it("Chrome", RR, u, .50, .03, .5, .1) for u in (-.18, -.09, 0, .09, .18)]
+              + [it("HeadLight", s_wedge(.5), .72, .86, .4, .2), it("Trim", EL, .74, .28, .3, .26)],
+        rear=[it("TailLight", s_wedge(.6), .68, .80, .56, .2), PLATE] + [it("Chrome", EL, u, .1, .12, .13) for u in (.5, .64)],
+        extras={"vents": True, "caliper": (0.85, 0.05, 0.05, 1)}, spokes=10)),
+    # ---- Legendary
+    "lamborgini_hurakan": dict(kind="supercar", color=rgb(120, 220, 40), spec=mid(
+        top=[(0, .58), (.03, .70), (.26, .82), (.44, 1.0), (.50, 1.0), (.76, .56), (.96, .38), (1, .30)], cab=(.26, .44, .50, .76),
+        side=(.42, .72), sm=0.008, box=0.5, edge=0.1,
+        front=[it("Trim", s_slant(.35), .58, .34, .7, .44), it("HeadLight", s_slant(.6), .76, .86, .36, .12), it("Trim", RR, 0, .1, .5, .12)],
+        rear=[it("TailLight", s_slant(.25), .66, .82, .56, .08), it("Trim", s_hex(.42), 0, .50, 1.84, .36, .04), PLATE] + [it("Chrome", RR, u, .12, .16, .12) for u in (.5, .7)],
+        extras={"intake": True, "caliper": (1, 0.8, 0.05, 1)})),
+    "lamborgini_aventadoor": dict(kind="proto", color=rgb(255, 150, 10), spec=mid(
+        top=[(0, .56), (.03, .70), (.30, .84), (.45, 1.0), (.50, 1.0), (.78, .52), (.97, .34), (1, .27)], cab=(.30, .45, .50, .78),
+        side=(.43, .74), sm=0.006, box=0.45, edge=0.1, axle=(.19, .80),
+        front=[it("Trim", s_slant(.5), .60, .36, .66, .5), it("HeadLight", s_slant(.5), .74, .88, .4, .1), it("HeadLight", s_slant(-.5), .74, .78, .3, .08)],
+        rear=[it("TailLight", s_slant(.3), .70, .84, .44, .07), it("TailLight", s_slant(-.3), .70, .76, .34, .06), it("Trim", s_hex(.42), 0, .46, 1.84, .4, .04),
+              it("Chrome", s_hex(.3), 0, .18, .4, .2, .1)],
+        extras={"intake": True, "wing": True, "caliper": (0.1, 0.1, 0.1, 1)})),
+    "tezla_cybertrak": dict(kind="pickup", color=rgb(176, 180, 186), L=17, H=5.6, spec=base(
+        top=[(0, .64), (.01, .68), (.56, 1.0), (.60, 1.0), (.99, .52), (1, .46)], cab=(.30, .56, .60, .82),
+        side=(.40, .80), pillars=[.60], doors=[.42, .60, .78], axle=(.17, .82), tumble=0.80, box=0.25, edge=0.04, sm=0.003, psm=0.006,
+        belt=[(0, .63), (1, .50)], plan=[(0, .96), (.015, 1), (.985, 1), (1, .96)], rim=0.6, rearglass=False, spokes=6, metal=True,
+        front=[it("HeadLight", RR, 0, .92, 1.9, .07), it("Trim", RR, 0, .18, 1.9, .3)],
+        rear=[it("TailLight", RR, 0, .90, 1.9, .06), it("Trim", RR, 0, .14, 1.9, .22)],
+        extras={"flare": "Trim"})),
+    "mazeratti_mc20": dict(kind="supercar", color=rgb(240, 240, 236), H=3.7, spec=mid(
+        sm=0.026, tumble=0.64,
+        front=[it("Trim", s_el(18), 0, .34, .7, .44)] + [it("Chrome", RR, u, .34, .03, .34, .1) for u in (-.14, 0, .14)]
+              + [it("HeadLight", s_wedge(.3), .78, .9, .26, .22), it("Trim", EL, .7, .26, .3, .24)],
+        rear=[it("TailLight", s_wedge(.7), .66, .82, .6, .12), it("Trim", RR, 0, .44, 1.6, .26, .04), PLATE] + [it("Chrome", EL, u, .5, .14, .2) for u in (.1,)],
+        extras={"intake": True, "caliper": (0.1, 0.2, 0.8, 1)})),
+}
+
+# traffic kind -> (design id, overrides)
+TRAFFIC = {
+    "compact": ("furd_fiasta", {}), "sedan": ("awdi_a4", {}), "taxi": ("mursides_e", {"taxi": True}), "van": ("dodje_caravon", {}),
+    "minibus": ("dodje_caravon", {"lightbar": False}), "sport": ("furd_mustank", {}), "supercar": ("lamborgini_hurakan", {}),
+    "pickup": ("furd_f150", {}), "service": ("dodje_caravon", {"lightbar": True}), "truck": ("furd_f150", {"cargo": True}),
+    "proto": ("mazeratti_mc20", {}),
+}
 TRAFFIC_COLOR = rgb(220, 60, 60)
 
-# ---------------------------------------------------------------- helpers
+# ---------------------------------------------------------------- blender helpers
 def reset():
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    MATS.clear()
 
 MATS = {}
 def mat(name, color, metal=0.0, rough=0.4, emit=None, alpha=1.0):
@@ -82,57 +258,12 @@ def mat(name, color, metal=0.0, rough=0.4, emit=None, alpha=1.0):
     bsdf.inputs["Roughness"].default_value = rough
     if emit:
         bsdf.inputs["Emission Color"].default_value = emit
-        bsdf.inputs["Emission Strength"].default_value = 3.0
+        bsdf.inputs["Emission Strength"].default_value = 2.5
     if alpha < 1:
         bsdf.inputs["Alpha"].default_value = alpha
     m.diffuse_color = color
     MATS[key] = m
     return m
-
-def interp(pts, f):
-    for (a, ya), (b, yb) in zip(pts, pts[1:]):
-        if a <= f <= b:
-            t = (f - a) / max(b - a, 1e-6)
-            t = t * t * (3 - 2 * t)
-            return ya + (yb - ya) * t
-    return pts[-1][1]
-
-def squircle(n, k):
-    """unit squircle points (y, z) in [-1,1], counter-clockwise, k points."""
-    out = []
-    for i in range(k):
-        a = 2 * math.pi * i / k
-        c, s = math.cos(a), math.sin(a)
-        out.append((math.copysign(abs(s) ** (2 / n), s), math.copysign(abs(c) ** (2 / n), c)))
-    return out
-
-def loft(name, rings, mats_fn=None, closed=True, cap=True):
-    """rings: list of lists of Vector. builds quads between rings (+ end caps)."""
-    me = bpy.data.meshes.new(name)
-    bm = bmesh.new()
-    vrings = [[bm.verts.new(p) for p in r] for r in rings]
-    k = len(rings[0])
-    seg = k if closed else k - 1
-    for a, b in zip(vrings, vrings[1:]):
-        for i in range(seg):
-            j = (i + 1) % k
-            try:
-                bm.faces.new((a[i], a[j], b[j], b[i]))
-            except ValueError:
-                pass
-    if cap and closed:
-        for r, rev in ((vrings[0], True), (vrings[-1], False)):
-            try:
-                f = bm.faces.new(list(reversed(r)) if rev else r)
-            except ValueError:
-                pass
-    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-    bm.to_mesh(me)
-    bm.free()
-    ob = bpy.data.objects.new(name, me)
-    bpy.context.collection.objects.link(ob)
-    return ob
 
 def apply_mods(ob):
     bpy.context.view_layer.objects.active = ob
@@ -141,14 +272,6 @@ def apply_mods(ob):
     ob.select_set(True)
     for m in list(ob.modifiers):
         bpy.ops.object.modifier_apply(modifier=m.name)
-
-def subsurf(ob, lvl=1):
-    m = ob.modifiers.new("ss", "SUBSURF")
-    m.levels = lvl
-    m.render_levels = lvl
-    apply_mods(ob)
-    for p in ob.data.polygons:
-        p.use_smooth = True
 
 def prim(kind, name, loc, size, rot=(0, 0, 0), verts=24):
     if kind == "box":
@@ -189,266 +312,372 @@ def join(objs, name):
     ob.name = name
     return ob
 
+def prism(name, pts_yz, x, depth):
+    """extrude polygon (y,z) from x to x+depth"""
+    me = bpy.data.meshes.new(name)
+    bm = bmesh.new()
+    a = [bm.verts.new((x, y, z)) for y, z in pts_yz]
+    b = [bm.verts.new((x + depth, y, z)) for y, z in pts_yz]
+    n = len(a)
+    bm.faces.new(a)
+    bm.faces.new(list(reversed(b)))
+    for i in range(n):
+        j = (i + 1) % n
+        bm.faces.new((a[j], a[i], b[i], b[j]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(me)
+    bm.free()
+    ob = bpy.data.objects.new(name, me)
+    bpy.context.collection.objects.link(ob)
+    return ob
+
+def lin(pts, f):
+    if f <= pts[0][0]:
+        return pts[0][1]
+    for (a, ya), (b, yb) in zip(pts, pts[1:]):
+        if a <= f <= b:
+            return ya + (yb - ya) * (f - a) / max(b - a, 1e-9)
+    return pts[-1][1]
+
+def smo(pts, f, s):
+    c = lambda v: min(1.0, max(0.0, v))
+    return (lin(pts, c(f - s)) + 2 * lin(pts, f) + lin(pts, c(f + s))) / 4
+
 # ---------------------------------------------------------------- car builder
-def build_car(cid, kind, color, opt, seed, low=False):
-    rnd = random.Random(seed)
-    k = dict(KINDS[kind])
-    fam = FAM[k["fam"]]
-    L = k["L"] * (0.92 if opt.get("short") else 1.0)
-    W, H, wr, clear = k["W"], k["H"], k["wr"], k["clear"]
-    jit = lambda v, a: v * (1 + rnd.uniform(-a, a))
-    roofH = jit(H, 0.03)
-    beltK = jit(1.0, 0.03) * (0.96 if opt.get("sporty") else 1.0)
-    neon = opt.get("neon") or ((0.2, 0.9, 1, 1) if k.get("neon") else None)
+NJ = 16  # points per half ring
+MAT_IDX = {"Body": 0, "Glass": 1, "Trim": 2, "Stripe": 3}
+
+def build_car(cid, design, color=None, low=False, over=None, dims=None):
+    car = CARS[design]
+    S = dict(car["spec"])
+    S["extras"] = dict(S["extras"])
+    S["extras"].update(over or {})
+    ex = S["extras"]
+    k = dict(KINDS[dims or car["kind"]])
+    if not dims:
+        k.update({n: car[n] for n in ("L", "H", "W") if n in car})
+    L, W, H, clear = k["L"], k["W"], k["H"], k["clear"]
+    wr = k["wr"] * S["wheel"]
+    color = color or car["color"]
+    x0 = -L / 2
+    rg, rr, rf, wsb = S["cab"]
+    sg0, sg1 = S["side"]
+    beltmid = lin(S["belt"], 0.5) * H
 
     M = {
-        "Body": mat("Body", color, metal=0.6 if opt.get("chrome") else 0.25, rough=0.15 if opt.get("chrome") else 0.3),
-        "Glass": mat("Glass", (0.10, 0.16, 0.22, 1), rough=0.05, alpha=0.6),
-        "Trim": mat("Trim", (0.05, 0.05, 0.06, 1), rough=0.6),
-        "Chrome": mat("Chrome", (0.85, 0.86, 0.9, 1), metal=1, rough=0.12),
-        "Tire": mat("Tire", (0.03, 0.03, 0.035, 1), rough=0.9),
-        "Rim": mat("Rim", (0.75, 0.77, 0.8, 1) if not neon else (0.12, 0.12, 0.14, 1), metal=1, rough=0.2),
-        "HeadLight": mat("HeadLight", (1, 0.97, 0.85, 1), emit=(1, 0.97, 0.85, 1)),
-        "TailLight": mat("TailLight", (1, 0.08, 0.12, 1), emit=(1, 0.05, 0.1, 1)),
+        "Body": mat("Body", color, metal=0.9 if S.get("metal") else 0.3, rough=0.35 if S.get("metal") else 0.25),
+        "Glass": mat("Glass", (0.03, 0.05, 0.07, 1), rough=0.05),
+        "Trim": mat("Trim", (0.03, 0.03, 0.035, 1), rough=0.55),
+        "Stripe": mat("Stripe", (0.95, 0.95, 0.95, 1) if sum(color[:3]) < 1.9 else (0.04, 0.04, 0.05, 1), rough=0.3),
+        "Chrome": mat("Chrome", (0.85, 0.86, 0.9, 1), metal=1, rough=0.1),
+        "Tire": mat("Tire", (0.025, 0.025, 0.03, 1), rough=0.9),
+        "Rim": mat("Rim", (0.7, 0.72, 0.76, 1), metal=1, rough=0.2),
+        "Caliper": mat("Caliper", ex.get("caliper") or (0.3, 0.3, 0.3, 1), rough=0.4),
+        "HeadLight": mat("HeadLight", (1, 0.97, 0.88, 1), emit=(1, 0.97, 0.88, 1)),
+        "TailLight": mat("TailLight", (0.9, 0.04, 0.06, 1), emit=(1, 0.03, 0.06, 1)),
+        "Plate": mat("Plate", (0.92, 0.92, 0.9, 1), rough=0.5),
+        "Cargo": mat("Cargo", (0.94, 0.94, 0.96, 1), rough=0.5),
     }
-    if neon:
-        M["Neon"] = mat("Neon", neon, emit=neon)
-    M["Cargo"] = mat("Cargo", (0.94, 0.94, 0.96, 1), rough=0.5)
     parts = {n: [] for n in M}
 
-    x0 = -L / 2
-    plan = fam["plan"]
-    def half_w(f):  # plan view rounding at both ends
-        u = abs(f * 2 - 1)
-        return W / 2 * (0.58 + 0.42 * (max(0.0, 1 - u ** plan)) ** (1 / plan))
+    def hwf(f):
+        return smo(S["plan"], f, S["psm"]) * W / 2
 
-    bmin = 2 * wr + 0.55  # shoulder line always clears the wheel arches
+    def ztop0(f):
+        return smo(S["top"], f, S["sm"]) * H
 
-    def belt(f):
-        b = interp(fam["belt"], f) * H * beltK
-        edge = min(1.0, min(f, 1 - f) / 0.12)  # allow a lower nose/tail
-        return max(b, bmin * (0.82 + 0.18 * edge))
-
-    # ---- lower body (squircle sections)
-    N, K = (26, 16) if low else (44, 24)
-    sq = squircle(5, K)
-    rings = []
-    for i in range(N + 1):
-        f = i / N
-        f = 0.5 - 0.5 * math.cos(f * math.pi)  # denser at the ends
+    def bump(f):  # fenders always clear the wheels
         x = x0 + f * L
-        hw = half_w(f)
-        bot = clear + 0.25 * (abs(f * 2 - 1) ** 6)
-        top = belt(f)
-        cy, hy = (top + bot) / 2, (top - bot) / 2
-        ring = []
-        for (sy, sz) in sq:
-            tumble = 1 - 0.07 * max(0, sy)
-            ring.append(Vector((x, sz * hw * tumble, cy + sy * hy)))
-        rings.append(ring)
-    body = loft(cid + "_body", rings)
-    subsurf(body, 1)
-    # wheel arches
-    axles = [x0 + a * L for a in fam["axle"]]
+        d = min(abs(x - x0 - a * L) for a in S["axle"])
+        R = wr * 1.16
+        if d < R * 0.9:
+            return wr + math.sqrt(R * R - d * d) + 0.28
+        e = wr + math.sqrt(R * R * 0.19) + 0.28
+        t = (d - R * 0.9) / (wr * 1.2)
+        return e * (0.5 + 0.5 * math.cos(math.pi * t)) if t < 1 else 0.0
+
+    ztop = ztop0
+
+    def zbelt(f):
+        return max(min(lin(S["belt"], f) * H, ztop0(f) - 0.035 * H), bump(f))
+
+    def zbot(f):
+        e = max(0.0, (abs(2 * f - 1) - 0.9) / 0.1)
+        return clear + 0.12 * H * e * e
+
+    def ring(f):
+        hw, zt, zl, zb = hwf(f), ztop(f), zbelt(f), zbot(f)
+        g = zt - zl
+        r = min(1.0, max(0.0, g / max(H - beltmid, 0.1)))
+        y0 = hw * 0.955
+        rw = hw * (0.93 - (0.93 - S["tumble"]) * r)
+        ze = zt - g * S["edge"]
+        hs = zl - zb
+        p = [(0, zb), (0.55 * hw, zb), (0.9 * hw, zb + 0.03), (0.985 * hw, zb + min(0.25, hs * 0.2)), (hw, zb + 0.45 * hs), (0.997 * hw, zb + 0.8 * hs), (y0, zl)]
+        ay, az = y0 - 0.035 * hw * r, zl + 0.02
+        for t in (0, 1 / 3, 2 / 3, 1):
+            p.append((ay + (rw - ay) * t, az + (ze - az) * t))
+        e = S["box"]
+        for n in range(1, 6):
+            a = n / 5 * math.pi / 2
+            p.append((rw * math.cos(a) ** e if n < 5 else 0.0, ze + (zt - ze) * math.sin(a) ** e))
+        bz = bump(f)
+        if bz > 0:  # keep the fender top closed over the wheel pocket
+            yin = W / 2 - 1.3
+            p = [(y, max(z, bz)) if (j >= 7 and y > yin) else (y, z) for j, (y, z) in enumerate(p)]
+        return p
+
+    # ---- stations
+    N = 34 if low else 60
+    keys = [0.0, 1.0, sg0, sg1] + [f for f, _ in S["top"]]
+    for c in S["cab"]:
+        keys += [c - 0.006, c + 0.006]
+    for p in S["pillars"]:
+        keys += [p - 0.007, p + 0.007]
+    if not low:
+        for d in S["doors"]:
+            keys += [d - 0.0035, d + 0.0035]
+    fs = sorted(set([i / N for i in range(N + 1)] + [min(1, max(0, v)) for v in keys]))
+    out = [fs[0]]
+    protect = set(round(d + s, 4) for d in S["doors"] for s in (-0.0035, 0.0035))
+    for f in fs[1:]:
+        if f - out[-1] > 0.004 or round(f, 4) in protect:
+            out.append(f)
+    fs = out
+
+    def mat_of(fm, j):
+        gh = (ztop(fm) - zbelt(fm)) > 0.10 * H and rg - 0.01 < fm < wsb + 0.01
+        in_p = any(abs(fm - p) < 0.0075 for p in S["pillars"])
+        if gh and 7 <= j <= 9:
+            if sg0 < fm < sg1:
+                return S["pillar_mat"] if in_p else "Glass"
+        if gh and 11 <= j <= 14:
+            if rf < fm < wsb - 0.004:
+                return "Glass"
+            if rg + 0.004 < fm < rr and S.get("rearglass", True):
+                return "Glass"
+            if rr <= fm <= rf and S["roof"] != "body":
+                return "Glass" if S["roof"] == "glass" else "Trim"
+        if gh and j == 10 and S["pillar_mat"] == "Trim" and rg < fm < wsb:
+            return "Trim"
+        tt = S.get("top_trim")
+        if tt and 11 <= j <= 14 and tt[0] < fm < tt[1]:
+            return "Trim"
+        if S["stripes"] and S["stripes"][0] <= j <= S["stripes"][1]:
+            return "Stripe"
+        if 3 <= j <= 6 and not low and any(abs(fm - d) < 0.003 for d in S["doors"]):
+            return "Trim"
+        return "Body"
+
+    me = bpy.data.meshes.new(cid + "_shell")
+    bm = bmesh.new()
+    Rv, Lv = [], []
+    for f in fs:
+        x = x0 + f * L
+        pts = ring(f)
+        r = [bm.verts.new((x, y, z)) for y, z in pts]
+        l = [r[0]] + [bm.verts.new((x, -y, z)) for y, z in pts[1:-1]] + [r[-1]]
+        Rv.append(r)
+        Lv.append(l)
+    for i in range(len(fs) - 1):
+        fm = (fs[i] + fs[i + 1]) / 2
+        for j in range(NJ - 1):
+            mi = MAT_IDX[mat_of(fm, j)]
+            for V in (Rv, Lv):
+                try:
+                    fc = bm.faces.new((V[i][j], V[i][j + 1], V[i + 1][j + 1], V[i + 1][j]))
+                    fc.material_index = mi
+                    fc.smooth = True
+                except ValueError:
+                    pass
+    for i in (0, len(fs) - 1):
+        loop = Rv[i] + list(reversed(Lv[i][1:-1]))
+        try:
+            bm.faces.new(loop)
+        except ValueError:
+            pass
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(me)
+    bm.free()
+    shell = bpy.data.objects.new(cid + "_shell", me)
+    bpy.context.collection.objects.link(shell)
+    for n in ("Body", "Glass", "Trim", "Stripe"):
+        shell.data.materials.append(M[n])
+
+    # ---- wheel arches
+    axles = [x0 + a * L for a in S["axle"]]
+    if ex.get("cargo"):
+        axles.insert(1, x0 + (S["axle"][0] + 0.13) * L)
     for ax in axles:
-        cut = prim("cyl", "cut", (ax, 0, wr), (wr * 2.3, wr * 2.3, W * 1.4), rot=(math.pi / 2, 0, 0), verts=32)
-        m = body.modifiers.new("arch", "BOOLEAN")
-        m.object = cut
-        m.operation = "DIFFERENCE"
-        m.solver = "EXACT"
-        apply_mods(body)
-        bpy.data.objects.remove(cut)
-    set_mat(body, M["Body"])
-    parts["Body"].append(body)
-
-    # ---- greenhouse (glass + roof/pillars as body)
-    rg, rr, rf, ws = fam["cab"]
-    if opt.get("sporty"):
-        rr, rf = rr + 0.02, rf - 0.02
-    def roof(f):
-        if f <= rg or f >= ws:
-            return None
-        if f < rr:
-            t = (f - rg) / (rr - rg)
-        elif f > rf:
-            t = (ws - f) / (ws - rf)
-        else:
-            t = 1
-        t = math.sin(t * math.pi / 2) ** 0.8
-        return belt(f) + (roofH - belt(f)) * t
-    NG, KG = (18, 14) if low else (30, 20)
-    sqg = squircle(7, KG)
-    grings, fl = [], []
-    for i in range(NG + 1):
-        f = rg + (ws - rg) * (i / NG)
-        f = min(max(f, rg + 1e-3), ws - 1e-3)
-        r_top = roof(f) or belt(f) + 0.02
-        b = belt(f) - 0.05
-        cy, hy = (r_top + b) / 2, max((r_top - b) / 2, 0.01)
-        hw = half_w(f) * 0.93
-        ring = []
-        for (sy, sz) in sqg:
-            v = (sy + 1) / 2
-            ring.append(Vector((x0 + f * L, sz * hw * (1 - 0.24 * v), cy + sy * hy)))
-        grings.append(ring)
-        fl.append(f)
-    gh = loft(cid + "_cabin", grings)
-    gh.data.materials.append(M["Glass"])
-    gh.data.materials.append(M["Body"])
-    panel = fam.get("panel", -1)
-    for p in gh.data.polygons:
-        c = p.center
-        f = (c.x - x0) / L
-        top = roof(min(max(f, rg + 1e-3), ws - 1e-3)) or 0
-        is_roof = p.normal.z > 0.72 and rr - 0.03 < f < rf + 0.03
-        is_pillar = (abs(f - rf) < 0.025 or abs(f - rr) < 0.03 or abs(f - (rr + rf) / 2) < 0.012) and abs(c.y) > 0.25 * W
-        is_low = c.z < belt(f) + 0.12
-        is_panel = f < panel and abs(c.y) > 0.2 * W
-        if is_roof or is_pillar or is_low or is_panel:
-            p.material_index = 1
-    for p in gh.data.polygons:
-        p.use_smooth = True
-    parts["Glass"].append(gh)
-
-    # ---- pickup bed / truck cargo box
-    if "bed" in fam:
-        a, b = fam["bed"]
-        xa, xb, y0 = x0 + a * L, x0 + b * L, belt(0.2)
-        bw = half_w(0.2) * 2 * 0.96
-        parts["Trim"].append(prim("box", "bedfloor", ((xa + xb) / 2, 0, y0 - 0.05), (xb - xa, bw, 0.2)))
         for s in (-1, 1):
-            parts["Body"].append(prim("box", "bedwall", ((xa + xb) / 2, s * (bw / 2 - 0.12), y0 + 0.45), (xb - xa, 0.24, 0.9)))
-        parts["Body"].append(prim("box", "tailgate", (xa + 0.12, 0, y0 + 0.45), (0.24, bw, 0.9)))
-    if "box" in fam:
-        a, b = fam["box"]
-        xa, xb = x0 + a * L, x0 + b * L
-        cargo = prim("box", "cargo", ((xa + xb) / 2, 0, (belt(0.3) + H) / 2), (xb - xa, W * 0.98, H - belt(0.3)))
-        bevel(cargo, 0.2, 2)
-        parts["Cargo"].append(cargo)
-        stripe = prim("box", "stripe", ((xa + xb) / 2, 0, (belt(0.3) + H) / 2), (xb - xa - 0.4, W * 0.99, 0.8))
-        parts["Body"].append(stripe)
+            cut = prim("cyl", "cut", (ax, s * (W / 2 + 0.2), wr), (wr * 2.32, wr * 2.32, 2.64), rot=(math.pi / 2, 0, 0), verts=28 if low else 40)
+            m = shell.modifiers.new("arch", "BOOLEAN")
+            m.object = cut
+            m.operation = "DIFFERENCE"
+            m.solver = "EXACT"
+            apply_mods(shell)
+            bpy.data.objects.remove(cut)
+    try:
+        shell.data.set_sharp_from_angle(angle=math.radians(38))
+    except Exception:
+        pass
 
     # ---- wheels
-    tw = 0.95 if k["fam"] != "truck" else 1.3
+    tw = 1.0 if k["wr"] < 1.9 else 1.3
+    rimr = wr * S["rim"]
     for ax in axles:
         for s in (-1, 1):
-            y = s * (W / 2 - tw / 2 - 0.05)
-            t = prim("cyl", "tire", (ax, y, wr), (wr * 2, wr * 2, tw), rot=(math.pi / 2, 0, 0), verts=28)
-            bevel(t, 0.22, 3)
+            y = s * (W / 2 - tw / 2 - 0.04)
+            t = prim("cyl", "tire", (ax, y, wr), (wr * 2, wr * 2, tw), rot=(math.pi / 2, 0, 0), verts=20 if low else 32)
+            bevel(t, 0.2, 2 if low else 3)
             parts["Tire"].append(t)
-            ry = y + s * (tw / 2 - 0.1)
-            parts["Rim"].append(prim("cyl", "rim", (ax, ry, wr), (wr * 1.3, wr * 1.3, 0.22), rot=(math.pi / 2, 0, 0), verts=24))
-            parts["Chrome"].append(prim("cyl", "hub", (ax, ry + s * 0.08, wr), (wr * 0.36, wr * 0.36, 0.2), rot=(math.pi / 2, 0, 0), verts=12))
-            for n in range(5):
-                a = n * 2 * math.pi / 5
-                sp = prim("box", "spoke", (ax + math.cos(a) * wr * 0.32, ry + s * 0.05, wr + math.sin(a) * wr * 0.32), (wr * 0.6, 0.16, wr * 0.16), rot=(0, -a, 0))
-                parts["Rim"].append(sp)
-            parts["Trim"].append(prim("cyl", "disc", (ax, y, wr), (wr * 1.1, wr * 1.1, tw * 0.6), rot=(math.pi / 2, 0, 0), verts=16))
+            ry = y + s * (tw / 2 - 0.02)
+            parts["Trim"].append(prim("cyl", "well", (ax, ry - s * 0.08, wr), (rimr * 2, rimr * 2, 0.2), rot=(math.pi / 2, 0, 0), verts=20))
+            parts["Rim"].append(prim("cyl", "hub", (ax, ry, wr), (rimr * 0.5, rimr * 0.5, 0.26), rot=(math.pi / 2, 0, 0), verts=12))
+            bpy.ops.mesh.primitive_torus_add(major_radius=rimr * 0.96, minor_radius=0.09, major_segments=20 if low else 32, minor_segments=6,
+                                             location=(ax, ry, wr), rotation=(math.pi / 2, 0, 0))
+            parts["Rim"].append(bpy.context.active_object)
+            ns = 5 if low else S["spokes"]
+            for n in range(ns):
+                a = n * 2 * math.pi / ns
+                parts["Rim"].append(prim("box", "spoke", (ax + math.cos(a) * rimr * 0.5, ry, wr + math.sin(a) * rimr * 0.5),
+                                         (rimr * 0.95, 0.14, rimr * (0.22 if ns <= 6 else 0.11)), rot=(0, -a, 0)))
+            if ex.get("caliper") and not low:
+                parts["Caliper"].append(prim("box", "caliper", (ax + rimr * 0.55, ry - s * 0.1, wr + rimr * 0.4), (rimr * 0.5, 0.12, rimr * 0.7), rot=(0, 0.6, 0)))
+            if ex.get("flare") and not low:
+                bpy.ops.mesh.primitive_torus_add(major_radius=wr * 1.2, minor_radius=0.16, major_segments=28, minor_segments=6,
+                                                 location=(ax, s * (hwf((ax - x0) / L) - 0.02), wr), rotation=(math.pi / 2, 0, 0))
+                fl = bpy.context.active_object
+                bmf = bmesh.new()
+                bmf.from_mesh(fl.data)
+                bmesh.ops.delete(bmf, geom=[v for v in bmf.verts if (fl.matrix_world @ v.co).z < zbot(0.5) + 0.05], context="VERTS")
+                bmf.to_mesh(fl.data)
+                bmf.free()
+                parts[ex["flare"]].append(fl)
 
-    # ---- lights, grille, bumpers, mirrors, exhaust
-    fx = x0 + L
-    def front_x(fz, inset=0.08):
-        # x of the plan outline at lateral offset fz near the nose / tail
-        for i in range(200):
-            f = 1 - i / 400
-            if half_w(f) >= fz:
-                return x0 + f * L - inset
-        return fx
-    def rear_x(fz, inset=0.08):
-        for i in range(200):
-            f = i / 400
-            if half_w(f) >= fz:
-                return x0 + f * L + inset
-        return x0
-    hz = belt(0.97) - 0.25
+    # ---- fascias
+    def fascia(items, front):
+        f = 1.0 if front else 0.0
+        hw = hwf(f) * 0.96
+        z0, z1 = zbot(f), ztop(f)
+        xf = x0 + f * L
+        sgn = 1 if front else -1
+        for I in items:
+            for mir in ((1, -1) if abs(I["cu"]) > 1e-6 else (1,)):
+                pts = [((I["cu"] + u * I["su"]) * mir * hw, z0 + (I["cv"] + v * I["sv"]) * (z1 - z0)) for u, v in I["shape"]]
+                pts = [(max(-hw * 1.02, min(hw * 1.02, y)), z) for y, z in pts]
+                d = I["depth"]
+                ob = prism(I["mat"], pts, xf - 0.1 * sgn, (0.1 + d) * sgn)
+                parts[I["mat"]].append(ob)
+                if I["frame"] and not low:
+                    cy = I["cu"] * mir * hw
+                    cz = z0 + I["cv"] * (z1 - z0)
+                    fp = [(cy + (y - cy) * 1.12, cz + (z - cz) * 1.12) for y, z in pts]
+                    parts[I["frame"]].append(prism("frame", fp, xf - 0.1 * sgn, (0.1 + d * 0.6) * sgn))
+
+    fascia(S["front"], True)
+    fascia(S["rear"], False)
+
+    # ---- side details
+    fx = lambda f: x0 + f * L
     for s in (-1, 1):
-        z = s * W * 0.33
-        h = prim("sphere", "head", (front_x(abs(z)), z, hz), (0.35, W * 0.2, 0.32))
-        parts["HeadLight"].append(h)
-        tz = belt(0.03) - 0.25
-        t = prim("box", "tail", (rear_x(abs(s * W * 0.32)), s * W * 0.32, tz), (0.2, W * 0.24, 0.3))
-        parts["TailLight"].append(t)
-        m = prim("box", "mirror", (x0 + ws * L - 0.4, s * (half_w(ws) + 0.25), belt(ws) + 0.25), (0.5, 0.55, 0.38))
+        mf = wsb - 0.015
+        m = prim("box", "mirror", (fx(mf), s * (hwf(mf) + 0.22), zbelt(mf) + 0.3), (0.45, 0.6, 0.36))
         bevel(m, 0.1, 2)
-        set_mat(m, M["Body"])
         parts["Body"].append(m)
-    parts["Trim"].append(prim("box", "grille", (front_x(W * 0.18, 0.02), 0, clear + (belt(1) - clear) * 0.45), (0.25, W * 0.42, (belt(1) - clear) * 0.45)))
-    for nm, bx in (("bumperF", front_x(W * 0.3, 0.12)), ("bumperR", rear_x(W * 0.3, 0.12))):
-        bp = prim("box", nm, (bx, 0, clear + 0.35), (0.4, W * 0.78, 0.36))
-        bevel(bp, 0.12, 2)
-        parts["Trim"].append(bp)
-    pipes = (-1, 1) if k["fam"] in ("sport", "super") else (1,)
-    for s in pipes:
-        parts["Chrome"].append(prim("cyl", "exhaust", (rear_x(W * 0.25, -0.15), s * W * 0.25, clear + 0.3), (0.42, 0.42, 0.7), rot=(0, math.pi / 2, 0), verts=12))
-    if opt.get("spoiler"):
-        sx = x0 + 0.06 * L
-        top = belt(0.06)
+        if not low:
+            for d in S["doors"][:-1]:
+                hf = d + 0.04
+                parts["Chrome" if ex.get("molding") else "Body"].append(prim("box", "handle", (fx(hf), s * (hwf(hf) * 0.99 + 0.03), zbelt(hf) - 0.32), (0.55, 0.1, 0.13)))
+        if ex.get("intake"):
+            f = S["axle"][0] + 0.15
+            parts["Trim"].append(prism("intake", [(s * (hwf(f) + 0.03), zbot(f) + 0.5), (s * (hwf(f) + 0.03), zbelt(f) - 0.25), (s * (hwf(f) - 0.25), zbelt(f) - 0.25), (s * (hwf(f) - 0.25), zbot(f) + 0.5)], fx(f) - 0.5, 1.1))
+        if ex.get("blade"):
+            f = S["axle"][0] + 0.2
+            parts["Trim"].append(prim("box", "blade", (fx(f), s * hwf(f) * 0.985, (zbelt(f) + ztop(f)) / 2), (0.9, 0.12, ztop(f) - zbelt(f) + 0.5)))
+        if ex.get("vents") and not low:
+            for n in range(3):
+                f = S["axle"][1] - 0.115 - n * 0.022
+                parts["Chrome"].append(prim("cyl", "vent", (fx(f), s * (hwf(f) * 0.998), zbelt(f) - 0.42), (0.2, 0.2, 0.1), rot=(math.pi / 2, 0, 0), verts=10))
+        if ex.get("gill") and not low:
+            f = S["axle"][1] - 0.12
+            parts["Trim"].append(prim("box", "gill", (fx(f), s * hwf(f), zbelt(f) - 0.6), (0.2, 0.1, 1.0)))
+        if ex.get("molding"):
+            parts["Trim"].append(prim("box", "molding", (fx(0.5), s * (hwf(0.5) + 0.02), clear + (zbelt(0.5) - clear) * 0.55), (L * 0.5, 0.1, 0.22)))
+        if ex.get("indicators"):
+            parts["HeadLight"].append(prim("box", "indicator", (fx(0.95), s * hwf(0.95) * 0.8, ztop(0.95) + 0.1), (0.6, 0.3, 0.2)))
+        if ex.get("rails"):
+            f0, f1 = rr + 0.03, rf - 0.03
+            parts["Trim"].append(prim("box", "rail", (fx((f0 + f1) / 2), s * hwf(0.4) * S["tumble"] * 0.86, H + 0.12), ((f1 - f0) * L, 0.14, 0.14)))
+    if ex.get("lip"):
+        parts["Trim"].append(prim("box", "splitter", (fx(1) - 0.2, 0, zbot(1) - 0.02), (0.7, hwf(1) * 1.9, 0.1)))
+    sp = ex.get("spoiler")
+    if sp == "lip":
+        parts["Body"].append(prim("box", "ducktail", (fx(0.012) + 0.25, 0, ztop(0.02) + 0.08), (0.5, hwf(0.03) * 1.7, 0.16), rot=(0, 0.25, 0)))
+    if ex.get("wing"):
+        zt = ztop(0.06)
         for s in (-1, 1):
-            parts["Trim"].append(prim("box", "wingpost", (sx, s * W * 0.28, top + 0.4), (0.3, 0.2, 0.8)))
-        wing = prim("box", "wing", (sx - 0.1, 0, top + 0.85), (1.4, W * 0.95, 0.16), rot=(0, 0.12, 0))
-        bevel(wing, 0.05, 1)
-        set_mat(wing, M["Body"])
-        parts["Body"].append(wing)
-    if k.get("taxi"):
-        ts = prim("box", "taxisign", (x0 + (rr + rf) / 2 * L, 0, roofH + 0.3), (1.4, 2.4, 0.55))
-        bevel(ts, 0.12, 2)
+            parts["Trim"].append(prim("box", "wingpost", (fx(0.06), s * W * 0.3, zt + 0.35), (0.5, 0.14, 0.9)))
+        w = prim("box", "wing", (fx(0.05), 0, zt + 0.85), (1.3, W * 0.96, 0.14), rot=(0, 0.14, 0))
+        parts["Trim"].append(w)
+    if ex.get("scoop"):
+        f = (wsb + 1) / 2
+        sc = prim("box", "scoop", (fx(f), 0, ztop(f) + 0.05), (L * 0.14, W * 0.22, 0.22))
+        bevel(sc, 0.08, 2)
+        parts["Stripe" if S["stripes"] else "Body"].append(sc)
+    if ex.get("spare"):
+        sw = prim("cyl", "spare", (fx(0) - 0.45, 0, zbelt(0.02) + 0.1), (wr * 1.95, wr * 1.95, 0.8), rot=(0, math.pi / 2, 0), verts=28)
+        bevel(sw, 0.15, 2)
+        parts["Trim"].append(sw)
+        parts["Chrome"].append(prim("cyl", "sparecap", (fx(0) - 0.88, 0, zbelt(0.02) + 0.1), (wr * 1.1, wr * 1.1, 0.06), rot=(0, math.pi / 2, 0), verts=20))
+    if ex.get("taxi"):
+        ts = prim("box", "taxisign", (fx((rr + rf) / 2), 0, H + 0.28), (1.3, 2.2, 0.5))
+        bevel(ts, 0.1, 2)
         parts["HeadLight"].append(ts)
-    if k.get("lightbar"):
-        lb = prim("box", "lightbar", (x0 + (rf - 0.05) * L, 0, roofH + 0.2), (0.8, W * 0.6, 0.35))
-        parts["HeadLight"].append(lb)
-    if neon:
-        for s in (-1, 1):
-            parts["Neon"].append(prim("box", "sideglow", (0, s * (W / 2 - 0.15), clear + 0.15), (L * 0.66, 0.12, 0.12)))
-        parts["Neon"].append(prim("box", "lightstrip", (front_x(W * 0.25, 0.05), 0, belt(0.98) - 0.05), (0.1, W * 0.62, 0.08)))
+    if ex.get("lightbar"):
+        parts["HeadLight"].append(prim("box", "lightbar", (fx(rf - 0.05), 0, H + 0.2), (0.8, W * 0.55, 0.32)))
+    if ex.get("cargo"):
+        a, b = 0.02, rg - 0.02
+        cz0 = ztop(0.2)
+        c = prim("box", "cargo", (fx((a + b) / 2), 0, (cz0 + H * 1.12) / 2), ((b - a) * L, W * 0.98, H * 1.12 - cz0))
+        bevel(c, 0.15, 2)
+        parts["Cargo"].append(c)
 
-    # ---- join per material -> one object each, parented to an empty named by car id
+    # ---- assemble: split shell by material, join everything per look
     root = bpy.data.objects.new(cid, None)
     bpy.context.collection.objects.link(root)
+    for o in bpy.context.selected_objects:
+        o.select_set(False)
+    shell.select_set(True)
+    bpy.context.view_layer.objects.active = shell
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.mesh.separate(type="MATERIAL")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    for o in list(bpy.context.selected_objects):
+        if not o.data.polygons:
+            bpy.data.objects.remove(o)
+            continue
+        idx = o.data.polygons[0].material_index
+        name = o.data.materials[idx].name.split(".")[0]
+        set_mat(o, M[name])
+        for p in o.data.polygons:
+            p.material_index = 0
+        parts[name].append(o)
     for name, objs in parts.items():
         if not objs:
             continue
         for o in objs:
-            if not o.data.materials:
-                set_mat(o, M[name])
+            set_mat(o, M[name])
+            if o.data.polygons and not o.name.startswith(cid):
+                for p in o.data.polygons:
+                    p.use_smooth = False
         ob = join(objs, name)
-        if name in ("Glass",):  # greenhouse carries Glass + Body faces: split them
-            bpy.ops.object.mode_set(mode="EDIT")
-            bpy.ops.mesh.select_all(action="SELECT")
-            bpy.ops.mesh.separate(type="MATERIAL")
-            bpy.ops.object.mode_set(mode="OBJECT")
-            for o in bpy.context.selected_objects:
-                mn = o.active_material.name.split(".")[0]
-                o.name = "Glass" if mn == "Glass" else "Body"
-                o.parent = root
-            continue
         ob.parent = root
-    # merge duplicates created by the split (Body + Body.001 ...)
-    groups = {}
-    for o in list(root.children):
-        groups.setdefault(o.name.split(".")[0], []).append(o)
-    for name, objs in groups.items():
-        if len(objs) > 1:
-            ob = join(objs, name)
-            ob.parent = root
-        for o in root.children:
-            if o.name.split(".")[0] == name:
-                o.name = name
-        # keep one material per object (Roblox MeshPart = one material)
-    for o in root.children:
-        if o.type == "MESH" and len(o.data.materials) > 1:
-            keep = o.data.materials[0]
-            for p in o.data.polygons:
-                p.material_index = 0
-            o.data.materials.clear()
-            o.data.materials.append(keep)
     return root
 
 def triangles(root):
-    n = 0
-    for o in root.children:
-        if o.type == "MESH":
-            n += sum(len(p.vertices) - 2 for p in o.data.polygons)
-    return n
+    return sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in root.children if o.type == "MESH")
 
 def export(roots, path):
     for o in bpy.context.selected_objects:
@@ -458,79 +687,84 @@ def export(roots, path):
         for c in r.children:
             c.select_set(True)
     bpy.ops.export_scene.fbx(filepath=path, use_selection=True, object_types={"EMPTY", "MESH"}, apply_unit_scale=True,
-                             axis_forward="-Z", axis_up="Y", mesh_smooth_type="FACE", add_leaf_bones=False, bake_space_transform=True)
+                             axis_forward="-Z", axis_up="Y", mesh_smooth_type="EDGE", add_leaf_bones=False, bake_space_transform=True)
 
 # ---------------------------------------------------------------- render
-def render_grid(roots, path, cols, title):
+def setup_scene(resx, resy, samples=32):
     sc = bpy.context.scene
+    if sc.camera:
+        sc.render.resolution_x, sc.render.resolution_y = resx, resy
+        return sc, sc.camera.data, sc.camera
     sc.render.engine = "CYCLES"
     sc.cycles.device = "CPU"
-    sc.cycles.samples = 24
+    sc.cycles.samples = samples
     sc.cycles.use_denoising = True
-    sc.render.resolution_x, sc.render.resolution_y = 1600, int(1600 * 0.62)
-    sc.render.film_transparent = False
+    sc.render.resolution_x, sc.render.resolution_y = resx, resy
     sc.view_settings.view_transform = "Standard"
     world = bpy.data.worlds.new("w")
     world.use_nodes = True
-    world.node_tree.nodes["Background"].inputs[0].default_value = (0.62, 0.82, 1.0, 1)
-    world.node_tree.nodes["Background"].inputs[1].default_value = 0.55
+    world.node_tree.nodes["Background"].inputs[0].default_value = (0.62, 0.78, 1.0, 1)
+    world.node_tree.nodes["Background"].inputs[1].default_value = 0.6
     sc.world = world
-    sp = 0
-    rows = math.ceil(len(roots) / cols)
-    for i, r in enumerate(roots):
-        cx, cy = (i % cols) * 30, -(i // cols) * 16
-        r.location = (cx, cy, 0)
     bpy.ops.mesh.primitive_plane_add(size=2000, location=(0, 0, 0))
-    g = bpy.context.active_object
-    set_mat(g, mat("Ground", (0.45, 0.47, 0.5, 1), rough=0.8))
+    set_mat(bpy.context.active_object, mat("Ground", (0.42, 0.44, 0.47, 1), rough=0.7))
     sun = bpy.data.lights.new("sun", "SUN")
     sun.energy = 3
+    sun.angle = 0.2
     so = bpy.data.objects.new("sun", sun)
     so.rotation_euler = (math.radians(50), math.radians(10), math.radians(35))
     sc.collection.objects.link(so)
     cam = bpy.data.cameras.new("cam")
-    cam.type = "ORTHO"
-    w = cols * 30
-    cam.ortho_scale = w * 0.78
     co = bpy.data.objects.new("cam", cam)
     sc.collection.objects.link(co)
-    cx, cy = (cols - 1) * 15, -(rows - 1) * 8
-    co.location = (cx + 50, cy - 70, 55)
-    direction = Vector((cx, cy, 0)) - co.location
-    co.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
     sc.camera = co
+    return sc, cam, co
+
+def render_grid(roots, path, cols, rear=False):
+    rows = math.ceil(len(roots) / cols)
+    sc, cam, co = setup_scene(1800, int(1800 * rows / cols * 0.6) + 40)
+    for i, r in enumerate(roots):
+        r.location = ((i % cols) * 20, -(i // cols) * 20, 0)
+        r.rotation_euler = (0, 0, math.radians(145 if rear else -35))
+    cam.type = "ORTHO"
+    cam.ortho_scale = cols * 20 * 1.0
+    cx, cy = (cols - 1) * 10, -(rows - 1) * 10
+    co.location = (cx, cy - 120, 55)
+    co.rotation_euler = (Vector((cx, cy, 1.5)) - co.location).to_track_quat("-Z", "Y").to_euler()
     sc.render.filepath = path
     bpy.ops.render.render(write_still=True)
+    for r in roots:
+        r.location = (0, 0, 0)
+        r.rotation_euler = (0, 0, 0)
 
 def main():
     only = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     no_render = "norender" in only
-    # collection
+    ids = [c for c in CARS if c in only] or list(CARS)
     reset()
     roots = []
-    sel = [c for c in CARS if c[0] in only] or CARS
-    for i, (cid, kind, color, opt) in enumerate(sel):
-        r = build_car(cid, kind, color, opt, seed=i * 31 + 7)
+    for cid in ids:
+        r = build_car(cid, cid)
         print(cid, "tris", triangles(r))
         roots.append(r)
     for r in roots:
         export([r], os.path.join(OUT, r.name + ".fbx"))
-    export(roots, os.path.join(OUT, "cars_collection.fbx"))
+    if len(ids) == len(CARS):
+        export(roots, os.path.join(OUT, "cars_collection.fbx"))
     if not no_render:
-        render_grid(roots, os.path.join(RENDERS, "collection.png"), 5, "Collection")
+        render_grid(roots, os.path.join(RENDERS, "collection.png"), min(4, len(roots)))
+        render_grid(roots, os.path.join(RENDERS, "collection_rear.png"), min(4, len(roots)), rear=True)
     if "notraffic" in only:
         return
-    # traffic
     reset()
-    MATS.clear()
     troots = []
-    for i, kind in enumerate(KINDS):
-        r = build_car(kind, kind, TRAFFIC_COLOR, {}, seed=100 + i, low=True)
+    for kind, (design, over) in TRAFFIC.items():
+        r = build_car(kind, design, color=TRAFFIC_COLOR, low=True, over=over, dims=kind)
         print(kind, "tris", triangles(r))
         troots.append(r)
     export(troots, os.path.join(OUT, "cars_traffic.fbx"))
     if not no_render:
-        render_grid(troots, os.path.join(RENDERS, "traffic.png"), 4, "Traffic")
+        render_grid(troots, os.path.join(RENDERS, "traffic.png"), 4)
 
 if __name__ == "__main__":
     main()
