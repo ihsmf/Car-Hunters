@@ -103,61 +103,40 @@ function Cine.Zoom(fov, t, style)
 end
 
 -- RGB-split glitch: horizontal slices + red/cyan bars + grade flicker
+-- "impact" pulse: short colour/contrast flicker + shake (no overlay bars, nothing drawn over the scene)
 function Cine.Glitch(dur, power)
 	power = power or 1
 	task.spawn(function()
 		local t0 = os.clock()
+		local flip = false
 		while os.clock() - t0 < dur do
-			for _, c in ipairs(glitchHolder:GetChildren()) do
-				c:Destroy()
-			end
-			local n = math.floor(3 + 6 * power)
-			for _ = 1, n do
-				local red = math.random() < 0.5
-				new("Frame", {
-					BackgroundColor3 = red and Color3.fromRGB(255, 40, 60) or Color3.fromRGB(40, 240, 255),
-					BackgroundTransparency = 0.35 + math.random() * 0.4, BorderSizePixel = 0, ZIndex = 48,
-					Position = UDim2.new(math.random() * 0.3 - 0.15, 0, math.random(), 0),
-					Size = UDim2.new(0.5 + math.random() * 0.8, 0, 0, math.random(3, 6 + math.floor(26 * power))),
-				}, glitchHolder)
-			end
-			cc.TintColor = (math.random() < 0.5) and Color3.fromRGB(255, 200, 210) or Color3.fromRGB(200, 255, 255)
-			Cine.Shake(0.6 * power, 0.08)
-			task.wait(0.04 + math.random() * 0.05)
-		end
-		for _, c in ipairs(glitchHolder:GetChildren()) do
-			c:Destroy()
+			flip = not flip
+			cc.TintColor = flip and Color3.fromRGB(255, 225, 225) or Color3.fromRGB(225, 245, 255)
+			cc.Contrast = 0.15 * power
+			Cine.Shake(0.4 * power, 0.08)
+			task.wait(0.06)
 		end
 		cc.TintColor = Color3.new(1, 1, 1)
+		cc.Contrast = 0
 	end)
 end
 
 -- Big punchy title with RGB ghost copies
 function Cine.Title(text, color, dur, sizePx, yScale)
-	local holder = new("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, yScale or 0.4), Size = UDim2.fromOffset(1000, sizePx or 140), ZIndex = 49 }, titleHolder)
-	local function lbl(col, off, tr, z)
-		local l = new("TextLabel", { BackgroundTransparency = 1, Font = Enum.Font.LuckiestGuy, Text = text, TextScaled = true, TextColor3 = col,
-			TextTransparency = tr, Size = UDim2.fromScale(1, 1), Position = UDim2.fromOffset(off, 0), ZIndex = z, Rotation = -3 }, holder)
-		return l
-	end
-	local r = lbl(Color3.fromRGB(255, 40, 60), -8, 0.3, 49)
-	local c = lbl(Color3.fromRGB(40, 240, 255), 8, 0.3, 49)
-	local main = lbl(color, 0, 0, 50)
+	local holder = new("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, yScale or 0.4),
+		Size = UDim2.fromOffset(1000, sizePx or 140), ZIndex = 49, Rotation = -3 }, titleHolder)
+	local shadow = new("TextLabel", { BackgroundTransparency = 1, Font = Enum.Font.LuckiestGuy, Text = text, TextScaled = true,
+		TextColor3 = Color3.fromRGB(27, 31, 42), TextTransparency = 0.35, Size = UDim2.fromScale(1, 1), Position = UDim2.fromOffset(6, 8), ZIndex = 49 }, holder)
+	local main = new("TextLabel", { BackgroundTransparency = 1, Font = Enum.Font.LuckiestGuy, Text = text, TextScaled = true,
+		TextColor3 = color, Size = UDim2.fromScale(1, 1), ZIndex = 50 }, holder)
 	new("UIStroke", { Color = Color3.fromRGB(27, 31, 42), Thickness = 6 }, main)
-	local sc = new("UIScale", { Scale = 2.4 }, holder)
-	tw(sc, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
-	task.spawn(function()
-		local t0 = os.clock()
-		while os.clock() - t0 < (dur or 1.5) and holder.Parent do
-			local j = math.random() < 0.25 and 14 or 4
-			r.Position = UDim2.fromOffset(-j, math.random(-2, 2))
-			c.Position = UDim2.fromOffset(j, math.random(-2, 2))
-			task.wait(0.05)
-		end
-		tw(sc, 0.2, { Scale = 0.6 })
-		for _, l in ipairs({ r, c, main }) do
-			tw(l, 0.2, { TextTransparency = 1 })
-		end
+	new("UIGradient", { Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.45), color), Rotation = 90 }, main)
+	local sc = new("UIScale", { Scale = 2.2 }, holder)
+	tw(sc, 0.3, { Scale = 1 }, Enum.EasingStyle.Back)
+	task.delay(dur or 1.5, function()
+		tw(sc, 0.2, { Scale = 0.7 })
+		tw(main, 0.2, { TextTransparency = 1 })
+		tw(shadow, 0.2, { TextTransparency = 1 })
 		task.wait(0.22)
 		holder:Destroy()
 	end)
