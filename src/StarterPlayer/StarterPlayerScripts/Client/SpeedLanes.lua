@@ -13,6 +13,7 @@ function SpeedLanes.Start()
 	local player = Players.LocalPlayer
 	local onLane = false
 	local fov = 70
+	local lastAnim = 0
 	RunService.Heartbeat:Connect(function(dt)
 		local char = player.Character
 		local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -30,7 +31,11 @@ function SpeedLanes.Start()
 			fov = fov + ((onLane and 82 or 70) - fov) * math.min(1, dt * 4)
 			cam.FieldOfView = fov
 		end
-		local t = os.clock() * 1.6
+		if os.clock() - lastAnim < 0.08 then
+			return
+		end
+		lastAnim = os.clock()
+		local t = lastAnim * 1.6
 		for _, ch in ipairs(CollectionService:GetTagged("SpeedChevron")) do
 			local ph = (t - (ch:GetAttribute("Phase") or 0) * 4) % 1
 			ch.Color = ph < 0.18 and WHITE or (ph < 0.45 and YELLOW or ORANGE)

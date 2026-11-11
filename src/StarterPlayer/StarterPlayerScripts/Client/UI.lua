@@ -613,7 +613,7 @@ function UI.TogglePanel(name)
 		name = nil
 	end
 	for n, p in pairs(panels) do
-		if type(p) == "table" and p.root then
+		if type(p) == "table" and p.root and p.scale then
 			if n == name then
 				p.root.Visible = true
 				p.scale.Scale = 0.6

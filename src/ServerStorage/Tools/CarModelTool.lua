@@ -67,6 +67,122 @@ function Tool.Status()
 	end
 end
 
+-- Blender pipeline: import assets/cars/cars_collection.fbx and cars_traffic.fbx with File > Import 3D
+-- (they land in Workspace), then run in the Command Bar:
+--   require(game.ServerStorage.Tools.CarModelTool).ApplyImported()
+local C = Color3.fromRGB
+local LOOK = {
+	Body = { Enum.Material.SmoothPlastic, nil, 0, 0.05 },
+	Glass = { Enum.Material.Glass, C(30, 46, 62), 0.25, 0.2 },
+	Trim = { Enum.Material.SmoothPlastic, C(22, 22, 26), 0, 0 },
+	Chrome = { Enum.Material.Metal, C(222, 224, 232), 0, 0.35 },
+	Tire = { Enum.Material.SmoothPlastic, C(22, 22, 26), 0, 0 },
+	Rim = { Enum.Material.Metal, C(192, 196, 204), 0, 0.2 },
+	HeadLight = { Enum.Material.Neon, C(255, 246, 210), 0, 0 },
+	TailLight = { Enum.Material.Neon, C(255, 40, 50), 0, 0 },
+	Neon = { Enum.Material.Neon, nil, 0, 0 },
+	Cargo = { Enum.Material.SmoothPlastic, C(240, 240, 244), 0, 0 },
+}
+local PROP_LOOK = {
+	Rubber = { Enum.Material.SmoothPlastic, C(28, 28, 32) }, Orange = { Enum.Material.SmoothPlastic, C(255, 130, 30) },
+	White = { Enum.Material.SmoothPlastic, C(245, 245, 245) }, Red = { Enum.Material.SmoothPlastic, C(225, 50, 50) },
+	Metal = { Enum.Material.Metal, C(180, 184, 190) }, Yellow = { Enum.Material.SmoothPlastic, C(255, 210, 63) },
+}
+local PROPS = { TireStack = true, Cone = true, Hydrant = true }
+
+local function installProp(m)
+	local assets = ensure(game:GetService("ServerStorage"), "Folder", "BuilderAssets")
+	local props = ensure(assets, "Folder", "Props")
+	local old = props:FindFirstChild(m.Name)
+	if old then
+		old:Destroy()
+	end
+	for _, d in ipairs(m:GetDescendants()) do
+		if d:IsA("BasePart") then
+			local look = PROP_LOOK[string.match(d.Name, "^(%a+)") or ""]
+			if look then
+				d.Material, d.Color = look[1], look[2]
+			end
+			d.Anchored = true
+		end
+	end
+	local bb, size = m:GetBoundingBox()
+	m.WorldPivot = CFrame.new(bb.Position - Vector3.new(0, size.Y / 2, 0))
+	m.Parent = props
+end
+
+local function styleCar(model, def)
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") then
+			local key = string.match(d.Name, "^(%a+)") or d.Name
+			local look = LOOK[key]
+			if look then
+				d.Name = key
+				d.Material = look[1]
+				d.Transparency = look[3]
+				d.Reflectance = look[4]
+				if look[2] then
+					d.Color = look[2]
+				elseif key == "Body" then
+					d.Color = def and def.body or Color3.fromRGB(220, 60, 60)
+					if def and def.chrome then
+						d.Material = Enum.Material.Metal
+						d.Reflectance = 0.4
+					end
+				elseif key == "Neon" then
+					d.Color = def and def.neon or Color3.fromRGB(40, 230, 255)
+				end
+				if key == "Rim" and def and def.neon then
+					d.Color = C(30, 30, 36)
+				end
+			end
+			d.Anchored = false
+			d.CanCollide = false
+			d.CastShadow = key ~= "Glass" and key ~= "Neon"
+			if d:IsA("MeshPart") then
+				d.RenderFidelity = Enum.RenderFidelity.Automatic
+			end
+		end
+	end
+end
+
+function Tool.ApplyImported(container)
+	local root = ensure(ReplicatedStorage, "Folder", "CarModels")
+	local traffic = ensure(root, "Folder", "Traffic")
+	local sources = container and { container } or Workspace:GetChildren()
+	local moved = 0
+	for _, src in ipairs(sources) do
+		for _, m in ipairs(src:GetDescendants()) do
+			if m:IsA("Model") then
+				if PROPS[m.Name] then
+					installProp(m)
+					moved = moved + 1
+					continue
+				end
+				local def = CarConfig.ById[m.Name]
+				local dest = def and root or (VehicleKinds[m.Name] and traffic) or nil
+				if dest then
+					local old = dest:FindFirstChild(m.Name)
+					if old then
+						old:Destroy()
+					end
+					styleCar(m, def)
+					m:SetAttribute("Yaw", 0)
+					m:SetAttribute("Recolor", def == nil)
+					if def then
+						m:SetAttribute("CarName", def.name)
+						m:SetAttribute("Rarity", def.rarity)
+					end
+					m.Parent = dest
+					moved = moved + 1
+				end
+			end
+		end
+	end
+	print(string.format("[CarModels] ApplyImported: %d models installed", moved))
+	Tool.Status()
+end
+
 function Tool.Preview()
 	local VehicleFactory = require(Shared:WaitForChild("VehicleFactory"))
 	local old = Workspace:FindFirstChild("CarModelPreview")

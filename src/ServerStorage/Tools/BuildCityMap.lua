@@ -352,8 +352,8 @@ local function buildPlaza(ctx)
 		end
 	end
 	for _, s in ipairs({ -1, 1 }) do
-		Prefabs.TireStack(f.StreetProps, Vector3.new(s * 30, 0.2, 20), rng)
-		Prefabs.TireStack(f.StreetProps, Vector3.new(s * 36, 0.2, 26), rng)
+		Prefabs.TireStack(f.StreetProps, Vector3.new(s * 24, 0.2, 48), rng)
+		Prefabs.TireStack(f.StreetProps, Vector3.new(s * 30, 0.2, 54), rng)
 	end
 end
 
