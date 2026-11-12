@@ -782,7 +782,7 @@ local function buildRoad(ctx, road, pal, zid)
 			if zid == "neon" then
 				Prefabs.Lamp(f.StreetProps, Vector3.new(x, 0.8, z0), 3, pal.accent2, 0)
 			elseif zid == "industrial" or zid == "highway" then
-				Part(f.StreetProps, "Barrier", Vector3.new(7, 1.6, 1.6), CFrame.new(x, 1.6, z0), (zid == "highway") and C(190, 192, 200) or C(240, 190, 40), M.Concrete)
+				Prefabs.Barrier(f.StreetProps, Vector3.new(x, 0.8, z0), 0, (zid == "highway") and C(190, 192, 200) or C(240, 190, 40))
 			else
 				Prefabs.Tree(f.StreetProps, Vector3.new(x, 0.8, z0), ctx.rng, "tree")
 			end
@@ -945,7 +945,7 @@ local function placeBlock(ctx, blk, pal, zid)
 		if zid == "neon" then
 			Prefabs.Lamp(f.StreetProps, Vector3.new(x, 0.4, z), 3, C(255, 200, 140), 0)
 		elseif zid == "industrial" then
-			Part(f.StreetProps, "Barrel", Vector3.new(3, 3.6, 3), CFrame.new(x, 2.2, z), pick(rng, { C(200, 70, 50), C(70, 110, 190) }), M.Metal, { shape = CYL }).CFrame = CFrame.new(x, 2.2, z) * UPRIGHT
+			Prefabs.Barrel(f.StreetProps, Vector3.new(x, 0.4, z), pick(rng, { C(200, 70, 50), C(70, 110, 190) }))
 		else
 			Prefabs.Tree(f.StreetProps, Vector3.new(x, 0.4, z), rng, (zid == "highway") and "palm" or "tree")
 		end

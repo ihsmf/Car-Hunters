@@ -87,7 +87,7 @@ def upload_models(args):
     """every FBX in assets/spawn + assets/parts/parts.fbx + assets/props/props.fbx -> Model assets -> ModelIds.lua"""
     creator = {"userId": str(args.creator_user)} if args.creator_user else {"groupId": str(args.creator_group)}
     files = []
-    for folder in ("spawn",):
+    for folder in ("spawn", "city"):
         d = os.path.join(ROOT, "assets", folder)
         files += [os.path.join(d, f) for f in sorted(os.listdir(d)) if f.endswith(".fbx")]
     files += [os.path.join(ROOT, "assets", "parts", "parts.fbx"), os.path.join(ROOT, "assets", "props", "props.fbx")]

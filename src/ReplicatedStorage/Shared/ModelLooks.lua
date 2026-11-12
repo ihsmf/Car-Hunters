@@ -14,4 +14,7 @@ return {
 	Wood = { M.Wood, C(150, 100, 60), 0, 0 }, Yellow = { M.SmoothPlastic, C(255, 200, 40), 0, 0 },
 	Concrete = { M.Concrete, C(170, 168, 160), 0, 0 }, Orange = { M.SmoothPlastic, C(255, 130, 30), 0, 0 },
 	Red = { M.SmoothPlastic, C(225, 50, 50), 0, 0 },
+	-- city kit: Wall / Trim / Roof are recoloured per district by the map builder
+	Wall = { M.SmoothPlastic, C(230, 200, 160), 0, 0 }, Trim = { M.SmoothPlastic, C(240, 150, 50), 0, 0 },
+	Roof = { M.SmoothPlastic, C(170, 80, 64), 0, 0 }, Brick = { M.Brick, C(160, 76, 56), 0, 0 },
 }

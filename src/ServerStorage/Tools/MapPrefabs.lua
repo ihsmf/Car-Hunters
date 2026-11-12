@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local VehicleFactory = require(Shared:WaitForChild("VehicleFactory"))
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
+local ModelSizes = require(Shared:WaitForChild("ModelSizes"))
 local ServerStorage = game:GetService("ServerStorage")
 
 local C = Color3.fromRGB
@@ -70,7 +71,8 @@ local Label = Prefabs.Label
 
 -- Blender-made props: ServerStorage.BuilderAssets.Props.<name> (see docs/BLENDER.md). nil if not imported.
 Prefabs.TemplateUse = { placed = 0, missing = {} }
-function Prefabs.FromTemplate(name, parent, cf)
+-- opts: scale (uniform), colors = { Wall = c, Trim = c, Roof = c } recolours the Blender looks per district
+function Prefabs.FromTemplate(name, parent, cf, opts)
 	local assets = ServerStorage:FindFirstChild("BuilderAssets")
 	local props = assets and assets:FindFirstChild("Props")
 	local tpl = props and props:FindFirstChild(name)
@@ -80,9 +82,16 @@ function Prefabs.FromTemplate(name, parent, cf)
 	end
 	Prefabs.TemplateUse.placed = Prefabs.TemplateUse.placed + 1
 	local m = tpl:Clone()
+	if opts and opts.scale and math.abs(opts.scale - 1) > 0.01 then
+		m:ScaleTo(m:GetScale() * opts.scale)
+	end
 	for _, d in ipairs(m:GetDescendants()) do
 		if d:IsA("BasePart") then
 			d.Anchored = true
+			local c = opts and opts.colors and opts.colors[d.Name]
+			if c then
+				d.Color = c
+			end
 		end
 	end
 	m:PivotTo(cf)
@@ -120,6 +129,14 @@ end
 
 function Prefabs.Lamp(parent, pos, variant, glow, facing)
 	local cf = CFrame.new(pos) * CFrame.Angles(0, facing or 0, 0)
+	local lm = Prefabs.FromTemplate(({ "LampA", "LampB", "LampC" })[variant] or "LampA", parent, CFrame.new(pos.X, pos.Y - 0.2, pos.Z) * CFrame.Angles(0, facing or 0, 0))
+	if lm then
+		local g = lm:FindFirstChild("Glow", true)
+		if g then
+			addLight(g, variant == 3 and 12 or 16)
+		end
+		return
+	end
 	local warm = Color3.fromRGB(255, 236, 200)
 	local POLE = C(52, 56, 64)
 	Part(parent, "LampBase", Vector3.new(1.4, 0.8, 1.4), cf * CFrame.new(0, 0.4, 0), POLE, M.Metal)
@@ -143,6 +160,9 @@ function Prefabs.Lamp(parent, pos, variant, glow, facing)
 end
 
 function Prefabs.Tree(parent, pos, rng, variant)
+	if Prefabs.FromTemplate(variant == "palm" and "Palm" or "Tree", parent, CFrame.new(pos) * CFrame.Angles(0, rr(rng, 0, 6.28), 0), { scale = rr(rng, 0.85, 1.2) }) then
+		return
+	end
 	local h = rr(rng, 6, 9)
 	if variant == "palm" then
 		Part(parent, "Trunk", Vector3.new(1.1, h + 3, 1.1), CFrame.new(pos + Vector3.new(0, (h + 3) / 2, 0)), C(150, 110, 70), M.Wood)
@@ -160,6 +180,9 @@ function Prefabs.Tree(parent, pos, rng, variant)
 end
 
 function Prefabs.Bush(parent, pos, rng)
+	if Prefabs.FromTemplate("Bush", parent, CFrame.new(pos) * CFrame.Angles(0, rr(rng, 0, 6.28), 0), { scale = rr(rng, 0.8, 1.3) }) then
+		return
+	end
 	local s = rr(rng, 3, 5)
 	Part(parent, "Bush", Vector3.new(s, s * 0.7, s), CFrame.new(pos + Vector3.new(0, s * 0.3, 0)), pick(rng, { C(60, 150, 70), C(80, 170, 90) }), M.Grass, { shape = BALL, collide = false })
 end
@@ -179,6 +202,11 @@ end
 
 function Prefabs.Kiosk(parent, pos, yaw, color, text)
 	local cf = CFrame.new(pos) * CFrame.Angles(0, yaw or 0, 0)
+	if Prefabs.FromTemplate("Kiosk", parent, cf, { colors = { Wall = color } }) then
+		local sign = Part(parent, "KioskSign", Vector3.new(5, 1.3, 0.3), cf * CFrame.new(0, 8.3, -2.6), DARK)
+		Label(sign, Enum.NormalId.Front, text or "SHOP", C(255, 220, 90))
+		return
+	end
 	Part(parent, "Kiosk", Vector3.new(7, 7, 6), cf * CFrame.new(0, 3.5, 0), color, M.SmoothPlastic)
 	Part(parent, "KioskRoof", Vector3.new(8.4, 0.6, 7.4), cf * CFrame.new(0, 7.3, 0), DARK)
 	local win = Part(parent, "KioskWindow", Vector3.new(5, 2.6, 0.3), cf * CFrame.new(0, 4.4, -3.1), GLASS, M.Glass, { t = 0.3 })
@@ -220,6 +248,9 @@ function Prefabs.Fountain(parent, pos, accent)
 end
 
 function Prefabs.FlowerBed(parent, pos, w, d, rng)
+	if Prefabs.FromTemplate("FlowerBed", parent, CFrame.new(pos) * CFrame.Angles(0, w < d and math.pi / 2 or 0, 0), { scale = math.min(math.max(w, d) / 8, math.min(w, d) / 5) }) then
+		return
+	end
 	Part(parent, "BedEdge", Vector3.new(w, 1, d), CFrame.new(pos + Vector3.new(0, 0.5, 0)), C(232, 224, 212), M.Concrete)
 	Part(parent, "BedSoil", Vector3.new(w - 0.8, 0.2, d - 0.8), CFrame.new(pos + Vector3.new(0, 1.05, 0)), C(110, 160, 80), M.Grass, { collide = false })
 	local cols = { C(255, 120, 150), C(255, 210, 90), C(120, 200, 255), C(255, 255, 255), C(255, 150, 90) }
@@ -246,6 +277,9 @@ end
 
 function Prefabs.TrafficLight(parent, pos, yaw)
 	local cf = CFrame.new(pos) * CFrame.Angles(0, yaw or 0, 0)
+	if Prefabs.FromTemplate("TrafficLight", parent, cf) then
+		return
+	end
 	Part(parent, "TLPole", Vector3.new(0.6, 10, 0.6), cf * CFrame.new(0, 5, 0), DARK, M.Metal)
 	Part(parent, "TLBox", Vector3.new(1.4, 4, 1.2), cf * CFrame.new(0, 10.5, 0), C(40, 42, 50), M.SmoothPlastic)
 	Part(parent, "TLRed", Vector3.new(0.9, 0.9, 0.3), cf * CFrame.new(0, 11.8, -0.6), C(255, 70, 70), M.Neon, { collide = false, cast = false })
@@ -255,6 +289,9 @@ end
 
 function Prefabs.BusStop(parent, pos, yaw, color)
 	local cf = CFrame.new(pos) * CFrame.Angles(0, yaw or 0, 0)
+	if Prefabs.FromTemplate("BusStop", parent, cf, { colors = { Trim = color } }) then
+		return
+	end
 	Part(parent, "StopRoof", Vector3.new(10, 0.5, 3.4), cf * CFrame.new(0, 8, 0), color, M.SmoothPlastic)
 	Part(parent, "StopBack", Vector3.new(10, 6, 0.3), cf * CFrame.new(0, 4.6, 1.5), GLASS, M.Glass, { t = 0.45 })
 	for _, x in ipairs({ -4.8, 4.8 }) do
@@ -274,6 +311,9 @@ function Prefabs.Hydrant(parent, pos)
 end
 
 function Prefabs.Bin(parent, pos, color)
+	if Prefabs.FromTemplate("Bin", parent, CFrame.new(pos), { colors = { Green = color } }) then
+		return
+	end
 	Part(parent, "Bin", Vector3.new(3, 2, 2), CFrame.new(pos + Vector3.new(0, 1.5, 0)) * UPRIGHT, color or C(70, 150, 110), M.SmoothPlastic, { shape = CYL })
 	Part(parent, "BinLid", Vector3.new(0.3, 2.2, 2.2), CFrame.new(pos + Vector3.new(0, 3.1, 0)) * UPRIGHT, DARK, M.SmoothPlastic, { shape = CYL, collide = false })
 end
@@ -289,6 +329,9 @@ end
 
 function Prefabs.Pallet(parent, pos, yaw, rng)
 	local cf = CFrame.new(pos) * CFrame.Angles(0, yaw or 0, 0)
+	if Prefabs.FromTemplate("Pallet", parent, cf) then
+		return
+	end
 	Part(parent, "Pallet", Vector3.new(5, 0.6, 5), cf * CFrame.new(0, 0.3, 0), C(176, 132, 84), M.Wood)
 	local h = math.floor(rr(rng, 1, 3.99))
 	for i = 1, h do
@@ -298,6 +341,9 @@ end
 
 function Prefabs.Forklift(parent, pos, yaw)
 	local cf = CFrame.new(pos) * CFrame.Angles(0, yaw or 0, 0)
+	if Prefabs.FromTemplate("Forklift", parent, cf) then
+		return
+	end
 	Part(parent, "FLBody", Vector3.new(6, 2.6, 4), cf * CFrame.new(0, 2.1, 0), C(255, 196, 40), M.SmoothPlastic)
 	Part(parent, "FLSeat", Vector3.new(2, 1.2, 2.4), cf * CFrame.new(-0.6, 4, 0), DARK)
 	Part(parent, "FLRoof", Vector3.new(3.6, 0.3, 3.8), cf * CFrame.new(-0.4, 7.4, 0), DARK, M.Metal)
@@ -340,6 +386,21 @@ function Prefabs.Gantry(parent, x, z0, width, text, accent)
 	Label(b, Enum.NormalId.Left, text, C(255, 255, 255))
 	Label(b, Enum.NormalId.Right, text, C(255, 255, 255))
 	Part(parent, "GantryTrim", Vector3.new(0.7, 0.3, width * 0.6), CFrame.new(x, 14.4, z0), accent, M.Neon, { collide = false })
+end
+
+-- concrete barrier / barrel: Blender model or a block
+function Prefabs.Barrier(parent, pos, yaw, color)
+	if Prefabs.FromTemplate("Barrier", parent, CFrame.new(pos) * CFrame.Angles(0, yaw or 0, 0)) then
+		return
+	end
+	Part(parent, "Barrier", Vector3.new(7, 1.6, 1.6), CFrame.new(pos + Vector3.new(0, 0.8, 0)) * CFrame.Angles(0, yaw or 0, 0), color or C(190, 192, 200), M.Concrete)
+end
+
+function Prefabs.Barrel(parent, pos, color)
+	if Prefabs.FromTemplate("Barrel", parent, CFrame.new(pos), { colors = { Accent = color } }) then
+		return
+	end
+	Part(parent, "Barrel", Vector3.new(3.6, 3, 3), CFrame.new(pos + Vector3.new(0, 1.8, 0)) * UPRIGHT, color, M.Metal, { shape = CYL })
 end
 
 local B = {}
@@ -532,11 +593,17 @@ function B.containers(parent, cf, w, d, h, pal, rng)
 	for ix = 1, nx do
 		local stack = math.floor(rr(rng, 1, 4))
 		for iy = 1, stack do
-			mk("Container", Vector3.new(12, 4.2, 5), Vector3.new(-w / 2 + (ix - 0.5) * (w / nx), 2.1 + (iy - 1) * 4.3, -d / 2 + 4), pick(rng, cols), M.Metal)
+			local off = Vector3.new(-w / 2 + (ix - 0.5) * (w / nx), (iy - 1) * 4.3, -d / 2 + 4)
+			if not Prefabs.FromTemplate("Container", parent, cf * CFrame.new(off), { colors = { Trim = pick(rng, cols) } }) then
+				mk("Container", Vector3.new(12, 4.2, 5), off + Vector3.new(0, 2.1, 0), pick(rng, cols), M.Metal)
+			end
 		end
 		local stack2 = math.floor(rr(rng, 1, 3))
 		for iy = 1, stack2 do
-			mk("Container", Vector3.new(12, 4.2, 5), Vector3.new(-w / 2 + (ix - 0.5) * (w / nx), 2.1 + (iy - 1) * 4.3, -d / 2 + 10), pick(rng, cols), M.Metal)
+			local off = Vector3.new(-w / 2 + (ix - 0.5) * (w / nx), (iy - 1) * 4.3, -d / 2 + 10)
+			if not Prefabs.FromTemplate("Container", parent, cf * CFrame.new(off), { colors = { Trim = pick(rng, cols) } }) then
+				mk("Container", Vector3.new(12, 4.2, 5), off + Vector3.new(0, 2.1, 0), pick(rng, cols), M.Metal)
+			end
 		end
 	end
 end
@@ -671,7 +738,17 @@ Prefabs.Archetypes = {
 	},
 }
 
+-- Blender building scaled to fit the lot (footprint from ModelSizes), recoloured with the district palette
+local ROOFS = { C(200, 96, 80), C(110, 120, 150), C(90, 150, 140), C(160, 110, 170), C(230, 170, 70) }
 function Prefabs.Building(kind, parent, cf, w, d, h, pal, rng)
+	local info = ModelSizes["B_" .. kind]
+	if info and info.w and kind ~= "containers" and kind ~= "billboard" and kind ~= "holosign" and kind ~= "pipes" then
+		local s = math.min(w / info.w, d / info.d)
+		local m = Prefabs.FromTemplate("B_" .. kind, parent, cf, { scale = s, colors = { Wall = pick(rng, pal.buildings), Trim = pal.accent, Roof = pick(rng, ROOFS) } })
+		if m then
+			return
+		end
+	end
 	local fn = B[kind]
 	if fn then
 		fn(parent, cf, w, d, h, pal, rng)

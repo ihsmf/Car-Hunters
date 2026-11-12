@@ -1748,7 +1748,7 @@ local Kinds = {
 }
 
 return Kinds
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXC52BCFBB80D6448A9B940D1A9D615227"><Properties><string name="Name">DonateConfig</string><ProtectedString name="Source">-- Golden Magnate stall. Prices in Robux. Grants are performed on the server (DonateService).
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXA9E9588FB2DF4063A6FD8A4905B5F912"><Properties><string name="Name">DonateConfig</string><ProtectedString name="Source">-- Golden Magnate stall. Prices in Robux. Grants are performed on the server (DonateService).
 local DonateConfig = {}
 
 DonateConfig.Products = {
@@ -1788,7 +1788,7 @@ for _, list in ipairs({ DonateConfig.Products, DonateConfig.Passes }) do
 end
 
 return DonateConfig
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX9536EEB11AD641ABA793AF2797EACF69"><Properties><string name="Name">ExhaustFx</string><ProtectedString name="Source">-- Rarity-based exhaust for cars parked in a garage. Rarer = denser, brighter, flashier.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX96783300F73241AD92242A72C6C27BAF"><Properties><string name="Name">ExhaustFx</string><ProtectedString name="Source">-- Rarity-based exhaust for cars parked in a garage. Rarer = denser, brighter, flashier.
 local CollectionService = game:GetService("CollectionService")
 local Kinds = require(script.Parent:WaitForChild("VehicleKinds"))
 
@@ -1874,7 +1874,7 @@ function ExhaustFx.Attach(model, def, rarityIndex)
 end
 
 return ExhaustFx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX6B98288DCC614EB7ABA29100A6CA5948"><Properties><string name="Name">GarageKit</string><ProtectedString name="Source">-- Shared garage pieces: colour style, parking bay, upper floors. Used by BuildCityMap (ground floor)
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXE1DAFFCDAAF44527A4ABDCA00E5C4271"><Properties><string name="Name">GarageKit</string><ProtectedString name="Source">-- Shared garage pieces: colour style, parking bay, upper floors. Used by BuildCityMap (ground floor)
 -- and BaseService (floors 2-4 are built per owner). No two visible faces share a plane.
 local BaseLayout = require(script.Parent:WaitForChild("BaseLayout"))
 local MapConfig = require(script.Parent:WaitForChild("MapConfig"))
@@ -2030,7 +2030,7 @@ function GarageKit.ApplyStyle(root, style)
 end
 
 return GarageKit
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX3D9F6C4FCAE0424BA5F56E77D39DC716"><Properties><string name="Name">IconIds</string><ProtectedString name="Source">-- HUD icons rendered in Blender (blender/make_icons.py), uploaded as Decals (tools/roblox_open_cloud.py icons).
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX103C2D5EAB474A1EBCCEDDB6A470385B"><Properties><string name="Name">IconIds</string><ProtectedString name="Source">-- HUD icons rendered in Blender (blender/make_icons.py), uploaded as Decals (tools/roblox_open_cloud.py icons).
 return {
 	backpack = 111087539179811,
 	bolts = 75730983950469,
@@ -2044,7 +2044,7 @@ return {
 	trade = 106225904873732,
 	turbo = 125383811079005,
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX2014D03CBBEC4C1F8275CA1BEB268121"><Properties><string name="Name">Icons</string><ProtectedString name="Source">-- HUD icons rendered from the Blender models (assets/icons), uploaded as Decals; shown through rbxthumb.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXF9E767FEA4384780A8BDC9B25529F47A"><Properties><string name="Name">Icons</string><ProtectedString name="Source">-- HUD icons rendered from the Blender models (assets/icons), uploaded as Decals; shown through rbxthumb.
 local ok, ids = pcall(require, script.Parent:WaitForChild("IconIds"))
 ids = ok and ids or {}
 
@@ -2059,23 +2059,53 @@ function Icons.Get(name)
 end
 
 return Icons
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX184941197F7B46A4AE8A000D8A8A6CE9"><Properties><string name="Name">ModelIds</string><ProtectedString name="Source">-- Blender models uploaded as Roblox Model assets (tools/roblox_open_cloud.py models). ModelService loads them.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXE9F8361C8DCA468FB64BB28C2E84E89C"><Properties><string name="Name">ModelIds</string><ProtectedString name="Source">-- Blender models uploaded as Roblox Model assets (tools/roblox_open_cloud.py models). ModelService loads them.
 return {
+	B_apartment = 83206894459340,
+	B_cafe = 85813552056204,
+	B_club = 96566382819289,
+	B_dealership = 110246975449291,
+	B_factory = 91813150574061,
+	B_garage = 103589943035438,
+	B_gasstation = 85930303080653,
+	B_house = 134265483159600,
+	B_motel = 117850888292195,
+	B_neontower = 140083573332314,
+	B_shop = 117507999754458,
+	B_silo = 76974112162653,
+	B_tower = 129510756418442,
+	B_warehouse = 120078321117460,
+	Barrel = 120008831590250,
+	Barrier = 97199315058553,
 	Bench = 111293322482950,
+	Bin = 124919305781626,
+	BusStop = 128103140294475,
+	Bush = 120178074502225,
 	CarStand = 128470964402156,
+	Container = 112578046657944,
 	FinishArch = 108575550981413,
+	FlowerBed = 90749241960072,
 	FoodTruck = 109698012176509,
+	Forklift = 92550940717907,
 	Grandstand = 102209679823606,
+	Kiosk = 75385565144809,
+	LampA = 116943030686524,
+	LampB = 78660907518303,
+	LampC = 130078895199007,
 	LeaderboardFrame = 112950396257766,
+	Pallet = 93622636996133,
+	Palm = 84839006941387,
 	PartsKit = 85021215483759,
 	Planter = 82604295980020,
 	PortalGate = 122010027906968,
 	PropsKit = 128006272318809,
 	StreetLamp = 72732679442551,
 	StringLightPole = 97197595475226,
+	TrafficLight = 90550631207901,
+	Tree = 131239895134755,
 	TrophyFountain = 101684494576747,
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXBFC1BE71CA5842B195BC8987B4B8F67A"><Properties><string name="Name">ModelLooks</string><ProtectedString name="Source">-- Material + colour for Blender meshes, by mesh name (the look name). Shared by ModelService and CarModelTool.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXBAB5388B39934686A76FDBC64EBCFC74"><Properties><string name="Name">ModelLooks</string><ProtectedString name="Source">-- Material + colour for Blender meshes, by mesh name (the look name). Shared by ModelService and CarModelTool.
 local C = Color3.fromRGB
 local M = Enum.Material
 return {
@@ -2091,23 +2121,56 @@ return {
 	Wood = { M.Wood, C(150, 100, 60), 0, 0 }, Yellow = { M.SmoothPlastic, C(255, 200, 40), 0, 0 },
 	Concrete = { M.Concrete, C(170, 168, 160), 0, 0 }, Orange = { M.SmoothPlastic, C(255, 130, 30), 0, 0 },
 	Red = { M.SmoothPlastic, C(225, 50, 50), 0, 0 },
+	-- city kit: Wall / Trim / Roof are recoloured per district by the map builder
+	Wall = { M.SmoothPlastic, C(230, 200, 160), 0, 0 }, Trim = { M.SmoothPlastic, C(240, 150, 50), 0, 0 },
+	Roof = { M.SmoothPlastic, C(170, 80, 64), 0, 0 }, Brick = { M.Brick, C(160, 76, 56), 0, 0 },
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX8B2C39E3444043BEBE2DE190EE59AD02"><Properties><string name="Name">ModelSizes</string><ProtectedString name="Source">-- generated by blender/make_spawn.py: longest side (studs) and bounding-box centre relative to the model origin
--- in Roblox axes (x, up, z) so ModelService can put the pivot back on the Blender origin
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX99DC891DF9A9473F8C80E149079628DB"><Properties><string name="Name">ModelSizes</string><ProtectedString name="Source">-- generated by blender/make_spawn.py + make_city.py: longest side (studs), bounding-box centre relative to the
+-- model origin in Roblox axes (x, up, z), footprint w/d. ModelService puts the pivot back on the Blender origin.
 return {
-	FinishArch = { size = 85.00, c = { 0.00, 13.70, 0.03 } },
-	PortalGate = { size = 23.80, c = { 2.20, 8.55, -0.00 } },
-	CarStand = { size = 24.00, c = { 0.00, 1.70, 1.00 } },
-	TrophyFountain = { size = 18.10, c = { 0.00, 5.25, -0.00 } },
-	Grandstand = { size = 32.00, c = { 0.00, 7.75, -4.40 } },
-	LeaderboardFrame = { size = 26.70, c = { 0.00, 13.35, 3.80 } },
-	Planter = { size = 12.27, c = { 0.84, 6.13, -0.00 } },
-	StreetLamp = { size = 13.90, c = { 0.00, 6.95, -0.00 } },
-	FoodTruck = { size = 13.30, c = { 0.45, 4.15, 0.95 } },
+	B_apartment = { size = 30.80, c = { 0.00, 14.20, -0.80 }, w = 30.80, d = 26.40 },
+	B_cafe = { size = 28.60, c = { 0.00, 4.80, -3.00 }, w = 26.60, d = 28.60 },
+	B_club = { size = 34.40, c = { 0.00, 5.50, -2.45 }, w = 34.40, d = 29.30 },
+	B_dealership = { size = 42.00, c = { 0.00, 6.25, -0.12 }, w = 42.00, d = 28.25 },
+	B_factory = { size = 40.00, c = { 0.00, 16.25, -0.10 }, w = 40.00, d = 28.20 },
+	B_garage = { size = 28.80, c = { 0.00, 4.90, -0.00 }, w = 28.80, d = 22.80 },
+	B_gasstation = { size = 44.00, c = { 0.00, 4.75, -0.00 }, w = 44.00, d = 30.00 },
+	B_house = { size = 25.60, c = { 0.00, 9.00, -1.80 }, w = 25.60, d = 25.60 },
+	B_motel = { size = 47.00, c = { 0.00, 5.40, -0.65 }, w = 47.00, d = 18.30 },
+	B_neontower = { size = 49.60, c = { 0.00, 24.80, -0.00 }, w = 26.60, d = 24.60 },
+	B_shop = { size = 31.00, c = { 0.00, 7.70, -1.34 }, w = 31.00, d = 27.68 },
+	B_silo = { size = 30.00, c = { 0.00, 15.00, -0.00 }, w = 25.40, d = 12.40 },
+	B_tower = { size = 46.40, c = { 0.00, 23.20, -0.00 }, w = 28.60, d = 24.60 },
+	B_warehouse = { size = 45.00, c = { 0.00, 7.60, -0.00 }, w = 45.00, d = 31.00 },
+	Barrel = { size = 3.60, c = { 0.00, 1.80, -0.00 }, w = 2.90, d = 2.90 },
+	Barrier = { size = 7.02, c = { 0.00, 0.85, -0.00 }, w = 7.02, d = 1.80 },
 	Bench = { size = 6.00, c = { 0.00, 1.50, -0.01 } },
+	Bin = { size = 2.85, c = { 0.00, 1.53, -0.00 }, w = 2.20, d = 2.20 },
+	BusStop = { size = 10.50, c = { 0.05, 4.25, -0.00 }, w = 10.50, d = 3.60 },
+	Bush = { size = 4.87, c = { 0.00, 1.26, -0.00 }, w = 4.87, d = 3.60 },
+	CarStand = { size = 24.00, c = { 0.00, 1.70, 1.00 } },
+	Container = { size = 12.12, c = { 0.00, 2.15, -0.01 }, w = 12.12, d = 5.14 },
+	FinishArch = { size = 85.00, c = { 0.00, 13.70, 0.03 } },
+	FlowerBed = { size = 8.00, c = { 0.00, 0.96, -0.00 }, w = 8.00, d = 5.00 },
+	FoodTruck = { size = 13.30, c = { 0.45, 4.15, 0.95 } },
+	Forklift = { size = 7.52, c = { 0.00, 1.76, -0.95 }, w = 3.90, d = 7.10 },
+	Grandstand = { size = 32.00, c = { 0.00, 7.75, -4.40 } },
+	Kiosk = { size = 8.45, c = { 0.00, 3.80, -0.52 }, w = 8.40, d = 8.45 },
+	LampA = { size = 12.50, c = { 2.20, 6.25, -0.00 }, w = 5.80, d = 1.40 },
+	LampB = { size = 13.50, c = { 0.00, 6.75, -0.00 }, w = 1.60, d = 8.30 },
+	LampC = { size = 10.68, c = { 0.00, 5.34, -0.00 }, w = 2.20, d = 2.20 },
+	LeaderboardFrame = { size = 26.70, c = { 0.00, 13.35, 3.80 } },
+	Pallet = { size = 4.20, c = { 0.00, 1.38, -0.00 }, w = 4.20, d = 4.20 },
+	Palm = { size = 11.90, c = { 1.35, 5.95, -0.00 }, w = 10.66, d = 10.66 },
+	Planter = { size = 12.27, c = { 0.84, 6.13, -0.00 } },
+	PortalGate = { size = 23.80, c = { 2.20, 8.55, -0.00 } },
+	StreetLamp = { size = 13.90, c = { 0.00, 6.95, -0.00 } },
 	StringLightPole = { size = 12.00, c = { 0.00, 6.00, -0.00 } },
+	TrafficLight = { size = 12.70, c = { 0.00, 6.35, -0.65 }, w = 1.50, d = 1.90 },
+	Tree = { size = 10.50, c = { 0.05, 5.25, 0.15 }, w = 7.66, d = 6.70 },
+	TrophyFountain = { size = 18.10, c = { 0.00, 5.25, -0.00 } },
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX88DF84599BCC456799CB91AC151663D0"><Properties><string name="Name">ProductIds</string><ProtectedString name="Source">-- Filled by tools/roblox_open_cloud.py (Open Cloud). 0 = not created yet: in Studio the purchase is simulated.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXB24441A5FE434BEBBEAB1ACA1D7E9793"><Properties><string name="Name">ProductIds</string><ProtectedString name="Source">-- Filled by tools/roblox_open_cloud.py (Open Cloud). 0 = not created yet: in Studio the purchase is simulated.
 return {
 	products = {
 		cash_s = 0, cash_m = 0, cash_l = 0, cash_xl = 0,
@@ -2119,7 +2182,7 @@ return {
 		vip = 0, big_backpack = 0, auto_collect = 0, golden_car = 0, double_contracts = 0, fast_trap = 0, golden_garage = 0,
 	},
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX44692582EFF84C82BCF2A11861811D1A"><Properties><string name="Name">RewardConfig</string><ProtectedString name="Source">-- Daily login streak (7 days, missing a day resets) and playtime chests per session.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXB6C0662CBCC3479EBC5DECF555F803E6"><Properties><string name="Name">RewardConfig</string><ProtectedString name="Source">-- Daily login streak (7 days, missing a day resets) and playtime chests per session.
 local R = {}
 
 -- money = max(min, income * seconds); parts added on top
@@ -2158,7 +2221,7 @@ function R.NextDay(daily, today)
 end
 
 return R
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX1CD737E926F34E1A999E84BA295D4FA0"><Properties><string name="Name">ShopConfig</string><ProtectedString name="Source">-- Pit Stop upgrades (in-game money). Effects are read on the server through ShopService.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX84B57AA378464B24903D2D77AFE3F927"><Properties><string name="Name">ShopConfig</string><ProtectedString name="Source">-- Pit Stop upgrades (in-game money). Effects are read on the server through ShopService.
 local ShopConfig = {}
 
 local function curve(base, growth, max)
@@ -2192,7 +2255,7 @@ function ShopConfig.NextCost(id, level)
 end
 
 return ShopConfig
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX9B6CD662A48F4D80B99F30A84BE75250"><Properties><string name="Name">SkinConfig</string><ProtectedString name="Source">-- Garage skins: one active at a time, each recolours the whole garage and adds an income bonus.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXF0E9C8AFD2394C9B8BD38512043038D3"><Properties><string name="Name">SkinConfig</string><ProtectedString name="Source">-- Garage skins: one active at a time, each recolours the whole garage and adds an income bonus.
 local C = Color3.fromRGB
 local SkinConfig = {}
 
@@ -2252,13 +2315,13 @@ function SkinConfig.RebirthNeeds(n)
 end
 
 return SkinConfig
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXF61A85CA54D54ADC820D7C8B3A29E528"><Properties><string name="Name">SoundIds</string><ProtectedString name="Source">-- Sound asset ids (ElevenLabs SFX uploaded by tools/roblox_open_cloud.py). 0 = not uploaded: built-in fallback is used.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX92459ABBD589481D8DFD1E11E15069F7"><Properties><string name="Name">SoundIds</string><ProtectedString name="Source">-- Sound asset ids (ElevenLabs SFX uploaded by tools/roblox_open_cloud.py). 0 = not uploaded: built-in fallback is used.
 return {
 	click = 129701225439846, open = 137919267005389, err = 93818499880209, ping = 88613645625966, throw = 119327249998497, clank = 81236574431044, charge = 119801036998398, reveal = 104359112527062, revealBig = 89971480285601, land = 105360367997502, drive = 135356508628598,
 	pickup = 115648143432870, pickupBig = 88679381563835, bank = 106536817236294, bankCombo = 118911778326066, combo = 117977986909264, cash = 94389113268355, siren = 91817872654141, crash = 95389621886750, wrecked = 139719815735975, airbag = 86864075035630,
 	whoosh = 106593268383104, fanfare = 132390340647866, ambience = 0, step = 107581095754096,
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXC2E065B3B003484FAD090DC8DB37B6DB"><Properties><string name="Name">SpecialVehicles</string><ProtectedString name="Source">-- Hand-built shapes that are not cars: freight train, taxiing airliner, monster trucks (bosses).
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX982826F3D919450DA3611668E2206C1F"><Properties><string name="Name">SpecialVehicles</string><ProtectedString name="Source">-- Hand-built shapes that are not cars: freight train, taxiing airliner, monster trucks (bosses).
 -- Same contract as VehicleFactory: Model with an anchored, invisible PrimaryPart "Root" at ground level,
 -- everything else welded to it, length along local +X.
 local SV = {}
@@ -2419,7 +2482,7 @@ function SV.Build(kindName, color)
 end
 
 return SV
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX9959A2E5A19E46DBB60C40193283F5A4"><Properties><string name="Name">TuningConfig</string><ProtectedString name="Source">-- Tuning parts: each car has one slot per category; parts add a % to that car's income.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXBB00589681B94529A115DCDF1A04E3E7"><Properties><string name="Name">TuningConfig</string><ProtectedString name="Source">-- Tuning parts: each car has one slot per category; parts add a % to that car's income.
 -- Stage 1-2 are traded at Big Tony (contracts board), Stage 3 only drops in the last districts/arenas.
 local TuningConfig = {}
 
@@ -2502,7 +2565,7 @@ function TuningConfig.CarMult(tune)
 end
 
 return TuningConfig
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX37C7C70CA1D146C4ACDDEAC24B917487"><Properties><string name="Name">WheelKit</string><ProtectedString name="Source">-- Wheel detection / repair shared by CarStoreTool (install time) and VehicleFactory (every spawn).
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4405607F326B46F3A8677D23B8682F25"><Properties><string name="Name">WheelKit</string><ProtectedString name="Source">-- Wheel detection / repair shared by CarStoreTool (install time) and VehicleFactory (every spawn).
 -- Store cars often lose their wheels (transparent collider parts, chassis scripts); this puts real-looking
 -- wheels back wherever a wheel should be and nothing visible is there.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -5007,7 +5070,7 @@ function Zone.Start()
 end
 
 return Zone
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4DBEF502279A49F193280066E4192792"><Properties><string name="Name">BossService</string><ProtectedString name="Source">-- Arena bosses: a monster truck per arena hunts the nearest player. Touch = WRECKED.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXE84C4F189A2F447BAF5471B0CA650181"><Properties><string name="Name">BossService</string><ProtectedString name="Source">-- Arena bosses: a monster truck per arena hunts the nearest player. Touch = WRECKED.
 -- Players scare it by throwing their cheapest part: 1st hit stuns it, 2nd hit makes it flee for a while.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -5267,7 +5330,7 @@ function Boss.Start()
 end
 
 return Boss
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXCF08C2EE39AC44738E10044F2599D016"><Properties><string name="Name">CheckpointService</string><ProtectedString name="Source">-- District checkpoints: at the far end of every district a player carrying loot chooses
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXCDFAD70B65A44AF3B8535A994DA2699B"><Properties><string name="Name">CheckpointService</string><ProtectedString name="Source">-- District checkpoints: at the far end of every district a player carrying loot chooses
 --   SAVE &amp; GO HOME  -&gt; loot is banked right here and the player is teleported to the garage
 --   RISK IT         -&gt; teleported to the start of the next district (must be unlocked); loot stays at risk,
 --                      the run's risk multiplier grows by +0.5 (applied when the loot is finally banked).
@@ -5383,7 +5446,7 @@ function CP.Start()
 end
 
 return CP
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX3B45D9DB4C434A9A835C6F16B44C3C9E"><Properties><string name="Name">ContractService</string><ProtectedString name="Source">-- Contracts board: three active jobs per player. Finished jobs wait as "ready" until claimed at Big Tony.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXC6964D7FBF4D4C6F81859571BABFEACA"><Properties><string name="Name">ContractService</string><ProtectedString name="Source">-- Contracts board: three active jobs per player. Finished jobs wait as "ready" until claimed at Big Tony.
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -5557,7 +5620,7 @@ function Contracts.Start()
 end
 
 return Contracts
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX169C58FC8CB54B618D11B6BAFE994A92"><Properties><string name="Name">DonateService</string><ProtectedString name="Source">-- Golden Magnate stall: developer products + game passes, with idempotent receipt processing.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4FE435B70CD1442CA8F61776C72FEACC"><Properties><string name="Name">DonateService</string><ProtectedString name="Source">-- Golden Magnate stall: developer products + game passes, with idempotent receipt processing.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -5849,7 +5912,7 @@ function Donate.Start()
 end
 
 return Donate
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXD491A4F837D34A3F9D74F40D74A1446E"><Properties><string name="Name">HotDropService</string><ProtectedString name="Source">-- Hot Drop: every ~80 s a rare crate parachutes onto a dangerous spot. First player to grab it wins.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX5A67BE689E8E470CAA25F1218A7F8998"><Properties><string name="Name">HotDropService</string><ProtectedString name="Source">-- Hot Drop: every ~80 s a rare crate parachutes onto a dangerous spot. First player to grab it wins.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -6059,7 +6122,7 @@ function HotDrop.Start()
 end
 
 return HotDrop
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXF6BC6775F9EE429BAD96FFFB6373AFD1"><Properties><string name="Name">LeaderboardService</string><ProtectedString name="Source">-- Plaza leaderboard: big screen with tabs (Income / Collection / Rebirths) that cycle every 8 s,
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXB9279CD9C220498ABA12C54CCBAB1004"><Properties><string name="Name">LeaderboardService</string><ProtectedString name="Source">-- Plaza leaderboard: big screen with tabs (Income / Collection / Rebirths) that cycle every 8 s,
 -- rank badges, avatar headshots, and the top 3 players standing as statues on the podium.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -6270,7 +6333,7 @@ function LB.Start()
 end
 
 return LB
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX014CAA279AAD4FB2ABEF53CDE615031A"><Properties><string name="Name">MechanicService</string><ProtectedString name="Source">-- Big Tony, the rich mechanic next to the contracts board: hands out finished contract rewards
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXD7F27433A44547FF9CB8C2E7FE2558E9"><Properties><string name="Name">MechanicService</string><ProtectedString name="Source">-- Big Tony, the rich mechanic next to the contracts board: hands out finished contract rewards
 -- and trades banked parts for tuning parts.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -6444,7 +6507,7 @@ function Mechanic.Start()
 end
 
 return Mechanic
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX478C542693D6479C87A32157786BA31B"><Properties><string name="Name">ModelService</string><ProtectedString name="Source">-- Loads the Blender models that tools/roblox_open_cloud.py uploaded (ids in Shared/ModelIds.lua), styles their meshes
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXD9E17BE23F304C72BBDAEA468AA5D683"><Properties><string name="Name">ModelService</string><ProtectedString name="Source">-- Loads the Blender models that tools/roblox_open_cloud.py uploaded (ids in Shared/ModelIds.lua), styles their meshes
 -- by look name and installs them where the game looks for them:
 --   spawn models + street props -&gt; ServerStorage.BuilderAssets.Props   (map builder, Prefabs.FromTemplate)
 --   pickup / tuning parts       -&gt; ReplicatedStorage.PartModels        (PartVisual, WheelKit)
@@ -6575,7 +6638,7 @@ function ModelService.LoadAll()
 end
 
 return ModelService
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXD9145FBB212B4F089E5B58340CBD5EC4"><Properties><string name="Name">RebirthService</string><ProtectedString name="Source">-- Rebirth (classic reset for a permanent income bonus + tokens) and garage skins.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX2683B7FA18954940ABAD7E10FCE63D24"><Properties><string name="Name">RebirthService</string><ProtectedString name="Source">-- Rebirth (classic reset for a permanent income bonus + tokens) and garage skins.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local SkinConfig = require(Shared:WaitForChild("SkinConfig"))
@@ -6712,7 +6775,7 @@ function Rebirth.TokenPerk(player, id)
 end
 
 return Rebirth
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX1271DDDAA5644385A965FF60DBFFD722"><Properties><string name="Name">RewardsService</string><ProtectedString name="Source">-- Daily streak + playtime chests. Everything is decided on the server.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX59EDE306115746258F3E1CB500E8DA69"><Properties><string name="Name">RewardsService</string><ProtectedString name="Source">-- Daily streak + playtime chests. Everything is decided on the server.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local R = require(Shared:WaitForChild("RewardConfig"))
@@ -6782,7 +6845,7 @@ function Rewards.ClaimChest(player, i)
 end
 
 return Rewards
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXBDA6816032C040CAB72640074D7FC426"><Properties><string name="Name">ShopService</string><ProtectedString name="Source">-- Pit Stop: perks bought with in-game money + the mechanic NPC. All perk effects are read through this module.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4E32923AB6664236ADFE11E943BBB00C"><Properties><string name="Name">ShopService</string><ProtectedString name="Source">-- Pit Stop: perks bought with in-game money + the mechanic NPC. All perk effects are read through this module.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -7067,7 +7130,7 @@ function Shop.Start()
 end
 
 return Shop
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXE0EF1B2DCE5C47C2B976CE516EDAB5D4"><Properties><string name="Name">TradeService</string><ProtectedString name="Source">-- Player trading: request -&gt; accept -&gt; both sides offer cars / money / parts -&gt; both READY -&gt; 3 s countdown -&gt;
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXACF43C84806C4E3E9E13052295E1D9D7"><Properties><string name="Name">TradeService</string><ProtectedString name="Source">-- Player trading: request -&gt; accept -&gt; both sides offer cars / money / parts -&gt; both READY -&gt; 3 s countdown -&gt;
 -- the server re-checks everything and swaps atomically. Any change resets READY.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -7328,7 +7391,7 @@ end
 Trade._active = active
 Trade._execute = execute
 return Trade
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXCCD55EB0E5B6422492FD272BEB7B243A"><Properties><string name="Name">TuningService</string><ProtectedString name="Source">-- Install / remove tuning parts on owned cars. Removing returns the part to the inventory.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX213038B7BF2145C0A1DB362D03D2F698"><Properties><string name="Name">TuningService</string><ProtectedString name="Source">-- Install / remove tuning parts on owned cars. Removing returns the part to the inventory.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
@@ -7403,7 +7466,7 @@ function Tuning.Give(player, itemId, n)
 end
 
 return Tuning
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX16321A21314244FEB333D7970182CC86"><Properties><string name="Name">WarpService</string><ProtectedString name="Source">-- Teleport buttons: home garage or any unlocked district. Server-validated.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX3A8C0994DAEB4642941AB52238F4D74B"><Properties><string name="Name">WarpService</string><ProtectedString name="Source">-- Teleport buttons: home garage or any unlocked district. Server-validated.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
@@ -8493,7 +8556,7 @@ local function buildRoad(ctx, road, pal, zid)
 			if zid == "neon" then
 				Prefabs.Lamp(f.StreetProps, Vector3.new(x, 0.8, z0), 3, pal.accent2, 0)
 			elseif zid == "industrial" or zid == "highway" then
-				Part(f.StreetProps, "Barrier", Vector3.new(7, 1.6, 1.6), CFrame.new(x, 1.6, z0), (zid == "highway") and C(190, 192, 200) or C(240, 190, 40), M.Concrete)
+				Prefabs.Barrier(f.StreetProps, Vector3.new(x, 0.8, z0), 0, (zid == "highway") and C(190, 192, 200) or C(240, 190, 40))
 			else
 				Prefabs.Tree(f.StreetProps, Vector3.new(x, 0.8, z0), ctx.rng, "tree")
 			end
@@ -8656,7 +8719,7 @@ local function placeBlock(ctx, blk, pal, zid)
 		if zid == "neon" then
 			Prefabs.Lamp(f.StreetProps, Vector3.new(x, 0.4, z), 3, C(255, 200, 140), 0)
 		elseif zid == "industrial" then
-			Part(f.StreetProps, "Barrel", Vector3.new(3, 3.6, 3), CFrame.new(x, 2.2, z), pick(rng, { C(200, 70, 50), C(70, 110, 190) }), M.Metal, { shape = CYL }).CFrame = CFrame.new(x, 2.2, z) * UPRIGHT
+			Prefabs.Barrel(f.StreetProps, Vector3.new(x, 0.4, z), pick(rng, { C(200, 70, 50), C(70, 110, 190) }))
 		else
 			Prefabs.Tree(f.StreetProps, Vector3.new(x, 0.4, z), rng, (zid == "highway") and "palm" or "tree")
 		end
@@ -9020,6 +9083,7 @@ return Build
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local VehicleFactory = require(Shared:WaitForChild("VehicleFactory"))
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
+local ModelSizes = require(Shared:WaitForChild("ModelSizes"))
 local ServerStorage = game:GetService("ServerStorage")
 
 local C = Color3.fromRGB
@@ -9088,7 +9152,8 @@ local Label = Prefabs.Label
 
 -- Blender-made props: ServerStorage.BuilderAssets.Props.&lt;name&gt; (see docs/BLENDER.md). nil if not imported.
 Prefabs.TemplateUse = { placed = 0, missing = {} }
-function Prefabs.FromTemplate(name, parent, cf)
+-- opts: scale (uniform), colors = { Wall = c, Trim = c, Roof = c } recolours the Blender looks per district
+function Prefabs.FromTemplate(name, parent, cf, opts)
 	local assets = ServerStorage:FindFirstChild("BuilderAssets")
 	local props = assets and assets:FindFirstChild("Props")
 	local tpl = props and props:FindFirstChild(name)
@@ -9098,9 +9163,16 @@ function Prefabs.FromTemplate(name, parent, cf)
 	end
 	Prefabs.TemplateUse.placed = Prefabs.TemplateUse.placed + 1
 	local m = tpl:Clone()
+	if opts and opts.scale and math.abs(opts.scale - 1) &gt; 0.01 then
+		m:ScaleTo(m:GetScale() * opts.scale)
+	end
 	for _, d in ipairs(m:GetDescendants()) do
 		if d:IsA("BasePart") then
 			d.Anchored = true
+			local c = opts and opts.colors and opts.colors[d.Name]
+			if c then
+				d.Color = c
+			end
 		end
 	end
 	m:PivotTo(cf)
@@ -9138,6 +9210,14 @@ end
 
 function Prefabs.Lamp(parent, pos, variant, glow, facing)
 	local cf = CFrame.new(pos) * CFrame.Angles(0, facing or 0, 0)
+	local lm = Prefabs.FromTemplate(({ "LampA", "LampB", "LampC" })[variant] or "LampA", parent, CFrame.new(pos.X, pos.Y - 0.2, pos.Z) * CFrame.Angles(0, facing or 0, 0))
+	if lm then
+		local g = lm:FindFirstChild("Glow", true)
+		if g then
+			addLight(g, variant == 3 and 12 or 16)
+		end
+		return
+	end
 	local warm = Color3.fromRGB(255, 236, 200)
 	local POLE = C(52, 56, 64)
 	Part(parent, "LampBase", Vector3.new(1.4, 0.8, 1.4), cf * CFrame.new(0, 0.4, 0), POLE, M.Metal)
@@ -9161,6 +9241,9 @@ function Prefabs.Lamp(parent, pos, variant, glow, facing)
 end
 
 function Prefabs.Tree(parent, pos, rng, variant)
+	if Prefabs.FromTemplate(variant == "palm" and "Palm" or "Tree", parent, CFrame.new(pos) * CFrame.Angles(0, rr(rng, 0, 6.28), 0), { scale = rr(rng, 0.85, 1.2) }) then
+		return
+	end
 	local h = rr(rng, 6, 9)
 	if variant == "palm" then
 		Part(parent, "Trunk", Vector3.new(1.1, h + 3, 1.1), CFrame.new(pos + Vector3.new(0, (h + 3) / 2, 0)), C(150, 110, 70), M.Wood)
@@ -9178,6 +9261,9 @@ function Prefabs.Tree(parent, pos, rng, variant)
 end
 
 function Prefabs.Bush(parent, pos, rng)
+	if Prefabs.FromTemplate("Bush", parent, CFrame.new(pos) * CFrame.Angles(0, rr(rng, 0, 6.28), 0), { scale = rr(rng, 0.8, 1.3) }) then
+		return
+	end
 	local s = rr(rng, 3, 5)
 	Part(parent, "Bush", Vector3.new(s, s * 0.7, s), CFrame.new(pos + Vector3.new(0, s * 0.3, 0)), pick(rng, { C(60, 150, 70), C(80, 170, 90) }), M.Grass, { shape = BALL, collide = false })
 end
@@ -9197,6 +9283,11 @@ end
 
 function Prefabs.Kiosk(parent, pos, yaw, color, text)
 	local cf = CFrame.new(pos) * CFrame.Angles(0, yaw or 0, 0)
+	if Prefabs.FromTemplate("Kiosk", parent, cf, { colors = { Wall = color } }) then
+		local sign = Part(parent, "KioskSign", Vector3.new(5, 1.3, 0.3), cf * CFrame.new(0, 8.3, -2.6), DARK)
+		Label(sign, Enum.NormalId.Front, text or "SHOP", C(255, 220, 90))
+		return
+	end
 	Part(parent, "Kiosk", Vector3.new(7, 7, 6), cf * CFrame.new(0, 3.5, 0), color, M.SmoothPlastic)
 	Part(parent, "KioskRoof", Vector3.new(8.4, 0.6, 7.4), cf * CFrame.new(0, 7.3, 0), DARK)
 	local win = Part(parent, "KioskWindow", Vector3.new(5, 2.6, 0.3), cf * CFrame.new(0, 4.4, -3.1), GLASS, M.Glass, { t = 0.3 })
@@ -9238,6 +9329,9 @@ function Prefabs.Fountain(parent, pos, accent)
 end
 
 function Prefabs.FlowerBed(parent, pos, w, d, rng)
+	if Prefabs.FromTemplate("FlowerBed", parent, CFrame.new(pos) * CFrame.Angles(0, w &lt; d and math.pi / 2 or 0, 0), { scale = math.min(math.max(w, d) / 8, math.min(w, d) / 5) }) then
+		return
+	end
 	Part(parent, "BedEdge", Vector3.new(w, 1, d), CFrame.new(pos + Vector3.new(0, 0.5, 0)), C(232, 224, 212), M.Concrete)
 	Part(parent, "BedSoil", Vector3.new(w - 0.8, 0.2, d - 0.8), CFrame.new(pos + Vector3.new(0, 1.05, 0)), C(110, 160, 80), M.Grass, { collide = false })
 	local cols = { C(255, 120, 150), C(255, 210, 90), C(120, 200, 255), C(255, 255, 255), C(255, 150, 90) }
@@ -9264,6 +9358,9 @@ end
 
 function Prefabs.TrafficLight(parent, pos, yaw)
 	local cf = CFrame.new(pos) * CFrame.Angles(0, yaw or 0, 0)
+	if Prefabs.FromTemplate("TrafficLight", parent, cf) then
+		return
+	end
 	Part(parent, "TLPole", Vector3.new(0.6, 10, 0.6), cf * CFrame.new(0, 5, 0), DARK, M.Metal)
 	Part(parent, "TLBox", Vector3.new(1.4, 4, 1.2), cf * CFrame.new(0, 10.5, 0), C(40, 42, 50), M.SmoothPlastic)
 	Part(parent, "TLRed", Vector3.new(0.9, 0.9, 0.3), cf * CFrame.new(0, 11.8, -0.6), C(255, 70, 70), M.Neon, { collide = false, cast = false })
@@ -9273,6 +9370,9 @@ end
 
 function Prefabs.BusStop(parent, pos, yaw, color)
 	local cf = CFrame.new(pos) * CFrame.Angles(0, yaw or 0, 0)
+	if Prefabs.FromTemplate("BusStop", parent, cf, { colors = { Trim = color } }) then
+		return
+	end
 	Part(parent, "StopRoof", Vector3.new(10, 0.5, 3.4), cf * CFrame.new(0, 8, 0), color, M.SmoothPlastic)
 	Part(parent, "StopBack", Vector3.new(10, 6, 0.3), cf * CFrame.new(0, 4.6, 1.5), GLASS, M.Glass, { t = 0.45 })
 	for _, x in ipairs({ -4.8, 4.8 }) do
@@ -9292,6 +9392,9 @@ function Prefabs.Hydrant(parent, pos)
 end
 
 function Prefabs.Bin(parent, pos, color)
+	if Prefabs.FromTemplate("Bin", parent, CFrame.new(pos), { colors = { Green = color } }) then
+		return
+	end
 	Part(parent, "Bin", Vector3.new(3, 2, 2), CFrame.new(pos + Vector3.new(0, 1.5, 0)) * UPRIGHT, color or C(70, 150, 110), M.SmoothPlastic, { shape = CYL })
 	Part(parent, "BinLid", Vector3.new(0.3, 2.2, 2.2), CFrame.new(pos + Vector3.new(0, 3.1, 0)) * UPRIGHT, DARK, M.SmoothPlastic, { shape = CYL, collide = false })
 end
@@ -9307,6 +9410,9 @@ end
 
 function Prefabs.Pallet(parent, pos, yaw, rng)
 	local cf = CFrame.new(pos) * CFrame.Angles(0, yaw or 0, 0)
+	if Prefabs.FromTemplate("Pallet", parent, cf) then
+		return
+	end
 	Part(parent, "Pallet", Vector3.new(5, 0.6, 5), cf * CFrame.new(0, 0.3, 0), C(176, 132, 84), M.Wood)
 	local h = math.floor(rr(rng, 1, 3.99))
 	for i = 1, h do
@@ -9316,6 +9422,9 @@ end
 
 function Prefabs.Forklift(parent, pos, yaw)
 	local cf = CFrame.new(pos) * CFrame.Angles(0, yaw or 0, 0)
+	if Prefabs.FromTemplate("Forklift", parent, cf) then
+		return
+	end
 	Part(parent, "FLBody", Vector3.new(6, 2.6, 4), cf * CFrame.new(0, 2.1, 0), C(255, 196, 40), M.SmoothPlastic)
 	Part(parent, "FLSeat", Vector3.new(2, 1.2, 2.4), cf * CFrame.new(-0.6, 4, 0), DARK)
 	Part(parent, "FLRoof", Vector3.new(3.6, 0.3, 3.8), cf * CFrame.new(-0.4, 7.4, 0), DARK, M.Metal)
@@ -9358,6 +9467,21 @@ function Prefabs.Gantry(parent, x, z0, width, text, accent)
 	Label(b, Enum.NormalId.Left, text, C(255, 255, 255))
 	Label(b, Enum.NormalId.Right, text, C(255, 255, 255))
 	Part(parent, "GantryTrim", Vector3.new(0.7, 0.3, width * 0.6), CFrame.new(x, 14.4, z0), accent, M.Neon, { collide = false })
+end
+
+-- concrete barrier / barrel: Blender model or a block
+function Prefabs.Barrier(parent, pos, yaw, color)
+	if Prefabs.FromTemplate("Barrier", parent, CFrame.new(pos) * CFrame.Angles(0, yaw or 0, 0)) then
+		return
+	end
+	Part(parent, "Barrier", Vector3.new(7, 1.6, 1.6), CFrame.new(pos + Vector3.new(0, 0.8, 0)) * CFrame.Angles(0, yaw or 0, 0), color or C(190, 192, 200), M.Concrete)
+end
+
+function Prefabs.Barrel(parent, pos, color)
+	if Prefabs.FromTemplate("Barrel", parent, CFrame.new(pos), { colors = { Accent = color } }) then
+		return
+	end
+	Part(parent, "Barrel", Vector3.new(3.6, 3, 3), CFrame.new(pos + Vector3.new(0, 1.8, 0)) * UPRIGHT, color, M.Metal, { shape = CYL })
 end
 
 local B = {}
@@ -9550,11 +9674,17 @@ function B.containers(parent, cf, w, d, h, pal, rng)
 	for ix = 1, nx do
 		local stack = math.floor(rr(rng, 1, 4))
 		for iy = 1, stack do
-			mk("Container", Vector3.new(12, 4.2, 5), Vector3.new(-w / 2 + (ix - 0.5) * (w / nx), 2.1 + (iy - 1) * 4.3, -d / 2 + 4), pick(rng, cols), M.Metal)
+			local off = Vector3.new(-w / 2 + (ix - 0.5) * (w / nx), (iy - 1) * 4.3, -d / 2 + 4)
+			if not Prefabs.FromTemplate("Container", parent, cf * CFrame.new(off), { colors = { Trim = pick(rng, cols) } }) then
+				mk("Container", Vector3.new(12, 4.2, 5), off + Vector3.new(0, 2.1, 0), pick(rng, cols), M.Metal)
+			end
 		end
 		local stack2 = math.floor(rr(rng, 1, 3))
 		for iy = 1, stack2 do
-			mk("Container", Vector3.new(12, 4.2, 5), Vector3.new(-w / 2 + (ix - 0.5) * (w / nx), 2.1 + (iy - 1) * 4.3, -d / 2 + 10), pick(rng, cols), M.Metal)
+			local off = Vector3.new(-w / 2 + (ix - 0.5) * (w / nx), (iy - 1) * 4.3, -d / 2 + 10)
+			if not Prefabs.FromTemplate("Container", parent, cf * CFrame.new(off), { colors = { Trim = pick(rng, cols) } }) then
+				mk("Container", Vector3.new(12, 4.2, 5), off + Vector3.new(0, 2.1, 0), pick(rng, cols), M.Metal)
+			end
 		end
 	end
 end
@@ -9689,7 +9819,17 @@ Prefabs.Archetypes = {
 	},
 }
 
+-- Blender building scaled to fit the lot (footprint from ModelSizes), recoloured with the district palette
+local ROOFS = { C(200, 96, 80), C(110, 120, 150), C(90, 150, 140), C(160, 110, 170), C(230, 170, 70) }
 function Prefabs.Building(kind, parent, cf, w, d, h, pal, rng)
+	local info = ModelSizes["B_" .. kind]
+	if info and info.w and kind ~= "containers" and kind ~= "billboard" and kind ~= "holosign" and kind ~= "pipes" then
+		local s = math.min(w / info.w, d / info.d)
+		local m = Prefabs.FromTemplate("B_" .. kind, parent, cf, { scale = s, colors = { Wall = pick(rng, pal.buildings), Trim = pal.accent, Roof = pick(rng, ROOFS) } })
+		if m then
+			return
+		end
+	end
 	local fn = B[kind]
 	if fn then
 		fn(parent, cf, w, d, h, pal, rng)
@@ -9697,7 +9837,7 @@ function Prefabs.Building(kind, parent, cf, w, d, h, pal, rng)
 end
 
 return Prefabs
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX96476BB455C548C891F692432D6DDF19"><Properties><string name="Name">CarStoreTool</string><ProtectedString name="Source">-- Installs real car models from the Roblox Creator Store (free models) into ReplicatedStorage.CarModels.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXFC237F4ACCF24B579AD5988519D92BB5"><Properties><string name="Name">CarStoreTool</string><ProtectedString name="Source">-- Installs real car models from the Roblox Creator Store (free models) into ReplicatedStorage.CarModels.
 -- Run in Studio (edit mode), View &gt; Command Bar:
 --   require(game.ServerStorage.Tools.CarStoreTool).InstallAll()
 --   require(game.ServerStorage.Tools.CarStoreTool).Install("bmv_m3", 2629351758)   -- any other asset id
@@ -10080,7 +10220,7 @@ function Tool.Flip(carId)
 end
 
 return Tool
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXF0ACA7A18E534948A7744E346B9CF7C9"><Properties><string name="Name">ModelPreview</string><ProtectedString name="Source">-- Studio edit-mode preview: load the uploaded Blender models and build the whole map, to look around without Play.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXC68581035E994F19BB7ADA18BF5B7B8F"><Properties><string name="Name">ModelPreview</string><ProtectedString name="Source">-- Studio edit-mode preview: load the uploaded Blender models and build the whole map, to look around without Play.
 --   require(game.ServerStorage.Tools.ModelPreview).Run()
 -- Do NOT save the place afterwards if you want the server to rebuild the map itself (it rebuilds anyway when the
 -- saved map is older than MapConfig.Version). Clear(): removes the preview map.
@@ -12256,7 +12396,7 @@ function Fx.Hit(dir, flashFrame)
 end
 
 return Fx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX81089671CE18492EBEABE226990B5329"><Properties><string name="Name">BatchReveal</string><ProtectedString name="Source">-- Batch throw reveal: parts rain onto the lift, a fast reel of every car (slowing down on the best one),
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX17CD0A3711E84DB69E9E946B5E8210EA"><Properties><string name="Name">BatchReveal</string><ProtectedString name="Source">-- Batch throw reveal: parts rain onto the lift, a fast reel of every car (slowing down on the best one),
 -- then a results grid. "SEE BEST CAR" plays the full showcase + drive-in for the best car.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -12497,7 +12637,7 @@ function BR.Start(ui, cine, trap)
 end
 
 return BR
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXA9A359EBA0EF4EA5AED319B055C08135"><Properties><string name="Name">BossFx</string><ProtectedString name="Source">-- Boss HUD + effects: big "THROW!" button appears when a monster truck is close, the cheapest part flies at it,
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX381529FCEF9443EB911DBC23A8E99EA1"><Properties><string name="Name">BossFx</string><ProtectedString name="Source">-- Boss HUD + effects: big "THROW!" button appears when a monster truck is close, the cheapest part flies at it,
 -- stars when it is stunned, dust when it flees.
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -12667,7 +12807,7 @@ function BossFx.Start(ui, cine)
 end
 
 return BossFx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXD8EB9D144A9B4EC99BE5160F660206D7"><Properties><string name="Name">Checkpoint</string><ProtectedString name="Source">-- Checkpoint choice card: SAVE &amp; GO HOME (bank now, teleport to the garage) or RISK IT (next district, bigger multiplier).
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7624E9149F614D15821FEBC0F7D11580"><Properties><string name="Name">Checkpoint</string><ProtectedString name="Source">-- Checkpoint choice card: SAVE &amp; GO HOME (bank now, teleport to the garage) or RISK IT (next district, bigger multiplier).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
@@ -12768,7 +12908,7 @@ function CP.Start(ui, cine)
 end
 
 return CP
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX85CB727D093C4BF3B79BC8E5D0019D0C"><Properties><string name="Name">CineFx</string><ProtectedString name="Source">-- Cinematic toolkit: camera shake / zoom / takeover, letterbox, darken, flash, glitch, big titles.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXDA8CAB86CAAD4F14867AF386590FF047"><Properties><string name="Name">CineFx</string><ProtectedString name="Source">-- Cinematic toolkit: camera shake / zoom / takeover, letterbox, darken, flash, glitch, big titles.
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
@@ -12959,7 +13099,7 @@ function Cine.Reset(t)
 end
 
 return Cine
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX6156011CDB374F64B0CEA4241D930B31"><Properties><string name="Name">ClientFx</string><ProtectedString name="Source">-- Small feedback effects: pickups, banking, donations, airbag, the Golden Magnate's coin toss.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXF7A4872AEF3A440FB4DAC98402D45142"><Properties><string name="Name">ClientFx</string><ProtectedString name="Source">-- Small feedback effects: pickups, banking, donations, airbag, the Golden Magnate's coin toss.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
@@ -13177,7 +13317,7 @@ function Fx.Init(ui)
 end
 
 return Fx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXFFB1C1D1E2C54DA481F05CCD3C9AC94A"><Properties><string name="Name">DeathFx</string><ProtectedString name="Source">-- WRECKED! sequence: impact flash, heavy shake, glitch, grayscale-red grade, crane-up camera, countdown.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXC5750AF91274463C9F602416879E6299"><Properties><string name="Name">DeathFx</string><ProtectedString name="Source">-- WRECKED! sequence: impact flash, heavy shake, glitch, grayscale-red grade, crane-up camera, countdown.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -13333,7 +13473,7 @@ function DeathFx.Recover()
 end
 
 return DeathFx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX79459800DD1B4A6CABDA5E4396C01201"><Properties><string name="Name">GaragePrompts</string><ProtectedString name="Source">-- Own-garage interactions created on this client only: buy the next bay right at the bay,
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX2518953DAAA543029AF20C7CB263123D"><Properties><string name="Name">GaragePrompts</string><ProtectedString name="Source">-- Own-garage interactions created on this client only: buy the next bay right at the bay,
 -- build the next floor at the lift, ride the lift between floors.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -13509,7 +13649,7 @@ function GP.Start(kit, cine)
 end
 
 return GP
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX5B4EE5FC7060447AB412C0695698C916"><Properties><string name="Name">Markers</string><ProtectedString name="Source">-- World markers (always on top) + an edge arrow pointing to the current objective.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX360E3A99F2DE407B91DA953B502658F6"><Properties><string name="Name">Markers</string><ProtectedString name="Source">-- World markers (always on top) + an edge arrow pointing to the current objective.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -13699,7 +13839,7 @@ function Markers.Start(kit, extraModule)
 end
 
 return Markers
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXE11CD1F3B28A418A913A868807DBAF00"><Properties><string name="Name">Rewards</string><ProtectedString name="Source">-- GIFTS: 7-day login streak + playtime chests. Button in the left column, red dot when something can be claimed.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXF376995CEE7840FA8F56B83366C9B6D9"><Properties><string name="Name">Rewards</string><ProtectedString name="Source">-- GIFTS: 7-day login streak + playtime chests. Button in the left column, red dot when something can be claimed.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
@@ -13843,7 +13983,7 @@ function RW.Start(ui)
 end
 
 return RW
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXE43CBB93BD2B46089495389ADD769D01"><Properties><string name="Name">SpeedLanes</string><ProtectedString name="Source">-- Running lanes: dark strips with white arrows. Boost only while running the way the arrows point.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX20E5FBA6AE944F77925748440C4F6390"><Properties><string name="Name">SpeedLanes</string><ProtectedString name="Source">-- Running lanes: dark strips with white arrows. Boost only while running the way the arrows point.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -13883,7 +14023,7 @@ function SpeedLanes.Start(getBaseSpeed)
 end
 
 return SpeedLanes
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX12FE788B5ACB418D9EB2C3DE95069D62"><Properties><string name="Name">Trade</string><ProtectedString name="Source">-- Trading UI: TRADE button (right side) -&gt; pick a player -&gt; request; incoming request card; two-sided trade window.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXFD7C700AECFE44DBADEEFD824E2D5221"><Properties><string name="Name">Trade</string><ProtectedString name="Source">-- Trading UI: TRADE button (right side) -&gt; pick a player -&gt; request; incoming request card; two-sided trade window.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -14154,7 +14294,7 @@ function TR.Start(ui)
 end
 
 return TR
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXAB72CC38EA8A45439350EAA899325BF2"><Properties><string name="Name">Tutorial</string><ProtectedString name="Source">-- First-time tutorial (7 steps) and, afterwards, the "next goal" card. One objective card at the top,
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXDBD9AB743DDE4F4393D5B4EFA9C52CDA"><Properties><string name="Name">Tutorial</string><ProtectedString name="Source">-- First-time tutorial (7 steps) and, afterwards, the "next goal" card. One objective card at the top,
 -- a guide beam + marker in the world, and a pulse on the button you need. Progress is saved on the server.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -14388,7 +14528,7 @@ function Tut.Start(ui, cine, guide)
 end
 
 return Tut
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXDD2F9D97D148493296FA45B2BDECA3F7"><Properties><string name="Name">UIExtra</string><ProtectedString name="Source">-- Extra HUD + panels: Pit Stop perks, Golden Magnate donations, combo meter, contracts, hot drop banner, boosts.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXEDE28B171E8C42408B9CF3D838195A59"><Properties><string name="Name">UIExtra</string><ProtectedString name="Source">-- Extra HUD + panels: Pit Stop perks, Golden Magnate donations, combo meter, contracts, hot drop banner, boosts.
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -15095,7 +15235,7 @@ function X.Init(ui)
 end
 
 return X
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX60511B76CAFC40B78D937BA14CFEA623"><Properties><string name="Name">ZoneFx</string><ProtectedString name="Source">-- Per-district hazards on the client: level-crossing lights/arms (docks), sandstorm (desert),
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX83F6A4C2BF4F41A2AD8146CF75E41897"><Properties><string name="Name">ZoneFx</string><ProtectedString name="Source">-- Per-district hazards on the client: level-crossing lights/arms (docks), sandstorm (desert),
 -- jet blast behind taxiing planes (airport), rain + lightning (storm).
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
