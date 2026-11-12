@@ -47,9 +47,9 @@ end
 
 -- Rebirth rules
 SkinConfig.Rebirth = {
-	needZone = { [0] = "neon", [1] = "airport", [2] = "canyon" }, -- later rebirths need "rush"
+	needZone = { [0] = "scrapyard", [1] = "airport", [2] = "canyon" }, -- beat the arena of your tier; later: "rush"
 	lateZone = "rush",
-	baseMoney = 2500000, growth = 1.8,
+	baseMoney = 30000000, growth = 3,
 	incomePer = 0.25, startMoney = 500,
 }
 function SkinConfig.RebirthNeeds(n)

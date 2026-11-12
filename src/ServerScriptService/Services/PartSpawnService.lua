@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Util = require(Shared:WaitForChild("Util"))
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
+local MapConfig = require(Shared:WaitForChild("MapConfig"))
 local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
 local PartVisual = require(Shared:WaitForChild("PartVisual"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
@@ -20,6 +21,15 @@ local drops
 
 function PartSpawn.Init(hub)
 	S = hub
+end
+
+function PartSpawn.Amount(pt)
+	local n = PartConfig.CrateAmount[pt.risk]
+	if not n then
+		return 1
+	end
+	local z = MapConfig.Zones[pt.zone]
+	return PartConfig.CrateAmountTier[z and z.tier or 1] or n
 end
 
 local function cooldownFor(risk)
@@ -38,7 +48,7 @@ local function spawnAt(pt)
 	model:PivotTo(CFrame.new(pt.pos + Vector3.new(0, 3, 0)))
 	model:SetAttribute("PointId", pt.id)
 	model:SetAttribute("Risk", pt.risk)
-	model:SetAttribute("Amount", PartConfig.CrateAmount[pt.risk] or 1)
+	model:SetAttribute("Amount", PartSpawn.Amount(pt))
 	CollectionService:AddTag(model, "SpinBob")
 	model.Parent = drops
 	pt.model = model
@@ -94,7 +104,7 @@ function PartSpawn.Start()
 						if pt.active then
 							local d = pt.pos - pos
 							if d.X * d.X + d.Z * d.Z <= r2 and math.abs(d.Y) < 12 then
-								local amount = PartConfig.CrateAmount[pt.risk] or 1
+								local amount = PartSpawn.Amount(pt)
 								if S.Inventory.CarriedTotal(s) + amount > S.Shop.CarryCap(s) then
 									if t - (warnedAt[player] or 0) > 3 then
 										warnedAt[player] = t

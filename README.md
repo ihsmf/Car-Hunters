@@ -10,8 +10,9 @@ Roblox-игра: бегай по опасным дорогам, собирай �
 | `src/` | Все скрипты (структура = дерево Explorer). Источник правды для кода |
 | `base/CarHunters_original.rbxlx` | Исходный плейс (до изменений) |
 | `tools/build_place.py` | Собирает `CarHunters.rbxlx` из `base/` + `src/` |
-| `blender/make_cars.py`, `blender/make_props.py` | Генераторы 3D-моделей в Blender |
-| `assets/cars/*.fbx`, `assets/props/props.fbx` | Готовые модели машин и пропсов |
+| `blender/make_cars.py`, `blender/make_props.py`, `blender/make_parts.py` | Генераторы 3D-моделей в Blender |
+| `assets/cars/*.fbx`, `assets/props/props.fbx`, `assets/parts/parts.fbx` | Готовые модели машин, пропсов и деталей |
+| `tools/econ_sim.py`, `docs/ECONOMY.md` | Симулятор экономики и описание баланса/петель |
 | `docs/renders/` | Рендеры моделей из Blender |
 | `docs/figma/` | Скриншот макета UI |
 
@@ -97,12 +98,12 @@ Roblox-игра: бегай по опасным дорогам, собирай �
 Roblox не позволяет вшить меши в `.rbxlx` без загрузки в ваш аккаунт, поэтому импорт делаете вы (бесплатно):
 
 1. Studio → **Home → Import 3D** → `assets/cars/cars_collection.fbx` → Import (появится в Workspace).
-2. То же для `assets/cars/cars_traffic.fbx` и `assets/props/props.fbx`.
+2. То же для `assets/cars/cars_traffic.fbx`, `assets/props/props.fbx` и `assets/parts/parts.fbx` (детали и тюнинг).
 3. View → Command Bar, выполнить:
    ```lua
    require(game.ServerStorage.Tools.CarModelTool).ApplyImported()
    ```
-   Скрипт сам раскладывает модели в `ReplicatedStorage.CarModels` / `CarModels.Traffic` / `ServerStorage.BuilderAssets.Props` и назначает материалы (стекло, хром, неон, фары…).
+   Скрипт сам раскладывает модели в `ReplicatedStorage.CarModels` / `CarModels.Traffic` / `ReplicatedStorage.PartModels` / `ServerStorage.BuilderAssets.Props` и назначает материалы (стекло, хром, неон, фары…).
 4. Проверка: `require(game.ServerStorage.Tools.CarModelTool).Preview()` — если машины смотрят назад, поставьте модели атрибут `Yaw = 180`.
 5. Сохраните плейс.
 
@@ -130,6 +131,26 @@ require(game.ServerStorage.Tools.CarStoreTool).InstallAll()
 - Трафик остаётся на лёгких моделях из Blender: магазинные машины состоят из 50–180 деталей, для десятков движущихся машин это слишком тяжело.
 
 **Риски.** На магазинных моделях есть настоящие логотипы и шильдики — это уже чужие товарные знаки в вашей игре, Roblox может снять игру по жалобе правообладателя. Часть моделей — перезаливы без известного автора. Модели тяжёлые (до ~80k треугольников), на слабых телефонах гараж из 12 таких машин может тормозить.
+
+## v4: районы, боссы, тюнинг, этажи, ребёрт
+
+- **15 зон** (`MapConfig.ZoneOrder`): Tier 1 (City, Highway, Industrial, Night) → арена **Scrapyard** → Tier 2 (**Docks** — поезда и переезд со шлагбаумами, **Desert** — 3 полосы и песчаные бури, **Bridges** — узкие мосты над рекой, падение = смерть, **Airport** — рулящие самолёты и реактивная струя) → арена **Canyon** → Tier 3 (**Circuit** — болиды 100+ studs/s, **Drift** — машины виляют, **Storm** — ночь, дождь, молнии, **Rush Hour** — всё сразу) → **Colosseum**. В Tier 3 и на аренах падают тюнинг-детали.
+- **Боссы** (`BossService`, `BossFx`): монстр-трак гоняется за ближайшим игроком; кнопка «КИНЬ!» / «Кинь, чтобы отпугнуть» кидает самую дешёвую деталь, 2 броска — трак уезжает.
+- **Гараж**: 4 этажа × 6 машин, лифт, покупка места прямо у места, этажа — у лифта; обложки гаража с бустом дохода (лавка → вкладка GARAGE).
+- **Big Tony** у доски контрактов: выдаёт награды за выполненные контракты и меняет детали на тюнинг. Тюнинг ставится в гараже (кнопка TUNE у машины): 7 слотов, Stage 1–3, аэро-крыло и пламя наддува видны на машине.
+- **Ребёрт** (кнопка REBIRTH в гараже), жетоны и магазин жетонов.
+- Экономика и петли — [docs/ECONOMY.md](docs/ECONOMY.md).
+
+![parts](docs/renders/parts.png)
+
+### Чек-лист Play-теста v4
+1. Карта: пересобрать (`InstallAll`/BuildCityMap), в Output нет ошибок; пройти пешком до Colosseum (вход в закрытые районы — стена).
+2. Docks: шлагбаумы опускаются и мигают перед поездом; поезд убивает.
+3. Bridges: падение в реку = WRECKED; с подушкой — возврат на берег.
+4. Арена: трак гоняется, кнопка «КИНЬ!» появляется ближе 80 studs, 1-й бросок — оглушение, 2-й — бегство, списана самая дешёвая деталь.
+5. Гараж: купить место у места, достроить этаж у лифта, лифт возит между этажами; обложка перекрашивает гараж.
+6. Тони: выполненный контракт «CLAIM AT TONY», награда выдаётся у Тони; обмен деталей на тюнинг; TUNE ставит/снимает детали, доход машины растёт.
+7. Ребёрт: доступен после арены Scrapyard и $30M; после — пустой гараж, +25% дохода, жетоны.
 
 ## Проверка в Studio
 

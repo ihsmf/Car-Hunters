@@ -105,13 +105,13 @@ for _, def in ipairs(CarConfig.Exclusive) do
 	CarConfig.ById[def.id] = def
 end
 
--- top cars are rare on purpose: a Legendary from bolts is 1 in 1000
+-- top cars are rare on purpose: a Legendary from bolts is 1 in 5000, from a core 1 in 67
 CarConfig.DropChances = {
-	bolts = { Common = 70, Uncommon = 22, Rare = 7, Epic = 0.9, Legendary = 0.1 },
-	tire = { Common = 58, Uncommon = 28, Rare = 11, Epic = 2.6, Legendary = 0.4 },
-	engine = { Common = 42, Uncommon = 33, Rare = 19, Epic = 5, Legendary = 1 },
-	turbo = { Common = 28, Uncommon = 34, Rare = 26, Epic = 10, Legendary = 2 },
-	core = { Common = 15, Uncommon = 30, Rare = 34, Epic = 17, Legendary = 4 },
+	bolts = { Common = 72, Uncommon = 22, Rare = 5.5, Epic = 0.48, Legendary = 0.02 },
+	tire = { Common = 58, Uncommon = 30, Rare = 10, Epic = 1.9, Legendary = 0.1 },
+	engine = { Common = 42, Uncommon = 34, Rare = 19.75, Epic = 4, Legendary = 0.25 },
+	turbo = { Common = 28, Uncommon = 36, Rare = 27.4, Epic = 8, Legendary = 0.6 },
+	core = { Common = 15, Uncommon = 32, Rare = 37.5, Epic = 14, Legendary = 1.5 },
 }
 
 function CarConfig.IncomeAt(def, level)

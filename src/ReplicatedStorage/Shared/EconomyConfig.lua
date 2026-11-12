@@ -22,22 +22,23 @@ do
 	end
 end
 
+-- tuned with tools/econ_sim.py (see docs/ECONOMY.md). minValue = collection value gate (keeps players from rushing)
 EconomyConfig.ZoneUnlock = {
-	highway = { cost = 16000, minValue = 7000 },
-	industrial = { cost = 180000, minValue = 70000 },
-	neon = { cost = 1000000, minValue = 400000 },
-	scrapyard = { cost = 4000000, minValue = 1500000 },
+	highway = { cost = 60000, minValue = 15000 },
+	industrial = { cost = 600000, minValue = 150000 },
+	neon = { cost = 5000000, minValue = 600000 },
+	scrapyard = { cost = 14000000, minValue = 900000 },
 	-- Tier 2 needs a rebirth, Tier 3 three rebirths (RebirthService)
-	docks = { cost = 20000000, minValue = 6000000, rebirths = 1 },
-	desert = { cost = 60000000, minValue = 20000000, rebirths = 1 },
-	bridge = { cost = 180000000, minValue = 60000000, rebirths = 1 },
-	airport = { cost = 500000000, minValue = 150000000, rebirths = 1 },
-	canyon = { cost = 1500000000, minValue = 400000000, rebirths = 2 },
-	circuit = { cost = 8e9, minValue = 2e9, rebirths = 3 },
-	drift = { cost = 25e9, minValue = 6e9, rebirths = 3 },
-	storm = { cost = 80e9, minValue = 20e9, rebirths = 3 },
-	rush = { cost = 250e9, minValue = 60e9, rebirths = 3 },
-	colosseum = { cost = 1e12, minValue = 200e9, rebirths = 4 },
+	docks = { cost = 60000000, minValue = 1000000, rebirths = 1 },
+	desert = { cost = 180000000, minValue = 1200000, rebirths = 1 },
+	bridge = { cost = 500000000, minValue = 1500000, rebirths = 1 },
+	airport = { cost = 1500000000, minValue = 2000000, rebirths = 1 },
+	canyon = { cost = 5000000000, minValue = 2500000, rebirths = 2 },
+	circuit = { cost = 3.5e9, minValue = 2500000, rebirths = 3 },
+	drift = { cost = 8e9, minValue = 2500000, rebirths = 3 },
+	storm = { cost = 1.6e10, minValue = 2500000, rebirths = 3 },
+	rush = { cost = 3e10, minValue = 2500000, rebirths = 3 },
+	colosseum = { cost = 5e10, minValue = 2500000, rebirths = 3 },
 }
 
 EconomyConfig.SellFraction = 0.35

@@ -48,8 +48,8 @@ PartConfig.PointCounts = {
 
 -- Tier 2: engines/turbos/cores everywhere; Tier 3 + arenas also drop tuning parts (see TuningDrops)
 do
-	local T2 = { road = { { "turbo", 50 }, { "core", 50 } }, safe = { { "engine", 50 }, { "turbo", 40 }, { "core", 10 } }, risky = { { "turbo", 55 }, { "core", 45 } } }
-	local T3 = { road = { { "turbo", 30 }, { "core", 70 } }, safe = { { "turbo", 60 }, { "core", 40 } }, risky = { { "turbo", 35 }, { "core", 65 } } }
+	local T2 = { road = { { "core", 100 } }, safe = { { "engine", 25 }, { "turbo", 50 }, { "core", 25 } }, risky = { { "turbo", 35 }, { "core", 65 } } }
+	local T3 = { road = { { "core", 100 } }, safe = { { "turbo", 35 }, { "core", 65 } }, risky = { { "core", 100 } } }
 	for _, id in ipairs({ "docks", "desert", "bridge", "airport", "scrapyard" }) do
 		PartConfig.SpawnTables[id] = T2
 		PartConfig.PointCounts[id] = { safe = 10, risky = 8, road = 4 }
@@ -65,14 +65,15 @@ end
 
 -- chance that a pickup in this zone is a tuning part instead, and which stages can drop
 PartConfig.TuningDrops = {
-	scrapyard = { chance = 0.05, stages = { 1 } },
-	canyon = { chance = 0.08, stages = { 1, 2 } },
-	circuit = { chance = 0.06, stages = { 2 } }, drift = { chance = 0.06, stages = { 2 } },
-	storm = { chance = 0.07, stages = { 2, 3 } }, rush = { chance = 0.08, stages = { 2, 3 } },
-	colosseum = { chance = 0.12, stages = { 2, 3 } },
+	scrapyard = { chance = 0.015, stages = { 1 } },
+	canyon = { chance = 0.025, stages = { 1, 2 } },
+	circuit = { chance = 0.03, stages = { 2 } }, drift = { chance = 0.03, stages = { 2 } },
+	storm = { chance = 0.035, stages = { 2, 3 } }, rush = { chance = 0.04, stages = { 2, 3 } },
+	colosseum = { chance = 0.06, stages = { 2, 3 } },
 }
 
 PartConfig.Cooldowns = { safe = { 45, 70 }, risky = { 60, 95 }, road = { 50, 80 } }
 PartConfig.CrateAmount = { road = 2 } -- road crates hold several parts
+PartConfig.CrateAmountTier = { [2] = 3, [3] = 4 } -- deeper districts: fatter crates
 
 return PartConfig
