@@ -671,6 +671,14 @@ function X.Init(ui)
 			UI.TogglePanel("shop")
 		elseif n == "DonatePrompt" then
 			UI.TogglePanel("donate")
+		elseif n == "MagnatPrompt" then
+			-- Golden Magnat GT podium on the square: buy the game pass right here
+			local st = K.store.State
+			if st and st.passes and st.passes.golden_car then
+				UI.Toast("You already own the Golden Magnat GT!", "good")
+			else
+				K.actions.Donate("golden_car")
+			end
 		elseif n == "TonyPrompt" then
 			tonyTab = "rewards"
 			for _, c in ipairs(K.store.State and K.store.State.contracts or {}) do

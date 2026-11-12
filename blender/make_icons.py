@@ -3,8 +3,8 @@ Parts come from make_parts.py; coin, shop bag, clipboard and backpack are modell
 Render only some icons:  python3 blender/make_icons.py --only teleport,garage   (or ICONS_ONLY=teleport,garage)."""
 import math, os, runpy, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import bmesh
 import bpy
+import bmesh  # after bpy (bmesh only exists once bpy is loaded)
 from mathutils import Quaternion, Vector
 
 saved = sys.argv
@@ -125,7 +125,7 @@ def arc_tube(R, r, a0, a1, z0=0.0):
     bm.from_mesh(t.data)
     kill = []
     for v in bm.verts:
-        a = math.atan2(v.co.z, v.co.x) % (2 * math.pi)  # object-local == world here (rotation applied below)
+        a = math.atan2(v.co.y, v.co.x) % (2 * math.pi)  # mesh is in local XY; the X90 object rotation maps local y -> world z
         if not (a0 <= a <= a1 or a0 <= a + 2 * math.pi <= a1):
             kill.append(v)
     bmesh.ops.delete(bm, geom=kill, context="VERTS")
@@ -221,11 +221,15 @@ FIT.add("rebirth")
 
 # settings: metal cog with a gold hub
 g = {"Metal": [], "Gold": [], "Dark": []}
-g["Metal"].append(cyl((0, 0, 0), 1.15, 0.5, rot=(math.pi / 2, 0, 0), verts=64))
+disc = cyl((0, 0, 0), 1.15, 0.5, rot=(math.pi / 2, 0, 0), verts=64)
+mc.bevel(disc, 0.08, 3)  # bevelled edge so the smooth-shaded caps stay flat
+g["Metal"].append(disc)
 for k in range(8):
     a = k * math.pi / 4
-    g["Metal"].append(box((math.cos(a) * 1.25, 0, math.sin(a) * 1.25), (0.55, 0.5, 0.5), bev=0.06, rot=(0, -a, 0)))
-g["Gold"].append(cyl((0, -0.12, 0), 0.55, 0.5, rot=(math.pi / 2, 0, 0), verts=48))
+    g["Metal"].append(box((math.cos(a) * 1.2, 0, math.sin(a) * 1.2), (0.6, 0.5, 0.5), bev=0.08, rot=(0, -a, 0)))
+hub = cyl((0, -0.12, 0), 0.55, 0.5, rot=(math.pi / 2, 0, 0), verts=48)
+mc.bevel(hub, 0.06, 3)
+g["Gold"].append(hub)
 g["Dark"].append(cyl((0, -0.2, 0), 0.24, 0.5, rot=(math.pi / 2, 0, 0), verts=32))
 roots["settings"] = finish("settings", g)
 face_camera(roots["settings"], 0.75)
@@ -235,7 +239,7 @@ FIT.add("settings")
 g = {"Cream": [], "Accent": [], "Wood": [], "Gold": [], "Blue": [], "White": []}
 top = 1.6
 g["Cream"].append(box((0, 0, top / 2), (2.2, 2.0, top), bev=0.04))
-g["Cream"].append(mc.prim("cyl", "gable", (0, 0, top + 0.25 * 1.47), (1.47, 2.31, 2.2), rot=(0, -math.pi / 2, 0), verts=3))
+g["Cream"].append(mc.prism("gable", [(-1.0, top - 0.01), (1.0, top - 0.01), (0.0, top + 1.1)], -1.1, 2.2))
 sl = math.atan2(1.1, 1.0)
 L = math.hypot(1.0, 1.1) + 0.35
 for s_ in (-1, 1):
