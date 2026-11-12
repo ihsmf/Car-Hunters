@@ -266,7 +266,7 @@ local function noteRemove(it)
 	end)
 	noteLayout()
 	local nextOne = table.remove(notes.queue, 1)
-	while nextOne and os.clock() - (nextOne.at or 0) > 4 do
+	while nextOne and (os.clock() - (nextOne.at or 0) > 4 or (state.notesOff and nextOne.kind ~= "error" and nextOne.kind ~= "warn")) do
 		nextOne = table.remove(notes.queue, 1) -- stale ("Not enough money" 8 s later helps nobody)
 	end
 	if nextOne then
@@ -338,16 +338,32 @@ function UI.Toast(msg, kind, silent)
 end
 
 -- a modal dialog (confirm, checkpoint) is up: the notification lane moves to the very top
+-- counted: a confirm over the checkpoint card, or a confirm replacing another one, keeps the flag right
+local dialogDepth = 0
 function UI.SetDialog(on)
-	state.dialog = on and true or nil
+	dialogDepth = math.max(0, dialogDepth + (on and 1 or -1))
+	state.dialog = dialogDepth > 0 or nil
 	noteLayout()
 end
 
 function UI.SetNotificationsEnabled(on)
+	if state.notesOff == not on then
+		return -- unchanged (called on every settings change)
+	end
 	state.notesOff = not on
 	if not on then
+		-- drop waiting messages first (errors/warnings stay), then hide what is on screen
+		local keep = {}
+		for _, q in ipairs(notes.queue) do
+			if q.kind == "error" or q.kind == "warn" then
+				table.insert(keep, q)
+			end
+		end
+		notes.queue = keep
 		for _, it in ipairs(table.clone(notes.items)) do
-			noteRemove(it)
+			if it.kind ~= "error" and it.kind ~= "warn" then
+				noteRemove(it)
+			end
 		end
 	end
 end

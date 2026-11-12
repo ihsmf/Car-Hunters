@@ -248,7 +248,23 @@ function Tool.DetectWheels(car)
 	if #clusters >= 3 then
 		return "named", #clusters
 	end
-	return "baked", 0
+	-- unnamed wheel meshes: disc-shaped visible parts (two equal sides, one thin) in the lower half of the car
+	local cf, size = car:GetBoundingBox()
+	local bottom = cf.Position.Y - size.Y / 2
+	local discs = 0
+	for _, d in ipairs(car:GetDescendants()) do
+		if d:IsA("BasePart") and d.Transparency < 0.99 then
+			local x, y, z = d.Size.X, d.Size.Y, d.Size.Z
+			local a, b, c = math.max(x, y, z), math.min(x, y, z), x + y + z - math.max(x, y, z) - math.min(x, y, z)
+			if a >= 1.2 and a <= 6 and c / a > 0.9 and b / a < 0.6 and d.Position.Y < bottom + size.Y * 0.5 then
+				discs = discs + 1
+			end
+		end
+	end
+	if discs >= 4 then
+		return "mesh", discs
+	end
+	return "baked", 0 -- one-piece body mesh (wheels modelled into it)
 end
 
 ---------------------------------------------------------------- wheels (see Shared/WheelKit.lua)
@@ -287,7 +303,7 @@ function Tool.Install(carId, assetId, yaw)
 	-- wheels kept in a sibling model (outside the seat's model) belong to the car too
 	if holder ~= car then
 		for _, o in ipairs(holder:GetChildren()) do
-			if o ~= car and o.Name == "Wheels" then
+			if o ~= car and (o.Name == "Wheels" or wheelName(o.Name)) then
 				o.Parent = car
 			end
 		end
@@ -305,6 +321,10 @@ function Tool.Install(carId, assetId, yaw)
 	end
 	-- only the model's own wheels: nothing is guessed or added (that made duplicates and wrong sizes)
 	local wheelSource, wheelCount = Tool.DetectWheels(car)
+	if wheelSource == "baked" then
+		-- the model is drawn without separate wheel parts: fine for one-piece meshes, but say so in Output
+		warn(string.format("[CarStore] %s: asset %s has no separate wheel parts (one-piece mesh) - check it with CarModelTool.Preview()", carId, tostring(assetId)))
+	end
 	if wheelSource == "achassis" and wheelCount < 4 then
 		holder:Destroy()
 		warn(string.format("[CarStore] %s: asset %s rejected (only %d of 4 wheels)", carId, tostring(assetId), wheelCount))
