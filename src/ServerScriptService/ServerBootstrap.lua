@@ -104,6 +104,7 @@ Net.Get("PlaceCar").OnServerEvent:Connect(function(p, uid, slot) S.Cars.Place(p,
 Net.Get("RemoveCar").OnServerEvent:Connect(function(p, uid) S.Cars.Remove(p, uid) end)
 Net.Get("UpgradeCar").OnServerEvent:Connect(function(p, uid, lvl) S.Upgrade.UpgradeCar(p, uid, lvl) end)
 Net.Get("BuySlot").OnServerEvent:Connect(function(p, n) S.Upgrade.BuySlot(p, n) end)
+Net.Get("BuyFloor").OnServerEvent:Connect(function(p, n) S.Upgrade.BuyFloor(p, n) end)
 Net.Get("UnlockZone").OnServerEvent:Connect(function(p, z) S.Zone.Unlock(p, z) end)
 Net.Get("SellCar").OnServerEvent:Connect(function(p, uid) S.Cars.Sell(p, uid) end)
 Net.Get("AutoPark").OnServerEvent:Connect(function(p) S.Cars.AutoPark(p) end)

@@ -21,6 +21,7 @@ local SpeedLanes = require(Client:WaitForChild("SpeedLanes"))
 local UIExtra = require(Client:WaitForChild("UIExtra"))
 local Markers = require(Client:WaitForChild("Markers"))
 local ClientFx = require(Client:WaitForChild("ClientFx"))
+local GaragePrompts = require(Client:WaitForChild("GaragePrompts"))
 
 local player = Players.LocalPlayer
 Strings.SetLocale(player.LocaleId)
@@ -31,6 +32,7 @@ local actions = {
 	Remove = function(uid) Net.Get("RemoveCar"):FireServer(uid) end,
 	Upgrade = function(uid, level) Net.Get("UpgradeCar"):FireServer(uid, level) end,
 	BuySlot = function(count) Net.Get("BuySlot"):FireServer(count) end,
+	BuyFloor = function(floors) Net.Get("BuyFloor"):FireServer(floors) end,
 	Unlock = function(zoneId) Net.Get("UnlockZone"):FireServer(zoneId) end,
 	Sell = function(uid) Net.Get("SellCar"):FireServer(uid) end,
 	AutoPark = function() Net.Get("AutoPark"):FireServer() end,
@@ -57,6 +59,7 @@ end)
 UIExtra.Init(UI)
 ClientFx.Init(UI)
 Markers.Start(UI.Kit(), UIExtra)
+GaragePrompts.Start(UI.Kit(), CineFx)
 UI.Refresh()
 
 Net.Get("HotDrop").OnClientEvent:Connect(function(info) UIExtra.OnHotDrop(info) end)

@@ -16,7 +16,7 @@ local DataService = {}
 local S
 
 local STORE_NAME = "CarHunters_Profiles_v1"
-local SCHEMA_VERSION = 3
+local SCHEMA_VERSION = 4
 local LOCK_TIMEOUT = 120
 local SERVER_ID = (game.JobId ~= "" and game.JobId) or ("studio-" .. HttpService:GenerateGUID(false))
 
@@ -30,6 +30,7 @@ local function newProfile(isNew)
 		parts = { bolts = 0, tire = 0, engine = 0, turbo = 0, core = 0 },
 		unlockedZones = { city = true },
 		garageSlotCount = EconomyConfig.StartSlots,
+		floors = 1,
 		cars = {},
 		stats = { throws = 0, upgrades = 0, deaths = 0, sold = 0 },
 		discovered = {},
@@ -77,6 +78,9 @@ local function sanitize(raw)
 	p.unlockedZones.city = true
 	local slots = toCount(raw.garageSlotCount, EconomyConfig.MaxSlots)
 	p.garageSlotCount = Util.Clamp(slots, EconomyConfig.StartSlots, EconomyConfig.MaxSlots)
+	-- v4: multi-storey garage, 6 bays per floor (old profiles get the floors their bays need)
+	local floors = toCount(raw.floors, EconomyConfig.MaxFloors)
+	p.floors = Util.Clamp(math.max(floors, math.ceil(p.garageSlotCount / 6)), 1, EconomyConfig.MaxFloors)
 
 	local seenUid, seenSlot = {}, {}
 	if type(raw.cars) == "table" then
@@ -393,6 +397,7 @@ function DataService.BuildState(s)
 		carryCap = S.Shop.CarryCap(s),
 		zones = Util.CopyTable(d.unlockedZones),
 		slots = d.garageSlotCount,
+		floors = d.floors,
 		cars = cars,
 		stats = Util.CopyTable(d.stats),
 		baseIndex = s.baseIndex,

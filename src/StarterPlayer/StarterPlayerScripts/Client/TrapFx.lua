@@ -282,9 +282,21 @@ function TrapFx.Play(res, baseIndex, onDone)
 			local pts = {
 				Vector3.new(padPos.X, y, padPos.Z),
 				bcf:PointToWorldSpace(Vector3.new(BaseLayout.LaneX, y, BaseLayout.TrapLocal.Z)),
-				bcf:PointToWorldSpace(Vector3.new(BaseLayout.LaneX, y, sl.Z)),
-				bcf:PointToWorldSpace(Vector3.new(sl.X, y, sl.Z)),
 			}
+			if sl.Y > 0 then
+				-- upper level: drive into the lift, rise, roll onto the deck and along it to the bay
+				local el = BaseLayout.ElevatorLocal
+				local yUp = y + sl.Y
+				for _, p in ipairs({
+					Vector3.new(BaseLayout.LaneX, y, el.Z), Vector3.new(el.X, y, el.Z), Vector3.new(el.X, yUp, el.Z),
+					Vector3.new(-15, yUp, el.Z), Vector3.new(-15, yUp, sl.Z), Vector3.new(sl.X, yUp, sl.Z),
+				}) do
+					table.insert(pts, bcf:PointToWorldSpace(p))
+				end
+			else
+				table.insert(pts, bcf:PointToWorldSpace(Vector3.new(BaseLayout.LaneX, y, sl.Z)))
+				table.insert(pts, bcf:PointToWorldSpace(Vector3.new(sl.X, y, sl.Z)))
+			end
 			local total = 0
 			for i = 2, #pts do
 				total = total + (pts[i] - pts[i - 1]).Magnitude
@@ -299,7 +311,12 @@ function TrapFx.Play(res, baseIndex, onDone)
 					local seg = (pts[i] - pts[i - 1]).Magnitude
 					if dist <= acc + seg or i == #pts then
 						local pos = pts[i - 1]:Lerp(pts[i], math.clamp((dist - acc) / math.max(seg, 1e-3), 0, 1))
-						ghost.PrimaryPart.CFrame = faceCF(pos, pts[i] - pts[i - 1])
+						local dir = pts[i] - pts[i - 1]
+						if math.abs(dir.X) + math.abs(dir.Z) < 0.01 then
+							ghost.PrimaryPart.CFrame = ghost.PrimaryPart.CFrame - ghost.PrimaryPart.Position + pos
+						else
+							ghost.PrimaryPart.CFrame = faceCF(pos, dir)
+						end
 						camTarget = CFrame.lookAt(pos + side * 16 + Vector3.new(0, 10, 0) + front * 10, pos + Vector3.new(0, 2, 0))
 						break
 					end

@@ -87,6 +87,10 @@ function Upgrade.BuySlot(player, expectedCount)
 	if not cost or nextSlot > EconomyConfig.MaxSlots then
 		return
 	end
+	if nextSlot > d.floors * 6 then
+		S.Data.Notify(player, "needFloor", nil, "warn")
+		return
+	end
 	if d.money < cost then
 		S.Data.Notify(player, "noMoney", nil, "error")
 		return
@@ -94,6 +98,43 @@ function Upgrade.BuySlot(player, expectedCount)
 	d.money = d.money - cost
 	d.garageSlotCount = nextSlot
 	S.Data.Notify(player, "slotBought", { nextSlot }, "good")
+	S.Base.RefreshAll(player)
+	S.Data.Push(player)
+end
+
+function Upgrade.BuyFloor(player, expectedFloors)
+	if not Util.IsInt(expectedFloors) then
+		return
+	end
+	local s = S.Data.Get(player)
+	if not s or not s.ready or not S.Data.RateLimit(player, "floor", 0.5) then
+		return
+	end
+	if not S.Base.IsNearOwnBase(player) then
+		S.Data.Notify(player, "tooFar", nil, "warn")
+		return
+	end
+	local d = s.data
+	if d.floors ~= expectedFloors then
+		S.Data.Push(player)
+		return
+	end
+	local nextFloor = d.floors + 1
+	local cost = EconomyConfig.FloorCosts[nextFloor]
+	if not cost then
+		return
+	end
+	if d.garageSlotCount < d.floors * 6 then
+		S.Data.Notify(player, "fillFloor", nil, "warn")
+		return
+	end
+	if d.money < cost then
+		S.Data.Notify(player, "noMoney", nil, "error")
+		return
+	end
+	d.money = d.money - cost
+	d.floors = nextFloor
+	S.Data.Notify(player, "floorBuilt", { nextFloor }, "good")
 	S.Base.RefreshAll(player)
 	S.Data.Push(player)
 end

@@ -78,7 +78,7 @@ function Donate.Grant(player, key)
 		end
 	elseif item.slots then
 		local before = d.garageSlotCount
-		d.garageSlotCount = math.min(EconomyConfig.MaxSlots, before + item.slots)
+		d.garageSlotCount = math.min(d.floors * 6, before + item.slots)
 		local missing = item.slots - (d.garageSlotCount - before)
 		if missing > 0 then -- already maxed: pay it out instead
 			d.money = math.min(d.money + missing * math.max(50000, (s.income or 0) * 600), EconomyConfig.MaxMoney)

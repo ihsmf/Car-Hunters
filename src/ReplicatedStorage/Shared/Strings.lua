@@ -46,6 +46,7 @@ local en = {
 	n_needPrev = "Unlock the previous district first.", n_needValue = "Collection value too low.",
 	n_full = "Server is full.", n_moved = "Car moved.", n_removed = "Car unparked.",
 	n_sold = "Sold %s for $%s", n_autoParked = "Best cars parked!",
+	n_needFloor = "Build the next floor first (at the lift).", n_fillFloor = "Buy all bays on this floor first.", n_floorBuilt = "Floor %d built!",
 	n_perkBought = "%s upgraded to Lv %d!", n_donateThanks = "Thank you! %s is yours!", n_donateOff = "This item is not on sale yet.",
 	n_hotDropMine = "HOT DROP! +%d %s - now run home!", n_contractDone = "Contract done! +$%s",
 	n_banked2 = "Banked %d parts (+%d combo bonus, x%s) +$%s",

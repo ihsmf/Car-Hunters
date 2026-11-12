@@ -25,6 +25,7 @@ Net.Names = {
 	"HotDrop",
 	"BankFx",
 	"PickupFx",
+	"BuyFloor",
 }
 
 function Net.Folder()

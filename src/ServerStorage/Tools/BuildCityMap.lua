@@ -10,6 +10,11 @@ local BaseLayout = require(Shared:WaitForChild("BaseLayout"))
 local TrafficMath = require(Shared:WaitForChild("TrafficMath"))
 local VehicleFactory = require(Shared:WaitForChild("VehicleFactory"))
 local Prefabs = require(script.Parent:WaitForChild("MapPrefabs"))
+local GarageKit = require(Shared:WaitForChild("GarageKit"))
+local GarageStyle = GarageKit.Style
+local function GarageBay(slotsFolder, model, bcf, n, topY)
+	return GarageKit.Bay(slotsFolder, model, bcf, n, topY)
+end
 
 local C = Color3.fromRGB
 local M = Enum.Material
@@ -137,6 +142,8 @@ local function buildWorld(ctx)
 	Label(fin, Enum.NormalId.Front, "END OF THE CITY", C(255, 210, 60))
 end
 
+-- Garage v2: clean showroom. Ground floor is static; floors 2-4 are added by BaseService (GarageFloors).
+-- Rule against texture flicker: no two visible faces share a plane; overlays sit >= 0.02 above what they cover.
 local function buildBase(ctx, i)
 	local f = ctx.f
 	local bcf = BaseLayout.GetBaseCFrame(i)
@@ -146,129 +153,93 @@ local function buildBase(ctx, i)
 	local function mk(name, size, off, color, mat, o)
 		return Part(model, name, size, bcf * CFrame.new(off), color, mat, o)
 	end
-	local CONCRETE, ASPHALT, STEEL, DARKSTEEL = C(176, 178, 182), C(78, 82, 90), C(150, 156, 166), C(52, 56, 64)
-	local BRICK, WHITE, HAZARD = C(168, 78, 62), C(242, 242, 238), C(255, 196, 40)
+	local G = GarageStyle
 	local PX, PZ = MapConfig.BasePlot.x / 2, MapConfig.BasePlot.z / 2
+	local EDGE = BaseLayout.DeckEdgeX
+	local deckW = EDGE + PX -- deck depth along X
+	local deckCX = (EDGE - PX) / 2
+	local H = BaseLayout.FloorHeight
 
-	-- floor and markings
-	mk("Floor", Vector3.new(PX * 2, 1, PZ * 2), Vector3.new(0, 0, 0), CONCRETE, M.Concrete)
-	mk("Apron", Vector3.new(14, 1.02, PZ * 2), Vector3.new(PX - 7, 0.005, 0), C(196, 198, 200), M.Concrete)
-	for z = -PZ + 4, PZ - 4, 8 do
-		mk("LaneDash", Vector3.new(0.5, 0.04, 4), Vector3.new(BaseLayout.LaneX, 0.53, z), HAZARD, M.SmoothPlastic, { collide = false, cast = false })
-	end
+	-- floor: polished slab + darker showroom inlay under the deck
+	mk("Floor", Vector3.new(PX * 2, 1, PZ * 2), Vector3.new(0, 0, 0), G.floor, M.SmoothPlastic, { refl = 0.04 })
+	mk("Inlay", Vector3.new(deckW, 0.1, PZ * 2), Vector3.new(deckCX, 0.55, 0), G.inlay, M.SmoothPlastic)
+	mk("DriveLine", Vector3.new(0.4, 0.06, PZ * 2 - 6), Vector3.new(BaseLayout.LaneX, 0.53, 0), G.line, M.SmoothPlastic, { collide = false, cast = false })
+
 	local slots = Instance.new("Folder")
 	slots.Name = "Slots"
 	slots.Parent = model
-	for n = 1, BaseLayout.SlotCount do
-		local p = BaseLayout.SlotLocal(n)
-		local pad = Part(slots, "Slot" .. n, Vector3.new(22, 0.06, 12.4), bcf * CFrame.new(p.X, 0.53, p.Z), ASPHALT, M.SmoothPlastic, { collide = false, cast = false })
-		local num = Label(pad, Enum.NormalId.Top, tostring(n), WHITE)
-		num.TextTransparency = 0.35
-		num.Rotation = 90
-		for _, s in ipairs({ -1, 1 }) do
-			mk("SlotLine", Vector3.new(22, 0.04, 0.35), Vector3.new(p.X, 0.58, p.Z + s * 6.4), WHITE, M.SmoothPlastic, { collide = false, cast = false })
-		end
-		mk("WheelStop", Vector3.new(0.7, 0.45, 5), Vector3.new(p.X - 10, 0.72, p.Z), HAZARD, M.SmoothPlastic, { collide = false })
+	for n = 1, BaseLayout.SlotsPerFloor do
+		GarageBay(slots, model, bcf, n, 0.6)
 	end
 
-	-- building: brick back wall with roller doors, concrete side walls, corrugated roof on steel columns
-	mk("BackWall", Vector3.new(2, 18, PZ * 2), Vector3.new(-PX + 1, 9, 0), BRICK, M.Brick)
-	mk("BackWallCap", Vector3.new(2.6, 1, PZ * 2 + 0.6), Vector3.new(-PX + 1, 18.5, 0), DARKSTEEL, M.Metal)
-	for _, z in ipairs({ -30, 0, 30 }) do
-		mk("RollerDoor", Vector3.new(0.4, 10, 16), Vector3.new(-PX + 2.2, 5.2, z), C(204, 208, 214), M.DiamondPlate)
-		for y = 1, 9, 1.4 do
-			mk("DoorRib", Vector3.new(0.2, 0.18, 16), Vector3.new(-PX + 2.45, y, z), C(160, 164, 172), M.Metal, { collide = false, cast = false })
-		end
-		mk("DoorFrame", Vector3.new(0.6, 1, 17.2), Vector3.new(-PX + 2.3, 10.5, z), DARKSTEEL, M.Metal)
-	end
+	-- shell: charcoal back wall, side fins, white roof deck with black fascia (owner sign lives on it)
+	-- walls stop under the roof slab so no faces are shared with it
+	mk("BackWall", Vector3.new(2, H - 1, PZ * 2), Vector3.new(-PX + 1, H / 2, 0), G.wall, M.SmoothPlastic)
 	for _, s in ipairs({ -1, 1 }) do
-		mk("SideWall", Vector3.new(58, 8, 1.6), Vector3.new(-PX + 29, 4, s * (PZ - 0.8)), C(200, 200, 196), M.Concrete)
-		mk("SideWallStripe", Vector3.new(58, 0.8, 1.7), Vector3.new(-PX + 29, 7.6, s * (PZ - 0.8)), C(40, 120, 200), M.SmoothPlastic)
-		for x = 2, PX - 4, 8 do
-			mk("Bollard", Vector3.new(0.9, 2.6, 0.9), Vector3.new(x, 1.8, s * (PZ - 0.8)), HAZARD, M.SmoothPlastic)
-		end
+		mk("SideFin", Vector3.new(deckW - 2, H - 1, 0.8), Vector3.new(deckCX + 1, H / 2, s * (PZ - 0.6)), G.wall, M.SmoothPlastic)
 	end
-	local roofX0, roofX1 = -PX, 6
-	local rw = roofX1 - roofX0
-	mk("Roof", Vector3.new(rw, 0.6, PZ * 2 + 2), Vector3.new((roofX0 + roofX1) / 2, 16.4, 0), C(198, 202, 208), M.Metal)
-	for z = -PZ, PZ, 4 do
-		mk("RoofRib", Vector3.new(rw, 0.4, 0.5), Vector3.new((roofX0 + roofX1) / 2, 16.9, z), C(170, 175, 184), M.Metal, { collide = false, cast = false })
-	end
-	mk("RoofFascia", Vector3.new(1, 2.4, PZ * 2 + 2), Vector3.new(roofX1, 15.8, 0), C(40, 120, 200), M.SmoothPlastic)
-	for _, z in ipairs({ -PZ + 1.5, -15, 15, PZ - 1.5 }) do
-		mk("Column", Vector3.new(1.4, 15.8, 1.4), Vector3.new(roofX1 - 0.8, 7.9, z), STEEL, M.Metal)
-		mk("ColumnBase", Vector3.new(2.2, 0.8, 2.2), Vector3.new(roofX1 - 0.8, 0.9, z), DARKSTEEL, M.Metal)
+	mk("Roof", Vector3.new(deckW, 1, PZ * 2), Vector3.new(deckCX, H, 0), G.deck, M.SmoothPlastic)
+	local fascia = mk("OwnerSign", Vector3.new(1.2, 2.4, PZ * 2 + 0.4), Vector3.new(EDGE + 0.4, H + 0.2, 0), G.frame, M.SmoothPlastic)
+	Label(fascia, Enum.NormalId.Right, "FREE GARAGE", C(255, 255, 255))
+	local screen = mk("IncomeScreen", Vector3.new(0.4, 2, 24), Vector3.new(EDGE + 1.2, H - 2.3, 0), G.frame, M.SmoothPlastic)
+	Label(screen, Enum.NormalId.Right, "", C(110, 230, 140))
+	for _, z in ipairs({ -PZ + 1, -15.5, 15.5, PZ - 1 }) do
+		mk("Column", Vector3.new(1.2, H - 1, 1.2), Vector3.new(EDGE - 0.8, H / 2, z), G.frame, M.Metal)
 	end
 	for _, z in ipairs({ -30, 0, 30 }) do
-		local lamp = mk("CeilingLight", Vector3.new(14, 0.3, 1.2), Vector3.new(-22, 15.9, z), C(255, 246, 225), M.Neon, { collide = false, cast = false, light = true })
-		local pl = Instance.new("SurfaceLight")
-		pl.Face = Enum.NormalId.Bottom
-		pl.Range = 22
-		pl.Brightness = 1.2
-		pl.Angle = 110
-		pl.Color = C(255, 240, 215)
-		pl.Parent = lamp
+		local lamp = mk("CeilingLight", Vector3.new(12, 0.12, 1.6), Vector3.new(-31, H - 0.6, z), C(255, 244, 222), M.Neon, { collide = false, cast = false, light = true })
+		local sl = Instance.new("SurfaceLight")
+		sl.Face = Enum.NormalId.Bottom
+		sl.Range = 18
+		sl.Brightness = 1.1
+		sl.Angle = 100
+		sl.Color = C(255, 238, 210)
+		sl.Parent = lamp
 	end
 
-	-- owner sign + income board on the back wall (BaseService writes into their SurfaceGuis)
-	local sign = mk("OwnerSign", Vector3.new(1, 5, 40), Vector3.new(-PX + 2.4, 13.2, 0), C(26, 30, 38), M.SmoothPlastic)
-	Label(sign, Enum.NormalId.Right, "FREE GARAGE", C(255, 255, 255))
-	mk("OwnerSignFrame", Vector3.new(0.8, 5.8, 40.8), Vector3.new(-PX + 2.2, 13.2, 0), HAZARD, M.SmoothPlastic)
-	local screen = mk("IncomeScreen", Vector3.new(1, 3, 22), Vector3.new(-PX + 2.4, 19.6, 0), C(16, 18, 22), M.SmoothPlastic)
-	Label(screen, Enum.NormalId.Right, "", C(110, 230, 140))
-
-	-- the trap: a car lift with a magnetic crane
-	local t = BaseLayout.TrapLocal
-	mk("TrapPad", Vector3.new(18, 0.7, 18), Vector3.new(t.X, 0.85, t.Z), C(96, 100, 108), M.DiamondPlate)
-	for k = 0, 7 do
-		for _, s in ipairs({ -1, 1 }) do
-			local c = (k % 2 == 0) and HAZARD or C(28, 28, 30)
-			mk("Hazard", Vector3.new(2.25, 0.06, 0.8), Vector3.new(t.X - 7.9 + k * 2.25, 1.23, t.Z + s * 8.6), c, M.SmoothPlastic, { collide = false, cast = false })
-			mk("Hazard", Vector3.new(0.8, 0.06, 2.25), Vector3.new(t.X + s * 8.6, 1.23, t.Z - 7.9 + k * 2.25), c, M.SmoothPlastic, { collide = false, cast = false })
+	-- lift shaft (ground stage) to the upper floors
+	local el = BaseLayout.ElevatorLocal
+	mk("ElevatorPad", Vector3.new(8, 0.4, 8), Vector3.new(el.X, 0.7, el.Z), G.frame, M.Metal)
+	mk("ElevatorStripe", Vector3.new(7, 0.06, 0.4), Vector3.new(el.X, 0.95, el.Z - 3.4), G.accent, M.SmoothPlastic, { collide = false, cast = false })
+	for _, sx in ipairs({ -1, 1 }) do
+		for _, sz in ipairs({ -1, 1 }) do
+			mk("ElevatorPost", Vector3.new(0.6, H, 0.6), Vector3.new(el.X + sx * 4.3, H / 2 + 0.5, el.Z + sz * 4.3), G.frame, M.Metal)
 		end
+	end
+
+	-- the trap: a clean steel car lift with a magnetic crane
+	local t = BaseLayout.TrapLocal
+	mk("TrapPad", Vector3.new(18, 0.8, 18), Vector3.new(t.X, 0.9, t.Z), C(74, 78, 86), M.Metal)
+	for _, s in ipairs({ -1, 1 }) do
+		mk("TrapEdge", Vector3.new(17, 0.06, 0.5), Vector3.new(t.X, 1.36, t.Z + s * 8.4), G.accent, M.SmoothPlastic, { collide = false, cast = false })
 	end
 	for _, sx in ipairs({ -1, 1 }) do
 		for _, sz in ipairs({ -1, 1 }) do
-			mk("LiftPost", Vector3.new(1.4, 14, 1.4), Vector3.new(t.X + sx * 9.4, 7, t.Z + sz * 9.4), C(220, 70, 50), M.Metal)
+			mk("LiftPost", Vector3.new(1.2, 13, 1.2), Vector3.new(t.X + sx * 9.6, 7, t.Z + sz * 9.6), G.accent2, M.Metal)
 		end
-		mk("LiftBeam", Vector3.new(1.2, 1.2, 20.2), Vector3.new(t.X + sx * 9.4, 14.2, t.Z), C(220, 70, 50), M.Metal)
+		mk("LiftBeam", Vector3.new(1, 1, 20.4), Vector3.new(t.X + sx * 9.6, 14, t.Z), G.accent2, M.Metal)
 	end
-	mk("CraneBeam", Vector3.new(20.2, 1.4, 1.4), Vector3.new(t.X, 14.6, t.Z), DARKSTEEL, M.Metal)
-	mk("CraneCable", Vector3.new(0.25, 3.6, 0.25), Vector3.new(t.X, 12.2, t.Z), C(30, 30, 30), M.Metal, { collide = false })
-	local magnet = mk("TrapMagnet", Vector3.new(1.4, 6, 6), Vector3.new(t.X, 9.8, t.Z), C(70, 74, 82), M.Metal, { shape = CYL, collide = false })
+	mk("CraneBeam", Vector3.new(20.4, 1.2, 1.2), Vector3.new(t.X, 14.2, t.Z), G.frame, M.Metal)
+	mk("CraneCable", Vector3.new(0.2, 3.4, 0.2), Vector3.new(t.X, 12, t.Z), G.frame, M.Metal, { collide = false })
+	local magnet = mk("TrapMagnet", Vector3.new(1.2, 6, 6), Vector3.new(t.X, 9.8, t.Z), C(64, 68, 76), M.Metal, { shape = CYL, collide = false })
 	magnet.CFrame = bcf * CFrame.new(t.X, 9.8, t.Z) * UPRIGHT
-	local trapSign = mk("TrapSign", Vector3.new(0.5, 2.4, 12), Vector3.new(t.X + 9.6, 12.2, t.Z), C(26, 30, 38), M.SmoothPlastic)
-	Label(trapSign, Enum.NormalId.Right, "THROW PARTS HERE", HAZARD)
+	local trapSign = mk("TrapSign", Vector3.new(0.4, 2, 12), Vector3.new(t.X + 10.4, 12, t.Z), G.frame, M.SmoothPlastic)
+	Label(trapSign, Enum.NormalId.Right, "THROW PARTS HERE", G.accent)
 
-	-- vehicle entrance: roller door in a frame, new cars roll out of it
+	-- vehicle entrance
 	local pl = BaseLayout.PortalLocal
 	for _, s in ipairs({ -1, 1 }) do
-		mk("PortalPost", Vector3.new(2, 13, 2), Vector3.new(pl.X, 6.5, pl.Z + s * 9.5), BRICK, M.Brick)
+		mk("PortalPost", Vector3.new(1.6, 12, 1.6), Vector3.new(pl.X, 6.5, pl.Z + s * 9.4), G.frame, M.Metal)
 	end
-	local header = mk("PortalHeader", Vector3.new(2.4, 3, 21), Vector3.new(pl.X, 14.2, pl.Z), DARKSTEEL, M.Metal)
-	Label(header, Enum.NormalId.Right, "VEHICLE IN", WHITE)
-	mk("PortalDoor", Vector3.new(0.4, 12, 17), Vector3.new(pl.X - 0.6, 6.6, pl.Z), C(204, 208, 214), M.DiamondPlate, { collide = false })
+	local header = mk("PortalHeader", Vector3.new(2, 2.4, 20.4), Vector3.new(pl.X, 13.6, pl.Z), G.frame, M.Metal)
+	Label(header, Enum.NormalId.Right, "VEHICLE IN", C(255, 255, 255))
+	mk("PortalDoor", Vector3.new(0.4, 11.4, 17.2), Vector3.new(pl.X - 0.4, 6.4, pl.Z), G.door, M.SmoothPlastic, { collide = false })
 
-	-- terminal (opens the garage menu) = tool chest with a screen
+	-- garage terminal (menu)
 	local tm = BaseLayout.TerminalLocal
-	mk("Terminal", Vector3.new(4, 5, 7), Vector3.new(tm.X, 3, tm.Z), C(200, 40, 40), M.SmoothPlastic)
-	for d = 0, 3 do
-		mk("Drawer", Vector3.new(4.1, 0.15, 6.4), Vector3.new(tm.X, 1.4 + d * 1.1, tm.Z), C(150, 30, 30), M.SmoothPlastic, { collide = false, cast = false })
-	end
-	local scr = mk("TerminalScreen", Vector3.new(0.4, 3, 5), Vector3.new(tm.X, 7.2, tm.Z), C(16, 18, 22), M.SmoothPlastic)
-	Label(scr, Enum.NormalId.Right, "GARAGE", WHITE)
-
-	-- workshop clutter along the back wall
-	local rng = ctx.rng
-	Prefabs.TireStack(model, bcf:PointToWorldSpace(Vector3.new(-PX + 5, 0.5, -PZ + 5)), rng)
-	Prefabs.TireStack(model, bcf:PointToWorldSpace(Vector3.new(-PX + 5, 0.5, PZ - 5)), rng)
-	for k = 0, 2 do
-		local b = mk("Barrel", Vector3.new(3.4, 3, 3), Vector3.new(-PX + 4, 2.2, -PZ + 10 + k * 3.2), (k == 1) and C(40, 110, 190) or C(200, 60, 50), M.Metal, { shape = CYL })
-		b.CFrame = bcf * CFrame.new(-PX + 4, 2.2, -PZ + 10 + k * 3.2) * UPRIGHT
-	end
-	mk("Workbench", Vector3.new(4, 0.5, 9), Vector3.new(-PX + 4, 3.4, PZ - 14), C(150, 104, 64), M.Wood)
-	mk("WorkbenchLegs", Vector3.new(3.6, 3, 8.6), Vector3.new(-PX + 4, 1.6, PZ - 14), DARKSTEEL, M.Metal)
-	mk("Vise", Vector3.new(1.2, 1, 1.4), Vector3.new(-PX + 4, 4.1, PZ - 17), C(40, 90, 160), M.Metal)
+	mk("Terminal", Vector3.new(2.4, 4, 4), Vector3.new(tm.X, 2.5, tm.Z), G.frame, M.SmoothPlastic)
+	local scr = mk("TerminalScreen", Vector3.new(0.3, 2.4, 3.6), Vector3.new(tm.X + 1.36, 3.4, tm.Z), C(16, 18, 22), M.SmoothPlastic)
+	Label(scr, Enum.NormalId.Right, "GARAGE", G.accent)
 
 	local sp = Instance.new("SpawnLocation")
 	sp.Name = "Spawn"
@@ -285,6 +256,9 @@ local function buildBase(ctx, i)
 	local cars = Instance.new("Folder")
 	cars.Name = "Cars"
 	cars.Parent = model
+	local floors = Instance.new("Folder")
+	floors.Name = "Floors"
+	floors.Parent = model
 	Prefabs.Lamp(model, bcf:PointToWorldSpace(Vector3.new(PX - 1.5, 0.5, PZ - 3)), 1, C(255, 230, 180), math.pi)
 	Prefabs.Lamp(model, bcf:PointToWorldSpace(Vector3.new(PX - 1.5, 0.5, -PZ + 3)), 1, C(255, 230, 180), math.pi)
 	model.Parent = f.Bases

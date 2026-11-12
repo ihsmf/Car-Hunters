@@ -11,6 +11,7 @@ local VehicleFactory = require(Shared:WaitForChild("VehicleFactory"))
 local ExhaustFx = require(Shared:WaitForChild("ExhaustFx"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 local Util = require(Shared:WaitForChild("Util"))
+local GarageKit = require(Shared:WaitForChild("GarageKit"))
 
 local Base = {}
 local S
@@ -32,9 +33,12 @@ function Base.Start()
 		assert(m, "Base model missing: Base" .. i)
 		local b = { index = i, model = m, owner = nil, sig = {}, carModels = {}, pads = {} }
 		local slots = m:WaitForChild("Slots")
-		for n = 1, BaseLayout.SlotCount do
+		for n = 1, BaseLayout.SlotsPerFloor do
 			b.pads[n] = slots:WaitForChild("Slot" .. n)
 		end
+		b.floorModels = {}
+		b.floorsFolder = m:FindFirstChild("Floors") or Instance.new("Folder", m)
+		b.floorsFolder.Name = "Floors"
 		b.spawn = m:WaitForChild("Spawn")
 		b.sign = m:WaitForChild("OwnerSign"):FindFirstChildWhichIsA("SurfaceGui", true)
 		b.screen = m:WaitForChild("IncomeScreen"):FindFirstChildWhichIsA("SurfaceGui", true)
@@ -50,6 +54,9 @@ function Base.Start()
 end
 
 local function setPad(pad, state, rarityColor)
+	if not pad then
+		return
+	end
 	pad.Material = Enum.Material.SmoothPlastic
 	pad.Transparency = 0
 	if state == "locked" then
@@ -70,6 +77,26 @@ local function setLabel(gui, text)
 	end
 end
 
+-- builds/removes floors 2..n for the owner
+local function ensureFloors(b, floors, style)
+	for f = 2, BaseLayout.MaxFloors do
+		if f <= floors and not b.floorModels[f] then
+			local m, pads = GarageKit.BuildFloor(b.floorsFolder, BaseLayout.GetBaseCFrame(b.index), f, style)
+			b.floorModels[f] = m
+			for slot, pad in pairs(pads) do
+				b.pads[slot] = pad
+			end
+		elseif f > floors and b.floorModels[f] then
+			b.floorModels[f]:Destroy()
+			b.floorModels[f] = nil
+			for slot = (f - 1) * BaseLayout.SlotsPerFloor + 1, f * BaseLayout.SlotsPerFloor do
+				b.pads[slot] = nil
+			end
+		end
+	end
+end
+Base.EnsureFloors = ensureFloors
+
 function Base.SetFree(b)
 	b.owner = nil
 	for slot, model in pairs(b.carModels) do
@@ -77,7 +104,8 @@ function Base.SetFree(b)
 	end
 	b.carModels = {}
 	b.sig = {}
-	for _, pad in ipairs(b.pads) do
+	ensureFloors(b, 1)
+	for _, pad in pairs(b.pads) do
 		setPad(pad, "locked")
 	end
 	setLabel(b.sign, Strings.Tables.en.free_garage)
@@ -167,6 +195,7 @@ function Base.RefreshAll(player)
 		return
 	end
 	local d = s.data
+	ensureFloors(b, d.floors or 1)
 	local now = os.clock()
 	local bySlot = {}
 	for _, c in ipairs(d.cars) do
@@ -177,6 +206,9 @@ function Base.RefreshAll(player)
 	for slot = 1, BaseLayout.SlotCount do
 		local pad = b.pads[slot]
 		local car = bySlot[slot]
+		if not pad then
+			car = nil
+		end
 		local hidden = car and s.hidden[car.uid] and s.hidden[car.uid] > now
 		if slot > d.garageSlotCount then
 			setPad(pad, "locked")

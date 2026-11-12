@@ -3,7 +3,12 @@
 local BaseLayout = {}
 
 BaseLayout.FloorY = 0.5
-BaseLayout.SlotCount = 12
+BaseLayout.SlotCount = 24 -- 4 floors x 6 bays
+BaseLayout.SlotsPerFloor = 6
+BaseLayout.MaxFloors = 4
+BaseLayout.FloorHeight = 14
+BaseLayout.DeckEdgeX = -10 -- front edge of the upper decks (local X)
+BaseLayout.ElevatorLocal = Vector3.new(-3, 0, 38)
 BaseLayout.TrapLocal = Vector3.new(30, 0, -26)
 BaseLayout.PortalLocal = Vector3.new(52, 0, 20)
 BaseLayout.TerminalLocal = Vector3.new(30, 0, 40)
@@ -11,12 +16,19 @@ BaseLayout.SpawnLocal = Vector3.new(44, 0, 0)
 BaseLayout.BackWallX = -52
 BaseLayout.LaneX = 14
 
+function BaseLayout.FloorOf(slot)
+	return math.floor((slot - 1) / BaseLayout.SlotsPerFloor) + 1
+end
+
+-- one row of 6 bays per floor, cars face +X (towards the plaza)
 function BaseLayout.SlotLocal(slot)
-	local row = math.floor((slot - 1) / 6)
-	local col = (slot - 1) % 6
-	local x = (row == 0) and -35 or -8
-	local z = -37.5 + col * 15
-	return Vector3.new(x, 0, z)
+	local floor = BaseLayout.FloorOf(slot)
+	local col = (slot - 1) % BaseLayout.SlotsPerFloor
+	return Vector3.new(-31, (floor - 1) * BaseLayout.FloorHeight, -37.5 + col * 15)
+end
+
+function BaseLayout.FloorTopY(floor)
+	return BaseLayout.FloorY + (floor - 1) * BaseLayout.FloorHeight
 end
 
 function BaseLayout.GetBaseCFrame(index)
@@ -31,7 +43,7 @@ end
 
 function BaseLayout.SlotCFrame(index, slot)
 	local p = BaseLayout.SlotLocal(slot)
-	return BaseLayout.GetBaseCFrame(index) * CFrame.new(p.X, BaseLayout.FloorY, p.Z)
+	return BaseLayout.GetBaseCFrame(index) * CFrame.new(p.X, BaseLayout.FloorY + p.Y, p.Z)
 end
 
 return BaseLayout
@@ -264,13 +276,21 @@ EconomyConfig.DeathLossFraction = 1.0 -- one hit = whole run lost
 EconomyConfig.MaxCars = 200
 EconomyConfig.MaxMoney = 1e15
 EconomyConfig.StartSlots = 3
-EconomyConfig.MaxSlots = 12
+EconomyConfig.MaxSlots = 24
+EconomyConfig.MaxFloors = 4
 EconomyConfig.MaxPlayers = 8
 
-EconomyConfig.SlotCosts = {
-	[4] = 1500, [5] = 4000, [6] = 10000, [7] = 25000, [8] = 60000,
-	[9] = 150000, [10] = 350000, [11] = 800000, [12] = 2000000,
-}
+-- bay prices: each floor has its own base price, bays inside a floor get pricier (x1.6)
+EconomyConfig.FloorCosts = { [2] = 250000, [3] = 5000000, [4] = 80000000 }
+EconomyConfig.SlotCosts = {}
+do
+	local floorBase = { 1500, 30000, 600000, 10000000 }
+	for slot = 4, 24 do
+		local floor = math.floor((slot - 1) / 6) + 1
+		local i = (slot - 1) % 6 - ((floor == 1) and 3 or 0)
+		EconomyConfig.SlotCosts[slot] = math.floor(floorBase[floor] * 1.6 ^ i / 50 + 0.5) * 50
+	end
+end
 
 EconomyConfig.ZoneUnlock = {
 	highway = { cost = 16000, minValue = 7000 },
@@ -564,6 +584,7 @@ Net.Names = {
 	"HotDrop",
 	"BankFx",
 	"PickupFx",
+	"BuyFloor",
 }
 
 function Net.Folder()
@@ -812,6 +833,7 @@ local en = {
 	n_needPrev = "Unlock the previous district first.", n_needValue = "Collection value too low.",
 	n_full = "Server is full.", n_moved = "Car moved.", n_removed = "Car unparked.",
 	n_sold = "Sold %s for $%s", n_autoParked = "Best cars parked!",
+	n_needFloor = "Build the next floor first (at the lift).", n_fillFloor = "Buy all bays on this floor first.", n_floorBuilt = "Floor %d built!",
 	n_perkBought = "%s upgraded to Lv %d!", n_donateThanks = "Thank you! %s is yours!", n_donateOff = "This item is not on sale yet.",
 	n_hotDropMine = "HOT DROP! +%d %s - now run home!", n_contractDone = "Contract done! +$%s",
 	n_banked2 = "Banked %d parts (+%d combo bonus, x%s) +$%s",
@@ -1418,7 +1440,7 @@ local Kinds = {
 }
 
 return Kinds
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX452C522F0ACA497AAB36EE0B8FA08B77"><Properties><string name="Name">DonateConfig</string><ProtectedString name="Source">-- Golden Magnate stall. Prices in Robux. Grants are performed on the server (DonateService).
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXD538F495EA6C47A78E9DB93D956E9DF4"><Properties><string name="Name">DonateConfig</string><ProtectedString name="Source">-- Golden Magnate stall. Prices in Robux. Grants are performed on the server (DonateService).
 local DonateConfig = {}
 
 DonateConfig.Products = {
@@ -1456,7 +1478,7 @@ for _, list in ipairs({ DonateConfig.Products, DonateConfig.Passes }) do
 end
 
 return DonateConfig
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7FF2DD25B45E49BCA3E5956AB8F5E72A"><Properties><string name="Name">ExhaustFx</string><ProtectedString name="Source">-- Rarity-based exhaust for cars parked in a garage. Rarer = denser, brighter, flashier.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX602B0289BD02489DBC3B4556FC89273A"><Properties><string name="Name">ExhaustFx</string><ProtectedString name="Source">-- Rarity-based exhaust for cars parked in a garage. Rarer = denser, brighter, flashier.
 local CollectionService = game:GetService("CollectionService")
 local Kinds = require(script.Parent:WaitForChild("VehicleKinds"))
 
@@ -1542,7 +1564,163 @@ function ExhaustFx.Attach(model, def, rarityIndex)
 end
 
 return ExhaustFx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXA8614C7965A9440CA1C652B1DF060BA1"><Properties><string name="Name">ProductIds</string><ProtectedString name="Source">-- Filled by tools/roblox_open_cloud.py (Open Cloud). 0 = not created yet: in Studio the purchase is simulated.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXB298E8F4295A4F78BA998F0A97A1B50D"><Properties><string name="Name">GarageKit</string><ProtectedString name="Source">-- Shared garage pieces: colour style, parking bay, upper floors. Used by BuildCityMap (ground floor)
+-- and BaseService (floors 2-4 are built per owner). No two visible faces share a plane.
+local BaseLayout = require(script.Parent:WaitForChild("BaseLayout"))
+local MapConfig = require(script.Parent:WaitForChild("MapConfig"))
+
+local C = Color3.fromRGB
+local M = Enum.Material
+local GarageKit = {}
+
+GarageKit.Style = {
+	floor = C(212, 214, 218), inlay = C(60, 63, 70), line = C(242, 242, 240), wall = C(38, 40, 46),
+	deck = C(238, 238, 236), frame = C(28, 30, 34), accent = C(255, 196, 40), accent2 = C(214, 52, 44),
+	door = C(200, 204, 210), bay = C(80, 84, 92),
+}
+
+-- part names -&gt; style key, so a garage skin can recolour a whole garage in one pass
+GarageKit.Paint = {
+	Floor = "floor", Inlay = "inlay", DriveLine = "line", BayLine = "line", BackWall = "wall", SideFin = "wall",
+	Roof = "deck", OwnerSign = "frame", FloorSign = "frame", Column = "frame", ElevatorPad = "frame", ElevatorPost = "frame",
+	ElevatorStripe = "accent", TrapEdge = "accent", LiftPost = "accent2", LiftBeam = "accent2", Rail = "frame", RailPost = "frame",
+	PortalPost = "frame", PortalHeader = "frame", PortalDoor = "door", Terminal = "frame", WheelStop = "accent",
+}
+
+local function part(parent, name, size, cf, color, mat, o)
+	o = o or {}
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Size = size
+	p.CFrame = cf
+	p.Color = color
+	p.Material = mat or M.SmoothPlastic
+	p.Anchored = true
+	p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+	if o.collide == false then
+		p.CanCollide, p.CanQuery, p.CanTouch = false, false, false
+	end
+	if o.cast == false then
+		p.CastShadow = false
+	end
+	if o.refl then
+		p.Reflectance = o.refl
+	end
+	p.Parent = parent
+	return p
+end
+GarageKit.Part = part
+
+function GarageKit.Label(p, face, text, color)
+	local gui = Instance.new("SurfaceGui")
+	gui.Name = "Gui"
+	gui.Face = face
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 24
+	gui.LightInfluence = 0
+	gui.Parent = p
+	local l = Instance.new("TextLabel")
+	l.Name = "Label"
+	l.Size = UDim2.fromScale(1, 1)
+	l.BackgroundTransparency = 1
+	l.Font = Enum.Font.LuckiestGuy
+	l.TextScaled = true
+	l.TextColor3 = color
+	l.Text = text
+	l.Parent = gui
+	return l
+end
+
+-- one parking bay; topY = height of the surface it lies on. Returns the pad.
+function GarageKit.Bay(slotsFolder, model, bcf, slot, topY, style)
+	style = style or GarageKit.Style
+	local p = BaseLayout.SlotLocal(slot)
+	local pad = part(slotsFolder, "Slot" .. slot, Vector3.new(22, 0.06, 12.4), bcf * CFrame.new(p.X, topY + 0.03, p.Z), style.bay, M.SmoothPlastic, { collide = false, cast = false })
+	local num = GarageKit.Label(pad, Enum.NormalId.Top, tostring(slot), style.line)
+	num.TextTransparency = 0.45
+	num.Rotation = 90
+	for _, s in ipairs({ -1, 1 }) do
+		part(model, "BayLine", Vector3.new(22, 0.06, 0.3), bcf * CFrame.new(p.X, topY + 0.03, p.Z + s * 6.4), style.line, M.SmoothPlastic, { collide = false, cast = false })
+	end
+	part(model, "WheelStop", Vector3.new(0.6, 0.4, 5), bcf * CFrame.new(p.X - 10.6, topY + 0.2, p.Z), style.accent, M.SmoothPlastic)
+	return pad
+end
+
+-- builds floor f (2..4): its deck surface is the roof of floor f-1. Returns model, pads by slot.
+function GarageKit.BuildFloor(parent, bcf, f, style)
+	style = style or GarageKit.Style
+	local m = Instance.new("Model")
+	m.Name = "Floor" .. f
+	local H = BaseLayout.FloorHeight
+	local PX, PZ = MapConfig.BasePlot.x / 2, MapConfig.BasePlot.z / 2
+	local EDGE = BaseLayout.DeckEdgeX
+	local deckW = EDGE + PX
+	local deckCX = (EDGE - PX) / 2
+	local y0 = (f - 1) * H + 0.5 -- deck top of this floor
+	local function mk(name, size, off, color, mat, o)
+		return part(m, name, size, bcf * CFrame.new(off), color, mat, o)
+	end
+	mk("BackWall", Vector3.new(2, H - 1, PZ * 2), Vector3.new(-PX + 1, y0 + (H - 1) / 2, 0), style.wall)
+	for _, s in ipairs({ -1, 1 }) do
+		mk("SideFin", Vector3.new(deckW - 2, H - 1, 0.8), Vector3.new(deckCX + 1, y0 + (H - 1) / 2, s * (PZ - 0.6)), style.wall)
+	end
+	mk("Roof", Vector3.new(deckW, 1, PZ * 2), Vector3.new(deckCX, f * H, 0), style.deck)
+	mk("FloorSign", Vector3.new(1.2, 2.4, PZ * 2 + 0.4), Vector3.new(EDGE + 0.4, f * H + 0.2, 0), style.frame)
+	for _, z in ipairs({ -PZ + 1, -15.5, 15.5, PZ - 1 }) do
+		mk("Column", Vector3.new(1.2, H - 1, 1.2), Vector3.new(EDGE - 0.8, y0 + (H - 1) / 2, z), style.frame, M.Metal)
+	end
+	-- safety rail along the open edge, with a gap at the lift
+	local el = BaseLayout.ElevatorLocal
+	local gapA, gapB = el.Z - 5, el.Z + 5
+	for _, seg in ipairs({ { -PZ + 1, gapA }, { gapB, PZ - 1 } }) do
+		local len = seg[2] - seg[1]
+		if len &gt; 1 then
+			mk("Rail", Vector3.new(0.3, 0.3, len), Vector3.new(EDGE - 0.3, y0 + 3.4, (seg[1] + seg[2]) / 2), style.frame, M.Metal)
+			for z = seg[1], seg[2], 6 do
+				mk("RailPost", Vector3.new(0.3, 3.4, 0.3), Vector3.new(EDGE - 0.3, y0 + 1.7, z), style.frame, M.Metal)
+			end
+		end
+	end
+	for _, z in ipairs({ -30, 0, 30 }) do
+		local lamp = mk("CeilingLight", Vector3.new(12, 0.12, 1.6), Vector3.new(-31, f * H - 0.6, z), C(255, 244, 222), M.Neon, { collide = false, cast = false })
+		local sl = Instance.new("SurfaceLight")
+		sl.Face = Enum.NormalId.Bottom
+		sl.Range = 18
+		sl.Brightness = 1.1
+		sl.Angle = 100
+		sl.Color = C(255, 238, 210)
+		sl.Parent = lamp
+	end
+	for _, sx in ipairs({ -1, 1 }) do
+		for _, sz in ipairs({ -1, 1 }) do
+			mk("ElevatorPost", Vector3.new(0.6, H, 0.6), Vector3.new(el.X + sx * 4.3, y0 + H / 2, el.Z + sz * 4.3), style.frame, M.Metal)
+		end
+	end
+	local slots = Instance.new("Folder")
+	slots.Name = "Slots"
+	slots.Parent = m
+	local pads = {}
+	for n = (f - 1) * BaseLayout.SlotsPerFloor + 1, f * BaseLayout.SlotsPerFloor do
+		pads[n] = GarageKit.Bay(slots, m, bcf, n, y0, style)
+	end
+	m.Parent = parent
+	return m, pads
+end
+
+-- recolour every known part in a garage (skins)
+function GarageKit.ApplyStyle(root, style)
+	for _, d in ipairs(root:GetDescendants()) do
+		if d:IsA("BasePart") then
+			local key = GarageKit.Paint[d.Name]
+			if key and style[key] then
+				d.Color = style[key]
+			end
+		end
+	end
+end
+
+return GarageKit
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX85292A20A35043A8B65AB5D6E2D7C9B1"><Properties><string name="Name">ProductIds</string><ProtectedString name="Source">-- Filled by tools/roblox_open_cloud.py (Open Cloud). 0 = not created yet: in Studio the purchase is simulated.
 return {
 	products = {
 		cash_s = 0, cash_m = 0, cash_l = 0, cash_xl = 0,
@@ -1554,7 +1732,7 @@ return {
 		vip = 0, big_backpack = 0, auto_collect = 0, golden_car = 0, double_contracts = 0, fast_trap = 0,
 	},
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX66CECB8D7A0C486B8156E4AAD6BBD083"><Properties><string name="Name">ShopConfig</string><ProtectedString name="Source">-- Pit Stop upgrades (in-game money). Effects are read on the server through ShopService.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX437945A384A644699B98ACC636936729"><Properties><string name="Name">ShopConfig</string><ProtectedString name="Source">-- Pit Stop upgrades (in-game money). Effects are read on the server through ShopService.
 local ShopConfig = {}
 
 local function curve(base, growth, max)
@@ -1588,7 +1766,7 @@ function ShopConfig.NextCost(id, level)
 end
 
 return ShopConfig
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXA03B1369858C4D19A12FB406E1A67360"><Properties><string name="Name">SoundIds</string><ProtectedString name="Source">-- Sound asset ids (ElevenLabs SFX uploaded by tools/roblox_open_cloud.py). 0 = not uploaded: built-in fallback is used.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4413E91B55314EF5911B4F489287FE82"><Properties><string name="Name">SoundIds</string><ProtectedString name="Source">-- Sound asset ids (ElevenLabs SFX uploaded by tools/roblox_open_cloud.py). 0 = not uploaded: built-in fallback is used.
 return {
 	click = 129701225439846, open = 137919267005389, err = 93818499880209, ping = 88613645625966, throw = 119327249998497, clank = 81236574431044, charge = 119801036998398, reveal = 104359112527062, revealBig = 89971480285601, land = 105360367997502, drive = 135356508628598,
 	pickup = 115648143432870, pickupBig = 88679381563835, bank = 106536817236294, bankCombo = 118911778326066, combo = 117977986909264, cash = 94389113268355, siren = 91817872654141, crash = 95389621886750, wrecked = 139719815735975, airbag = 86864075035630,
@@ -1700,6 +1878,7 @@ Net.Get("PlaceCar").OnServerEvent:Connect(function(p, uid, slot) S.Cars.Place(p,
 Net.Get("RemoveCar").OnServerEvent:Connect(function(p, uid) S.Cars.Remove(p, uid) end)
 Net.Get("UpgradeCar").OnServerEvent:Connect(function(p, uid, lvl) S.Upgrade.UpgradeCar(p, uid, lvl) end)
 Net.Get("BuySlot").OnServerEvent:Connect(function(p, n) S.Upgrade.BuySlot(p, n) end)
+Net.Get("BuyFloor").OnServerEvent:Connect(function(p, n) S.Upgrade.BuyFloor(p, n) end)
 Net.Get("UnlockZone").OnServerEvent:Connect(function(p, z) S.Zone.Unlock(p, z) end)
 Net.Get("SellCar").OnServerEvent:Connect(function(p, uid) S.Cars.Sell(p, uid) end)
 Net.Get("AutoPark").OnServerEvent:Connect(function(p) S.Cars.AutoPark(p) end)
@@ -1790,6 +1969,7 @@ local VehicleFactory = require(Shared:WaitForChild("VehicleFactory"))
 local ExhaustFx = require(Shared:WaitForChild("ExhaustFx"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 local Util = require(Shared:WaitForChild("Util"))
+local GarageKit = require(Shared:WaitForChild("GarageKit"))
 
 local Base = {}
 local S
@@ -1811,9 +1991,12 @@ function Base.Start()
 		assert(m, "Base model missing: Base" .. i)
 		local b = { index = i, model = m, owner = nil, sig = {}, carModels = {}, pads = {} }
 		local slots = m:WaitForChild("Slots")
-		for n = 1, BaseLayout.SlotCount do
+		for n = 1, BaseLayout.SlotsPerFloor do
 			b.pads[n] = slots:WaitForChild("Slot" .. n)
 		end
+		b.floorModels = {}
+		b.floorsFolder = m:FindFirstChild("Floors") or Instance.new("Folder", m)
+		b.floorsFolder.Name = "Floors"
 		b.spawn = m:WaitForChild("Spawn")
 		b.sign = m:WaitForChild("OwnerSign"):FindFirstChildWhichIsA("SurfaceGui", true)
 		b.screen = m:WaitForChild("IncomeScreen"):FindFirstChildWhichIsA("SurfaceGui", true)
@@ -1829,6 +2012,9 @@ function Base.Start()
 end
 
 local function setPad(pad, state, rarityColor)
+	if not pad then
+		return
+	end
 	pad.Material = Enum.Material.SmoothPlastic
 	pad.Transparency = 0
 	if state == "locked" then
@@ -1849,6 +2035,26 @@ local function setLabel(gui, text)
 	end
 end
 
+-- builds/removes floors 2..n for the owner
+local function ensureFloors(b, floors, style)
+	for f = 2, BaseLayout.MaxFloors do
+		if f &lt;= floors and not b.floorModels[f] then
+			local m, pads = GarageKit.BuildFloor(b.floorsFolder, BaseLayout.GetBaseCFrame(b.index), f, style)
+			b.floorModels[f] = m
+			for slot, pad in pairs(pads) do
+				b.pads[slot] = pad
+			end
+		elseif f &gt; floors and b.floorModels[f] then
+			b.floorModels[f]:Destroy()
+			b.floorModels[f] = nil
+			for slot = (f - 1) * BaseLayout.SlotsPerFloor + 1, f * BaseLayout.SlotsPerFloor do
+				b.pads[slot] = nil
+			end
+		end
+	end
+end
+Base.EnsureFloors = ensureFloors
+
 function Base.SetFree(b)
 	b.owner = nil
 	for slot, model in pairs(b.carModels) do
@@ -1856,7 +2062,8 @@ function Base.SetFree(b)
 	end
 	b.carModels = {}
 	b.sig = {}
-	for _, pad in ipairs(b.pads) do
+	ensureFloors(b, 1)
+	for _, pad in pairs(b.pads) do
 		setPad(pad, "locked")
 	end
 	setLabel(b.sign, Strings.Tables.en.free_garage)
@@ -1946,6 +2153,7 @@ function Base.RefreshAll(player)
 		return
 	end
 	local d = s.data
+	ensureFloors(b, d.floors or 1)
 	local now = os.clock()
 	local bySlot = {}
 	for _, c in ipairs(d.cars) do
@@ -1956,6 +2164,9 @@ function Base.RefreshAll(player)
 	for slot = 1, BaseLayout.SlotCount do
 		local pad = b.pads[slot]
 		local car = bySlot[slot]
+		if not pad then
+			car = nil
+		end
 		local hidden = car and s.hidden[car.uid] and s.hidden[car.uid] &gt; now
 		if slot &gt; d.garageSlotCount then
 			setPad(pad, "locked")
@@ -2293,7 +2504,7 @@ local DataService = {}
 local S
 
 local STORE_NAME = "CarHunters_Profiles_v1"
-local SCHEMA_VERSION = 3
+local SCHEMA_VERSION = 4
 local LOCK_TIMEOUT = 120
 local SERVER_ID = (game.JobId ~= "" and game.JobId) or ("studio-" .. HttpService:GenerateGUID(false))
 
@@ -2307,6 +2518,7 @@ local function newProfile(isNew)
 		parts = { bolts = 0, tire = 0, engine = 0, turbo = 0, core = 0 },
 		unlockedZones = { city = true },
 		garageSlotCount = EconomyConfig.StartSlots,
+		floors = 1,
 		cars = {},
 		stats = { throws = 0, upgrades = 0, deaths = 0, sold = 0 },
 		discovered = {},
@@ -2354,6 +2566,9 @@ local function sanitize(raw)
 	p.unlockedZones.city = true
 	local slots = toCount(raw.garageSlotCount, EconomyConfig.MaxSlots)
 	p.garageSlotCount = Util.Clamp(slots, EconomyConfig.StartSlots, EconomyConfig.MaxSlots)
+	-- v4: multi-storey garage, 6 bays per floor (old profiles get the floors their bays need)
+	local floors = toCount(raw.floors, EconomyConfig.MaxFloors)
+	p.floors = Util.Clamp(math.max(floors, math.ceil(p.garageSlotCount / 6)), 1, EconomyConfig.MaxFloors)
 
 	local seenUid, seenSlot = {}, {}
 	if type(raw.cars) == "table" then
@@ -2670,6 +2885,7 @@ function DataService.BuildState(s)
 		carryCap = S.Shop.CarryCap(s),
 		zones = Util.CopyTable(d.unlockedZones),
 		slots = d.garageSlotCount,
+		floors = d.floors,
 		cars = cars,
 		stats = Util.CopyTable(d.stats),
 		baseIndex = s.baseIndex,
@@ -3334,6 +3550,10 @@ function Upgrade.BuySlot(player, expectedCount)
 	if not cost or nextSlot &gt; EconomyConfig.MaxSlots then
 		return
 	end
+	if nextSlot &gt; d.floors * 6 then
+		S.Data.Notify(player, "needFloor", nil, "warn")
+		return
+	end
 	if d.money &lt; cost then
 		S.Data.Notify(player, "noMoney", nil, "error")
 		return
@@ -3341,6 +3561,43 @@ function Upgrade.BuySlot(player, expectedCount)
 	d.money = d.money - cost
 	d.garageSlotCount = nextSlot
 	S.Data.Notify(player, "slotBought", { nextSlot }, "good")
+	S.Base.RefreshAll(player)
+	S.Data.Push(player)
+end
+
+function Upgrade.BuyFloor(player, expectedFloors)
+	if not Util.IsInt(expectedFloors) then
+		return
+	end
+	local s = S.Data.Get(player)
+	if not s or not s.ready or not S.Data.RateLimit(player, "floor", 0.5) then
+		return
+	end
+	if not S.Base.IsNearOwnBase(player) then
+		S.Data.Notify(player, "tooFar", nil, "warn")
+		return
+	end
+	local d = s.data
+	if d.floors ~= expectedFloors then
+		S.Data.Push(player)
+		return
+	end
+	local nextFloor = d.floors + 1
+	local cost = EconomyConfig.FloorCosts[nextFloor]
+	if not cost then
+		return
+	end
+	if d.garageSlotCount &lt; d.floors * 6 then
+		S.Data.Notify(player, "fillFloor", nil, "warn")
+		return
+	end
+	if d.money &lt; cost then
+		S.Data.Notify(player, "noMoney", nil, "error")
+		return
+	end
+	d.money = d.money - cost
+	d.floors = nextFloor
+	S.Data.Notify(player, "floorBuilt", { nextFloor }, "good")
 	S.Base.RefreshAll(player)
 	S.Data.Push(player)
 end
@@ -3427,7 +3684,7 @@ function Zone.Start()
 end
 
 return Zone
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0C72F53C1C3048AC958FA694DCE02D1E"><Properties><string name="Name">ContractService</string><ProtectedString name="Source">-- Contracts board: three active jobs per player, auto-claimed on completion and replaced.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXA1FFB5A527A44802AE289F007B7BED85"><Properties><string name="Name">ContractService</string><ProtectedString name="Source">-- Contracts board: three active jobs per player, auto-claimed on completion and replaced.
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -3595,7 +3852,7 @@ function Contracts.Start()
 end
 
 return Contracts
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX862192DB159441A39849FD0464BB9D12"><Properties><string name="Name">DonateService</string><ProtectedString name="Source">-- Golden Magnate stall: developer products + game passes, with idempotent receipt processing.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX20123FCF74054E5DA51466A16FD12544"><Properties><string name="Name">DonateService</string><ProtectedString name="Source">-- Golden Magnate stall: developer products + game passes, with idempotent receipt processing.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -3675,7 +3932,7 @@ function Donate.Grant(player, key)
 		end
 	elseif item.slots then
 		local before = d.garageSlotCount
-		d.garageSlotCount = math.min(EconomyConfig.MaxSlots, before + item.slots)
+		d.garageSlotCount = math.min(d.floors * 6, before + item.slots)
 		local missing = item.slots - (d.garageSlotCount - before)
 		if missing &gt; 0 then -- already maxed: pay it out instead
 			d.money = math.min(d.money + missing * math.max(50000, (s.income or 0) * 600), EconomyConfig.MaxMoney)
@@ -3879,7 +4136,7 @@ function Donate.Start()
 end
 
 return Donate
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX3E5BB28E284A4E8B9DC89DE67AB4DD52"><Properties><string name="Name">HotDropService</string><ProtectedString name="Source">-- Hot Drop: every ~80 s a rare crate parachutes onto a dangerous spot. First player to grab it wins.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX08E7646E045446858BFACDFCBC669829"><Properties><string name="Name">HotDropService</string><ProtectedString name="Source">-- Hot Drop: every ~80 s a rare crate parachutes onto a dangerous spot. First player to grab it wins.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -4089,7 +4346,7 @@ function HotDrop.Start()
 end
 
 return HotDrop
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXEDF1A7F1B964466FB5FB83703F34D9AA"><Properties><string name="Name">ShopService</string><ProtectedString name="Source">-- Pit Stop: perks bought with in-game money + the mechanic NPC. All perk effects are read through this module.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX59EB4B605C474D4492600445FC4D90EF"><Properties><string name="Name">ShopService</string><ProtectedString name="Source">-- Pit Stop: perks bought with in-game money + the mechanic NPC. All perk effects are read through this module.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -4374,7 +4631,7 @@ function Shop.Start()
 end
 
 return Shop
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXE03105D5EE444C169DF4584955D7019C"><Properties><string name="Name">WarpService</string><ProtectedString name="Source">-- Teleport buttons: home garage or any unlocked district. Server-validated.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX283019130E474B928ED0A8FD60B2F0FD"><Properties><string name="Name">WarpService</string><ProtectedString name="Source">-- Teleport buttons: home garage or any unlocked district. Server-validated.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
@@ -4657,6 +4914,11 @@ local BaseLayout = require(Shared:WaitForChild("BaseLayout"))
 local TrafficMath = require(Shared:WaitForChild("TrafficMath"))
 local VehicleFactory = require(Shared:WaitForChild("VehicleFactory"))
 local Prefabs = require(script.Parent:WaitForChild("MapPrefabs"))
+local GarageKit = require(Shared:WaitForChild("GarageKit"))
+local GarageStyle = GarageKit.Style
+local function GarageBay(slotsFolder, model, bcf, n, topY)
+	return GarageKit.Bay(slotsFolder, model, bcf, n, topY)
+end
 
 local C = Color3.fromRGB
 local M = Enum.Material
@@ -4784,6 +5046,8 @@ local function buildWorld(ctx)
 	Label(fin, Enum.NormalId.Front, "END OF THE CITY", C(255, 210, 60))
 end
 
+-- Garage v2: clean showroom. Ground floor is static; floors 2-4 are added by BaseService (GarageFloors).
+-- Rule against texture flicker: no two visible faces share a plane; overlays sit &gt;= 0.02 above what they cover.
 local function buildBase(ctx, i)
 	local f = ctx.f
 	local bcf = BaseLayout.GetBaseCFrame(i)
@@ -4793,129 +5057,93 @@ local function buildBase(ctx, i)
 	local function mk(name, size, off, color, mat, o)
 		return Part(model, name, size, bcf * CFrame.new(off), color, mat, o)
 	end
-	local CONCRETE, ASPHALT, STEEL, DARKSTEEL = C(176, 178, 182), C(78, 82, 90), C(150, 156, 166), C(52, 56, 64)
-	local BRICK, WHITE, HAZARD = C(168, 78, 62), C(242, 242, 238), C(255, 196, 40)
+	local G = GarageStyle
 	local PX, PZ = MapConfig.BasePlot.x / 2, MapConfig.BasePlot.z / 2
+	local EDGE = BaseLayout.DeckEdgeX
+	local deckW = EDGE + PX -- deck depth along X
+	local deckCX = (EDGE - PX) / 2
+	local H = BaseLayout.FloorHeight
 
-	-- floor and markings
-	mk("Floor", Vector3.new(PX * 2, 1, PZ * 2), Vector3.new(0, 0, 0), CONCRETE, M.Concrete)
-	mk("Apron", Vector3.new(14, 1.02, PZ * 2), Vector3.new(PX - 7, 0.005, 0), C(196, 198, 200), M.Concrete)
-	for z = -PZ + 4, PZ - 4, 8 do
-		mk("LaneDash", Vector3.new(0.5, 0.04, 4), Vector3.new(BaseLayout.LaneX, 0.53, z), HAZARD, M.SmoothPlastic, { collide = false, cast = false })
-	end
+	-- floor: polished slab + darker showroom inlay under the deck
+	mk("Floor", Vector3.new(PX * 2, 1, PZ * 2), Vector3.new(0, 0, 0), G.floor, M.SmoothPlastic, { refl = 0.04 })
+	mk("Inlay", Vector3.new(deckW, 0.1, PZ * 2), Vector3.new(deckCX, 0.55, 0), G.inlay, M.SmoothPlastic)
+	mk("DriveLine", Vector3.new(0.4, 0.06, PZ * 2 - 6), Vector3.new(BaseLayout.LaneX, 0.53, 0), G.line, M.SmoothPlastic, { collide = false, cast = false })
+
 	local slots = Instance.new("Folder")
 	slots.Name = "Slots"
 	slots.Parent = model
-	for n = 1, BaseLayout.SlotCount do
-		local p = BaseLayout.SlotLocal(n)
-		local pad = Part(slots, "Slot" .. n, Vector3.new(22, 0.06, 12.4), bcf * CFrame.new(p.X, 0.53, p.Z), ASPHALT, M.SmoothPlastic, { collide = false, cast = false })
-		local num = Label(pad, Enum.NormalId.Top, tostring(n), WHITE)
-		num.TextTransparency = 0.35
-		num.Rotation = 90
-		for _, s in ipairs({ -1, 1 }) do
-			mk("SlotLine", Vector3.new(22, 0.04, 0.35), Vector3.new(p.X, 0.58, p.Z + s * 6.4), WHITE, M.SmoothPlastic, { collide = false, cast = false })
-		end
-		mk("WheelStop", Vector3.new(0.7, 0.45, 5), Vector3.new(p.X - 10, 0.72, p.Z), HAZARD, M.SmoothPlastic, { collide = false })
+	for n = 1, BaseLayout.SlotsPerFloor do
+		GarageBay(slots, model, bcf, n, 0.6)
 	end
 
-	-- building: brick back wall with roller doors, concrete side walls, corrugated roof on steel columns
-	mk("BackWall", Vector3.new(2, 18, PZ * 2), Vector3.new(-PX + 1, 9, 0), BRICK, M.Brick)
-	mk("BackWallCap", Vector3.new(2.6, 1, PZ * 2 + 0.6), Vector3.new(-PX + 1, 18.5, 0), DARKSTEEL, M.Metal)
-	for _, z in ipairs({ -30, 0, 30 }) do
-		mk("RollerDoor", Vector3.new(0.4, 10, 16), Vector3.new(-PX + 2.2, 5.2, z), C(204, 208, 214), M.DiamondPlate)
-		for y = 1, 9, 1.4 do
-			mk("DoorRib", Vector3.new(0.2, 0.18, 16), Vector3.new(-PX + 2.45, y, z), C(160, 164, 172), M.Metal, { collide = false, cast = false })
-		end
-		mk("DoorFrame", Vector3.new(0.6, 1, 17.2), Vector3.new(-PX + 2.3, 10.5, z), DARKSTEEL, M.Metal)
-	end
+	-- shell: charcoal back wall, side fins, white roof deck with black fascia (owner sign lives on it)
+	-- walls stop under the roof slab so no faces are shared with it
+	mk("BackWall", Vector3.new(2, H - 1, PZ * 2), Vector3.new(-PX + 1, H / 2, 0), G.wall, M.SmoothPlastic)
 	for _, s in ipairs({ -1, 1 }) do
-		mk("SideWall", Vector3.new(58, 8, 1.6), Vector3.new(-PX + 29, 4, s * (PZ - 0.8)), C(200, 200, 196), M.Concrete)
-		mk("SideWallStripe", Vector3.new(58, 0.8, 1.7), Vector3.new(-PX + 29, 7.6, s * (PZ - 0.8)), C(40, 120, 200), M.SmoothPlastic)
-		for x = 2, PX - 4, 8 do
-			mk("Bollard", Vector3.new(0.9, 2.6, 0.9), Vector3.new(x, 1.8, s * (PZ - 0.8)), HAZARD, M.SmoothPlastic)
-		end
+		mk("SideFin", Vector3.new(deckW - 2, H - 1, 0.8), Vector3.new(deckCX + 1, H / 2, s * (PZ - 0.6)), G.wall, M.SmoothPlastic)
 	end
-	local roofX0, roofX1 = -PX, 6
-	local rw = roofX1 - roofX0
-	mk("Roof", Vector3.new(rw, 0.6, PZ * 2 + 2), Vector3.new((roofX0 + roofX1) / 2, 16.4, 0), C(198, 202, 208), M.Metal)
-	for z = -PZ, PZ, 4 do
-		mk("RoofRib", Vector3.new(rw, 0.4, 0.5), Vector3.new((roofX0 + roofX1) / 2, 16.9, z), C(170, 175, 184), M.Metal, { collide = false, cast = false })
-	end
-	mk("RoofFascia", Vector3.new(1, 2.4, PZ * 2 + 2), Vector3.new(roofX1, 15.8, 0), C(40, 120, 200), M.SmoothPlastic)
-	for _, z in ipairs({ -PZ + 1.5, -15, 15, PZ - 1.5 }) do
-		mk("Column", Vector3.new(1.4, 15.8, 1.4), Vector3.new(roofX1 - 0.8, 7.9, z), STEEL, M.Metal)
-		mk("ColumnBase", Vector3.new(2.2, 0.8, 2.2), Vector3.new(roofX1 - 0.8, 0.9, z), DARKSTEEL, M.Metal)
+	mk("Roof", Vector3.new(deckW, 1, PZ * 2), Vector3.new(deckCX, H, 0), G.deck, M.SmoothPlastic)
+	local fascia = mk("OwnerSign", Vector3.new(1.2, 2.4, PZ * 2 + 0.4), Vector3.new(EDGE + 0.4, H + 0.2, 0), G.frame, M.SmoothPlastic)
+	Label(fascia, Enum.NormalId.Right, "FREE GARAGE", C(255, 255, 255))
+	local screen = mk("IncomeScreen", Vector3.new(0.4, 2, 24), Vector3.new(EDGE + 1.2, H - 2.3, 0), G.frame, M.SmoothPlastic)
+	Label(screen, Enum.NormalId.Right, "", C(110, 230, 140))
+	for _, z in ipairs({ -PZ + 1, -15.5, 15.5, PZ - 1 }) do
+		mk("Column", Vector3.new(1.2, H - 1, 1.2), Vector3.new(EDGE - 0.8, H / 2, z), G.frame, M.Metal)
 	end
 	for _, z in ipairs({ -30, 0, 30 }) do
-		local lamp = mk("CeilingLight", Vector3.new(14, 0.3, 1.2), Vector3.new(-22, 15.9, z), C(255, 246, 225), M.Neon, { collide = false, cast = false, light = true })
-		local pl = Instance.new("SurfaceLight")
-		pl.Face = Enum.NormalId.Bottom
-		pl.Range = 22
-		pl.Brightness = 1.2
-		pl.Angle = 110
-		pl.Color = C(255, 240, 215)
-		pl.Parent = lamp
+		local lamp = mk("CeilingLight", Vector3.new(12, 0.12, 1.6), Vector3.new(-31, H - 0.6, z), C(255, 244, 222), M.Neon, { collide = false, cast = false, light = true })
+		local sl = Instance.new("SurfaceLight")
+		sl.Face = Enum.NormalId.Bottom
+		sl.Range = 18
+		sl.Brightness = 1.1
+		sl.Angle = 100
+		sl.Color = C(255, 238, 210)
+		sl.Parent = lamp
 	end
 
-	-- owner sign + income board on the back wall (BaseService writes into their SurfaceGuis)
-	local sign = mk("OwnerSign", Vector3.new(1, 5, 40), Vector3.new(-PX + 2.4, 13.2, 0), C(26, 30, 38), M.SmoothPlastic)
-	Label(sign, Enum.NormalId.Right, "FREE GARAGE", C(255, 255, 255))
-	mk("OwnerSignFrame", Vector3.new(0.8, 5.8, 40.8), Vector3.new(-PX + 2.2, 13.2, 0), HAZARD, M.SmoothPlastic)
-	local screen = mk("IncomeScreen", Vector3.new(1, 3, 22), Vector3.new(-PX + 2.4, 19.6, 0), C(16, 18, 22), M.SmoothPlastic)
-	Label(screen, Enum.NormalId.Right, "", C(110, 230, 140))
-
-	-- the trap: a car lift with a magnetic crane
-	local t = BaseLayout.TrapLocal
-	mk("TrapPad", Vector3.new(18, 0.7, 18), Vector3.new(t.X, 0.85, t.Z), C(96, 100, 108), M.DiamondPlate)
-	for k = 0, 7 do
-		for _, s in ipairs({ -1, 1 }) do
-			local c = (k % 2 == 0) and HAZARD or C(28, 28, 30)
-			mk("Hazard", Vector3.new(2.25, 0.06, 0.8), Vector3.new(t.X - 7.9 + k * 2.25, 1.23, t.Z + s * 8.6), c, M.SmoothPlastic, { collide = false, cast = false })
-			mk("Hazard", Vector3.new(0.8, 0.06, 2.25), Vector3.new(t.X + s * 8.6, 1.23, t.Z - 7.9 + k * 2.25), c, M.SmoothPlastic, { collide = false, cast = false })
+	-- lift shaft (ground stage) to the upper floors
+	local el = BaseLayout.ElevatorLocal
+	mk("ElevatorPad", Vector3.new(8, 0.4, 8), Vector3.new(el.X, 0.7, el.Z), G.frame, M.Metal)
+	mk("ElevatorStripe", Vector3.new(7, 0.06, 0.4), Vector3.new(el.X, 0.95, el.Z - 3.4), G.accent, M.SmoothPlastic, { collide = false, cast = false })
+	for _, sx in ipairs({ -1, 1 }) do
+		for _, sz in ipairs({ -1, 1 }) do
+			mk("ElevatorPost", Vector3.new(0.6, H, 0.6), Vector3.new(el.X + sx * 4.3, H / 2 + 0.5, el.Z + sz * 4.3), G.frame, M.Metal)
 		end
+	end
+
+	-- the trap: a clean steel car lift with a magnetic crane
+	local t = BaseLayout.TrapLocal
+	mk("TrapPad", Vector3.new(18, 0.8, 18), Vector3.new(t.X, 0.9, t.Z), C(74, 78, 86), M.Metal)
+	for _, s in ipairs({ -1, 1 }) do
+		mk("TrapEdge", Vector3.new(17, 0.06, 0.5), Vector3.new(t.X, 1.36, t.Z + s * 8.4), G.accent, M.SmoothPlastic, { collide = false, cast = false })
 	end
 	for _, sx in ipairs({ -1, 1 }) do
 		for _, sz in ipairs({ -1, 1 }) do
-			mk("LiftPost", Vector3.new(1.4, 14, 1.4), Vector3.new(t.X + sx * 9.4, 7, t.Z + sz * 9.4), C(220, 70, 50), M.Metal)
+			mk("LiftPost", Vector3.new(1.2, 13, 1.2), Vector3.new(t.X + sx * 9.6, 7, t.Z + sz * 9.6), G.accent2, M.Metal)
 		end
-		mk("LiftBeam", Vector3.new(1.2, 1.2, 20.2), Vector3.new(t.X + sx * 9.4, 14.2, t.Z), C(220, 70, 50), M.Metal)
+		mk("LiftBeam", Vector3.new(1, 1, 20.4), Vector3.new(t.X + sx * 9.6, 14, t.Z), G.accent2, M.Metal)
 	end
-	mk("CraneBeam", Vector3.new(20.2, 1.4, 1.4), Vector3.new(t.X, 14.6, t.Z), DARKSTEEL, M.Metal)
-	mk("CraneCable", Vector3.new(0.25, 3.6, 0.25), Vector3.new(t.X, 12.2, t.Z), C(30, 30, 30), M.Metal, { collide = false })
-	local magnet = mk("TrapMagnet", Vector3.new(1.4, 6, 6), Vector3.new(t.X, 9.8, t.Z), C(70, 74, 82), M.Metal, { shape = CYL, collide = false })
+	mk("CraneBeam", Vector3.new(20.4, 1.2, 1.2), Vector3.new(t.X, 14.2, t.Z), G.frame, M.Metal)
+	mk("CraneCable", Vector3.new(0.2, 3.4, 0.2), Vector3.new(t.X, 12, t.Z), G.frame, M.Metal, { collide = false })
+	local magnet = mk("TrapMagnet", Vector3.new(1.2, 6, 6), Vector3.new(t.X, 9.8, t.Z), C(64, 68, 76), M.Metal, { shape = CYL, collide = false })
 	magnet.CFrame = bcf * CFrame.new(t.X, 9.8, t.Z) * UPRIGHT
-	local trapSign = mk("TrapSign", Vector3.new(0.5, 2.4, 12), Vector3.new(t.X + 9.6, 12.2, t.Z), C(26, 30, 38), M.SmoothPlastic)
-	Label(trapSign, Enum.NormalId.Right, "THROW PARTS HERE", HAZARD)
+	local trapSign = mk("TrapSign", Vector3.new(0.4, 2, 12), Vector3.new(t.X + 10.4, 12, t.Z), G.frame, M.SmoothPlastic)
+	Label(trapSign, Enum.NormalId.Right, "THROW PARTS HERE", G.accent)
 
-	-- vehicle entrance: roller door in a frame, new cars roll out of it
+	-- vehicle entrance
 	local pl = BaseLayout.PortalLocal
 	for _, s in ipairs({ -1, 1 }) do
-		mk("PortalPost", Vector3.new(2, 13, 2), Vector3.new(pl.X, 6.5, pl.Z + s * 9.5), BRICK, M.Brick)
+		mk("PortalPost", Vector3.new(1.6, 12, 1.6), Vector3.new(pl.X, 6.5, pl.Z + s * 9.4), G.frame, M.Metal)
 	end
-	local header = mk("PortalHeader", Vector3.new(2.4, 3, 21), Vector3.new(pl.X, 14.2, pl.Z), DARKSTEEL, M.Metal)
-	Label(header, Enum.NormalId.Right, "VEHICLE IN", WHITE)
-	mk("PortalDoor", Vector3.new(0.4, 12, 17), Vector3.new(pl.X - 0.6, 6.6, pl.Z), C(204, 208, 214), M.DiamondPlate, { collide = false })
+	local header = mk("PortalHeader", Vector3.new(2, 2.4, 20.4), Vector3.new(pl.X, 13.6, pl.Z), G.frame, M.Metal)
+	Label(header, Enum.NormalId.Right, "VEHICLE IN", C(255, 255, 255))
+	mk("PortalDoor", Vector3.new(0.4, 11.4, 17.2), Vector3.new(pl.X - 0.4, 6.4, pl.Z), G.door, M.SmoothPlastic, { collide = false })
 
-	-- terminal (opens the garage menu) = tool chest with a screen
+	-- garage terminal (menu)
 	local tm = BaseLayout.TerminalLocal
-	mk("Terminal", Vector3.new(4, 5, 7), Vector3.new(tm.X, 3, tm.Z), C(200, 40, 40), M.SmoothPlastic)
-	for d = 0, 3 do
-		mk("Drawer", Vector3.new(4.1, 0.15, 6.4), Vector3.new(tm.X, 1.4 + d * 1.1, tm.Z), C(150, 30, 30), M.SmoothPlastic, { collide = false, cast = false })
-	end
-	local scr = mk("TerminalScreen", Vector3.new(0.4, 3, 5), Vector3.new(tm.X, 7.2, tm.Z), C(16, 18, 22), M.SmoothPlastic)
-	Label(scr, Enum.NormalId.Right, "GARAGE", WHITE)
-
-	-- workshop clutter along the back wall
-	local rng = ctx.rng
-	Prefabs.TireStack(model, bcf:PointToWorldSpace(Vector3.new(-PX + 5, 0.5, -PZ + 5)), rng)
-	Prefabs.TireStack(model, bcf:PointToWorldSpace(Vector3.new(-PX + 5, 0.5, PZ - 5)), rng)
-	for k = 0, 2 do
-		local b = mk("Barrel", Vector3.new(3.4, 3, 3), Vector3.new(-PX + 4, 2.2, -PZ + 10 + k * 3.2), (k == 1) and C(40, 110, 190) or C(200, 60, 50), M.Metal, { shape = CYL })
-		b.CFrame = bcf * CFrame.new(-PX + 4, 2.2, -PZ + 10 + k * 3.2) * UPRIGHT
-	end
-	mk("Workbench", Vector3.new(4, 0.5, 9), Vector3.new(-PX + 4, 3.4, PZ - 14), C(150, 104, 64), M.Wood)
-	mk("WorkbenchLegs", Vector3.new(3.6, 3, 8.6), Vector3.new(-PX + 4, 1.6, PZ - 14), DARKSTEEL, M.Metal)
-	mk("Vise", Vector3.new(1.2, 1, 1.4), Vector3.new(-PX + 4, 4.1, PZ - 17), C(40, 90, 160), M.Metal)
+	mk("Terminal", Vector3.new(2.4, 4, 4), Vector3.new(tm.X, 2.5, tm.Z), G.frame, M.SmoothPlastic)
+	local scr = mk("TerminalScreen", Vector3.new(0.3, 2.4, 3.6), Vector3.new(tm.X + 1.36, 3.4, tm.Z), C(16, 18, 22), M.SmoothPlastic)
+	Label(scr, Enum.NormalId.Right, "GARAGE", G.accent)
 
 	local sp = Instance.new("SpawnLocation")
 	sp.Name = "Spawn"
@@ -4932,6 +5160,9 @@ local function buildBase(ctx, i)
 	local cars = Instance.new("Folder")
 	cars.Name = "Cars"
 	cars.Parent = model
+	local floors = Instance.new("Folder")
+	floors.Name = "Floors"
+	floors.Parent = model
 	Prefabs.Lamp(model, bcf:PointToWorldSpace(Vector3.new(PX - 1.5, 0.5, PZ - 3)), 1, C(255, 230, 180), math.pi)
 	Prefabs.Lamp(model, bcf:PointToWorldSpace(Vector3.new(PX - 1.5, 0.5, -PZ + 3)), 1, C(255, 230, 180), math.pi)
 	model.Parent = f.Bases
@@ -6289,7 +6520,7 @@ function Prefabs.Building(kind, parent, cf, w, d, h, pal, rng)
 end
 
 return Prefabs
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXD4C8D4B3A6DA418FA246FA3781C7D1D8"><Properties><string name="Name">CarStoreTool</string><ProtectedString name="Source">-- Installs real car models from the Roblox Creator Store (free models) into ReplicatedStorage.CarModels.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX6A4EBBFC6A3942AE858544771E517161"><Properties><string name="Name">CarStoreTool</string><ProtectedString name="Source">-- Installs real car models from the Roblox Creator Store (free models) into ReplicatedStorage.CarModels.
 -- Run in Studio (edit mode), View &gt; Command Bar:
 --   require(game.ServerStorage.Tools.CarStoreTool).InstallAll()
 --   require(game.ServerStorage.Tools.CarStoreTool).Install("bmv_m3", 2629351758)   -- any other asset id
@@ -6733,6 +6964,7 @@ local SpeedLanes = require(Client:WaitForChild("SpeedLanes"))
 local UIExtra = require(Client:WaitForChild("UIExtra"))
 local Markers = require(Client:WaitForChild("Markers"))
 local ClientFx = require(Client:WaitForChild("ClientFx"))
+local GaragePrompts = require(Client:WaitForChild("GaragePrompts"))
 
 local player = Players.LocalPlayer
 Strings.SetLocale(player.LocaleId)
@@ -6743,6 +6975,7 @@ local actions = {
 	Remove = function(uid) Net.Get("RemoveCar"):FireServer(uid) end,
 	Upgrade = function(uid, level) Net.Get("UpgradeCar"):FireServer(uid, level) end,
 	BuySlot = function(count) Net.Get("BuySlot"):FireServer(count) end,
+	BuyFloor = function(floors) Net.Get("BuyFloor"):FireServer(floors) end,
 	Unlock = function(zoneId) Net.Get("UnlockZone"):FireServer(zoneId) end,
 	Sell = function(uid) Net.Get("SellCar"):FireServer(uid) end,
 	AutoPark = function() Net.Get("AutoPark"):FireServer() end,
@@ -6769,6 +7002,7 @@ end)
 UIExtra.Init(UI)
 ClientFx.Init(UI)
 Markers.Start(UI.Kit(), UIExtra)
+GaragePrompts.Start(UI.Kit(), CineFx)
 UI.Refresh()
 
 Net.Get("HotDrop").OnClientEvent:Connect(function(info) UIExtra.OnHotDrop(info) end)
@@ -7334,9 +7568,21 @@ function TrapFx.Play(res, baseIndex, onDone)
 			local pts = {
 				Vector3.new(padPos.X, y, padPos.Z),
 				bcf:PointToWorldSpace(Vector3.new(BaseLayout.LaneX, y, BaseLayout.TrapLocal.Z)),
-				bcf:PointToWorldSpace(Vector3.new(BaseLayout.LaneX, y, sl.Z)),
-				bcf:PointToWorldSpace(Vector3.new(sl.X, y, sl.Z)),
 			}
+			if sl.Y &gt; 0 then
+				-- upper level: drive into the lift, rise, roll onto the deck and along it to the bay
+				local el = BaseLayout.ElevatorLocal
+				local yUp = y + sl.Y
+				for _, p in ipairs({
+					Vector3.new(BaseLayout.LaneX, y, el.Z), Vector3.new(el.X, y, el.Z), Vector3.new(el.X, yUp, el.Z),
+					Vector3.new(-15, yUp, el.Z), Vector3.new(-15, yUp, sl.Z), Vector3.new(sl.X, yUp, sl.Z),
+				}) do
+					table.insert(pts, bcf:PointToWorldSpace(p))
+				end
+			else
+				table.insert(pts, bcf:PointToWorldSpace(Vector3.new(BaseLayout.LaneX, y, sl.Z)))
+				table.insert(pts, bcf:PointToWorldSpace(Vector3.new(sl.X, y, sl.Z)))
+			end
 			local total = 0
 			for i = 2, #pts do
 				total = total + (pts[i] - pts[i - 1]).Magnitude
@@ -7351,7 +7597,12 @@ function TrapFx.Play(res, baseIndex, onDone)
 					local seg = (pts[i] - pts[i - 1]).Magnitude
 					if dist &lt;= acc + seg or i == #pts then
 						local pos = pts[i - 1]:Lerp(pts[i], math.clamp((dist - acc) / math.max(seg, 1e-3), 0, 1))
-						ghost.PrimaryPart.CFrame = faceCF(pos, pts[i] - pts[i - 1])
+						local dir = pts[i] - pts[i - 1]
+						if math.abs(dir.X) + math.abs(dir.Z) &lt; 0.01 then
+							ghost.PrimaryPart.CFrame = ghost.PrimaryPart.CFrame - ghost.PrimaryPart.Position + pos
+						else
+							ghost.PrimaryPart.CFrame = faceCF(pos, dir)
+						end
 						camTarget = CFrame.lookAt(pos + side * 16 + Vector3.new(0, 10, 0) + front * 10, pos + Vector3.new(0, 2, 0))
 						break
 					end
@@ -7854,7 +8105,14 @@ local function buildGarage()
 	panels.garageInfo = text(c, { Text = "", Font = BODY, TextSize = 20, TextColor3 = P.ink, Size = UDim2.new(1, -380, 0, 50), ZIndex = 22, RichText = true })
 	panels.autoBtn = toy(c, { Text = T("btn_autopark"), Color = P.green, Size = UDim2.fromOffset(170, 54), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -190, 0, -2), ZIndex = 23, OnClick = function() actions.AutoPark() end })
 	panels.slotBtn = toy(c, { Text = T("btn_buyslot"), Sub = "", Color = P.blue, Size = UDim2.fromOffset(176, 54), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, -2), ZIndex = 23, SubSize = 14,
-		OnClick = function() actions.BuySlot(store.State.slots + 1) end })
+		OnClick = function()
+			local st = store.State
+			if st.slots + 1 &gt; (st.floors or 1) * 6 then
+				actions.BuyFloor(st.floors or 1)
+			else
+				actions.BuySlot(st.slots)
+			end
+		end })
 	panels.carList = scroller(c, UDim2.fromOffset(0, 62), UDim2.new(1, 0, 1, -62))
 end
 
@@ -7903,7 +8161,12 @@ local function refreshGarage()
 	end
 	panels.garageInfo.Text = string.format('&lt;font color="#1E9E40"&gt;+%s/s&lt;/font&gt;   🅿 %d/%d   🚗 %d', Util.FormatNumber(store.Income), parked, st.slots, #st.cars)
 	local cost = EconomyConfig.SlotCosts[st.slots + 1]
-	if cost then
+	local floors = st.floors or 1
+	if cost and st.slots + 1 &gt; floors * 6 then
+		local fc = EconomyConfig.FloorCosts[floors + 1]
+		panels.slotBtn.SetText("+ LEVEL " .. (floors + 1), "$" .. Util.FormatNumber(fc))
+		panels.slotBtn.SetColor(store.Money &gt;= fc and P.orange or P.grey)
+	elseif cost then
 		panels.slotBtn.SetText(T("btn_buyslot"), "$" .. Util.FormatNumber(cost))
 		panels.slotBtn.SetColor(store.Money &gt;= cost and P.blue or P.grey)
 	else
@@ -8425,7 +8688,7 @@ function Fx.Hit(dir, flashFrame)
 end
 
 return Fx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX090966613F184B38BDEFA38310098197"><Properties><string name="Name">CineFx</string><ProtectedString name="Source">-- Cinematic toolkit: camera shake / zoom / takeover, letterbox, darken, flash, glitch, big titles.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX59D6D7373E1444F692748938A24653ED"><Properties><string name="Name">CineFx</string><ProtectedString name="Source">-- Cinematic toolkit: camera shake / zoom / takeover, letterbox, darken, flash, glitch, big titles.
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
@@ -8616,7 +8879,7 @@ function Cine.Reset(t)
 end
 
 return Cine
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXD22B3643E45E451E909DFD036596B8C4"><Properties><string name="Name">ClientFx</string><ProtectedString name="Source">-- Small feedback effects: pickups, banking, donations, airbag, the Golden Magnate's coin toss.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7DB590CB707F4D899F207948167AFDFD"><Properties><string name="Name">ClientFx</string><ProtectedString name="Source">-- Small feedback effects: pickups, banking, donations, airbag, the Golden Magnate's coin toss.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
@@ -8834,7 +9097,7 @@ function Fx.Init(ui)
 end
 
 return Fx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX9656CF7F88D8496182E8BD74D4188B82"><Properties><string name="Name">DeathFx</string><ProtectedString name="Source">-- WRECKED! sequence: impact flash, heavy shake, glitch, grayscale-red grade, crane-up camera, countdown.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7D9309CC8B334675B424E2747750AD60"><Properties><string name="Name">DeathFx</string><ProtectedString name="Source">-- WRECKED! sequence: impact flash, heavy shake, glitch, grayscale-red grade, crane-up camera, countdown.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -8990,7 +9253,132 @@ function DeathFx.Recover()
 end
 
 return DeathFx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXE9FC94BF1B534C52966B2716A3E6EEB5"><Properties><string name="Name">Markers</string><ProtectedString name="Source">-- World markers (always on top) + an edge arrow pointing to the current objective.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX901E4DEB767348F599A2B124023407B2"><Properties><string name="Name">GaragePrompts</string><ProtectedString name="Source">-- Own-garage interactions created on this client only: buy the next bay right at the bay,
+-- build the next floor at the lift, ride the lift between floors.
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local BaseLayout = require(Shared:WaitForChild("BaseLayout"))
+local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
+local Util = require(Shared:WaitForChild("Util"))
+local Net = require(Shared:WaitForChild("Net"))
+
+local GP = {}
+local K, store, Cine
+local folder
+local sig = ""
+
+local function anchor(name, cf)
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch = true, false, false, false
+	p.Transparency = 1
+	p.Size = Vector3.new(4, 4, 4)
+	p.CFrame = cf
+	p.Parent = folder
+	return p
+end
+
+local function prompt(part, action, object, onTrigger)
+	local pp = Instance.new("ProximityPrompt")
+	pp.ActionText = action
+	pp.ObjectText = object
+	pp.HoldDuration = 0.35
+	pp.MaxActivationDistance = 12
+	pp.RequiresLineOfSight = false
+	pp.Parent = part
+	pp.Triggered:Connect(onTrigger)
+	return pp
+end
+
+local function priceTag(part, text, color)
+	local bb = K.new("BillboardGui", { Adornee = part, Size = UDim2.fromOffset(150, 44), StudsOffset = Vector3.new(0, 3, 0), MaxDistance = 80, LightInfluence = 0 }, part)
+	local f = K.new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = color }, bb)
+	K.corner(f, 14)
+	K.stroke(f, K.P.ink, 3)
+	K.text(f, { Text = text, TextSize = 22, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
+end
+
+local function ride(targetY, bcf)
+	local char = Players.LocalPlayer.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	if not hrp then
+		return
+	end
+	if Cine then
+		Cine.Flash(Color3.new(0, 0, 0), 0.2, 0.5)
+	end
+	local dest = bcf * CFrame.new(-15, targetY + 3, BaseLayout.ElevatorLocal.Z)
+	hrp.AssemblyLinearVelocity = Vector3.zero
+	hrp.CFrame = CFrame.lookAt(dest.Position, dest.Position + bcf:VectorToWorldSpace(Vector3.new(-1, 0, 0)))
+end
+
+local function rebuild()
+	local st = store.State
+	if not st or not st.baseIndex then
+		return
+	end
+	local floors = st.floors or 1
+	local key = table.concat({ st.baseIndex, st.slots, floors }, ":")
+	if key == sig then
+		return
+	end
+	sig = key
+	folder:ClearAllChildren()
+	local bcf = BaseLayout.GetBaseCFrame(st.baseIndex)
+
+	-- next bay: price tag + buy prompt right on the bay
+	local nextSlot = st.slots + 1
+	if nextSlot &lt;= floors * BaseLayout.SlotsPerFloor and EconomyConfig.SlotCosts[nextSlot] then
+		local cost = EconomyConfig.SlotCosts[nextSlot]
+		local p = BaseLayout.SlotLocal(nextSlot)
+		local a = anchor("BuyBay", bcf * CFrame.new(p.X, BaseLayout.FloorY + p.Y + 2, p.Z))
+		priceTag(a, "🔒 $" .. Util.FormatNumber(cost), store.Money &gt;= cost and K.P.green or K.P.grey)
+		prompt(a, "Buy bay $" .. Util.FormatNumber(cost), "Parking bay " .. nextSlot, function()
+			K.actions.BuySlot(st.slots)
+		end)
+	end
+
+	-- lift: build the next floor, or ride to any built floor
+	local el = BaseLayout.ElevatorLocal
+	for f = 1, floors do
+		local y = (f - 1) * BaseLayout.FloorHeight
+		local stop = anchor("LiftStop" .. f, bcf * CFrame.new(f == 1 and el.X or -15, BaseLayout.FloorY + y + 2, el.Z))
+		for g = 1, floors do
+			if g ~= f then
+				prompt(stop, g == 1 and "Ground floor" or ("Level " .. g), "Lift", function()
+					ride((g - 1) * BaseLayout.FloorHeight + BaseLayout.FloorY, bcf)
+				end)
+			end
+		end
+		if f == 1 and floors &lt; BaseLayout.MaxFloors then
+			local cost = EconomyConfig.FloorCosts[floors + 1]
+			local full = st.slots &gt;= floors * BaseLayout.SlotsPerFloor
+			priceTag(stop, (full and "🏗️ $" or "🔒 $") .. Util.FormatNumber(cost), (full and store.Money &gt;= cost) and K.P.orange or K.P.grey)
+			prompt(stop, "Build level " .. (floors + 1) .. " $" .. Util.FormatNumber(cost), "Lift", function()
+				K.actions.BuyFloor(floors)
+			end)
+		end
+	end
+end
+
+function GP.Start(kit, cine)
+	K = kit
+	store = K.store
+	Cine = cine
+	folder = Instance.new("Folder")
+	folder.Name = "GaragePrompts"
+	folder.Parent = Workspace
+	store.Changed.Event:Connect(rebuild)
+	rebuild()
+	Net.Get("BuyFloor") -- make sure the remote exists before the first click
+end
+
+return GP
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX381761C7A4044957964627D3ED3B6BA9"><Properties><string name="Name">Markers</string><ProtectedString name="Source">-- World markers (always on top) + an edge arrow pointing to the current objective.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -9180,7 +9568,7 @@ function Markers.Start(kit, extraModule)
 end
 
 return Markers
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXB366DA409ABE47C6A957AD8653A8951A"><Properties><string name="Name">SpeedLanes</string><ProtectedString name="Source">-- Running lanes: dark strips with white arrows. Boost only while running the way the arrows point.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXC744D05B4E1A46589F40977356DE4CA4"><Properties><string name="Name">SpeedLanes</string><ProtectedString name="Source">-- Running lanes: dark strips with white arrows. Boost only while running the way the arrows point.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -9220,7 +9608,7 @@ function SpeedLanes.Start(getBaseSpeed)
 end
 
 return SpeedLanes
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0F8CD4A0D6E64EFEB578CC8EF85620BF"><Properties><string name="Name">UIExtra</string><ProtectedString name="Source">-- Extra HUD + panels: Pit Stop perks, Golden Magnate donations, combo meter, contracts, hot drop banner, boosts.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXEAE750162F7141AA808DEAEF51ECB866"><Properties><string name="Name">UIExtra</string><ProtectedString name="Source">-- Extra HUD + panels: Pit Stop perks, Golden Magnate donations, combo meter, contracts, hot drop banner, boosts.
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local ProximityPromptService = game:GetService("ProximityPromptService")

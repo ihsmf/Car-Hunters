@@ -458,7 +458,14 @@ local function buildGarage()
 	panels.garageInfo = text(c, { Text = "", Font = BODY, TextSize = 20, TextColor3 = P.ink, Size = UDim2.new(1, -380, 0, 50), ZIndex = 22, RichText = true })
 	panels.autoBtn = toy(c, { Text = T("btn_autopark"), Color = P.green, Size = UDim2.fromOffset(170, 54), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -190, 0, -2), ZIndex = 23, OnClick = function() actions.AutoPark() end })
 	panels.slotBtn = toy(c, { Text = T("btn_buyslot"), Sub = "", Color = P.blue, Size = UDim2.fromOffset(176, 54), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, -2), ZIndex = 23, SubSize = 14,
-		OnClick = function() actions.BuySlot(store.State.slots + 1) end })
+		OnClick = function()
+			local st = store.State
+			if st.slots + 1 > (st.floors or 1) * 6 then
+				actions.BuyFloor(st.floors or 1)
+			else
+				actions.BuySlot(st.slots)
+			end
+		end })
 	panels.carList = scroller(c, UDim2.fromOffset(0, 62), UDim2.new(1, 0, 1, -62))
 end
 
@@ -507,7 +514,12 @@ local function refreshGarage()
 	end
 	panels.garageInfo.Text = string.format('<font color="#1E9E40">+%s/s</font>   🅿 %d/%d   🚗 %d', Util.FormatNumber(store.Income), parked, st.slots, #st.cars)
 	local cost = EconomyConfig.SlotCosts[st.slots + 1]
-	if cost then
+	local floors = st.floors or 1
+	if cost and st.slots + 1 > floors * 6 then
+		local fc = EconomyConfig.FloorCosts[floors + 1]
+		panels.slotBtn.SetText("+ LEVEL " .. (floors + 1), "$" .. Util.FormatNumber(fc))
+		panels.slotBtn.SetColor(store.Money >= fc and P.orange or P.grey)
+	elseif cost then
 		panels.slotBtn.SetText(T("btn_buyslot"), "$" .. Util.FormatNumber(cost))
 		panels.slotBtn.SetColor(store.Money >= cost and P.blue or P.grey)
 	else
