@@ -324,6 +324,35 @@ local function refreshTune(st, open)
 	end
 end
 
+---------------------------------------------------------------- Welcome back (offline earnings)
+local function showOffline(info)
+	local dim = K.new("TextButton", { Name = "WelcomeBack", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.45, ZIndex = 80 }, K.gui)
+	local card = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(520, 330), BackgroundColor3 = P.cream, ZIndex = 81 }, dim)
+	K.corner(card, 28)
+	K.stroke(card, P.ink, 5)
+	local sc = K.new("UIScale", { Scale = 0.5 }, card)
+	K.tween(sc, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
+	K.text(card, { Text = "WELCOME BACK!", TextSize = 42, Position = UDim2.fromOffset(0, 18), Size = UDim2.new(1, 0, 0, 48), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 82, Outline = 3 })
+	local h = math.floor(info.seconds / 3600)
+	local m = math.floor(info.seconds % 3600 / 60)
+	K.text(card, { Text = string.format("Your garage worked for %dh %02dm while you were away%s", h, m, info.capped and " (max 8h)" or ""), Font = K.BODY, TextSize = 17, TextColor3 = P.muted,
+		TextWrapped = true, Position = UDim2.fromOffset(30, 72), Size = UDim2.new(1, -60, 0, 44), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 82 })
+	K.new("ImageLabel", { Position = UDim2.fromOffset(110, 128), Size = UDim2.fromOffset(64, 64), BackgroundTransparency = 1, Image = require(game:GetService("ReplicatedStorage").Shared.Icons).Get("coin") or "", ZIndex = 82 }, card)
+	K.text(card, { Text = "+$" .. Util.FormatNumber(info.amount), TextSize = 48, TextColor3 = C(70, 220, 100), Position = UDim2.fromOffset(184, 132), Size = UDim2.fromOffset(300, 56), ZIndex = 82, Outline = 3 })
+	local function closeCard()
+		dim:Destroy()
+	end
+	local btns = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -22), Size = UDim2.fromOffset(470, 76), BackgroundTransparency = 1, ZIndex = 82 }, card)
+	K.list(btns, Enum.FillDirection.Horizontal, 16, Enum.HorizontalAlignment.Center)
+	K.toy(btns, { Text = "COLLECT", Color = P.green, Size = UDim2.fromOffset(210, 72), TextSize = 26, LayoutOrder = 1, ZIndex = 83, OnClick = closeCard })
+	K.toy(btns, { Text = "x2", Sub = "R$ " .. ((DonateConfig.ById.offline_x2 or {}).price or "?"), Color = GOLD, Size = UDim2.fromOffset(150, 72), TextSize = 28, SubSize = 14, LayoutOrder = 2, ZIndex = 83,
+		OnClick = function()
+			K.actions.Donate("offline_x2")
+			closeCard()
+		end })
+	UI.Sfx("cash")
+end
+
 ---------------------------------------------------------------- Rebirth + token shop
 local function buildRebirth()
 	local p = K.panelShell("rebirth", T("rebirth_title"), 860, 600, TEAL)
@@ -630,6 +659,7 @@ function X.Init(ui)
 			refreshShop(st, "shop")
 		end
 	end)
+	require(Shared:WaitForChild("Net")).Get("OfflineEarnings").OnClientEvent:Connect(showOffline)
 	-- walk up to the NPCs
 	ProximityPromptService.PromptTriggered:Connect(function(prompt)
 		local n = prompt.Parent and prompt.Parent.Name

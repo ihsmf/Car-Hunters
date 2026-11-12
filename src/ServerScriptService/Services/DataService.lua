@@ -38,6 +38,7 @@ local function newProfile(isNew)
 		discovered = {},
 		pity = 0,
 		saveCount = 0,
+		lastSeen = 0,
 		perks = {},
 		boosts = {},
 		receipts = {},
@@ -208,6 +209,7 @@ local function sanitize(raw)
 		p.skin = raw.skin
 	end
 	p.saveCount = toCount(raw.saveCount, 1e12)
+	p.lastSeen = toCount(raw.lastSeen, 4e9)
 	return p
 end
 DataService.Sanitize = sanitize
@@ -364,6 +366,7 @@ local function snapshot(s, mergeCarried)
 	end
 	d.schemaVersion = SCHEMA_VERSION
 	d.saveCount = (d.saveCount or 0) + 1
+	d.lastSeen = os.time()
 	return d
 end
 

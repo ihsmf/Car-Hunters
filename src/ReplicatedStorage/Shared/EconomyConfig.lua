@@ -24,21 +24,21 @@ end
 
 -- tuned with tools/econ_sim.py (see docs/ECONOMY.md). minValue = collection value gate (keeps players from rushing)
 EconomyConfig.ZoneUnlock = {
-	highway = { cost = 60000, minValue = 15000 },
-	industrial = { cost = 600000, minValue = 150000 },
-	neon = { cost = 5000000, minValue = 600000 },
-	scrapyard = { cost = 14000000, minValue = 900000 },
+	highway = { cost = 120000, minValue = 15000 },
+	industrial = { cost = 1000000, minValue = 150000 },
+	neon = { cost = 14000000, minValue = 600000 },
+	scrapyard = { cost = 70000000, minValue = 900000 },
 	-- Tier 2 needs a rebirth, Tier 3 three rebirths (RebirthService)
-	docks = { cost = 60000000, minValue = 1000000, rebirths = 1 },
-	desert = { cost = 180000000, minValue = 1200000, rebirths = 1 },
-	bridge = { cost = 500000000, minValue = 1500000, rebirths = 1 },
-	airport = { cost = 1500000000, minValue = 2000000, rebirths = 1 },
-	canyon = { cost = 5000000000, minValue = 2500000, rebirths = 2 },
-	circuit = { cost = 3.5e9, minValue = 2500000, rebirths = 3 },
-	drift = { cost = 8e9, minValue = 2500000, rebirths = 3 },
-	storm = { cost = 1.6e10, minValue = 2500000, rebirths = 3 },
-	rush = { cost = 3e10, minValue = 2500000, rebirths = 3 },
-	colosseum = { cost = 5e10, minValue = 2500000, rebirths = 3 },
+	docks = { cost = 100000000, minValue = 1000000, rebirths = 1 },
+	desert = { cost = 310000000, minValue = 1200000, rebirths = 1 },
+	bridge = { cost = 850000000, minValue = 1500000, rebirths = 1 },
+	airport = { cost = 2.6e+09, minValue = 2000000, rebirths = 1 },
+	canyon = { cost = 8.5e+09, minValue = 2500000, rebirths = 2 },
+	circuit = { cost = 6e+09, minValue = 2500000, rebirths = 3 },
+	drift = { cost = 1.4e+10, minValue = 2500000, rebirths = 3 },
+	storm = { cost = 2.7e+10, minValue = 2500000, rebirths = 3 },
+	rush = { cost = 5.1e+10, minValue = 2500000, rebirths = 3 },
+	colosseum = { cost = 8.5e+10, minValue = 2500000, rebirths = 3 },
 }
 
 EconomyConfig.SellFraction = 0.35
@@ -50,7 +50,7 @@ EconomyConfig.MaxLuckShift = 0.15 -- all luck sources together
 
 EconomyConfig.ThrowCooldown = 0.8
 EconomyConfig.MaxBatch = 100 -- parts per batch throw
-EconomyConfig.MergeMaxLevel = 5 -- duplicates level a car up to this; beyond needs upgrades
+EconomyConfig.MergeMaxLevel = 3 -- duplicates level a car up to this; beyond needs upgrades
 EconomyConfig.ThrowAnimTime = 5.2
 EconomyConfig.ThrowMaxDistance = 45
 EconomyConfig.BaseActionDistance = 100

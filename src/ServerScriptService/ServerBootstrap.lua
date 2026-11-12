@@ -170,6 +170,7 @@ local function onPlayerAdded(player)
 	S.Income.Recalc(player)
 	S.Base.RefreshAll(player)
 	s.ready = true
+	S.Income.PayOffline(player)
 	S.Data.Push(player)
 	player:LoadCharacter()
 	if s.leftEarly then cleanup(player) end

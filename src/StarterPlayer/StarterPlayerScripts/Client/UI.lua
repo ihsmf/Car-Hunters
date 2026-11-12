@@ -973,10 +973,26 @@ local function refreshHint()
 		msg = T("tut_upgrade")
 	elseif hud.canUnlock then
 		msg = T("tut_zone")
+	else
+		-- always one clear next goal: the next district, then the next rebirth
+		for i, zid in ipairs(MapConfig.ZoneOrder) do
+			local req = EconomyConfig.ZoneUnlock[zid]
+			if req and not st.zones[zid] and (i == 1 or st.zones[MapConfig.ZoneOrder[i - 1]]) then
+				if (req.rebirths or 0) > (st.rebirths or 0) then
+					local SkinConfig = require(ReplicatedStorage.Shared.SkinConfig)
+					local need, money = SkinConfig.RebirthNeeds(st.rebirths or 0)
+					msg = st.zones[need] and string.format("Next goal: REBIRTH at $%s (you have $%s)", Util.FormatNumber(money), Util.FormatNumber(store.Money))
+						or string.format("Next goal: reach %s, then rebirth", T("zone_" .. need))
+				else
+					msg = string.format("Next goal: unlock %s - $%s", T("zone_" .. zid), Util.FormatNumber(req.cost))
+				end
+				break
+			end
+		end
 	end
 	hud.hintFrame.Visible = msg ~= nil and state.open == nil
 	if msg then
-		hud.hint.Text = "👉  " .. msg
+		hud.hint.Text = msg
 	end
 end
 

@@ -257,7 +257,8 @@ function MapConfig.ZoneBlocks(zoneId)
 end
 
 -- rectangles {x1, x2, z1, z2}
--- Running lanes: pairs of dark lanes with white arrows. Each lane = { x1, x2, z1, z2, dx, dz } where (dx,dz) is
+-- Running lanes: one central pair (out / back home) down the plaza and every district, stopping before roads.
+-- Each lane = { x1, x2, z1, z2, dx, dz } where (dx,dz) is
 -- the arrow direction; the boost only works while running that way.
 function MapConfig.SpeedLanes()
 	if MapConfig._lanes then
@@ -270,15 +271,6 @@ function MapConfig.SpeedLanes()
 		table.insert(out, { g, g + w, z1, z2, 0, -1 }) -- right lane: back home
 	end
 	pairZ(MapConfig.StartZ + 14, MapConfig.EntryZ + 8)
-	for i = 1, #MapConfig.BaseCenters, 2 do
-		local z = MapConfig.BaseCenters[i].z
-		local edge = MapConfig.PromenadeHalfWidth - 0.8 -- stop at the curb gap, never into the garage plot
-		for _, sx in ipairs({ -1, 1 }) do
-			local x1, x2 = math.min(sx * edge, sx * (g + w + 1)), math.max(sx * edge, sx * (g + w + 1))
-			table.insert(out, { x1, x2, z + g, z + g + w, -sx, 0 }) -- to the centre
-			table.insert(out, { x1, x2, z - g - w, z - g, sx, 0 }) -- to the garage
-		end
-	end
 	for _, zid in ipairs(MapConfig.ZoneOrder) do
 		for _, b in ipairs(MapConfig.ZoneBlocks(zid)) do
 			if b[2] - b[1] > 16 then

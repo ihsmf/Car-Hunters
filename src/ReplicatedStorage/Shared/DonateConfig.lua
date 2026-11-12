@@ -14,6 +14,7 @@ DonateConfig.Products = {
 	{ id = "crate_engine", tab = "pack", icon = "⚙️", name = "Engine Crate", desc = "3 engines", price = 29, parts = { engine = 3 } },
 	{ id = "crate_turbo", tab = "pack", icon = "🌀", name = "Turbo Crate", desc = "3 turbos", price = 69, parts = { turbo = 3 } },
 	{ id = "crate_core", tab = "pack", icon = "⚡", name = "Core Crate", desc = "1 energy core + 2 turbos", price = 149, parts = { core = 1, turbo = 2 } },
+	{ id = "offline_x2", tab = "pack", icon = "2x", name = "Double Offline Cash", desc = "Doubles the cash you earned while away", price = 29 },
 	{ id = "slots", tab = "pack", icon = "🅿️", name = "+3 Parking", desc = "Three more garage slots", price = 99, slots = 3 },
 }
 

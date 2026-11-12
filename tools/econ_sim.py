@@ -71,7 +71,8 @@ P = dict(
     pick_rate=0.22,          # parts per second while hunting (walk, dodge, spawn cooldowns)
     lane_speed=40,           # average running speed incl. speed lanes (studs/s)
     death={1: [0.06, 0.12, 0.18, 0.25, 0.28], 2: [0.3, 0.32, 0.36, 0.34, 0.33], 3: [0.4, 0.42, 0.45, 0.48, 0.42]},
-    throw_time=6.5,          # seconds per trap throw incl. animation
+    batch_ui=6,              # seconds looking at the reel / results grid per batch
+    session_h=2, away_h=10,  # play 2 h, then away 10 h (offline earnings, capped by the game)
     think=20,                # seconds per cycle spent in menus / walking in the garage
     risk_mix=(0.55, 0.35, 0.10),  # share of safe / risky / road pickups
     tuning_rate={},  # filled from PartConfig.TuningDrops below
@@ -184,14 +185,17 @@ class Player:
 
     def throw_all(self):
         # keep a few parts of each kind for upgrades
+        n = 0
         for part in ORDER:
             keep = 4 if part in ("tire", "engine", "turbo", "core") else 0
             while self.parts[part] > keep:
                 self.parts[part] -= 1
                 self.throw(part)
+                n += 1
+        if n:  # one batch: reel + grid instead of a cinematic per part
+            self.wait(2.5 + 0.05 * n + P["batch_ui"])
 
     def throw(self, part):
-        self.wait(P["throw_time"])
         row = dict(DROP[part])
         luck = min(Eco.MaxLuckShift, 0.015 * self.perks.get("lucky", 0))
         if self.pity >= Eco.PityThreshold - 1:
@@ -210,7 +214,14 @@ class Player:
         if (rar, i) not in self.discovered:
             self.discovered.add((rar, i))
             self.money += POOL[rar][i] * VALUE_MULT * Eco.DiscoverBonusMult
-        self.cars.append([POOL[rar][i], 1, rar, 1.0])
+        copy = None
+        for c in self.cars:
+            if c[2] == rar and len(c) > 4 and c[4] == i and (copy is None or c[1] > copy[1]):
+                copy = c
+        if copy and copy[1] < Eco.MergeMaxLevel:
+            copy[1] += 1  # merge duplicate
+            return
+        self.cars.append([POOL[rar][i], 1, rar, 1.0, i])
         if len(self.cars) > 60:  # sell junk
             self.cars.sort(key=self.car_income)
             junk = self.cars.pop(0)
@@ -310,6 +321,10 @@ class Player:
             self.mark(f"rebirth {self.rebirths}")
 
     def cycle(self):
+        # offline earnings after each play session
+        if self.t >= getattr(self, "next_away", P["session_h"] * 3600):
+            self.next_away = self.t + P["session_h"] * 3600
+            self.money += min(P["away_h"], 8) * 3600 * self.income() * 0.15
         self.do_run()
         self.throw_all()
         self.use_tuning()

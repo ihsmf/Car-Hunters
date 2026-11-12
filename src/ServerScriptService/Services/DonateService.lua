@@ -83,6 +83,14 @@ function Donate.Grant(player, key)
 		if missing > 0 then -- already maxed: pay it out instead
 			d.money = math.min(d.money + missing * math.max(50000, (s.income or 0) * 600), EconomyConfig.MaxMoney)
 		end
+	elseif key == "offline_x2" then
+		local off = s.offline
+		if off and not off.doubled then
+			off.doubled = true
+			d.money = math.min(d.money + off.amount, EconomyConfig.MaxMoney)
+		else
+			d.money = math.min(d.money + math.max(5000, (s.income or 0) * 600), EconomyConfig.MaxMoney)
+		end
 	elseif key == "pity" then
 		d.pity = math.max(d.pity, EconomyConfig.PityThreshold - 1)
 	elseif key == "hotdrop" then

@@ -405,21 +405,8 @@ local function buildPlaza(ctx)
 	for z = zS + 8, zE - 8, 12 do
 		Part(f.Ground, "PavingJoint", Vector3.new(2 * PW - 2, 0.04, 0.25), CFrame.new(0, 0.22, z), C(208, 200, 186), M.SmoothPlastic, { collide = false, cast = false })
 	end
-	-- curb along the promenade, open where the garage running lanes cross it
-	local cuts = {}
-	for i = 1, #MapConfig.BaseCenters, 2 do
-		table.insert(cuts, MapConfig.BaseCenters[i].z)
-	end
-	table.sort(cuts)
 	for _, s in ipairs({ -1, 1 }) do
-		local z0 = zS + 2
-		for idx = 1, #cuts + 1 do
-			local z1 = cuts[idx] and cuts[idx] - 8 or zE - 4
-			if z1 - z0 > 1 then
-				Part(f.Ground, "Curb", Vector3.new(1.2, 0.6, z1 - z0), CFrame.new(s * PW, 0.3, (z0 + z1) / 2), C(150, 150, 146), M.Concrete)
-			end
-			z0 = cuts[idx] and cuts[idx] + 8 or z1
-		end
+		Part(f.Ground, "Curb", Vector3.new(1.2, 0.6, len - 6), CFrame.new(s * PW, 0.3, zm - 1), C(150, 150, 146), M.Concrete)
 	end
 
 	for i = 1, MapConfig.BaseCount do

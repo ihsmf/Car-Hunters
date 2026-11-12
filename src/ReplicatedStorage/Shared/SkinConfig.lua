@@ -49,7 +49,7 @@ end
 SkinConfig.Rebirth = {
 	needZone = { [0] = "scrapyard", [1] = "airport", [2] = "canyon" }, -- beat the arena of your tier; later: "rush"
 	lateZone = "rush",
-	baseMoney = 30000000, growth = 3,
+	baseMoney = 150000000, growth = 2.2,
 	incomePer = 0.25, startMoney = 500,
 }
 function SkinConfig.RebirthNeeds(n)

@@ -54,6 +54,29 @@ function Income.Recalc(player)
 	S.Base.SetIncomeText(player, "+" .. Util.FormatNumber(s.income) .. "/s")
 end
 
+-- offline earnings: a share of income for the time away (capped), paid once on join
+Income.OfflineShare = 0.15
+Income.OfflineCap = 8 * 3600
+function Income.PayOffline(player)
+	local s = S.Data.Get(player)
+	local d = s and s.data
+	if not d or (d.lastSeen or 0) <= 0 then
+		return
+	end
+	local away = os.time() - d.lastSeen
+	if away < 120 then
+		return
+	end
+	local secs = math.min(away, Income.OfflineCap)
+	local amount = math.floor(secs * (s.income or 0) * Income.OfflineShare)
+	if amount <= 0 then
+		return
+	end
+	d.money = math.min(d.money + amount, EconomyConfig.MaxMoney)
+	s.offline = { amount = amount, seconds = secs, doubled = false }
+	Net.Get("OfflineEarnings"):FireClient(player, { amount = amount, seconds = away, capped = away > Income.OfflineCap })
+end
+
 function Income.Start()
 	local last = os.clock()
 	task.spawn(function()

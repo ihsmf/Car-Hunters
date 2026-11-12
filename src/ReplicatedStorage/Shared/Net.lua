@@ -36,6 +36,7 @@ Net.Names = {
 	"TokenPerk",
 	"ThrowBatch",
 	"ThrowBatchResult",
+	"OfflineEarnings",
 }
 
 function Net.Folder()
