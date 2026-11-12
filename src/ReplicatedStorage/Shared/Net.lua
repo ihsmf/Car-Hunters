@@ -42,6 +42,8 @@ Net.Names = {
 	"CheckpointChoice",
 	"CheckpointFx",
 	"TutorialStep",
+	"ClaimDaily",
+	"ClaimChest",
 }
 
 function Net.Folder()

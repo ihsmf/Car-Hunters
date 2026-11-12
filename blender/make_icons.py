@@ -58,6 +58,23 @@ g["Dark"].append(torus((0, 0, 2.7), 0.4, 0.08, rot=X90, seg=24, minor=8))
 g["Metal"].append(box((0, -0.95, 1.25), (0.5, 0.05, 0.12)))
 roots["backpack"] = finish("backpack", g)
 
+# gift: box with a ribbon and bow
+g = {"Accent": [], "Gold": []}
+g["Accent"].append(box((0, 0, 1.0), (2.2, 2.2, 1.8), bev=0.12))
+g["Accent"].append(box((0, 0, 2.05), (2.45, 2.45, 0.45), bev=0.1))
+g["Gold"].append(box((0, 0, 1.15), (0.42, 2.3, 2.3)))
+g["Gold"].append(box((0, 0, 1.15), (2.3, 0.42, 2.3)))
+for s_ in (-1, 1):
+    g["Gold"].append(torus((s_ * 0.45, 0, 2.55), 0.42, 0.14, rot=(math.pi / 2, 0, s_ * 0.5), seg=24, minor=8))
+roots["gift"] = finish("gift", g)
+
+# trade: two arrows in opposite directions
+g = {"Blue": [], "Gold": []}
+for s_, look in ((1, "Blue"), (-1, "Gold")):
+    g[look].append(box((0, 0, 1.4 + s_ * 0.55), (2.2, 0.5, 0.5), bev=0.12))
+    g[look].append(cone((s_ * 1.35, 0, 1.4 + s_ * 0.55), 0.55, 0.0, 0.8, rot=(0, s_ * math.pi / 2, 0), verts=4))
+roots["trade"] = finish("trade", g)
+
 # scene: transparent background, key + rim + fill
 sc = bpy.context.scene
 sc.render.engine = "CYCLES"
@@ -113,7 +130,7 @@ for name, r in roots.items():
     view = Vector((1.0, -1.25, 0.8)).normalized() if name not in ("coin",) else Vector((-1.0, -0.3, 0.2)).normalized()
     co.location = centre + view * (ext * 4)
     co.rotation_euler = (centre - co.location).to_track_quat("-Z", "Y").to_euler()
-    cam.ortho_scale = ext * 1.18
+    cam.ortho_scale = ext * (1.5 if name in ("gift", "trade") else 1.18)
     key = name.replace("Part_", "")
     sc.render.filepath = os.path.join(OUT, key + ".png")
     bpy.ops.render.render(write_still=True)

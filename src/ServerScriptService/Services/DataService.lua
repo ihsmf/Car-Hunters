@@ -40,6 +40,7 @@ local function newProfile(isNew)
 		saveCount = 0,
 		lastSeen = 0,
 		tutorial = 0,
+		daily = { day = 0, last = 0 },
 		perks = {},
 		boosts = {},
 		receipts = {},
@@ -212,6 +213,9 @@ local function sanitize(raw)
 	p.saveCount = toCount(raw.saveCount, 1e12)
 	p.lastSeen = toCount(raw.lastSeen, 4e9)
 	p.tutorial = toCount(raw.tutorial, 8)
+	if type(raw.daily) == "table" then
+		p.daily = { day = math.clamp(toCount(raw.daily.day, 7), 0, 7), last = toCount(raw.daily.last, 1e6) }
+	end
 	if raw.tutorial == nil and p.stats.throws > 0 then
 		p.tutorial = 8 -- players from before the tutorial existed
 	end
@@ -328,7 +332,7 @@ end
 function DataService.Load(player)
 	local s = {
 		player = player, ready = false, carried = {}, hidden = {}, rl = {}, income = 0, collectionValue = 0,
-		moneyFrac = 0, busy = false, protectedUntil = 0, lastHit = 0, baseIndex = nil,
+		moneyFrac = 0, busy = false, protectedUntil = 0, lastHit = 0, baseIndex = nil, joinedAt = os.clock(), chests = {},
 		ephemeral = false, loadFailed = false,
 	}
 	sessions[player] = s
@@ -468,6 +472,9 @@ function DataService.BuildState(s)
 		contracts = Util.CopyTable(d.contracts),
 		tuning = Util.CopyTable(d.tuning),
 		tutorial = d.tutorial,
+		daily = { day = d.daily.day, last = d.daily.last, today = math.floor(os.time() / 86400) },
+		chests = Util.CopyTable(s.chests or {}),
+		sessionTime = os.clock() - (s.joinedAt or os.clock()),
 		rebirths = d.rebirths,
 		tokens = d.tokens,
 		tokenPerks = Util.CopyTable(d.tokenPerks),
