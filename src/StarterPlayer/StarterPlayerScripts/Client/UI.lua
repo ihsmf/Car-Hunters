@@ -217,37 +217,52 @@ end
 
 ---------------------------------------------------------------- HUD
 local function buildHud()
-	-- money pill
-	local money = new("Frame", { Position = UDim2.fromOffset(18, 16), Size = UDim2.fromOffset(250, 66), BackgroundColor3 = P.ink, BorderSizePixel = 0 }, root)
-	corner(money, 40)
-	stroke(money, P.white, 3)
-	local coin = new("Frame", { Position = UDim2.fromOffset(10, 11), Size = UDim2.fromOffset(44, 44), BackgroundColor3 = P.white, BorderSizePixel = 0 }, money)
+	-- left column (Figma "07 — HUD Left Column v2"): wallet card, buttons, contracts card stacked
+	local colF = new("Frame", { Name = "LeftColumn", Position = UDim2.fromOffset(18, 16), Size = UDim2.fromOffset(270, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1 }, root)
+	list(colF, Enum.FillDirection.Vertical, 10)
+	hud.leftCol = colF
+	local DARK = C(20, 24, 34)
+	local card = new("Frame", { Name = "WalletCard", Size = UDim2.fromOffset(270, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = DARK, BackgroundTransparency = 0.12, LayoutOrder = 1 }, colF)
+	corner(card, 22)
+	stroke(card, P.white, 2.5).Transparency = 0.1
+	new("UIPadding", { PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14), PaddingTop = UDim.new(0, 12), PaddingBottom = UDim.new(0, 12) }, card)
+	list(card, Enum.FillDirection.Vertical, 10)
+	local money = new("Frame", { Name = "Money", Size = UDim2.new(1, 0, 0, 62), BackgroundTransparency = 1, LayoutOrder = 1 }, card)
+	local coin = new("Frame", { Position = UDim2.fromOffset(0, 9), Size = UDim2.fromOffset(44, 44), BackgroundColor3 = P.white, BorderSizePixel = 0 }, money)
 	corner(coin, 22)
-	stroke(coin, P.ink, 3)
-	new("UIGradient", { Color = ColorSequence.new(C(255, 230, 128), P.orange), Rotation = 90 }, coin)
+	stroke(coin, P.white, 2.5)
+	new("UIGradient", { Color = ColorSequence.new(C(255, 232, 130), P.orange), Rotation = 90 }, coin)
 	text(coin, { Text = "$", TextSize = 26, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
-	hud.money = text(money, { Position = UDim2.fromOffset(64, 6), Size = UDim2.fromOffset(180, 34), TextSize = 32, TextColor3 = P.yellow })
-	hud.income = text(money, { Position = UDim2.fromOffset(64, 38), Size = UDim2.fromOffset(180, 22), TextSize = 17, Font = BODY, TextColor3 = P.green })
+	hud.money = text(money, { Position = UDim2.fromOffset(54, 0), Size = UDim2.new(1, -54, 0, 36), TextSize = 34, TextColor3 = P.yellow })
+	local chip = new("Frame", { Position = UDim2.fromOffset(54, 38), Size = UDim2.fromOffset(0, 22), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = P.green, BackgroundTransparency = 0.82 }, money)
+	corner(chip, 10)
+	new("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }, chip)
+	hud.income = text(chip, { Size = UDim2.fromScale(0, 1), AutomaticSize = Enum.AutomaticSize.X, TextSize = 15, Font = BODY, TextColor3 = P.green })
 	hud.moneyScale = new("UIScale", {}, money)
-
-	-- banked parts row
-	local row = new("Frame", { Position = UDim2.fromOffset(18, 92), Size = UDim2.fromOffset(420, 34), BackgroundTransparency = 1 }, root)
+	new("Frame", { Name = "Divider", Size = UDim2.new(1, 0, 0, 2), BackgroundColor3 = P.white, BackgroundTransparency = 0.88, BorderSizePixel = 0, LayoutOrder = 2 }, card)
+	-- banked parts: 5 cells, rarity border, short label + count
+	local row = new("Frame", { Name = "Parts", Size = UDim2.new(1, 0, 0, 50), BackgroundTransparency = 1, LayoutOrder = 3 }, card)
 	list(row, Enum.FillDirection.Horizontal, 6)
 	hud.parts = {}
+	local SHORT = { bolts = "BOLT", tire = "TIRE", engine = "ENG", turbo = "TURBO", core = "CORE" }
 	for i, id in ipairs(PartConfig.Order) do
-		local chip = new("Frame", { Size = UDim2.fromOffset(70, 34), BackgroundColor3 = P.white, BorderSizePixel = 0, LayoutOrder = i }, row)
-		corner(chip, 14)
-		stroke(chip, rarityColor(PartConfig.Parts[id].rarity), 3.5)
-		text(chip, { Text = PART_ICON[id], Font = BODY, TextSize = 18, Position = UDim2.fromOffset(6, 0), Size = UDim2.fromOffset(26, 34) })
-		hud.parts[id] = { chip = chip, n = text(chip, { Text = "0", TextSize = 20, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(34, 2), Size = UDim2.fromOffset(34, 32) }) }
+		local rc = rarityColor(PartConfig.Parts[id].rarity)
+		local cell = new("Frame", { Size = UDim2.fromOffset(44, 50), BackgroundColor3 = P.white, BackgroundTransparency = 0.9, BorderSizePixel = 0, LayoutOrder = i }, row)
+		corner(cell, 12)
+		stroke(cell, rc, 2)
+		text(cell, { Text = SHORT[id], Font = BODY, TextSize = 10, TextColor3 = rc, Position = UDim2.fromOffset(0, 4), Size = UDim2.new(1, 0, 0, 12), TextXAlignment = Enum.TextXAlignment.Center })
+		hud.parts[id] = { chip = cell, n = text(cell, { Text = "0", TextSize = 21, Position = UDim2.fromOffset(0, 18), Size = UDim2.new(1, 0, 0, 26), TextXAlignment = Enum.TextXAlignment.Center }) }
 	end
-
-	-- risky loot badge
-	local bag = new("Frame", { Position = UDim2.fromOffset(18, 134), Size = UDim2.fromOffset(240, 34), BackgroundColor3 = P.red, BorderSizePixel = 0, Visible = false }, root)
+	-- risky loot of the current run
+	local bag = new("Frame", { Name = "RiskyLoot", Size = UDim2.new(1, 0, 0, 44), BackgroundColor3 = P.red, BackgroundTransparency = 0.78, Visible = false, LayoutOrder = 4 }, card)
 	corner(bag, 12)
-	stroke(bag, P.ink, 3)
+	stroke(bag, P.red, 2)
 	hud.bag = bag
-	hud.bagText = text(bag, { Text = "", TextSize = 19, Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -12, 1, 0) })
+	hud.bagText = text(bag, { Text = "", Font = BODY, TextSize = 14, Position = UDim2.fromOffset(10, 4), Size = UDim2.new(1, -20, 0, 20) })
+	local bbar = new("Frame", { Position = UDim2.new(0, 10, 0, 28), Size = UDim2.new(1, -20, 0, 8), BackgroundColor3 = P.white, BackgroundTransparency = 0.85, BorderSizePixel = 0 }, bag)
+	corner(bbar, 4)
+	hud.bagFill = new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = P.orange, BorderSizePixel = 0 }, bbar)
+	corner(hud.bagFill, 4)
 
 	-- zone banner + hint
 	local banner = new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), Size = UDim2.fromOffset(290, 46), BackgroundColor3 = P.white, BorderSizePixel = 0 }, root)
@@ -811,7 +826,8 @@ local function refreshHud()
 	for id, p in pairs(hud.parts) do
 		local n = store.Banked(id)
 		p.n.Text = tostring(n)
-		p.chip.BackgroundTransparency = n > 0 and 0 or 0.4
+		p.chip.BackgroundTransparency = n > 0 and 0.88 or 0.95
+		p.n.TextColor3 = n > 0 and P.white or P.grey
 	end
 	local carried = store.CarriedTotal()
 	hud.bag.Visible = carried > 0
@@ -823,8 +839,9 @@ local function refreshHud()
 				table.insert(icons, PART_ICON[id] .. n)
 			end
 		end
-		hud.bagText.Text = "🎒 " .. T("hud_risky", carried, st.carryCap or EconomyConfig.CarryCapacity) .. "  " .. table.concat(icons, " ")
-		hud.bag.Size = UDim2.fromOffset(math.max(240, hud.bagText.TextBounds.X + 24), 34)
+		local cap = st.carryCap or EconomyConfig.CarryCapacity
+		hud.bagText.Text = T("hud_risky", carried, cap) .. "  " .. table.concat(icons, " ")
+		hud.bagFill.Size = UDim2.fromScale(math.clamp(carried / cap, 0, 1), 1)
 	end
 	hud.throw.holder.Visible = state.nearTrap and state.open == nil
 	-- "can unlock" dot on TELEPORT
