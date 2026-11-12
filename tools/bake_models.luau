@@ -22,6 +22,24 @@ local assets = roblox.Instance.new("Folder")
 assets.Name = "Assets"
 assets.Parent = embedded
 
+local STRIP = {
+	"LuaSourceContainer", "Sound", "SoundGroup", "SoundEffect", "GuiBase", "GuiObject", "UIComponent", "ValueBase",
+	"RemoteEvent", "RemoteFunction", "BindableEvent", "BindableFunction", "Camera", "BodyMover", "Constraint",
+	"ParticleEmitter", "Fire", "Smoke", "Sparkles", "Trail", "Beam", "ProximityPrompt", "ClickDetector", "Tool",
+	"Humanoid", "Animation", "AnimationController", "Explosion", "Configuration",
+}
+local function strip(d)
+	for _, c in ipairs(STRIP) do
+		local ok, yes = pcall(function()
+			return d:IsA(c)
+		end)
+		if ok and yes then
+			return true
+		end
+	end
+	return false
+end
+
 local n, failed = 0, {}
 for _, file in ipairs(fs.readDir(dir)) do
 	local id = string.match(file, "^(%d+)%.rbxm$")
@@ -33,9 +51,10 @@ for _, file in ipairs(fs.readDir(dir)) do
 			for _, inst in ipairs(res) do
 				inst.Parent = holder
 			end
-			-- free models often carry scripts (car chassis, sometimes worse): never ship them
+			-- keep only geometry: free car models carry scripts, sounds, GUIs, remotes, values and effects whose
+			-- assets belong to other creators (Studio prints "Requester does not have permission" for each of them)
 			for _, d in ipairs(holder:GetDescendants()) do
-				if d:IsA("LuaSourceContainer") then
+				if d.Parent and strip(d) then
 					d:Destroy()
 				end
 			end
