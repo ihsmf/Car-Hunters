@@ -199,22 +199,120 @@ local function makeSound(name, id, vol, speed)
 end
 
 local KIND_COLOR = { good = P.green, error = P.red, warn = P.orange, info = P.blue }
-function UI.Toast(msg, kind)
-	local f = new("Frame", { BackgroundColor3 = KIND_COLOR[kind] or P.blue, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 44), BorderSizePixel = 0, ZIndex = 50 }, hud.toasts)
-	corner(f, 22)
-	stroke(f, P.ink, 3)
-	new("UIPadding", { PaddingLeft = UDim.new(0, 18), PaddingRight = UDim.new(0, 18) }, f)
-	local l = text(f, { Text = msg, TextSize = 22, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), ZIndex = 51 })
-	local sc = new("UIScale", { Scale = 0.4 }, f)
-	tween(sc, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
-	task.delay(2.6, function()
-		tween(f, 0.3, { BackgroundTransparency = 1 })
-		tween(l, 0.3, { TextTransparency = 1 })
-		task.wait(0.32)
-		f:Destroy()
+-- Notifications (v10): one queue for every top message. Max 3 on screen, the same text within its lifetime merges
+-- into "x2" instead of stacking, items move with their own position tweens (no list-layout snapping), and the
+-- whole pill (background, text AND outline) fades before it is destroyed.
+local notes = { items = {}, queue = {}, top = 172 }
+local NOTE_H, NOTE_GAP, NOTE_MAX, NOTE_LIFE = 44, 8, 3, 2.8
+
+local function noteY(i)
+	return notes.top + (i - 1) * (NOTE_H + NOTE_GAP)
+end
+
+local function noteLayout()
+	for i, it in ipairs(notes.items) do
+		tween(it.f, 0.22, { Position = UDim2.new(0.5, 0, 0, noteY(i)) })
+	end
+end
+
+local noteShow
+local function noteRemove(it)
+	if it.dead then
+		return
+	end
+	it.dead = true
+	for i, x in ipairs(notes.items) do
+		if x == it then
+			table.remove(notes.items, i)
+			break
+		end
+	end
+	tween(it.f, 0.25, { BackgroundTransparency = 1 })
+	tween(it.l, 0.25, { TextTransparency = 1 })
+	tween(it.stroke, 0.25, { Transparency = 1 })
+	for _, st in ipairs(it.l:GetChildren()) do
+		if st:IsA("UIStroke") then
+			tween(st, 0.25, { Transparency = 1 })
+		end
+	end
+	task.delay(0.27, function()
+		it.f:Destroy()
 	end)
+	noteLayout()
+	local nextOne = table.remove(notes.queue, 1)
+	if nextOne then
+		noteShow(nextOne.msg, nextOne.kind, nextOne.n)
+	end
+end
+
+local function noteLabel(it)
+	return it.n > 1 and (it.msg .. "   x" .. it.n) or it.msg
+end
+
+noteShow = function(msg, kind, n)
+	local f = new("Frame", { Name = "Note", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, noteY(#notes.items + 1) - 10), AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromOffset(0, NOTE_H), BackgroundColor3 = KIND_COLOR[kind] or P.blue, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 50 }, hud.toasts)
+	corner(f, 22)
+	local st = stroke(f, P.ink, 3)
+	st.Transparency = 1
+	new("UIPadding", { PaddingLeft = UDim.new(0, 18), PaddingRight = UDim.new(0, 18) }, f)
+	local l = text(f, { Text = msg, TextSize = 22, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), ZIndex = 51, TextTransparency = 1 })
+	local it = { f = f, l = l, stroke = st, msg = msg, kind = kind, n = n or 1, expire = os.clock() + NOTE_LIFE }
+	l.Text = noteLabel(it)
+	table.insert(notes.items, it)
+	tween(f, 0.2, { BackgroundTransparency = 0 })
+	tween(l, 0.2, { TextTransparency = 0 })
+	tween(st, 0.2, { Transparency = 0 })
+	noteLayout()
 	UI.Sfx(kind == "error" and "err" or "ping")
 end
+
+function UI.Toast(msg, kind)
+	msg = tostring(msg)
+	-- same message already on screen or waiting: count it instead of adding another pill
+	for _, it in ipairs(notes.items) do
+		if not it.dead and it.msg == msg then
+			it.n = it.n + 1
+			it.l.Text = noteLabel(it)
+			it.expire = os.clock() + NOTE_LIFE
+			return
+		end
+	end
+	for _, q in ipairs(notes.queue) do
+		if q.msg == msg then
+			q.n = q.n + 1
+			return
+		end
+	end
+	if #notes.items >= NOTE_MAX then
+		table.insert(notes.queue, { msg = msg, kind = kind, n = 1 })
+		-- make room soon: the oldest one leaves early
+		local oldest = notes.items[1]
+		oldest.expire = math.min(oldest.expire, os.clock() + 0.6)
+		return
+	end
+	noteShow(msg, kind, 1)
+end
+
+-- the notification lane starts below whatever is shown at the top (objective card, hot drop banner)
+function UI.SetNotesTop(px)
+	if notes.top ~= px then
+		notes.top = px
+		noteLayout()
+	end
+end
+
+task.spawn(function()
+	while true do
+		task.wait(0.1)
+		local now = os.clock()
+		for _, it in ipairs(table.clone(notes.items)) do
+			if now >= it.expire then
+				noteRemove(it)
+			end
+		end
+	end
+end)
 
 function UI.Notify(payload)
 	if type(payload) ~= "table" then
@@ -300,8 +398,7 @@ local function buildHud()
 		AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -24), OnClick = function() UI.TogglePanel("throw") end })
 	hud.throw.holder.Visible = false
 
-	hud.toasts = new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 170), Size = UDim2.fromOffset(600, 200), BackgroundTransparency = 1, ZIndex = 50 }, root)
-	list(hud.toasts, Enum.FillDirection.Vertical, 6, Enum.HorizontalAlignment.Center)
+	hud.toasts = new("Frame", { Name = "Notes", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 50 }, root) -- items position themselves (UI.Toast)
 	hud.flash = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = P.red, BackgroundTransparency = 1, ZIndex = 40, Active = false }, gui)
 end
 

@@ -71,10 +71,14 @@ function Cine.Shake(mag, dur)
 	table.insert(shakes, { mag = mag, dur = dur or 0.4, t0 = os.clock() })
 end
 
+local flashTween
 function Cine.Flash(color, from, t)
+	if flashTween then
+		flashTween:Cancel() -- a new flash restarts cleanly instead of fighting the previous tween
+	end
 	flash.BackgroundColor3 = color or Color3.new(1, 1, 1)
 	flash.BackgroundTransparency = from or 0
-	tw(flash, t or 0.4, { BackgroundTransparency = 1 })
+	flashTween = tw(flash, t or 0.4, { BackgroundTransparency = 1 })
 end
 
 function Cine.Darken(alpha, t)
@@ -121,8 +125,12 @@ function Cine.Glitch(dur, power)
 	end)
 end
 
--- Big punchy title with RGB ghost copies
+-- Big punchy title. Only one at a time: a new title replaces the one on screen (they used to draw on top of each other).
+local currentTitle
 function Cine.Title(text, color, dur, sizePx, yScale)
+	if currentTitle and currentTitle.Parent then
+		currentTitle:Destroy()
+	end
 	local holder = new("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, yScale or 0.4),
 		Size = UDim2.fromOffset(1000, sizePx or 140), ZIndex = 49, Rotation = -3 }, titleHolder)
 	local shadow = new("TextLabel", { BackgroundTransparency = 1, Font = Enum.Font.LuckiestGuy, Text = text, TextScaled = true,
@@ -131,12 +139,21 @@ function Cine.Title(text, color, dur, sizePx, yScale)
 		TextColor3 = color, Size = UDim2.fromScale(1, 1), ZIndex = 50 }, holder)
 	new("UIStroke", { Color = Color3.fromRGB(27, 31, 42), Thickness = 6 }, main)
 	new("UIGradient", { Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.45), color), Rotation = 90 }, main)
+	currentTitle = holder
 	local sc = new("UIScale", { Scale = 2.2 }, holder)
 	tw(sc, 0.3, { Scale = 1 }, Enum.EasingStyle.Back)
 	task.delay(dur or 1.5, function()
+		if not holder.Parent then
+			return
+		end
 		tw(sc, 0.2, { Scale = 0.7 })
 		tw(main, 0.2, { TextTransparency = 1 })
 		tw(shadow, 0.2, { TextTransparency = 1 })
+		for _, st in ipairs(main:GetChildren()) do
+			if st:IsA("UIStroke") then
+				tw(st, 0.2, { Transparency = 1 })
+			end
+		end
 		task.wait(0.22)
 		holder:Destroy()
 	end)

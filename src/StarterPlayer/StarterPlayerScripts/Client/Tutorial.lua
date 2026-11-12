@@ -200,11 +200,15 @@ local function tick()
 			Cine.Title("TUTORIAL COMPLETE!", P.yellow, 1.4, 90, 0.35)
 		else
 			-- quiet confirmation: green tick on the card
+			w.tickToken = (w.tickToken or 0) + 1
+			local token = w.tickToken
 			w.tick.Visible = true
 			w.tick.TextTransparency = 0
 			K.tween(w.tick, 0.9, { TextTransparency = 1 })
 			task.delay(0.9, function()
-				w.tick.Visible = false
+				if w.tickToken == token then -- a newer tick keeps showing
+					w.tick.Visible = false
+				end
 			end)
 		end
 	end

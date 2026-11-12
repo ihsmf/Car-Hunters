@@ -103,19 +103,7 @@ function Fx.Start(storeModule)
 			tintFx.Saturation = mood.sat
 		end
 		local t = os.clock()
-		-- showcase cars: turn only the anchored root (welded parts follow), 30 Hz, only near the camera
-		spinAcc = spinAcc + dt
-		if spinAcc >= 1 / 30 then
-			local step = spinAcc
-			spinAcc = 0
-			local camPos = cam and cam.CFrame.Position or Vector3.zero
-			for _, m in ipairs(CollectionService:GetTagged("Turntable")) do
-				local root = m:IsA("Model") and m.PrimaryPart
-				if root and (root.Position - camPos).Magnitude < 150 then
-					root.CFrame = root.CFrame * CFrame.Angles(0, step * 0.4, 0)
-				end
-			end
-		end
+		-- (v10: showcase cars stand still on static stands - no turntable spinning)
 		if t - lastBackfire > 2.2 then
 			lastBackfire = t
 			local camPos = cam and cam.CFrame.Position or Vector3.zero

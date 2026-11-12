@@ -5,6 +5,7 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Util = require(Shared:WaitForChild("Util"))
 local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
 
 local Mechanic = {}
@@ -39,12 +40,18 @@ function Mechanic.Claim(player, id)
 		return
 	end
 	local d = s.data
+	local total, n = 0, 0
 	for i = #d.contracts, 1, -1 do
 		local c = d.contracts[i]
 		if (id == "all" or c.id == id) and c.ready then
-			S.Contracts.Reward(player, s, c, i)
+			total = total + S.Contracts.Reward(player, s, c, i, true)
+			n = n + 1
 			gesture()
 		end
+	end
+	if n > 0 then -- one combined message + one state push
+		S.Data.Notify(player, n > 1 and "contractsDone" or "contractDone", n > 1 and { n, Util.FormatNumber(total) } or { Util.FormatNumber(total) }, "good")
+		S.Data.Push(player)
 	end
 end
 

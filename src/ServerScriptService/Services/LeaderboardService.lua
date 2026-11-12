@@ -86,8 +86,9 @@ local function build(screen)
 	end
 end
 
--- top-3 avatar statues
-local statues = {}
+-- top-3 avatar statues. The old statue stays until the new avatar has loaded (no blinking); a load that finishes
+-- after the ranking changed again is thrown away (no wrong player on the podium); feet stand on the step.
+local statues, pending = {}, {}
 local function placeStatue(rank, player)
 	local spot
 	for _, d in ipairs(ui.spots or {}) do
@@ -99,20 +100,29 @@ local function placeStatue(rank, player)
 		return
 	end
 	local key = player and player.UserId or 0
-	if statues[rank] and statues[rank].key == key then
+	if (statues[rank] and statues[rank].key == key) or pending[rank] == key then
 		return
-	end
-	if statues[rank] then
-		statues[rank].model:Destroy()
-		statues[rank] = nil
 	end
 	if not player then
+		pending[rank] = nil
+		if statues[rank] then
+			statues[rank].model:Destroy()
+			statues[rank] = nil
+		end
 		return
 	end
+	pending[rank] = key
 	task.spawn(function()
 		local ok, model = pcall(function()
 			return Players:CreateHumanoidModelFromUserId(player.UserId)
 		end)
+		if pending[rank] ~= key then
+			if ok and model then
+				model:Destroy()
+			end
+			return
+		end
+		pending[rank] = nil
 		if not ok or not model or not spot.Parent then
 			return
 		end
@@ -127,8 +137,18 @@ local function placeStatue(rank, player)
 				d.CanCollide = false
 			end
 		end
-		local _, size = model:GetBoundingBox()
-		model:PivotTo(CFrame.new(spot.Position + Vector3.new(0, size.Y / 2, 0)) * CFrame.Angles(0, spot:GetAttribute("Yaw") or 0, 0))
+		-- real step height: ray down onto the podium model (the spot heights are only a guess for the Blender frame)
+		local top = spot.Position.Y + spot.Size.Y / 2
+		local rp = RaycastParams.new()
+		rp.FilterType = Enum.RaycastFilterType.Include
+		rp.FilterDescendantsInstances = { spot.Parent }
+		local hit = Workspace:Raycast(spot.Position + Vector3.new(0, 12, 0), Vector3.new(0, -20, 0), rp)
+		if hit and hit.Instance ~= spot then
+			top = hit.Position.Y
+		end
+		model:PivotTo(CFrame.new(spot.Position + Vector3.new(0, 4, 0)) * CFrame.Angles(0, spot:GetAttribute("Yaw") or 0, 0))
+		local bcf, size = model:GetBoundingBox()
+		model:PivotTo(model:GetPivot() - Vector3.new(0, (bcf.Position.Y - size.Y / 2) - top, 0))
 		local hl = Instance.new("Highlight")
 		hl.FillColor = RANK_COLOR[rank]
 		hl.FillTransparency = 0.75
@@ -198,6 +218,7 @@ function LB.Start()
 		ui.spots = {}
 		for _, d in ipairs(screen.Parent:GetChildren()) do
 			if string.match(d.Name, "^StatueSpot") then
+				d.CanQuery = false -- the ray must hit the real step below it
 				table.insert(ui.spots, d)
 			end
 		end

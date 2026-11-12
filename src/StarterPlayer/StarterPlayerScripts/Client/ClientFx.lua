@@ -103,12 +103,24 @@ function Fx.Bank(info)
 	if info.bonus > 0 then
 		msg = msg .. "  +" .. info.bonus .. " COMBO"
 	end
+	if Fx._bankPop and Fx._bankPop.Parent then
+		Fx._bankPop:Destroy() -- one "+N" at a time: a quick second bank replaces the first
+	end
 	local big = K.text(K.root, { Text = msg, TextSize = 46, TextColor3 = K.P.yellow, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45),
 		Size = UDim2.fromOffset(700, 60), TextXAlignment = Enum.TextXAlignment.Center, Outline = 4, ZIndex = 45 })
 	local sc = K.new("UIScale", { Scale = 0.2 }, big)
 	tw(sc, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
+	Fx._bankPop = big
 	task.delay(1.3, function()
+		if not big.Parent then
+			return
+		end
 		tw(big, 0.3, { TextTransparency = 1 })
+		for _, st in ipairs(big:GetChildren()) do
+			if st:IsA("UIStroke") then
+				tw(st, 0.3, { Transparency = 1 })
+			end
+		end
 		task.wait(0.32)
 		big:Destroy()
 	end)

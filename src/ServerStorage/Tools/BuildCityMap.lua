@@ -608,7 +608,7 @@ local function buildPlaza(ctx)
 		Part(f.StreetProps, "MeetSignPost", Vector3.new(0.4, 8, 0.4), CFrame.new(-30 + sx * 8, 4, MapConfig.BaseCenters[1].z + 20), C(40, 44, 52), M.Metal)
 	end
 
-	-- 2) LUXURY SHOWROOM (middle): legendary cars on lit turntable stands, marble inlay
+	-- 2) LUXURY SHOWROOM (middle): legendary cars on static lit stands (v10: no turntables - spinning glitched)
 	local legends = CarConfig.ByRarity.Legendary
 	local standZ = { MapConfig.BaseCenters[3].z - 28, MapConfig.Shop.z - 22, MapConfig.Shop.z + 23 }
 	local k = 0
@@ -617,16 +617,40 @@ local function buildPlaza(ctx)
 			k = k + 1
 			local def = legends[(k - 1) % #legends + 1]
 			local cf = CFrame.new(x, 0.2, z)
-			local h = 1.35
-			if not Prefabs.FromTemplate("CarStand", f.StreetProps, cf * CFrame.Angles(0, x < 0 and math.pi / 2 or -math.pi / 2, 0)) then
+			local standTop = 1.4
+			local stand = Prefabs.FromTemplate("CarStand", f.StreetProps, cf * CFrame.Angles(0, x < 0 and math.pi / 2 or -math.pi / 2, 0))
+			if typeof(stand) == "Instance" and stand:IsA("Model") then
+				local bcf, bsize = stand:GetBoundingBox()
+				standTop = bcf.Position.Y + bsize.Y / 2
+			elseif not stand then
+				-- simple plinth: one solid cylinder + rim in the same top plane (no thin overlays)
 				Part(f.StreetProps, "Podium", Vector3.new(1.2, 18, 18), CFrame.new(x, 0.8, z) * UPRIGHT, C(40, 44, 52), M.Metal, { shape = CYL })
-				Part(f.StreetProps, "PodiumRim", Vector3.new(0.4, 18.6, 18.6), CFrame.new(x, 1.2, z) * UPRIGHT, C(232, 178, 50), M.Metal, { shape = CYL, collide = false })
-				h = 1.5
+				Part(f.StreetProps, "PodiumRim", Vector3.new(1.0, 18.6, 18.6), CFrame.new(x, 0.7, z) * UPRIGHT, C(232, 178, 50), M.Metal, { shape = CYL, collide = false })
+				standTop = 1.4
 			end
 			local car = VehicleFactory.BuildCar(def)
-			car:PivotTo(CFrame.new(x, 0.2 + h, z) * CFrame.Angles(0, math.rad(40 + k * 60), 0))
+			-- static 3/4 pose towards the promenade centre; the whole car is anchored so nothing can drift or jitter
+			car:PivotTo(CFrame.new(x, standTop + 3, z) * CFrame.Angles(0, (x < 0 and 0 or math.pi) + (k % 2 == 0 and 0.45 or -0.45), 0))
+			local ccf, csize = car:GetBoundingBox()
+			car:PivotTo(car:GetPivot() - Vector3.new(0, (ccf.Position.Y - csize.Y / 2) - (standTop + 0.02), 0)) -- wheels exactly on the stand
+			for _, d in ipairs(car:GetDescendants()) do
+				if d:IsA("BasePart") then
+					d.Anchored = true
+					d.CanCollide = false
+				end
+			end
 			car.Parent = f.StreetProps
-			CollectionService:AddTag(car, "Turntable")
+			-- spotlight from above (invisible holder, no geometry on the plinth)
+			local lamp = Part(f.StreetProps, "StandLight", Vector3.new(1, 1, 1), CFrame.new(x, 14, z), C(0, 0, 0), M.SmoothPlastic, { collide = false })
+			lamp.Transparency = 1
+			lamp.CanQuery, lamp.CanTouch = false, false
+			local spot = Instance.new("SpotLight")
+			spot.Face = Enum.NormalId.Bottom
+			spot.Angle = 55
+			spot.Range = 18
+			spot.Brightness = 2.5
+			spot.Color = CarConfig.Rarities[def.rarity].color:Lerp(Color3.new(1, 1, 1), 0.6)
+			spot.Parent = lamp
 			-- plinth label (towards the promenade centre)
 			local plate = Part(f.StreetProps, "StandPlate", Vector3.new(4, 1.2, 0.2), CFrame.new(x - math.sign(x) * 13.05, 2.4, z) * CFrame.Angles(0, math.sign(x) * math.pi / 2, 0), C(20, 24, 34), M.SmoothPlastic, { collide = false })
 			Label(plate, Enum.NormalId.Front, string.upper(def.name), C(255, 210, 63))

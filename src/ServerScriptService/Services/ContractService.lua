@@ -4,6 +4,7 @@ local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Util = require(Shared:WaitForChild("Util"))
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 
@@ -98,21 +99,25 @@ function Contracts.Fill(s)
 end
 
 -- paid out by MechanicService when the player talks to Big Tony
-function Contracts.Reward(player, s, c, index)
+-- quiet = the caller sends one combined notification (claiming several contracts at once)
+function Contracts.Reward(player, s, c, index, quiet)
 	local d = s.data
 	local mult = S.Shop.HasPass(s, "double_contracts") and 2 or 1
 	d.money = math.min(d.money + c.reward.money * mult, EconomyConfig.MaxMoney)
 	d.parts[c.reward.part] = (d.parts[c.reward.part] or 0) + c.reward.n * mult
 	d.stats.contracts = (d.stats.contracts or 0) + 1
 	table.remove(d.contracts, index)
-	S.Data.Notify(player, "contractDone", { c.reward.money * mult }, "good")
-	S.Data.Push(player)
+	if not quiet then
+		S.Data.Notify(player, "contractDone", { Util.FormatNumber(c.reward.money * mult) }, "good")
+		S.Data.Push(player)
+	end
 	task.delay(3, function()
 		if player.Parent and S.Data.Get(player) == s then
 			Contracts.Fill(s)
 			S.Data.Push(player)
 		end
 	end)
+	return c.reward.money * mult
 end
 
 -- event: "bank_part"(partId, n, zoneCounts) | "combo"(mult) | "speed"(seconds) | "throw" | "road" | "hotdrop"
@@ -123,6 +128,7 @@ function Contracts.Progress(player, event, amount, extra)
 	end
 	local d = s.data
 	local changed = false
+	local nowReady = 0
 	for i = #d.contracts, 1, -1 do
 		local c = d.contracts[i]
 		local add = 0
@@ -144,9 +150,12 @@ function Contracts.Progress(player, event, amount, extra)
 			changed = true
 			if c.progress >= c.n then
 				c.ready = true
-				S.Data.Notify(player, "contractReady", nil, "good")
+				nowReady = nowReady + 1
 			end
 		end
+	end
+	if nowReady > 0 then -- one message, not one per contract
+		S.Data.Notify(player, "contractReady", nil, "good")
 	end
 	if changed then
 		S.Data.Push(player)
