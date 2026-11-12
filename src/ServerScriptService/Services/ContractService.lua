@@ -17,6 +17,9 @@ Contracts.Active = 3
 local ZONE_PARTS = {
 	city = { "bolts", "tire" }, highway = { "tire", "engine" }, industrial = { "engine", "turbo" }, neon = { "turbo", "core" },
 }
+for _, z in ipairs(MapConfig.ZoneOrder) do
+	ZONE_PARTS[z] = ZONE_PARTS[z] or { "turbo", "core" }
+end
 
 function Contracts.Init(hub)
 	S = hub
@@ -36,7 +39,7 @@ local function rewardFor(s, weight)
 	local base = math.max(150, (s.income or 0) * 25) * weight
 	local d = s.data
 	local partPool = { "tire", "engine", "turbo", "core" }
-	local tier = math.clamp(bestZoneIndex(d), 1, 4)
+	local tier = math.clamp(bestZoneIndex(d), 1, 4) -- core is the top reward from the Night district on
 	return { money = math.floor(base / 10 + 0.5) * 10, part = partPool[tier], n = (weight >= 2) and 2 or 1 }
 end
 

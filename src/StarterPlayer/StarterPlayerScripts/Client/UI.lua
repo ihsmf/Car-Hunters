@@ -26,8 +26,10 @@ local P = {
 	cream = C(255, 246, 224), grey = C(170, 176, 188), muted = C(96, 102, 116),
 }
 local PART_ICON = { bolts = "🔩", tire = "🛞", engine = "⚙️", turbo = "🌀", core = "⚡" }
-local ZONE_ICON = { city = "🏙️", highway = "🛣️", industrial = "🏭", neon = "🌃" }
-local ZONE_COLOR = { city = P.green, highway = P.blue, industrial = P.red, neon = P.cyan, plaza = P.orange }
+local ZONE_ICON = { city = "🏙️", highway = "🛣️", industrial = "🏭", neon = "🌃", scrapyard = "💀", docks = "🚂", desert = "🏜️", bridge = "🌉",
+	airport = "✈️", canyon = "💀", circuit = "🏁", drift = "🌀", storm = "⛈️", rush = "🚦", colosseum = "👑" }
+local ZONE_COLOR = { city = P.green, highway = P.blue, industrial = P.red, neon = P.cyan, plaza = P.orange, scrapyard = P.red, docks = P.blue, desert = P.orange,
+	bridge = P.cyan, airport = P.blue, canyon = P.red, circuit = P.red, drift = P.cyan, storm = P.blue, rush = P.orange, colosseum = P.yellow }
 
 local UI = {}
 local store, actions
@@ -398,7 +400,8 @@ end
 -- TELEPORT (also unlocks districts)
 local function buildTeleport()
 	local p = panelShell("teleport", T("tp_title"), 820, 560, P.blue)
-	panels.tpGrid = new("Frame", { Size = UDim2.new(1, 0, 1, -40), BackgroundTransparency = 1, ZIndex = 22 }, p.content)
+	panels.tpGrid = new("ScrollingFrame", { Size = UDim2.new(1, 0, 1, -40), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8, ScrollBarImageColor3 = P.ink,
+		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 22 }, p.content)
 	new("UIGridLayout", { CellSize = UDim2.fromOffset(240, 196), CellPadding = UDim2.fromOffset(16, 18), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }, panels.tpGrid)
 	text(p.content, { Text = "⚠ " .. T("tp_walk"), Font = BODY, TextSize = 19, TextColor3 = P.red, AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), ZIndex = 22 })
 end
@@ -424,18 +427,24 @@ local function refreshTeleport()
 		local prevOpen = i == 1 or st.zones[MapConfig.ZoneOrder[i - 1]] == true
 		local req = EconomyConfig.ZoneUnlock[zid]
 		local title = string.gsub(zone.name, " DISTRICT", "")
+		local needReb = req and (req.rebirths or 0) > (st.rebirths or 0)
+		if not open and not prevOpen then
+			break -- show only the next district to unlock, the rest stays a surprise
+		end
 		if open then
 			tile(i, title, ZONE_ICON[zid], ZONE_COLOR[zid], T("zone_desc_" .. zid), function()
 				actions.Teleport(zid)
 				UI.TogglePanel(nil)
 			end)
 		else
-			local can = prevOpen and req and store.Money >= req.cost and store.CollectionValue >= req.minValue
-			local sub = not prevOpen and T("zones_need_prev")
+			local can = prevOpen and req and not needReb and store.Money >= req.cost and store.CollectionValue >= req.minValue
+			local sub = needReb and string.format(T("n_needRebirth"), req.rebirths)
 				or string.format("🔒 $%s  ·  %s $%s", Util.FormatNumber(req.cost), T("zones_value"), Util.FormatNumber(req.minValue))
 			local t = tile(i, can and (T("btn_unlock") .. "!") or title, "🔒", can and P.green or P.grey, sub, function()
 				if can then
 					actions.Unlock(zid)
+				elseif needReb then
+					UI.Toast(string.format(T("n_needRebirth"), req.rebirths), "warn")
 				elseif prevOpen and store.CollectionValue < req.minValue then
 					UI.Toast(T("n_needValue"), "warn")
 				elseif prevOpen then
@@ -758,7 +767,7 @@ local function refreshHud()
 	local dot = false
 	for i, zid in ipairs(MapConfig.ZoneOrder) do
 		local req = EconomyConfig.ZoneUnlock[zid]
-		if req and not st.zones[zid] and st.zones[MapConfig.ZoneOrder[i - 1]] and store.Money >= req.cost and store.CollectionValue >= req.minValue then
+		if req and (req.rebirths or 0) <= (st.rebirths or 0) and not st.zones[zid] and st.zones[MapConfig.ZoneOrder[i - 1]] and store.Money >= req.cost and store.CollectionValue >= req.minValue then
 			dot = true
 		end
 	end

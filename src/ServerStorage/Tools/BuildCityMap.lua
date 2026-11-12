@@ -28,8 +28,12 @@ local UPRIGHT = CFrame.Angles(0, 0, math.pi / 2)
 local Build = {}
 
 local TYPE_FOLDERS = { "Ground", "Roads", "Sidewalks", "Buildings", "StreetProps", "ZoneGates", "Bases", "TrafficRoutes", "PartSpawnPoints" }
-local ALL_SECTIONS = { "World", "Plaza", "CITY", "HIGHWAY", "INDUSTRIAL", "NEON" }
-local ZONE_OF = { CITY = "city", HIGHWAY = "highway", INDUSTRIAL = "industrial", NEON = "neon" }
+local ALL_SECTIONS = { "World", "Plaza" }
+local ZONE_OF = {}
+for _, zid in ipairs(MapConfig.ZoneOrder) do
+	table.insert(ALL_SECTIONS, string.upper(zid))
+	ZONE_OF[string.upper(zid)] = zid
+end
 
 local function getRoot()
 	local root = Workspace:FindFirstChild("GeneratedMap")
@@ -82,7 +86,10 @@ local YELLOW = C(255, 205, 40)
 local function buildWorld(ctx)
 	local f = ctx.f
 	local zS, zE = MapConfig.StartZ, MapConfig.EndZ
-	Part(f.Ground, "WorldFloor", Vector3.new(2800, 2, zE - zS + 1400), CFrame.new(0, -2.2, (zS + zE) / 2), C(26, 28, 36), M.Concrete)
+	for z = zS - 700, zE + 700, 2000 do
+		local len = math.min(2000, zE + 700 - z)
+		Part(f.Ground, "WorldFloor", Vector3.new(2000, 2, len), CFrame.new(0, -2.2, z + len / 2), C(26, 28, 36), M.Concrete)
+	end
 
 	local openings = {}
 	for _, r in ipairs(MapConfig.Roads) do
@@ -600,8 +607,13 @@ local function buildEntryFence(ctx, zone)
 	end
 end
 
+local buildRail, buildRiver, buildArena -- forward
 local function buildRoad(ctx, road, pal, zid)
 	local f = ctx.f
+	if road.rail then
+		return buildRail(ctx, road, pal)
+	end
+	zid = MapConfig.Zones[zid].style
 	local W, z0, len = road.width, road.z, TrafficMath.Length
 	local M_ = road.median
 	local rid = road.id
@@ -723,6 +735,7 @@ end
 
 local function placeBlock(ctx, blk, pal, zid)
 	local f = ctx.f
+	zid = MapConfig.Zones[zid].style
 	local rng = ctx.rng
 	local zA, zB = blk[1], blk[2]
 	local depth = zB - zA
@@ -874,6 +887,10 @@ local function genSpawnPoints(ctx, zid, blocks, roads)
 		end
 	end
 
+	for _, rp in ipairs(ctx.riverPoints or {}) do
+		addPoint(rp.X, rp.Y, rp.Z, "risky") -- loot in the middle of the narrow side bridges
+	end
+
 	-- scrap crates right on the traffic lanes: the best loot, the worst place to stand
 	for _, r in ipairs(roads) do
 		local lanes = TrafficMath.RoadLanes[r.id]
@@ -903,6 +920,147 @@ local function genSpawnPoints(ctx, zid, blocks, roads)
 	end
 end
 
+-- Docks: two railway tracks with a level crossing (lights blink client-side when a train comes)
+buildRail = function(ctx, road, pal)
+	local f = ctx.f
+	local W, z0, len = road.width, road.z, TrafficMath.Length
+	local GRAVEL, SLEEPER, RAIL = C(120, 112, 104), C(86, 62, 44), C(170, 174, 182)
+	Part(f.Roads, "RailBed", Vector3.new(len, 0.4, W), CFrame.new(0, 0, z0), GRAVEL, M.Slate)
+	for _, lane in ipairs(TrafficMath.RoadLanes[road.id]) do
+		for x = -len / 2 + 2, len / 2 - 2, 4 do
+			Part(f.Roads, "Sleeper", Vector3.new(1.2, 0.2, 7), CFrame.new(x, 0.3, lane.z), SLEEPER, M.Wood, { collide = false, cast = false })
+		end
+		for _, s in ipairs({ -1, 1 }) do
+			Part(f.Roads, "Rail", Vector3.new(len, 0.3, 0.4), CFrame.new(0, 0.55, lane.z + s * 2.6), RAIL, M.Metal, { collide = false })
+		end
+	end
+	for _, s in ipairs({ -1, 1 }) do
+		Part(f.Sidewalks, "Sidewalk", Vector3.new(2 * HW, 1.6, MapConfig.SidewalkWidth), CFrame.new(0, 0, z0 + s * (W / 2 + MapConfig.SidewalkWidth / 2)), pal.sidewalk, M.Concrete)
+	end
+	-- crossing planks + signals where the running lanes / paths cross
+	Part(f.Roads, "CrossingPlanks", Vector3.new(28, 0.3, W), CFrame.new(0, 0.36, z0), C(150, 104, 62), M.Wood)
+	for _, x in ipairs({ -HW * 0.5, 0, HW * 0.5 }) do
+		for _, s in ipairs({ -1, 1 }) do
+			local px, pz = x + s * 16, z0 + s * (W / 2 + 2.5)
+			Part(f.StreetProps, "SignalPost", Vector3.new(0.6, 9, 0.6), CFrame.new(px, 5.3, pz), C(240, 240, 240), M.Metal)
+			Part(f.StreetProps, "CrossBuck", Vector3.new(4, 0.6, 0.2), CFrame.new(px, 9.2, pz) * CFrame.Angles(0, 0, math.rad(35)), C(255, 255, 255), M.SmoothPlastic, { collide = false })
+			Part(f.StreetProps, "CrossBuck", Vector3.new(4, 0.6, 0.2), CFrame.new(px, 9.2, pz) * CFrame.Angles(0, 0, math.rad(-35)), C(255, 255, 255), M.SmoothPlastic, { collide = false })
+			for k, dx in ipairs({ -0.7, 0.7 }) do
+				local l = Part(f.StreetProps, "CrossingLight", Vector3.new(0.8, 0.8, 0.4), CFrame.new(px + dx, 7.4, pz - s * 0.4), C(90, 20, 20), M.SmoothPlastic, { collide = false })
+				l:SetAttribute("RoadId", road.id)
+				l:SetAttribute("Phase", k)
+				CollectionService:AddTag(l, "CrossingLight")
+			end
+			local arm = Part(f.StreetProps, "CrossingArm", Vector3.new(12, 0.5, 0.4), CFrame.new(px - s * 6.5, 3.4, pz), C(255, 255, 255), M.SmoothPlastic, { collide = false })
+			arm:SetAttribute("RoadId", road.id)
+			arm:SetAttribute("Side", s)
+			CollectionService:AddTag(arm, "CrossingArm")
+		end
+	end
+end
+
+-- Bridge district: deep water between the roads, three bridges; falling in = wrecked
+buildRiver = function(ctx, riv, pal)
+	local f = ctx.f
+	local len = riv.z2 - riv.z1
+	local zc = (riv.z1 + riv.z2) / 2
+	Part(f.Ground, "RiverBed", Vector3.new(2 * HW, 2, len), CFrame.new(0, -14, zc), C(60, 80, 90), M.Slate)
+	Part(f.Ground, "RiverWater", Vector3.new(2 * HW, 6, len), CFrame.new(0, -6.2, zc), C(50, 140, 200), M.Glass, { collide = false, t = 0.25 })
+	local kill = Part(f.Ground, "RiverKill", Vector3.new(2 * HW, 2, len - 2), CFrame.new(0, -7, zc), C(0, 0, 0), M.SmoothPlastic, { t = 1 })
+	kill.CanCollide = false
+	kill.CanTouch = true
+	CollectionService:AddTag(kill, "KillZone")
+	for _, s in ipairs({ -1, 1 }) do
+		Part(f.Ground, "RiverBank", Vector3.new(2 * HW, 9, 2), CFrame.new(0, -4.5, zc + s * (len / 2 + 1)), C(150, 140, 126), M.Concrete)
+	end
+	for _, b in ipairs(riv.bridges) do
+		Part(f.Roads, "BridgeDeck", Vector3.new(b.w, 1, len + 6), CFrame.new(b.x, -0.1, zc), C(150, 104, 62), M.Wood)
+		for _, s in ipairs({ -1, 1 }) do
+			Part(f.Roads, "BridgeRail", Vector3.new(0.4, 0.4, len + 6), CFrame.new(b.x + s * (b.w / 2 - 0.2), 3.2, zc), C(240, 240, 240), M.Metal, { collide = false })
+			for z = riv.z1 - 2, riv.z2 + 2, 8 do
+				Part(f.Roads, "BridgePost", Vector3.new(0.4, 3, 0.4), CFrame.new(b.x + s * (b.w / 2 - 0.2), 1.9, z), C(240, 240, 240), M.Metal, { collide = false })
+			end
+			Part(f.Roads, "BridgePier", Vector3.new(b.w, 14, 2), CFrame.new(b.x, -7.6, zc + s * len / 4), C(130, 130, 136), M.Concrete)
+		end
+	end
+	table.insert(ctx.foot, { x1 = -HW, x2 = HW, z1 = riv.z1 - 4, z2 = riv.z2 + 4 })
+	ctx.riverPoints = {}
+	for _, b in ipairs(riv.bridges) do
+		if b.x ~= 0 then
+			table.insert(ctx.riverPoints, Vector3.new(b.x, 0.4, zc))
+		end
+	end
+end
+
+-- Boss arena: open ground with cover; the truck is driven by BossService
+buildArena = function(ctx, zid)
+	local f = ctx.f
+	local zone = MapConfig.Zones[zid]
+	local pal = zone.palette
+	local rng = ctx.rng
+	local zc = (zone.zMin + zone.zMax) / 2
+	local center = Part(f.StreetProps, "ArenaCenter", Vector3.new(4, 1, 4), CFrame.new(0, 0.5, zc), C(255, 255, 255), M.SmoothPlastic, { t = 1, collide = false })
+	center:SetAttribute("ZoneId", zid)
+	center:SetAttribute("Boss", zone.boss)
+	center:SetAttribute("HalfX", HW - 8)
+	center:SetAttribute("HalfZ", (zone.zMax - zone.zMin) / 2 - 8)
+	CollectionService:AddTag(center, "Arena")
+	-- dirt track ring + start/finish ramps for show
+	Part(f.Ground, "ArenaDirt", Vector3.new(2 * HW - 20, 0.1, zone.zMax - zone.zMin - 20), CFrame.new(0, 0.05, zc), pal.ground:Lerp(C(90, 70, 50), 0.35), M.Ground, { collide = false, cast = false })
+	local covers = 0
+	local tries = 0
+	while covers < 14 and tries < 200 do
+		tries = tries + 1
+		local x = rr(rng, -(HW - 30), HW - 30)
+		local z = rr(rng, zone.zMin + 30, zone.zMax - 30)
+		if math.abs(x) > 14 and not inFootprint(ctx.foot, x, z, 10) then
+			covers = covers + 1
+			local w, d, h
+			if zone.style == "industrial" then
+				w, d, h = 20, 8, 8.6
+				Part(f.Buildings, "ScrapContainer", Vector3.new(w, h, d), CFrame.new(x, h / 2, z) * CFrame.Angles(0, rng() < 0.5 and 0 or math.pi / 2, 0), pick(rng, pal.buildings), M.Metal)
+			elseif zone.style == "highway" then
+				w, d, h = rr(rng, 12, 20), rr(rng, 10, 16), rr(rng, 8, 16)
+				Part(f.Buildings, "CanyonRock", Vector3.new(w, h, d), CFrame.new(x, h / 2 - 1, z) * CFrame.Angles(0, rng() * math.pi, 0), pick(rng, pal.buildings), M.Rock)
+			else
+				w, d, h = 6, 6, 18
+				Part(f.Buildings, "Column", Vector3.new(h, w, w), CFrame.new(x, h / 2, z) * UPRIGHT, C(236, 226, 204), M.Marble, { shape = CYL })
+				Part(f.Buildings, "ColumnCap", Vector3.new(8, 1.2, 8), CFrame.new(x, h + 0.6, z), C(220, 206, 176), M.Marble)
+			end
+			table.insert(ctx.foot, { x1 = x - w / 2 - 2, x2 = x + w / 2 + 2, z1 = z - w / 2 - 2, z2 = z + w / 2 + 2 })
+		end
+	end
+	if zid == "colosseum" then
+		for _, s in ipairs({ -1, 1 }) do
+			for k = 0, 5 do
+				Part(f.Buildings, "Stand", Vector3.new(8, 4 + k * 4, zone.zMax - zone.zMin), CFrame.new(s * (HW - 6 - k * 8), 2 + k * 2, zc), C(214 - k * 6, 196 - k * 6, 160 - k * 6), M.Concrete)
+			end
+		end
+	end
+	local banner = Part(f.StreetProps, "ArenaBanner", Vector3.new(60, 6, 1), CFrame.new(0, 26, zone.zMin + 4), C(28, 30, 38), M.SmoothPlastic, { collide = false })
+	Label(banner, Enum.NormalId.Front, zone.name .. " - BOSS", pal.accent)
+	Label(banner, Enum.NormalId.Back, "SURVIVE THE BOSS", pal.accent)
+	-- loot: many safe-ish points + a rich centre
+	local counts = PartConfig.PointCounts[zid] or { safe = 16, risky = 8 }
+	local idc = 0
+	local placed = 0
+	tries = 0
+	while placed < counts.safe + counts.risky and tries < 800 do
+		tries = tries + 1
+		local x = rr(rng, -(HW - 20), HW - 20)
+		local z = rr(rng, zone.zMin + 18, zone.zMax - 18)
+		if not inFootprint(ctx.foot, x, z, 4) then
+			placed = placed + 1
+			idc = idc + 1
+			local risk = placed <= counts.safe and "safe" or "risky"
+			local p = Part(f.PartSpawnPoints, string.format("SP_%s_%s_%02d", zid, risk, idc), Vector3.new(2, 0.4, 2), CFrame.new(x, 0.2, z), C(255, 255, 255), M.SmoothPlastic, { t = 1, collide = false })
+			p:SetAttribute("ZoneId", zid)
+			p:SetAttribute("Risk", risk)
+			table.insert(ctx.foot, { x1 = x - 6, x2 = x + 6, z1 = z - 6, z2 = z + 6 })
+		end
+	end
+end
+
 local function buildZone(ctx, zid)
 	local f = ctx.f
 	local zone = MapConfig.Zones[zid]
@@ -916,13 +1074,32 @@ local function buildZone(ctx, zid)
 			break
 		end
 	end
-	local ground = (zid == "industrial" or zid == "neon") and M.Concrete or M.Grass
-	Part(f.Ground, "Ground_" .. zid, Vector3.new(2 * HW, 2, zEnd - zStart), CFrame.new(0, -1, (zStart + zEnd) / 2), pal.ground, ground)
+	local sty = zone.style
+	local ground = (sty == "industrial" or sty == "neon" or zone.arena) and M.Concrete or M.Grass
+	if zid == "desert" or zid == "canyon" or zid == "colosseum" then
+		ground = M.Sand
+	end
+	local riv = MapConfig.River.zone == zid and MapConfig.River or nil
+	local function groundSeg(a, b)
+		if b - a > 0.5 then
+			Part(f.Ground, "Ground_" .. zid, Vector3.new(2 * HW, 2, b - a), CFrame.new(0, -1, (a + b) / 2), pal.ground, ground)
+		end
+	end
+	if riv then
+		groundSeg(zStart, riv.z1)
+		groundSeg(riv.z2, zEnd)
+	else
+		groundSeg(zStart, zEnd)
+	end
 
 	if gate then
 		buildGate(ctx, gate, zone)
 	else
 		buildEntryFence(ctx, zone)
+	end
+	if zone.arena then
+		buildArena(ctx, zid)
+		return
 	end
 
 	local roads = {}
@@ -931,14 +1108,19 @@ local function buildZone(ctx, zid)
 		table.insert(roads, r)
 		buildRoad(ctx, r, pal, zid)
 	end
+	if riv then
+		buildRiver(ctx, riv, pal)
+	end
 
 	local blocks = MapConfig.ZoneBlocks(zid)
 	for _, blk in ipairs(blocks) do
-		placeBlock(ctx, blk, pal, zid)
+		if not (riv and blk[1] < riv.z2 and blk[2] > riv.z1) then
+			placeBlock(ctx, blk, pal, zid)
+		end
 	end
 
 	Prefabs.DistrictSign(f.StreetProps, Vector3.new(-45, 0.4, blocks[1][1] + 10), zone.name, pal.accent2 or pal.accent, 0)
-	if zid == "industrial" then
+	if sty == "industrial" then
 		Prefabs.Crane(f.Buildings, Vector3.new(-(HW + 40), 0, (zone.zMin + zone.zMax) / 2 - 60), 0, pal.accent2)
 		Prefabs.Crane(f.Buildings, Vector3.new(HW + 40, 0, (zone.zMin + zone.zMax) / 2 + 60), math.pi, pal.accent)
 	end

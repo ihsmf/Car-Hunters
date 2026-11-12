@@ -19,6 +19,11 @@ local Kinds = {
 	muscle = { L = 16.0, W = 6.8, H = 4.5, wr = 1.35, clear = 0.7, bodyH = 2.0, cabinL = 6.0, cabinH = 1.6, cabinX = -1.6, cabinW = 0.86, color = C(210, 40, 36) },
 	proto = { L = 15.8, W = 7.0, H = 3.7, wr = 1.2, clear = 0.5, bodyH = 1.5, cabinL = 5.2, cabinH = 1.6, cabinX = -0.6, cabinW = 0.78,
 		fins = true, canopyNeon = true, color = C(30, 30, 44) },
+	racer = { L = 16.4, W = 7.2, H = 3.4, wr = 1.25, clear = 0.4, bodyH = 1.4, cabinL = 4.2, cabinH = 1.3, cabinX = -0.8, cabinW = 0.74,
+		fins = true, color = C(214, 52, 44) },
+	-- special shapes, built by SpecialVehicles (W/H are the hitbox)
+	train = { L = 150, W = 8, H = 12, special = "train", color = C(214, 52, 44) },
+	plane = { L = 42, W = 36, H = 9, special = "plane", color = C(240, 242, 246) },
 }
 
 return Kinds

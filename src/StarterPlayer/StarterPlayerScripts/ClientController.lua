@@ -22,6 +22,8 @@ local UIExtra = require(Client:WaitForChild("UIExtra"))
 local Markers = require(Client:WaitForChild("Markers"))
 local ClientFx = require(Client:WaitForChild("ClientFx"))
 local GaragePrompts = require(Client:WaitForChild("GaragePrompts"))
+local ZoneFx = require(Client:WaitForChild("ZoneFx"))
+local BossFx = require(Client:WaitForChild("BossFx"))
 
 local player = Players.LocalPlayer
 Strings.SetLocale(player.LocaleId)
@@ -60,6 +62,8 @@ SpeedLanes.Start(function()
 	return Store.State and Store.State.walkSpeed or MapConfig.WalkSpeed
 end)
 UIExtra.Init(UI)
+ZoneFx.Start()
+BossFx.Start(UI, CineFx)
 ClientFx.Init(UI)
 Markers.Start(UI.Kit(), UIExtra)
 GaragePrompts.Start(UI.Kit(), CineFx)

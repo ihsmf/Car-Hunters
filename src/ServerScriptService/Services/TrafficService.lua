@@ -22,10 +22,10 @@ function Traffic.HitTest(pos, t, roadIdx, margin)
 	margin = margin or 0
 	local groundY = MapConfig.RoadTopY
 	for _, lane in ipairs(TrafficMath.RoadLanes[roadIdx]) do
-		local dz = math.abs(pos.Z - lane.z)
-		if dz < 7 + margin then
+		if math.abs(pos.Z - lane.z) < 7 + (lane.weaveA or 0) + 24 + margin then
 			for k = 1, lane.count do
 				local kind = VehicleKinds[lane.kinds[k]]
+				local dz = math.abs(pos.Z - TrafficMath.CarZ(lane, k, t))
 				local x = TrafficMath.CarX(lane, k, t)
 				if math.abs(pos.X - x) <= kind.L / 2 + 1.0 + margin and dz <= kind.W / 2 + 1.0 + margin and pos.Y < groundY + kind.H + 2.5 then
 					return lane
@@ -101,6 +101,18 @@ function Traffic.Start()
 			end
 		end
 	end)
+end
+
+-- shared instant death for bosses, rivers, etc. (airbag still applies)
+function Traffic.Wreck(player, dirX)
+	local s = S.Data.Get(player)
+	local _, hum = S.Data.GetRoot(player)
+	local now = os.clock()
+	if s and s.ready and hum and hum.Health > 0 and now > s.protectedUntil and now - s.lastHit >= EconomyConfig.HitCooldown then
+		wreck(player, s, hum, { dir = dirX or 1 })
+		return true
+	end
+	return false
 end
 
 function Traffic.Protect(player, seconds)

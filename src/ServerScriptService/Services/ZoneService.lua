@@ -40,6 +40,10 @@ function Zone.Unlock(player, zoneId)
 	if not req then
 		return
 	end
+	if (d.rebirths or 0) < (req.rebirths or 0) then
+		S.Data.Notify(player, "needRebirth", { req.rebirths }, "warn")
+		return
+	end
 	if s.collectionValue < req.minValue then
 		S.Data.Notify(player, "needValue", nil, "warn")
 		return
@@ -55,6 +59,31 @@ function Zone.Unlock(player, zoneId)
 end
 
 function Zone.Start()
+	-- rivers etc.: touching a kill zone = wrecked (airbag can save you, then you respawn at the bank)
+	local CollectionService = game:GetService("CollectionService")
+	local function hookKill(part)
+		part.Touched:Connect(function(hit)
+			local player = Players:GetPlayerFromCharacter(hit.Parent)
+			if player and S.Traffic.Wreck(player, 0) then
+				return
+			end
+			local hum = hit.Parent and hit.Parent:FindFirstChildOfClass("Humanoid")
+			if player and hum and hum.Health > 0 then
+				-- airbag fired: pop the player back onto the nearest bank
+				local hrp = hit.Parent:FindFirstChild("HumanoidRootPart")
+				if hrp then
+					local z = hrp.Position.Z
+					local r = MapConfig.River
+					local bank = (math.abs(z - r.z1) < math.abs(z - r.z2)) and r.z1 - 6 or r.z2 + 6
+					hrp.CFrame = CFrame.new(hrp.Position.X, 4, bank)
+				end
+			end
+		end)
+	end
+	for _, p in ipairs(CollectionService:GetTagged("KillZone")) do
+		hookKill(p)
+	end
+	CollectionService:GetInstanceAddedSignal("KillZone"):Connect(hookKill)
 	task.spawn(function()
 		while true do
 			task.wait(0.25)

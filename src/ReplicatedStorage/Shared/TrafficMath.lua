@@ -33,8 +33,9 @@ for ri, road in ipairs(MapConfig.Roads) do
 			local dir = (side == -1) and 1 or -1
 			local speed = road.speed[1] + (road.speed[2] - road.speed[1]) * rng()
 			local spacing = road.spacing[1] + (road.spacing[2] - road.spacing[1]) * rng()
-			local n = math.max(2, math.floor(M.Length / spacing + 0.5))
-			local S = M.Length / n
+			local loop = road.loop or M.Length -- trains/planes run a long loop so they show up rarely
+			local n = road.count or math.max(2, math.floor(loop / spacing + 0.5))
+			local S = loop / n
 			local offsets, kinds, colors = {}, {}, {}
 			for k = 1, n do
 				offsets[k] = (k - 1) * S + (rng() * 2 - 1) * 0.18 * S
@@ -44,13 +45,21 @@ for ri, road in ipairs(MapConfig.Roads) do
 			local lane = {
 				road = ri, index = #M.Lanes + 1, side = side, dir = dir, z = road.z + zoff,
 				speed = speed, count = n, spacing = S, offsets = offsets, kinds = kinds,
-				colors = colors, phase = rng() * M.Length,
+				colors = colors, phase = rng() * loop, loop = loop,
 			}
+			if road.weave then
+				lane.weaveA = road.weave
+				lane.weaveW = 2 * math.pi / (2.2 + rng() * 1.6)
+				lane.weavePh = {}
+				for k = 1, n do
+					lane.weavePh[k] = rng() * 2 * math.pi
+				end
+			end
 			local sg = MapConfig.Surge
 			if sg then
 				local period = sg.period[1] + (sg.period[2] - sg.period[1]) * rng()
 				lane.surgeW = 2 * math.pi / period
-				lane.surgeA = sg.amp * speed / lane.surgeW
+				lane.surgeA = (road.surge or sg.amp) * speed / lane.surgeW
 				lane.surgePhase = rng() * 2 * math.pi
 			end
 			table.insert(lanes, lane)
@@ -62,12 +71,20 @@ end
 
 function M.CarX(lane, k, t)
 	local surge = lane.surgeA and lane.surgeA * math.sin(lane.surgeW * t + lane.surgePhase) or 0
-	local d = (lane.speed * t + surge + lane.phase + lane.offsets[k]) % M.Length
+	local d = (lane.speed * t + surge + lane.phase + lane.offsets[k]) % lane.loop
 	local x = M.MinX + d
 	if lane.dir < 0 then
 		x = -x
 	end
 	return x
+end
+
+-- lane centre z of car k at time t (drift lanes weave side to side)
+function M.CarZ(lane, k, t)
+	if lane.weaveA then
+		return lane.z + lane.weaveA * math.sin(lane.weaveW * t + lane.weavePh[k])
+	end
+	return lane.z
 end
 
 function M.RoadAtZ(z, margin)

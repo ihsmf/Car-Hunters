@@ -46,9 +46,13 @@ function Renderer.Start()
 					end
 					for k, m in ipairs(pool.models) do
 						local x = TrafficMath.CarX(lane, k, t)
-						local cf = CFrame.new(x, MapConfig.RoadTopY, lane.z)
+						local cf = CFrame.new(x, MapConfig.RoadTopY, TrafficMath.CarZ(lane, k, t))
 						if lane.dir < 0 then
 							cf = cf * flip
+						end
+						if lane.weaveA then
+							local dz = lane.weaveA * lane.weaveW * math.cos(lane.weaveW * t + lane.weavePh[k])
+							cf = cf * CFrame.Angles(0, -math.atan2(dz, lane.speed) * lane.dir, 0)
 						end
 						m.PrimaryPart.CFrame = cf
 					end
@@ -69,9 +73,9 @@ function Renderer.Start()
 			local ri = TrafficMath.RoadAtZ(pos.Z, 3)
 			if ri then
 				for _, lane in ipairs(TrafficMath.RoadLanes[ri]) do
-					local dz = math.abs(pos.Z - lane.z)
 					for k = 1, lane.count do
 						local kind = VehicleKinds[lane.kinds[k]]
+						local dz = math.abs(pos.Z - TrafficMath.CarZ(lane, k, t))
 						if dz <= kind.W / 2 + 1 and math.abs(pos.X - TrafficMath.CarX(lane, k, t)) <= kind.L / 2 + 1 and pos.Y < MapConfig.RoadTopY + kind.H + 2.5 then
 							lastReport = os.clock()
 							Net.Get("TrafficHit"):FireServer()

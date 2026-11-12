@@ -352,6 +352,9 @@ end
 
 function VehicleFactory.BuildTraffic(kindName, color, variant)
 	local k = Kinds[kindName] or Kinds.sedan
+	if k.special then
+		return require(script.Parent.SpecialVehicles).Build(kindName, k.special == "train" and color or nil)
+	end
 	local folder = modelsFolder()
 	local traffic = folder and folder:FindFirstChild("Traffic")
 	if traffic then

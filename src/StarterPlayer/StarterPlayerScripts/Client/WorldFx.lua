@@ -12,6 +12,17 @@ local MOODS = {
 	highway = { clock = 15.9, bright = 2.2, tint = Color3.fromRGB(255, 244, 226), sat = 0.14, amb = Color3.fromRGB(134, 124, 116) },
 	industrial = { clock = 17.3, bright = 2.0, tint = Color3.fromRGB(255, 234, 212), sat = 0.06, amb = Color3.fromRGB(130, 110, 104) },
 	neon = { clock = 20.4, bright = 1.4, tint = Color3.fromRGB(214, 236, 255), sat = 0.35, amb = Color3.fromRGB(60, 110, 150) },
+	scrapyard = { clock = 17.8, bright = 1.9, tint = Color3.fromRGB(255, 226, 200), sat = 0.1, amb = Color3.fromRGB(130, 104, 96) },
+	docks = { clock = 9.2, bright = 2.0, tint = Color3.fromRGB(236, 246, 255), sat = 0.1, amb = Color3.fromRGB(110, 124, 136) },
+	desert = { clock = 13.0, bright = 2.6, tint = Color3.fromRGB(255, 236, 206), sat = 0.12, amb = Color3.fromRGB(150, 128, 104) },
+	bridge = { clock = 11.0, bright = 2.3, tint = Color3.fromRGB(246, 252, 255), sat = 0.18, amb = Color3.fromRGB(124, 134, 140) },
+	airport = { clock = 15.0, bright = 2.3, tint = Color3.fromRGB(250, 250, 255), sat = 0.12, amb = Color3.fromRGB(128, 130, 136) },
+	canyon = { clock = 18.2, bright = 2.0, tint = Color3.fromRGB(255, 214, 180), sat = 0.2, amb = Color3.fromRGB(150, 100, 80) },
+	circuit = { clock = 14.0, bright = 2.4, tint = Color3.fromRGB(255, 250, 244), sat = 0.2, amb = Color3.fromRGB(132, 128, 118) },
+	drift = { clock = 21.0, bright = 1.3, tint = Color3.fromRGB(240, 220, 255), sat = 0.35, amb = Color3.fromRGB(90, 70, 130) },
+	storm = { clock = 19.6, bright = 0.9, tint = Color3.fromRGB(190, 206, 220), sat = -0.1, amb = Color3.fromRGB(70, 80, 96) },
+	rush = { clock = 16.8, bright = 2.1, tint = Color3.fromRGB(255, 236, 214), sat = 0.14, amb = Color3.fromRGB(134, 120, 110) },
+	colosseum = { clock = 17.0, bright = 2.2, tint = Color3.fromRGB(255, 232, 200), sat = 0.16, amb = Color3.fromRGB(150, 126, 100) },
 }
 local mood = { clock = 14.3, bright = 2.3, tint = Color3.fromRGB(255, 250, 244), sat = 0.16, amb = Color3.fromRGB(132, 128, 118) }
 local tintFx

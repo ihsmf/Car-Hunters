@@ -29,6 +29,8 @@ Net.Names = {
 	"ClaimContract",
 	"CraftTuning",
 	"TuneCar",
+	"BossThrow",
+	"BossFx",
 }
 
 function Net.Folder()
