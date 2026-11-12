@@ -663,12 +663,30 @@ end
 
 ---------------------------------------------------------------- reveal
 local function buildReveal()
-	local r = new("TextButton", { Name = "Reveal", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.25, Visible = false, ZIndex = 60 }, gui)
+	-- showcase: blurred world, rarity backdrop with turning rays + light streaks, car spinning on a glowing turntable
+	local r = new("TextButton", { Name = "Reveal", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(8, 10, 16), BackgroundTransparency = 0.15, Visible = false, ZIndex = 60 }, gui)
+	local glow = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.48), Size = UDim2.fromScale(1.4, 1.4), BackgroundColor3 = P.yellow, BackgroundTransparency = 0, BorderSizePixel = 0, ZIndex = 60 }, r)
+	new("UIAspectRatioConstraint", {}, glow)
+	corner(glow, 2000)
+	local glowGrad = new("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(0.5, 0.85), NumberSequenceKeypoint.new(1, 1) }), Rotation = 90 }, glow)
 	local rays = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), Size = UDim2.fromOffset(10, 10), BackgroundTransparency = 1, ZIndex = 60 }, r)
 	for k = 0, 11 do
-		new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(1600, 46), Rotation = k * 15, BackgroundColor3 = P.yellow, BackgroundTransparency = 0.82, BorderSizePixel = 0, ZIndex = 60 }, rays)
+		local ray = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(2000, 60), Rotation = k * 15, BackgroundColor3 = P.yellow, BackgroundTransparency = 0.8, BorderSizePixel = 0, ZIndex = 60 }, rays)
+		new("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.2), NumberSequenceKeypoint.new(1, 1) }) }, ray)
 	end
-	local box = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(640, 600), BackgroundTransparency = 1, ZIndex = 61 }, r)
+	-- light streaks sweeping across + floating sparkles
+	local streaks, sparks = {}, {}
+	for k = 1, 3 do
+		local st = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.new(0.5, 0, 0, 6 + k * 3), Rotation = -18, BackgroundColor3 = C(255, 255, 255), BackgroundTransparency = 0.6, BorderSizePixel = 0, ZIndex = 61 }, r)
+		new("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1) }) }, st)
+		streaks[k] = st
+	end
+	for k = 1, 26 do
+		local sp = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(6, 6), BackgroundColor3 = C(255, 255, 255), BorderSizePixel = 0, ZIndex = 61 }, r)
+		corner(sp, 3)
+		sparks[k] = { f = sp, x = math.random(), y = math.random(), v = 0.03 + math.random() * 0.06, s = 3 + math.random() * 7 }
+	end
+	local box = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(700, 640), BackgroundTransparency = 1, ZIndex = 61 }, r)
 	local sc = new("UIScale", {}, box)
 	local top = text(box, { Text = T("reveal_new"), TextSize = 34, Size = UDim2.new(1, 0, 0, 40), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 62 })
 	local badge = new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 46), Size = UDim2.fromOffset(330, 54), BackgroundColor3 = P.white, ZIndex = 62 }, box)
@@ -676,12 +694,21 @@ local function buildReveal()
 	stroke(badge, P.ink, 4)
 	local badgeGrad = gradient(badge, P.yellow)
 	local rarity = text(badge, { Text = "", TextSize = 36, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 63, Outline = 3 })
-	local vpHolder = new("Frame", { Position = UDim2.fromOffset(60, 110), Size = UDim2.fromOffset(520, 270), BackgroundTransparency = 1, ZIndex = 62 }, box)
-	local name = text(box, { Text = "", TextSize = 64, Position = UDim2.fromOffset(0, 380), Size = UDim2.new(1, 0, 0, 70), TextXAlignment = Enum.TextXAlignment.Center, Outline = 4, ZIndex = 62 })
-	local info = text(box, { Text = "", Font = BODY, TextSize = 24, Position = UDim2.fromOffset(0, 452), Size = UDim2.new(1, 0, 0, 30), TextXAlignment = Enum.TextXAlignment.Center, RichText = true, ZIndex = 62 })
+	-- turntable: glowing ellipse under the car
+	local disc = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(350, 352), Size = UDim2.fromOffset(470, 90), BackgroundColor3 = P.yellow, BorderSizePixel = 0, ZIndex = 61 }, box)
+	corner(disc, 200)
+	new("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(0.5, 0.25), NumberSequenceKeypoint.new(1, 0.9) }) }, disc)
+	local ring = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(350, 352), Size = UDim2.fromOffset(420, 70), BackgroundTransparency = 1, ZIndex = 61 }, box)
+	corner(ring, 200)
+	local ringStroke = stroke(ring, P.white, 4)
+	local vpHolder = new("Frame", { Position = UDim2.fromOffset(40, 106), Size = UDim2.fromOffset(620, 300), BackgroundTransparency = 1, ZIndex = 62 }, box)
+	local name = text(box, { Text = "", TextSize = 64, Position = UDim2.fromOffset(0, 410), Size = UDim2.new(1, 0, 0, 70), TextXAlignment = Enum.TextXAlignment.Center, Outline = 4, ZIndex = 62 })
+	local info = text(box, { Text = "", Font = BODY, TextSize = 24, Position = UDim2.fromOffset(0, 482), Size = UDim2.new(1, 0, 0, 30), TextXAlignment = Enum.TextXAlignment.Center, RichText = true, ZIndex = 62 })
+	local stamp = text(box, { Text = "NEW!", TextSize = 46, TextColor3 = P.yellow, Rotation = -14, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(600, 120), Size = UDim2.fromOffset(160, 60), TextXAlignment = Enum.TextXAlignment.Center, Outline = 4, ZIndex = 64, Visible = false })
 	local ok = toy(box, { Text = T("btn_awesome"), Color = P.green, Size = UDim2.fromOffset(300, 86), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, 0), ZIndex = 63,
 		OnClick = function() UI.HideReveal() end })
-	panels.reveal = { root = r, rays = rays, box = box, sc = sc, top = top, badgeGrad = badgeGrad, rarity = rarity, vpHolder = vpHolder, name = name, info = info, ok = ok }
+	panels.reveal = { root = r, rays = rays, box = box, sc = sc, top = top, badgeGrad = badgeGrad, rarity = rarity, vpHolder = vpHolder, name = name, info = info, ok = ok,
+		glow = glow, glowGrad = glowGrad, disc = disc, ringStroke = ringStroke, streaks = streaks, sparks = sparks, stamp = stamp }
 	r.Activated:Connect(function() UI.HideReveal() end)
 end
 
@@ -693,11 +720,21 @@ function UI.HideReveal()
 			rv.conn:Disconnect()
 			rv.conn = nil
 		end
+		if rv.blur then
+			rv.blur:Destroy()
+			rv.blur = nil
+		end
+		local cb = rv.onClosed
+		rv.onClosed = nil
+		if cb then
+			cb()
+		end
 	end
 end
 
-function UI.ShowReveal(res)
+function UI.ShowReveal(res, onClosed)
 	local rv = panels.reveal
+	rv.onClosed = onClosed
 	local def = CarConfig.ById[res.typeId]
 	if not def then
 		return
@@ -720,21 +757,48 @@ function UI.ShowReveal(res)
 	for _, ray in ipairs(rv.rays:GetChildren()) do
 		ray.BackgroundColor3 = rc
 	end
+	rv.glow.BackgroundColor3 = rc
+	rv.disc.BackgroundColor3 = rc
+	rv.ringStroke.Color = lift(rc, 0.4)
+	rv.stamp.Visible = res.isNew == true
+	for _, sp in ipairs(rv.sparks) do
+		sp.f.BackgroundColor3 = math.random() < 0.5 and rc or C(255, 255, 255)
+	end
 	clear(rv.vpHolder)
 	local vp, model = carViewport(rv.vpHolder, def, { Size = UDim2.fromScale(1, 1), ZIndex = 62 })
+	if not rv.blur then
+		rv.blur = new("BlurEffect", { Name = "RevealBlur", Size = 0 }, game:GetService("Lighting"))
+		tween(rv.blur, 0.35, { Size = 22 })
+	end
 	rv.root.Visible = true
 	rv.sc.Scale = 0.2
 	tween(rv.sc, 0.45, { Scale = 1 }, Enum.EasingStyle.Back)
 	UI.Sfx("fanfare")
+	local lvl = CarConfig.Rarities[res.rarity].index
 	local t0 = os.clock()
 	if rv.conn then
 		rv.conn:Disconnect()
 	end
-	rv.conn = RunService.RenderStepped:Connect(function()
+	rv.conn = RunService.RenderStepped:Connect(function(dt)
 		local t = os.clock() - t0
-		rv.rays.Rotation = t * 25
+		rv.rays.Rotation = t * (18 + lvl * 4)
+		rv.glow.Size = UDim2.fromScale(1.3 + math.sin(t * 2) * 0.05, 1.3 + math.sin(t * 2) * 0.05)
+		for k, st in ipairs(rv.streaks) do
+			local ph = ((t * (0.35 + k * 0.12)) + k * 0.33) % 1.6 - 0.3
+			st.Position = UDim2.fromScale(ph, 0.25 + k * 0.18)
+		end
+		for _, sp in ipairs(rv.sparks) do
+			sp.y = sp.y - sp.v * dt * (1 + lvl * 0.3)
+			if sp.y < -0.05 then
+				sp.y, sp.x = 1.05, math.random()
+			end
+			sp.f.Position = UDim2.fromScale(sp.x + math.sin(t + sp.s) * 0.01, sp.y)
+			sp.f.Size = UDim2.fromOffset(sp.s, sp.s)
+			sp.f.BackgroundTransparency = 0.2 + 0.6 * math.abs(math.sin(t * 3 + sp.s))
+		end
+		rv.stamp.Rotation = -14 + math.sin(t * 4) * 4
 		if model.Parent then
-			fitCamera(vp, model, math.rad(35) + t * 0.8)
+			fitCamera(vp, model, math.rad(35) + t * 0.9)
 		end
 	end)
 end

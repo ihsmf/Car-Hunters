@@ -26,6 +26,11 @@ local function play(name)
 	end
 end
 
+-- showcase hooks set by the controller: Reveal(res, onClosed), HideReveal()
+function TrapFx.SetReveal(show, hide)
+	TrapFx.Reveal, TrapFx.HideReveal = show, hide
+end
+
 function TrapFx.SetSfx(fn)
 	sfx = fn
 end
@@ -126,6 +131,9 @@ function TrapFx.Play(res, baseIndex, onDone)
 	task.spawn(function()
 		local def = CarConfig.ById[res.typeId]
 		if not def or not baseIndex then
+			if def and TrapFx.Reveal then
+				TrapFx.Reveal(res)
+			end
 			if onDone then
 				onDone()
 			end
@@ -232,92 +240,102 @@ function TrapFx.Play(res, baseIndex, onDone)
 			Cine.Title(string.upper(res.rarity) .. "!", rc, 1.1, 150, 0.28)
 		end
 
-		-- 5) the car drops onto the lift, suspension bounce, dust, rarity outline
-		local ghost = VehicleFactory.BuildCar(def)
-		local y = BaseLayout.FloorY + 0.6
-		local landCF = CFrame.new(padPos.X, y, padPos.Z) * CFrame.Angles(0, math.atan2(-front.Z, front.X), 0)
-		ghost:PivotTo(landCF + Vector3.new(0, 26, 0))
-		ghost.Parent = Workspace
-		local hl = Instance.new("Highlight")
-		hl.FillColor = rc
-		hl.OutlineColor = rc
-		hl.FillTransparency = 0.55
-		hl.OutlineTransparency = 0
-		hl.DepthMode = Enum.HighlightDepthMode.Occluded
-		hl.Parent = ghost
-		camTarget = CFrame.lookAt(padPos + side * 20 + front * 14 + Vector3.new(0, 7, 0), padPos + Vector3.new(0, 2.5, 0))
-		local fallT = 0.38 * k
-		local f0 = os.clock()
-		while true do
-			local a = math.min(1, (os.clock() - f0) / fallT)
-			ghost.PrimaryPart.CFrame = landCF + Vector3.new(0, 26 * (1 - a * a), 0)
-			if a >= 1 then
-				break
-			end
-			RunService.RenderStepped:Wait()
-		end
-		play("land")
-		Cine.Shake(1.4 + lvl * 0.3, 0.45)
-		dustRing(padPos, Color3.fromRGB(190, 186, 180), 30 + lvl * 6)
-		if lvl >= 5 then
-			burst(padPos + Vector3.new(0, 6, 0), { c1 = Color3.fromRGB(255, 220, 90), c2 = Color3.fromRGB(255, 180, 40), s1 = 0.7, life = 1.6, speed = 30, acc = Vector3.new(0, -25, 0), drag = 1 }, 140)
-		end
-		-- squash and settle
-		for _, dy in ipairs({ -0.5, 0.25, -0.1, 0 }) do
-			tw(ghost.PrimaryPart, 0.09, { CFrame = landCF + Vector3.new(0, dy, 0) })
-			task.wait(0.09)
-		end
-		tw(hl, 1.4, { FillTransparency = 1, OutlineTransparency = 1 })
+		-- 5) showcase: dark blurred screen, the car spins on a rarity backdrop (UI.ShowReveal) until tapped
+		Cine.Darken(0.55, 0.25)
+		Cine.Shake(1.2 + lvl * 0.3, 0.5)
 		if magnet then
 			tw(magnet, 0.6, { CFrame = magnetCF })
 			tw(light, 0.8, { Brightness = 0 })
 		end
-		tw(dof, 0.6, { FarIntensity = 0 })
-		wait(0.35)
+		tw(dof, 0.4, { FarIntensity = 0 })
+		local shown = false
+		if TrapFx.Reveal then
+			TrapFx.Reveal(res, function()
+				shown = true
+			end)
+			local w0 = os.clock()
+			while not shown and os.clock() - w0 < (lvl >= 4 and 6 or 4.5) do
+				task.wait(0.05)
+			end
+			if not shown and TrapFx.HideReveal then
+				TrapFx.HideReveal()
+			end
+		end
+		Cine.Darken(0, 0.3)
 
-		-- 6) drive off the lift into the parking slot, camera follows
+		-- 6) drive-in: the car comes through the garage gate and parks; the camera rides in front of it
+		local ghost = VehicleFactory.BuildCar(def)
+		local y = BaseLayout.FloorY + 0.6
+		local real = {}
+		local function hideReal()
+			local cars = base and base:FindFirstChild("Cars")
+			local m = cars and res.slot and cars:FindFirstChild("Car_" .. res.slot)
+			if m and not real[m] then
+				real[m] = true
+				for _, d in ipairs(m:GetDescendants()) do
+					if d:IsA("BasePart") then
+						d.LocalTransparencyModifier = 1
+					elseif d:IsA("BillboardGui") then
+						d.Enabled = false
+					end
+				end
+			end
+		end
 		if res.slot then
-			play("drive")
+			local pl = BaseLayout.PortalLocal
 			local sl = BaseLayout.SlotLocal(res.slot)
-			local pts = {
-				Vector3.new(padPos.X, y, padPos.Z),
-				bcf:PointToWorldSpace(Vector3.new(BaseLayout.LaneX, y, BaseLayout.TrapLocal.Z)),
-			}
+			local L = function(x, yy, z)
+				return bcf:PointToWorldSpace(Vector3.new(x, yy, z))
+			end
+			local pts = { L(pl.X + 30, y, pl.Z), L(pl.X - 6, y, pl.Z), L(BaseLayout.LaneX, y, pl.Z) }
 			if sl.Y > 0 then
-				-- upper level: drive into the lift, rise, roll onto the deck and along it to the bay
 				local el = BaseLayout.ElevatorLocal
 				local yUp = y + sl.Y
-				for _, p in ipairs({
-					Vector3.new(BaseLayout.LaneX, y, el.Z), Vector3.new(el.X, y, el.Z), Vector3.new(el.X, yUp, el.Z),
-					Vector3.new(-15, yUp, el.Z), Vector3.new(-15, yUp, sl.Z), Vector3.new(sl.X, yUp, sl.Z),
-				}) do
-					table.insert(pts, bcf:PointToWorldSpace(p))
+				for _, p in ipairs({ { BaseLayout.LaneX, y, el.Z }, { el.X, y, el.Z }, { el.X, yUp, el.Z }, { -15, yUp, el.Z }, { -15, yUp, sl.Z }, { sl.X, yUp, sl.Z } }) do
+					table.insert(pts, L(p[1], p[2], p[3]))
 				end
 			else
-				table.insert(pts, bcf:PointToWorldSpace(Vector3.new(BaseLayout.LaneX, y, sl.Z)))
-				table.insert(pts, bcf:PointToWorldSpace(Vector3.new(sl.X, y, sl.Z)))
+				table.insert(pts, L(BaseLayout.LaneX, y, sl.Z))
+				table.insert(pts, L(sl.X + 4, y, sl.Z))
 			end
+			-- open the roller door locally
+			local door = base and base:FindFirstChild("PortalDoor")
+			local doorCF = door and door.CFrame
+			if door then
+				tw(door, 0.6, { CFrame = doorCF + Vector3.new(0, 10.5, 0) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+			end
+			ghost:PivotTo(faceCF(pts[1], pts[2] - pts[1]))
+			ghost.Parent = Workspace
+			hideReal()
+			play("drive")
 			local total = 0
 			for i = 2, #pts do
 				total = total + (pts[i] - pts[i - 1]).Magnitude
 			end
-			local dur = math.clamp(total / 26, 1.2, 2.2) * k
+			local dur = math.clamp(total / 22, 3, 6)
 			local d0 = os.clock()
+			local lastDir = pts[2] - pts[1]
+			local camPos
 			while true do
+				hideReal()
 				local a = math.min(1, (os.clock() - d0) / dur)
-				local e = a * a * (3 - 2 * a)
+				local e = a < 0.5 and 2 * a * a or 1 - (-2 * a + 2) ^ 2 / 2 -- ease in-out
 				local dist, acc = e * total, 0
 				for i = 2, #pts do
 					local seg = (pts[i] - pts[i - 1]).Magnitude
 					if dist <= acc + seg or i == #pts then
 						local pos = pts[i - 1]:Lerp(pts[i], math.clamp((dist - acc) / math.max(seg, 1e-3), 0, 1))
 						local dir = pts[i] - pts[i - 1]
-						if math.abs(dir.X) + math.abs(dir.Z) < 0.01 then
-							ghost.PrimaryPart.CFrame = ghost.PrimaryPart.CFrame - ghost.PrimaryPart.Position + pos
-						else
-							ghost.PrimaryPart.CFrame = faceCF(pos, dir)
+						dir = Vector3.new(dir.X, 0, dir.Z)
+						if dir.Magnitude > 0.01 then
+							lastDir = lastDir:Lerp(dir.Unit, 0.18)
 						end
-						camTarget = CFrame.lookAt(pos + side * 16 + Vector3.new(0, 10, 0) + front * 10, pos + Vector3.new(0, 2, 0))
+						local fwd = lastDir.Magnitude > 0.01 and lastDir.Unit or Vector3.new(1, 0, 0)
+						ghost.PrimaryPart.CFrame = faceCF(pos, fwd) * CFrame.new(0, math.sin(os.clock() * 18) * 0.04, 0)
+						-- camera in front of the car, looking back at its face
+						local want = pos + fwd * 13 + fwd:Cross(Vector3.yAxis) * 2.5 + Vector3.new(0, 3.6, 0)
+						camPos = camPos and camPos:Lerp(want, 0.15) or want
+						camTarget = CFrame.lookAt(camPos, pos + Vector3.new(0, 1.6, 0))
 						break
 					end
 					acc = acc + seg
@@ -327,21 +345,32 @@ function TrapFx.Play(res, baseIndex, onDone)
 				end
 				RunService.RenderStepped:Wait()
 			end
-			-- turn into the bay facing outwards
-			local final = pts[#pts]
-			ghost.PrimaryPart.CFrame = faceCF(final, bcf:VectorToWorldSpace(Vector3.new(1, 0, 0)))
-		else
-			for _, d in ipairs(ghost:GetDescendants()) do
-				if d:IsA("BasePart") and d.Name ~= "Root" then
-					tw(d, 0.4, { Transparency = 1 })
+			-- reverse-style final: swing into the bay facing out, hero shot
+			local final = pts[#pts] - bcf:VectorToWorldSpace(Vector3.new(4, 0, 0))
+			local outDir = bcf:VectorToWorldSpace(Vector3.new(1, 0, 0))
+			tw(ghost.PrimaryPart, 0.7, { CFrame = faceCF(final, outDir) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+			camTarget = CFrame.lookAt(final + outDir * 14 + bcf:VectorToWorldSpace(Vector3.new(0, 0, 6)) + Vector3.new(0, 3, 0), final + Vector3.new(0, 1.5, 0))
+			task.wait(0.8)
+			Cine.Shake(0.3, 0.2)
+			if lvl >= 4 then
+				Cine.Title(string.upper(def.name), rc, 1.2, 90, 0.75)
+			end
+			task.wait(1.1)
+			if door then
+				tw(door, 0.6, { CFrame = doorCF })
+			end
+		end
+		-- the real (server) car takes over
+		ghost:Destroy()
+		for m in pairs(real) do
+			for _, d in ipairs(m:GetDescendants()) do
+				if d:IsA("BasePart") then
+					d.LocalTransparencyModifier = 0
+				elseif d:IsA("BillboardGui") then
+					d.Enabled = true
 				end
 			end
-			task.wait(0.4)
 		end
-		-- keep the ghost until the server-side car shows up in the slot
-		task.delay(math.max(0.3, (res.animTime or 5.2) + 0.4 - (os.clock() - tStart)), function()
-			ghost:Destroy()
-		end)
 		spk:Destroy()
 
 		-- 7) hand the camera back
