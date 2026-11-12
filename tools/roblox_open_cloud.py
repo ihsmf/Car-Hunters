@@ -130,6 +130,50 @@ def upload_models(args):
     print(f"uploaded {len(done)} models")
 
 
+def upload_icons(args):
+    """assets/icons/*.png -> Decal assets -> IconIds.lua (shown in game via rbxthumb://type=Asset)"""
+    creator = {"userId": str(args.creator_user)} if args.creator_user else {"groupId": str(args.creator_group)}
+    folder = os.path.join(ROOT, "assets", "icons")
+    done = {}
+    for fn in sorted(os.listdir(folder)):
+        if not fn.endswith(".png"):
+            continue
+        name = fn[:-4]
+        if args.only and name not in args.only.split(","):
+            continue
+        meta = {"assetType": "Decal", "displayName": f"CarHunters icon {name}", "description": "CAR HUNTERS HUD icon (Blender render)",
+                "creationContext": {"creator": creator}}
+        body, hdr = multipart({"request": json.dumps(meta)}, {"fileContent": (fn, "image/png", open(os.path.join(folder, fn), "rb").read())})
+        st, res = request("POST", f"{API}/assets/v1/assets", body, hdr)
+        if st >= 300:
+            print(f"  ! {name}: {st} {res}")
+            continue
+        op = res.get("path") or res.get("operationId")
+        asset, r2 = None, {}
+        for _ in range(40):
+            st2, r2 = request("GET", f"{API}/assets/v1/{op}" if op and op.startswith("operations") else f"{API}/assets/v1/operations/{op}")
+            if r2.get("done"):
+                asset = (r2.get("response") or {}).get("assetId")
+                break
+            time.sleep(2)
+        if asset:
+            done[name] = int(asset)
+            print(f"  {name}: {asset}")
+        else:
+            print(f"  ! {name}: upload did not finish ({r2})")
+    path = os.path.join(SHARED, "IconIds.lua")
+    old = {}
+    if os.path.exists(path):
+        for m in re.finditer(r"(\w+) = (\d+)", open(path, encoding="utf-8").read()):
+            old[m.group(1)] = int(m.group(2))
+    old.update(done)
+    lines = ["-- HUD icons rendered in Blender (blender/make_icons.py), uploaded as Decals (tools/roblox_open_cloud.py icons).", "return {"]
+    lines += [f"\t{k} = {v}," for k, v in sorted(old.items())]
+    lines.append("}")
+    open(path, "w", encoding="utf-8").write("\n".join(lines) + "\n")
+    print(f"uploaded {len(done)} icons")
+
+
 def lua_list(path, var):
     """read id/name/desc/price entries of DonateConfig.<var>"""
     s = open(path, encoding="utf-8").read()
@@ -165,13 +209,17 @@ def create_products(args):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=["sounds", "products", "models"])
+    ap.add_argument("what", choices=["sounds", "products", "models", "icons"])
     ap.add_argument("--creator-user", type=int)
     ap.add_argument("--creator-group", type=int)
     ap.add_argument("--universe", type=int)
     ap.add_argument("--only", help="comma-separated sound names to upload")
     a = ap.parse_args()
-    if a.what == "models":
+    if a.what == "icons":
+        if not (a.creator_user or a.creator_group):
+            sys.exit("need --creator-user or --creator-group")
+        upload_icons(a)
+    elif a.what == "models":
         if not (a.creator_user or a.creator_group):
             sys.exit("need --creator-user or --creator-group")
         upload_models(a)

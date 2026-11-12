@@ -11,6 +11,7 @@ local Strings = require(Shared:WaitForChild("Strings"))
 local Util = require(Shared:WaitForChild("Util"))
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
+local Icons = require(Shared:WaitForChild("Icons"))
 local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 local VehicleFactory = require(Shared:WaitForChild("VehicleFactory"))
@@ -217,52 +218,47 @@ end
 
 ---------------------------------------------------------------- HUD
 local function buildHud()
-	-- left column (Figma "07 — HUD Left Column v2"): wallet card, buttons, contracts card stacked
-	local colF = new("Frame", { Name = "LeftColumn", Position = UDim2.fromOffset(18, 16), Size = UDim2.fromOffset(270, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1 }, root)
-	list(colF, Enum.FillDirection.Vertical, 10)
+	-- left column (Figma "08 — HUD Left Clean"): no cards, outlined type, real 3D icons
+	local colF = new("Frame", { Name = "LeftColumn", Position = UDim2.fromOffset(18, 12), Size = UDim2.fromOffset(280, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1 }, root)
+	list(colF, Enum.FillDirection.Vertical, 12)
 	hud.leftCol = colF
-	local DARK = C(20, 24, 34)
-	local card = new("Frame", { Name = "WalletCard", Size = UDim2.fromOffset(270, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = DARK, BackgroundTransparency = 0.12, LayoutOrder = 1 }, colF)
-	corner(card, 22)
-	stroke(card, P.white, 2.5).Transparency = 0.1
-	new("UIPadding", { PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14), PaddingTop = UDim.new(0, 12), PaddingBottom = UDim.new(0, 12) }, card)
-	list(card, Enum.FillDirection.Vertical, 10)
-	local money = new("Frame", { Name = "Money", Size = UDim2.new(1, 0, 0, 62), BackgroundTransparency = 1, LayoutOrder = 1 }, card)
-	local coin = new("Frame", { Position = UDim2.fromOffset(0, 9), Size = UDim2.fromOffset(44, 44), BackgroundColor3 = P.white, BorderSizePixel = 0 }, money)
-	corner(coin, 22)
-	stroke(coin, P.white, 2.5)
-	new("UIGradient", { Color = ColorSequence.new(C(255, 232, 130), P.orange), Rotation = 90 }, coin)
-	text(coin, { Text = "$", TextSize = 26, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
-	hud.money = text(money, { Position = UDim2.fromOffset(54, 0), Size = UDim2.new(1, -54, 0, 36), TextSize = 34, TextColor3 = P.yellow })
-	local chip = new("Frame", { Position = UDim2.fromOffset(54, 38), Size = UDim2.fromOffset(0, 22), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = P.green, BackgroundTransparency = 0.82 }, money)
-	corner(chip, 10)
-	new("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }, chip)
-	hud.income = text(chip, { Size = UDim2.fromScale(0, 1), AutomaticSize = Enum.AutomaticSize.X, TextSize = 15, Font = BODY, TextColor3 = P.green })
-	hud.moneyScale = new("UIScale", {}, money)
-	new("Frame", { Name = "Divider", Size = UDim2.new(1, 0, 0, 2), BackgroundColor3 = P.white, BackgroundTransparency = 0.88, BorderSizePixel = 0, LayoutOrder = 2 }, card)
-	-- banked parts: 5 cells, rarity border, short label + count
-	local row = new("Frame", { Name = "Parts", Size = UDim2.new(1, 0, 0, 50), BackgroundTransparency = 1, LayoutOrder = 3 }, card)
-	list(row, Enum.FillDirection.Horizontal, 6)
-	hud.parts = {}
-	local SHORT = { bolts = "BOLT", tire = "TIRE", engine = "ENG", turbo = "TURBO", core = "CORE" }
-	for i, id in ipairs(PartConfig.Order) do
-		local rc = rarityColor(PartConfig.Parts[id].rarity)
-		local cell = new("Frame", { Size = UDim2.fromOffset(44, 50), BackgroundColor3 = P.white, BackgroundTransparency = 0.9, BorderSizePixel = 0, LayoutOrder = i }, row)
-		corner(cell, 12)
-		stroke(cell, rc, 2)
-		text(cell, { Text = SHORT[id], Font = BODY, TextSize = 10, TextColor3 = rc, Position = UDim2.fromOffset(0, 4), Size = UDim2.new(1, 0, 0, 12), TextXAlignment = Enum.TextXAlignment.Center })
-		hud.parts[id] = { chip = cell, n = text(cell, { Text = "0", TextSize = 21, Position = UDim2.fromOffset(0, 18), Size = UDim2.new(1, 0, 0, 26), TextXAlignment = Enum.TextXAlignment.Center }) }
+	local function outline(l, th)
+		new("UIStroke", { Color = P.ink, Thickness = th or 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual }, l)
+		return l
 	end
-	-- risky loot of the current run
-	local bag = new("Frame", { Name = "RiskyLoot", Size = UDim2.new(1, 0, 0, 44), BackgroundColor3 = P.red, BackgroundTransparency = 0.78, Visible = false, LayoutOrder = 4 }, card)
-	corner(bag, 12)
-	stroke(bag, P.red, 2)
+	local function icon(parent, name, size, pos)
+		local img = new("ImageLabel", { Size = UDim2.fromOffset(size, size), Position = pos or UDim2.new(), BackgroundTransparency = 1, Image = Icons.Get(name) or "", ScaleType = Enum.ScaleType.Fit }, parent)
+		if img.Image == "" then -- not uploaded: a plain short word instead
+			text(img, { Text = string.upper(string.sub(name, 1, 4)), TextSize = 14, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
+		end
+		return img
+	end
+	-- money
+	local money = new("Frame", { Name = "Money", Size = UDim2.fromOffset(280, 64), BackgroundTransparency = 1, LayoutOrder = 1 }, colF)
+	icon(money, "coin", 56, UDim2.fromOffset(0, 4))
+	hud.money = text(money, { Position = UDim2.fromOffset(64, 0), Size = UDim2.new(1, -64, 0, 42), TextSize = 40, TextColor3 = P.white, Outline = 3 })
+	hud.income = outline(text(money, { Position = UDim2.fromOffset(65, 42), Size = UDim2.new(1, -65, 0, 20), TextSize = 18, Font = BODY, TextColor3 = C(70, 220, 100) }), 2.5)
+	hud.moneyScale = new("UIScale", {}, money)
+	-- banked parts: icon, rarity underline, count
+	local row = new("Frame", { Name = "Parts", Size = UDim2.fromOffset(280, 76), BackgroundTransparency = 1, LayoutOrder = 2 }, colF)
+	list(row, Enum.FillDirection.Horizontal, 8)
+	hud.parts = {}
+	for i, id in ipairs(PartConfig.Order) do
+		local cell = new("Frame", { Size = UDim2.fromOffset(46, 76), BackgroundTransparency = 1, LayoutOrder = i }, row)
+		local img = icon(cell, id, 46)
+		local u = new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromOffset(23, 48), Size = UDim2.fromOffset(28, 3), BackgroundColor3 = rarityColor(PartConfig.Parts[id].rarity), BorderSizePixel = 0 }, cell)
+		corner(u, 2)
+		hud.parts[id] = { chip = img, n = text(cell, { Text = "0", TextSize = 20, Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 0, 22), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 }) }
+	end
+	-- loot carried on this run (only while carrying)
+	local bag = new("Frame", { Name = "Carrying", Size = UDim2.fromOffset(280, 28), BackgroundTransparency = 1, Visible = false, LayoutOrder = 3 }, colF)
 	hud.bag = bag
-	hud.bagText = text(bag, { Text = "", Font = BODY, TextSize = 14, Position = UDim2.fromOffset(10, 4), Size = UDim2.new(1, -20, 0, 20) })
-	local bbar = new("Frame", { Position = UDim2.new(0, 10, 0, 28), Size = UDim2.new(1, -20, 0, 8), BackgroundColor3 = P.white, BackgroundTransparency = 0.85, BorderSizePixel = 0 }, bag)
-	corner(bbar, 4)
-	hud.bagFill = new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = P.orange, BorderSizePixel = 0 }, bbar)
-	corner(hud.bagFill, 4)
+	hud.bagText = text(bag, { Text = "", TextSize = 17, TextColor3 = C(255, 80, 70), Size = UDim2.new(1, 0, 0, 20), Outline = 2.5 })
+	local bbar = new("Frame", { Position = UDim2.fromOffset(0, 23), Size = UDim2.fromOffset(200, 4), BackgroundColor3 = P.ink, BackgroundTransparency = 0.45, BorderSizePixel = 0 }, bag)
+	corner(bbar, 2)
+	hud.bagFill = new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = C(255, 80, 70), BorderSizePixel = 0 }, bbar)
+	corner(hud.bagFill, 2)
+	hud.icon = icon
 
 	-- zone banner + hint
 	local banner = new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), Size = UDim2.fromOffset(290, 46), BackgroundColor3 = P.white, BorderSizePixel = 0 }, root)
@@ -826,21 +822,14 @@ local function refreshHud()
 	for id, p in pairs(hud.parts) do
 		local n = store.Banked(id)
 		p.n.Text = tostring(n)
-		p.chip.BackgroundTransparency = n > 0 and 0.88 or 0.95
-		p.n.TextColor3 = n > 0 and P.white or P.grey
+		p.chip.ImageTransparency = n > 0 and 0 or 0.55
+		p.n.TextColor3 = n > 0 and P.white or C(200, 200, 205)
 	end
 	local carried = store.CarriedTotal()
 	hud.bag.Visible = carried > 0
 	if carried > 0 then
-		local icons = {}
-		for _, id in ipairs(PartConfig.Order) do
-			local n = store.Carried(id)
-			if n > 0 then
-				table.insert(icons, PART_ICON[id] .. n)
-			end
-		end
 		local cap = st.carryCap or EconomyConfig.CarryCapacity
-		hud.bagText.Text = T("hud_risky", carried, cap) .. "  " .. table.concat(icons, " ")
+		hud.bagText.Text = string.format("CARRYING  %d / %d", carried, cap)
 		hud.bagFill.Size = UDim2.fromScale(math.clamp(carried / cap, 0, 1), 1)
 	end
 	hud.throw.holder.Visible = state.nearTrap and state.open == nil

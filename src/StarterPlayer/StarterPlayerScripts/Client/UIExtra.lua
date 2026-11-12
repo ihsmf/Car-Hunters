@@ -421,19 +421,26 @@ end
 local function buildHud()
 	local root = K.root
 	local colF = K.hud.leftCol
-	-- SHOP + JOBS buttons under the wallet card
-	local brow = K.new("Frame", { Name = "Buttons", Size = UDim2.fromOffset(270, 56), BackgroundTransparency = 1, LayoutOrder = 2 }, colF)
-	K.list(brow, Enum.FillDirection.Horizontal, 10)
-	w.shopBtn = K.toy(brow, { Name = "MagnateBtn", Text = T("btn_magnate"), Color = GOLD, Size = UDim2.fromOffset(130, 56), TextSize = 24, LayoutOrder = 1,
-		OnClick = function() UI.TogglePanel("donate") end })
+	-- SHOP + JOBS: square toy buttons with the 3D icons, label underneath
+	local brow = K.new("Frame", { Name = "Buttons", Size = UDim2.fromOffset(280, 88), BackgroundTransparency = 1, LayoutOrder = 4 }, colF)
+	K.list(brow, Enum.FillDirection.Horizontal, 12)
+	local function iconButton(name, label, color, order, onClick)
+		local holder = K.new("Frame", { Size = UDim2.fromOffset(66, 88), BackgroundTransparency = 1, LayoutOrder = order }, brow)
+		local b = K.toy(holder, { Name = label .. "Btn", Text = "", Color = color, Size = UDim2.fromOffset(66, 66), OnClick = onClick })
+		K.hud.icon(b.face, name, 46, UDim2.fromOffset(10, 8)).ZIndex = b.face.ZIndex + 1
+		local l = K.text(holder, { Text = label, TextSize = 15, Position = UDim2.fromOffset(0, 66), Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 })
+		return b, l
+	end
+	w.shopBtn = iconButton("shop", T("btn_magnate"), GOLD, 1, function()
+		UI.TogglePanel("donate")
+	end)
 	w.jobsOpen = true
-	w.jobsBtn = K.toy(brow, { Name = "JobsBtn", Text = "JOBS", Color = P.orange, Size = UDim2.fromOffset(130, 56), TextSize = 24, LayoutOrder = 2,
-		OnClick = function()
-			w.jobsOpen = not w.jobsOpen
-			UI.Refresh()
-		end })
+	w.jobsBtn, w.jobsLabel = iconButton("jobs", "JOBS", P.orange, 2, function()
+		w.jobsOpen = not w.jobsOpen
+		UI.Refresh()
+	end)
 	-- active boosts strip to the right of the wallet card
-	w.boosts = K.new("Frame", { Position = UDim2.fromOffset(300, 18), Size = UDim2.fromOffset(240, 40), BackgroundTransparency = 1 }, root)
+	w.boosts = K.new("Frame", { Position = UDim2.fromOffset(310, 18), Size = UDim2.fromOffset(240, 40), BackgroundTransparency = 1 }, root)
 	K.list(w.boosts, Enum.FillDirection.Horizontal, 6)
 	-- combo meter (bottom left, above the jump area of mobile thumbstick? left of THROW)
 	local combo = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -140), Size = UDim2.fromOffset(300, 74), BackgroundColor3 = P.ink, Visible = false }, root)
@@ -447,13 +454,9 @@ local function buildHud()
 	K.corner(w.comboFill, 6)
 	w.comboSub = K.text(combo, { Text = "", Font = K.BODY, TextSize = 13, TextColor3 = P.white, Position = UDim2.fromOffset(14, 58), Size = UDim2.new(1, -28, 0, 14), TextXAlignment = Enum.TextXAlignment.Center })
 	w.comboScale = K.new("UIScale", {}, combo)
-	-- contracts card (collapsible with JOBS)
-	local cw = K.new("Frame", { Name = "Contracts", Size = UDim2.fromOffset(270, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = C(20, 24, 34), BackgroundTransparency = 0.12, LayoutOrder = 3 }, colF)
-	K.corner(cw, 18)
-	K.stroke(cw, P.white, 2.5)
-	K.new("UIPadding", { PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14), PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 12) }, cw)
-	K.list(cw, Enum.FillDirection.Vertical, 8)
-	K.text(cw, { Text = T("contracts_title"), TextSize = 18, TextColor3 = P.orange, Size = UDim2.new(1, 0, 0, 22), LayoutOrder = 0 })
+	-- contracts: plain outlined lines with a thin progress line (no card)
+	local cw = K.new("Frame", { Name = "Contracts", Size = UDim2.fromOffset(280, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 5 }, colF)
+	K.list(cw, Enum.FillDirection.Vertical, 7)
 	w.contracts = cw
 	w.contractRows = {}
 	-- hot drop banner
@@ -486,14 +489,14 @@ end
 local function refreshHud(st)
 	-- boosts
 	K.clear(w.boosts)
-	for _, b in ipairs({ { "income", "💸 x2" }, { "luck", "🍀 LUCK" } }) do
+	for _, b in ipairs({ { "income", "2X CASH" }, { "luck", "LUCK" } }) do
 		local left = st.boosts and st.boosts[b[1]] or 0
 		if left > 0 then
 			K.pill(w.boosts, b[2] .. " " .. fmtTime(left), GOLD, { H = 34, TextSize = 18 })
 		end
 	end
 	if st.passes and st.passes.vip then
-		K.pill(w.boosts, "⭐ VIP", GOLD, { H = 34, TextSize = 18 })
+		K.pill(w.boosts, "VIP", GOLD, { H = 34, TextSize = 18 })
 	end
 	-- contracts
 	for _, r in ipairs(w.contractRows) do
@@ -501,13 +504,12 @@ local function refreshHud(st)
 	end
 	w.contractRows = {}
 	for i, c in ipairs(st.contracts or {}) do
-		local row = K.new("Frame", { Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, LayoutOrder = i }, w.contracts)
-		K.text(row, { Text = (c.ready and "✓ " or "") .. contractText(c), Font = K.BODY, TextSize = 13, TextColor3 = c.ready and P.green or P.white, TextTruncate = Enum.TextTruncate.AtEnd, Size = UDim2.new(1, -50, 0, 20), RichText = false })
-		K.text(row, { Text = c.ready and "TONY" or string.format("%d/%d", c.progress, c.n), Font = K.BODY, TextSize = 13, TextColor3 = c.ready and P.yellow or P.grey, Outline = false, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.fromOffset(56, 22), TextXAlignment = Enum.TextXAlignment.Right })
-		local bar = K.new("Frame", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 6), BackgroundColor3 = C(255, 255, 255), BackgroundTransparency = 0.85 }, row)
-		K.corner(bar, 3)
-		local fill = K.new("Frame", { Size = UDim2.fromScale(c.progress / c.n, 1), BackgroundColor3 = c.ready and P.yellow or P.green }, bar)
-		K.corner(fill, 4)
+		local row = K.new("Frame", { Size = UDim2.new(1, 0, 0, 24), BackgroundTransparency = 1, LayoutOrder = i }, w.contracts)
+		local line = c.ready and "READY  -  see Big Tony" or string.format("%d/%d   %s", c.progress, c.n, contractText(c))
+		local lbl = K.text(row, { Text = line, Font = K.BODY, TextSize = 14, TextColor3 = c.ready and P.yellow or P.white, TextTruncate = Enum.TextTruncate.AtEnd, Size = UDim2.new(1, 0, 0, 18) })
+		K.new("UIStroke", { Color = P.ink, Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual }, lbl)
+		local bar = K.new("Frame", { Position = UDim2.fromOffset(0, 21), Size = UDim2.fromOffset(250, 2), BackgroundColor3 = P.ink, BackgroundTransparency = 0.5, BorderSizePixel = 0 }, row)
+		K.new("Frame", { Size = UDim2.fromScale(c.progress / c.n, 1), BackgroundColor3 = c.ready and P.yellow or C(70, 220, 100), BorderSizePixel = 0 }, bar)
 		table.insert(w.contractRows, row)
 	end
 	w.contracts.Visible = w.jobsOpen and #(st.contracts or {}) > 0 and K.state.open == nil
@@ -518,7 +520,7 @@ local function refreshHud(st)
 			ready = ready + 1
 		end
 	end
-	w.jobsBtn.SetText(ready > 0 and ("JOBS  " .. ready .. "!") or "JOBS", nil)
+	w.jobsLabel.Text = ready > 0 and ("JOBS " .. ready .. "!") or "JOBS"
 end
 
 local NEXT_TIER = { { 2, 1.5 }, { 4, 2 }, { 7, 3 } }
