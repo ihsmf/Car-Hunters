@@ -38,6 +38,10 @@ Net.Names = {
 	"ThrowBatchResult",
 	"OfflineEarnings",
 	"SellCars",
+	"CheckpointOffer",
+	"CheckpointChoice",
+	"CheckpointFx",
+	"TutorialStep",
 }
 
 function Net.Folder()

@@ -1041,7 +1041,8 @@ local function refreshHud()
 	hud.bag.Visible = carried > 0
 	if carried > 0 then
 		local cap = st.carryCap or EconomyConfig.CarryCapacity
-		hud.bagText.Text = string.format("CARRYING  %d / %d", carried, cap)
+		local risk = st.run and st.run.risk or 1
+		hud.bagText.Text = string.format("CARRYING  %d / %d", carried, cap) .. (risk > 1 and string.format("   RISK x%s", risk) or "")
 		hud.bagFill.Size = UDim2.fromScale(math.clamp(carried / cap, 0, 1), 1)
 	end
 	hud.throw.holder.Visible = state.nearTrap and state.open == nil

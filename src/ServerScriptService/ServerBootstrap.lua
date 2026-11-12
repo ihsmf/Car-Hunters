@@ -98,7 +98,7 @@ local S = {}
 local names = { Data = "DataService", Inventory = "InventoryService", Base = "BaseService", PartSpawn = "PartSpawnService",
 	Traffic = "TrafficService", Capture = "CaptureService", Cars = "CarCollectionService", Income = "IncomeService",
 	Upgrade = "UpgradeService", Zone = "ZoneService", Warp = "WarpService", Shop = "ShopService", Donate = "DonateService",
-	HotDrop = "HotDropService", Contracts = "ContractService", Tuning = "TuningService", Mechanic = "MechanicService", Boss = "BossService", Rebirth = "RebirthService", Leaderboard = "LeaderboardService" }
+	HotDrop = "HotDropService", Contracts = "ContractService", Tuning = "TuningService", Mechanic = "MechanicService", Boss = "BossService", Rebirth = "RebirthService", Leaderboard = "LeaderboardService", Checkpoint = "CheckpointService" }
 for key, moduleName in pairs(names) do
 	S[key] = require(Services:WaitForChild(moduleName))
 end
@@ -118,6 +118,7 @@ Net.Get("BuySlot").OnServerEvent:Connect(function(p, n) S.Upgrade.BuySlot(p, n) 
 Net.Get("BuyFloor").OnServerEvent:Connect(function(p, n) S.Upgrade.BuyFloor(p, n) end)
 Net.Get("UnlockZone").OnServerEvent:Connect(function(p, z) S.Zone.Unlock(p, z) end)
 Net.Get("SellCar").OnServerEvent:Connect(function(p, uid) S.Cars.Sell(p, uid) end)
+Net.Get("CheckpointChoice").OnServerEvent:Connect(function(p, c) S.Checkpoint.Choose(p, c) end)
 Net.Get("SellCars").OnServerEvent:Connect(function(p, uids) S.Cars.SellMany(p, uids) end)
 Net.Get("AutoPark").OnServerEvent:Connect(function(p) S.Cars.AutoPark(p) end)
 Net.Get("Teleport").OnServerEvent:Connect(function(p, dest) S.Warp.Go(p, dest) end)

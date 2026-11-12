@@ -470,7 +470,7 @@ function DataService.BuildState(s)
 		walkSpeed = S.Shop.WalkSpeed(s),
 		pickupRadius = S.Shop.PickupRadius(s),
 		airbagIn = S.Shop.AirbagReadyIn(s),
-		run = { picked = s.run and s.run.picked or 0, mult = s.run and s.run.mult or 1, firstAt = s.run and s.run.firstAt },
+		run = { picked = s.run and s.run.picked or 0, mult = s.run and s.run.mult or 1, firstAt = s.run and s.run.firstAt, risk = s.run and s.run.risk or 1 },
 	}
 end
 

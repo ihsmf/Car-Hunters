@@ -76,7 +76,7 @@ function Inv.Bank(player)
 		return false
 	end
 	local run = s.run or { picked = 0, mult = 1 }
-	local mult = run.mult or 1
+	local mult = (run.mult or 1) * (run.risk or 1) -- combo x checkpoint risk multiplier
 	local moved, bonus = 0, 0
 	local rng = Random.new()
 	local banked = {}

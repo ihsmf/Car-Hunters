@@ -1191,6 +1191,25 @@ local function buildZone(ctx, zid)
 	else
 		buildEntryFence(ctx, zone)
 	end
+	-- checkpoint at the far end: SAVE & GO HOME or RISK IT (CheckpointService)
+	do
+		local cz = zone.zMax - 5
+		local trig = Part(f.StreetProps, "CheckpointTrigger", Vector3.new(2 * HW - 12, 8, 3), CFrame.new(0, 4, cz), C(255, 255, 255), M.SmoothPlastic, { t = 1, collide = false })
+		trig.CanTouch = true
+		trig:SetAttribute("ZoneId", zid)
+		CollectionService:AddTag(trig, "Checkpoint")
+		for k = 0, 39 do
+			local x = -HW + 6 + (k + 0.5) * (2 * HW - 12) / 40
+			Part(f.StreetProps, "CheckpointStripe", Vector3.new((2 * HW - 12) / 40, 0.06, 2), CFrame.new(x, 0.2, cz), (k % 2 == 0) and C(255, 200, 40) or C(28, 28, 32), M.SmoothPlastic, { collide = false, cast = false })
+		end
+		for _, sx in ipairs({ -1, 1 }) do
+			Part(f.StreetProps, "CheckpointPost", Vector3.new(1.6, 13, 1.6), CFrame.new(sx * 16, 6.5, cz), C(40, 44, 52), M.Metal)
+		end
+		local cb = Part(f.StreetProps, "CheckpointSign", Vector3.new(34, 3.4, 1.2), CFrame.new(0, 13.6, cz), C(255, 200, 40), M.SmoothPlastic)
+		Label(cb, Enum.NormalId.Front, "CHECKPOINT - SAVE OR RISK", C(28, 28, 32))
+		Label(cb, Enum.NormalId.Back, "CHECKPOINT - SAVE OR RISK", C(28, 28, 32))
+	end
+
 	if zone.arena then
 		buildArena(ctx, zid)
 		return

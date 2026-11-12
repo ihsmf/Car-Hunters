@@ -25,6 +25,7 @@ local GaragePrompts = require(Client:WaitForChild("GaragePrompts"))
 local ZoneFx = require(Client:WaitForChild("ZoneFx"))
 local BossFx = require(Client:WaitForChild("BossFx"))
 local BatchReveal = require(Client:WaitForChild("BatchReveal"))
+local Checkpoint = require(Client:WaitForChild("Checkpoint"))
 
 local player = Players.LocalPlayer
 -- keep the camera close: no flying out over the map edge
@@ -75,6 +76,7 @@ UIExtra.Init(UI)
 ZoneFx.Start()
 BossFx.Start(UI, CineFx)
 BatchReveal.Start(UI, CineFx, TrapFx)
+Checkpoint.Start(UI, CineFx)
 ClientFx.Init(UI)
 Markers.Start(UI.Kit(), UIExtra)
 GaragePrompts.Start(UI.Kit(), CineFx)
