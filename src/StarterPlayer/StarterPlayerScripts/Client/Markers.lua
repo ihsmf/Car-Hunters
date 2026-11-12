@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Strings = require(Shared:WaitForChild("Strings"))
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
+local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local BaseLayout = require(Shared:WaitForChild("BaseLayout"))
 
 local T = Strings.T
@@ -83,11 +84,12 @@ local function refreshScanner()
 		for _, m in ipairs(drops:GetChildren()) do
 			local pid = m:GetAttribute("PartId")
 			local root = m:FindFirstChild("Root")
-			if root and (pid == "turbo" or pid == "core") then
+			local part = pid and PartConfig.Parts[pid]
+			if root and part and (part.rarity == "Epic" or part.rarity == "Legendary") then
 				local key = "rare_" .. tostring(m:GetAttribute("PointId"))
 				seen[key] = true
 				if not marks[key] then
-					makeMark(key, pid == "core" and "⚡" or "🌀", "", pid == "core" and C(255, 176, 32) or C(255, 77, 109), root.Position, 420)
+					makeMark(key, part.emoji, "", part.color, root.Position, 420)
 				end
 			end
 		end

@@ -6,7 +6,7 @@ local en = {
 	zone_industrial = "Industrial", zone_neon = "Night", zone_scrapyard = "Scrapyard Arena",
 	zone_docks = "Docks", zone_desert = "Desert", zone_bridge = "Bridges", zone_airport = "Airport", zone_canyon = "Canyon Arena",
 	zone_circuit = "Circuit", zone_drift = "Drift", zone_storm = "Storm", zone_rush = "Rush Hour", zone_colosseum = "Colosseum",
-	part_bolts = "Bolts", part_tire = "Tire", part_engine = "Engine", part_turbo = "Turbo", part_core = "Core",
+	part_bolts = "Bolts", part_tire = "Tire", part_engine = "Engine", part_turbo = "Turbo", part_core = "Energy Core", part_plugs = "Spark Plugs", part_filter = "Air Filter", part_gearbox = "Gearbox", part_intercooler = "Intercooler", part_chip = "Quantum Chip",
 	rarity_Common = "Common", rarity_Uncommon = "Uncommon", rarity_Rare = "Rare", rarity_Epic = "Epic", rarity_Legendary = "Legendary",
 	btn_throw = "THROW!", btn_garage = "GARAGE", btn_zones = "TELEPORT", btn_index = "CARS", btn_close = "X",
 	btn_teleport = "TELEPORT", btn_go = "GO!", btn_awesome = "AWESOME!", tp_title = "TELEPORT", tp_home = "MY GARAGE",

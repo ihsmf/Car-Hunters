@@ -29,7 +29,13 @@ local function newProfile(isNew)
 	local p = {
 		schemaVersion = SCHEMA_VERSION,
 		money = 0,
-		parts = { bolts = 0, tire = 0, engine = 0, turbo = 0, core = 0 },
+		parts = (function()
+			local t = {}
+			for id in pairs(PartConfig.Parts) do
+				t[id] = 0
+			end
+			return t
+		end)(),
 		unlockedZones = { city = true },
 		garageSlotCount = EconomyConfig.StartSlots,
 		floors = 1,

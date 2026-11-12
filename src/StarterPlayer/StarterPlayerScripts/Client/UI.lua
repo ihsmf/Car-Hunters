@@ -27,7 +27,10 @@ local P = {
 	blue = C(46, 168, 255), cyan = C(34, 224, 224), ink = C(27, 31, 42), white = C(255, 255, 255),
 	cream = C(255, 246, 224), grey = C(170, 176, 188), muted = C(96, 102, 116),
 }
-local PART_ICON = { bolts = "🔩", tire = "🛞", engine = "⚙️", turbo = "🌀", core = "⚡" }
+local PART_ICON = {}
+for id, p in pairs(PartConfig.Parts) do
+	PART_ICON[id] = p.emoji
+end
 local ZONE_ICON = { city = "🏙️", highway = "🛣️", industrial = "🏭", neon = "🌃", scrapyard = "💀", docks = "🚂", desert = "🏜️", bridge = "🌉",
 	airport = "✈️", canyon = "💀", circuit = "🏁", drift = "🌀", storm = "⛈️", rush = "🚦", colosseum = "👑" }
 local ZONE_COLOR = { city = P.green, highway = P.blue, industrial = P.red, neon = P.cyan, plaza = P.orange, scrapyard = P.red, docks = P.blue, desert = P.orange,
@@ -531,21 +534,20 @@ local function catchLimit()
 end
 local function setMix(id, n)
 	local total = mixTotal() - math.min(state.mix[id] or 0, store.Banked(id))
-	state.mix[id] = math.clamp(n, 0, math.min(store.Banked(id), catchLimit() - total))
+	state.mix[id] = math.clamp(n, 0, math.min(store.Banked(id), EconomyConfig.MaxBatch - total))
 	UI.Refresh()
 end
 
 local function buildThrow()
 	local p = panelShell("throw", T("throw_title"), 940, 600, P.yellow)
 	local c = p.content
-	local rows = new("Frame", { Size = UDim2.fromOffset(560, 410), BackgroundTransparency = 1, ZIndex = 22 }, c)
-	list(rows, Enum.FillDirection.Vertical, 10)
+	local rows = scroller(c, UDim2.new(), UDim2.fromOffset(570, 410)) -- 10 parts: scrolling list
 	panels.throwRows = {}
-	-- cars per throw (1 at the start, up to 4 with the "Multi Catch" Pit Stop upgrade)
+	-- rarity points of the pick + cars per throw (1 at the start, up to 4 with "Multi Catch")
 	panels.catchInfo = text(c, { Text = "", Font = BODY, TextSize = 17, TextColor3 = P.ink, RichText = true, Position = UDim2.fromOffset(0, 420), Size = UDim2.fromOffset(560, 26), ZIndex = 23 })
 	for i, id in ipairs(PartConfig.Order) do
 		local rc = rarityColor(PartConfig.Parts[id].rarity)
-		local r = new("Frame", { Size = UDim2.fromOffset(560, 74), BackgroundColor3 = P.white, LayoutOrder = i, ZIndex = 23 }, rows)
+		local r = new("Frame", { Size = UDim2.fromOffset(548, 74), BackgroundColor3 = P.white, LayoutOrder = i, ZIndex = 23 }, rows)
 		corner(r, 18)
 		local st = stroke(r, rc, 4)
 		-- the real 3D part (same model as on the map), slowly turning
@@ -564,7 +566,7 @@ local function buildThrow()
 		local _, ext = pm:GetBoundingBox()
 		panels.partSpin = panels.partSpin or {}
 		table.insert(panels.partSpin, { cam = cam, dist = math.max(ext.X, ext.Y, ext.Z) * 2.4, centre = pm:GetBoundingBox().Position })
-		text(r, { Text = string.upper(T("part_" .. id)), TextSize = 22, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(80, 12), Size = UDim2.fromOffset(150, 26), ZIndex = 24 })
+		text(r, { Text = string.upper(T("part_" .. id)), TextSize = 20, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(80, 10), Size = UDim2.fromOffset(152, 26), ZIndex = 24 })
 		local owned = text(r, { Text = "", Font = BODY, TextSize = 14, TextColor3 = P.muted, Position = UDim2.fromOffset(80, 40), Size = UDim2.fromOffset(150, 20), ZIndex = 24 })
 		local function stepBtn(label, color, x, w, onClick)
 			return toy(r, { Text = label, Color = color, Size = UDim2.fromOffset(w, 48), Position = UDim2.fromOffset(x, 12), TextSize = label == "MAX" and 18 or 26, ZIndex = 25, OnClick = onClick })
@@ -595,10 +597,12 @@ local function buildThrow()
 	end
 	-- right column: quick picks, expected cars, merge toggle, throw
 	local right = new("Frame", { Position = UDim2.fromOffset(582, 0), Size = UDim2.fromOffset(312, 480), BackgroundTransparency = 1, ZIndex = 22 }, c)
-	toy(right, { Text = "FILL", Color = P.orange, Size = UDim2.fromOffset(98, 46), Position = UDim2.fromOffset(0, 0), TextSize = 20, ZIndex = 23, OnClick = function()
+	toy(right, { Text = "ALL", Color = P.orange, Size = UDim2.fromOffset(98, 46), Position = UDim2.fromOffset(0, 0), TextSize = 20, ZIndex = 23, OnClick = function()
+		-- every part you have (more parts = more rarity points)
 		state.mix = {}
-		local left = catchLimit()
-		for _, id in ipairs(PartConfig.Order) do
+		local left = EconomyConfig.MaxBatch
+		for i = #PartConfig.Order, 1, -1 do
+			local id = PartConfig.Order[i]
 			local n = math.min(store.Banked(id), left)
 			state.mix[id] = n
 			left = left - n
@@ -606,14 +610,13 @@ local function buildThrow()
 		UI.Refresh()
 	end })
 	toy(right, { Text = "RARE", Color = P.blue, Size = UDim2.fromOffset(98, 46), Position = UDim2.fromOffset(107, 0), TextSize = 20, ZIndex = 23, OnClick = function()
-		-- the rarest parts you have, up to your cars-per-throw limit
+		-- only Rare, Epic and Legendary parts
 		state.mix = {}
-		local left = catchLimit()
-		for i = #PartConfig.Order, 1, -1 do
-			local id = PartConfig.Order[i]
-			local n = math.min(store.Banked(id), left)
-			state.mix[id] = n
-			left = left - n
+		for _, id in ipairs(PartConfig.Order) do
+			local rar = PartConfig.Parts[id].rarity
+			if rar == "Rare" or rar == "Epic" or rar == "Legendary" then
+				state.mix[id] = store.Banked(id)
+			end
 		end
 		UI.Refresh()
 	end })
@@ -624,7 +627,7 @@ local function buildThrow()
 	local odds = new("Frame", { Position = UDim2.fromOffset(0, 60), Size = UDim2.fromOffset(312, 212), BackgroundColor3 = P.white, ZIndex = 23 }, right)
 	corner(odds, 18)
 	stroke(odds, P.ink, 3)
-	text(odds, { Text = "YOU WILL GET ABOUT", TextSize = 18, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(14, 10), Size = UDim2.fromOffset(280, 22), ZIndex = 24 })
+	text(odds, { Text = "CHANCE PER CAR", TextSize = 18, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(14, 10), Size = UDim2.fromOffset(280, 22), ZIndex = 24 })
 	local bar = new("Frame", { Position = UDim2.fromOffset(14, 38), Size = UDim2.fromOffset(284, 16), BackgroundColor3 = C(230, 232, 236), ClipsDescendants = true, ZIndex = 24 }, odds)
 	corner(bar, 8)
 	list(bar, Enum.FillDirection.Horizontal, 0)
@@ -658,22 +661,14 @@ local function buildThrow()
 				UI.Toast(T("n_noPart"), "error")
 				return
 			end
-			if total == 1 then
-				for _, id in ipairs(PartConfig.Order) do
-					if math.min(state.mix[id] or 0, store.Banked(id)) > 0 then
-						actions.Throw(id)
-					end
+			local counts = {}
+			for _, id in ipairs(PartConfig.Order) do
+				local n = math.min(state.mix[id] or 0, store.Banked(id))
+				if n > 0 then
+					counts[id] = n
 				end
-			else
-				local counts = {}
-				for _, id in ipairs(PartConfig.Order) do
-					local n = math.min(state.mix[id] or 0, store.Banked(id))
-					if n > 0 then
-						counts[id] = n
-					end
-				end
-				actions.ThrowBatch(counts, state.merge)
 			end
+			actions.ThrowBatch(counts, state.merge)
 			state.mix = {}
 			UI.TogglePanel(nil)
 		end })
@@ -713,25 +708,8 @@ local function refreshThrow()
 		return
 	end
 	state.mixTouched = true
-	-- the limit can drop below the current pick (e.g. after a rebirth): trim the pick
 	local lim = catchLimit()
-	while mixTotal() > lim do
-		for i = 1, #PartConfig.Order do
-			local id = PartConfig.Order[i]
-			if (state.mix[id] or 0) > 0 then
-				state.mix[id] = state.mix[id] - 1
-				break
-			end
-		end
-	end
-	panels.catchInfo.Text = lim < EconomyConfig.MaxCatch
-		and string.format("<b>%d / %d</b> cars per throw  ·  get more with <b>Multi Catch</b> in the Pit Stop", lim, EconomyConfig.MaxCatch)
-		or string.format("<b>%d / %d</b> cars per throw (max)", lim, EconomyConfig.MaxCatch)
-	local expected = {}
-	for _, r in ipairs(CarConfig.RarityOrder) do
-		expected[r] = 0
-	end
-	local total = 0
+	local total, points = 0, 0
 	for id, row in pairs(panels.throwRows) do
 		local own = store.Banked(id)
 		local n = math.min(state.mix[id] or 0, own)
@@ -745,26 +723,30 @@ local function refreshThrow()
 		row.minus.SetColor(n > 0 and P.red or P.grey)
 		row.plus.SetColor(n < own and P.green or P.grey)
 		row.max.SetColor(own > 0 and P.blue or P.grey)
-		local chances = CarConfig.DropChances[id]
-		for _, r in ipairs(CarConfig.RarityOrder) do
-			expected[r] = expected[r] + n * chances[r] / 100
-		end
+		points = points + n * PartConfig.Parts[id].points
+	end
+	-- all parts add rarity points; the throw catches `lim` cars, each rolled on those points
+	panels.catchInfo.Text = string.format("<b>%d</b> rarity points  ·  catches <b>%d</b> car%s%s", points, lim, lim > 1 and "s" or "",
+		lim < EconomyConfig.MaxCatch and "  ·  more with <b>Multi Catch</b> (Pit Stop)" or "")
+	local chances = CarConfig.ChancesForPoints(math.max(points, 1))
+	local expected = {}
+	for _, r in ipairs(CarConfig.RarityOrder) do
+		expected[r] = total > 0 and lim * chances[r] / 100 or 0
 	end
 	clear(panels.oddsBar)
 	for i, r in ipairs(CarConfig.RarityOrder) do
-		local share = total > 0 and expected[r] / total or 0
+		local share = total > 0 and chances[r] / 100 or 0
 		if share > 0 then
 			new("Frame", { Size = UDim2.new(math.max(share, 0.012), 0, 1, 0), BackgroundColor3 = rarityColor(r), BorderSizePixel = 0, LayoutOrder = i, ZIndex = 25 }, panels.oddsBar)
 		end
-		local v = expected[r]
-		panels.oddsLines[r].Text = string.format("<b>%s</b>  <font color=\"#606674\">%s cars</font>", T("rarity_" .. r), v >= 10 and string.format("%.0f", v) or string.format("%.1f", v))
+		panels.oddsLines[r].Text = string.format("<b>%s</b>  <font color=\"#606674\">%s%%</font>", T("rarity_" .. r), total > 0 and (chances[r] >= 10 and string.format("%.0f", chances[r]) or string.format("%.1f", chances[r])) or "0")
 	end
 	local pity = st.pity or 0
 	local left = EconomyConfig.PityThreshold - pity
 	panels.oddsText.Text = left <= 1 and T("throw_pity_now") or T("throw_pity", left)
 	panels.mergeSw.BackgroundColor3 = state.merge and P.green or P.grey
 	panels.mergeKnob.Position = UDim2.fromOffset(state.merge and 25 or 3, 4)
-	panels.throwGo.SetText(total > 0 and ("THROW x" .. total) or T("btn_throw"), nil)
+	panels.throwGo.SetText(total > 0 and string.format("THROW %d PARTS", total) or T("btn_throw"), nil)
 	panels.throwGo.SetColor(total > 0 and P.green or P.grey)
 end
 

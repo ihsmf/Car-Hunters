@@ -147,14 +147,40 @@ for _, def in ipairs(CarConfig.Exclusive) do
 	CarConfig.ById[def.id] = def
 end
 
--- top cars are rare on purpose: a Legendary from bolts is 1 in 5000, from a core 1 in 67
-CarConfig.DropChances = {
-	bolts = { Common = 72, Uncommon = 22, Rare = 5.5, Epic = 0.48, Legendary = 0.02 },
-	tire = { Common = 58, Uncommon = 30, Rare = 10, Epic = 1.9, Legendary = 0.1 },
-	engine = { Common = 42, Uncommon = 34, Rare = 19.75, Epic = 4, Legendary = 0.25 },
-	turbo = { Common = 28, Uncommon = 36, Rare = 27.4, Epic = 8, Legendary = 0.6 },
-	core = { Common = 15, Uncommon = 32, Rare = 37.5, Epic = 14, Legendary = 1.5 },
+-- v13 catch by RARITY POINTS: a throw adds up the points of every part thrown (PartConfig.Parts[id].points);
+-- the car rarity odds come from this curve (log-interpolated between the rows). Top cars stay rare on purpose.
+CarConfig.PointRows = {
+	{ 1, { Common = 72, Uncommon = 22, Rare = 5.5, Epic = 0.48, Legendary = 0.02 } },
+	{ 4, { Common = 58, Uncommon = 30, Rare = 10, Epic = 1.9, Legendary = 0.1 } },
+	{ 10, { Common = 42, Uncommon = 34, Rare = 19.75, Epic = 4, Legendary = 0.25 } },
+	{ 22, { Common = 28, Uncommon = 36, Rare = 27.4, Epic = 8, Legendary = 0.6 } },
+	{ 50, { Common = 15, Uncommon = 32, Rare = 37.5, Epic = 14, Legendary = 1.5 } },
+	{ 200, { Common = 4, Uncommon = 18, Rare = 42, Epic = 30, Legendary = 6 } },
 }
+function CarConfig.ChancesForPoints(points)
+	local rows = CarConfig.PointRows
+	points = math.max(points or 1, rows[1][1])
+	if points >= rows[#rows][1] then
+		return table.clone(rows[#rows][2])
+	end
+	for i = 1, #rows - 1 do
+		local a, b = rows[i], rows[i + 1]
+		if points <= b[1] then
+			local t = (math.log(points) - math.log(a[1])) / (math.log(b[1]) - math.log(a[1]))
+			local out = {}
+			for _, r in ipairs(CarConfig.RarityOrder) do
+				out[r] = a[2][r] + (b[2][r] - a[2][r]) * t
+			end
+			return out
+		end
+	end
+	return table.clone(rows[#rows][2])
+end
+-- odds of a single part (throw menu, simulator)
+CarConfig.DropChances = {}
+for id, part in pairs(PartConfig.Parts) do
+	CarConfig.DropChances[id] = CarConfig.ChancesForPoints(part.points)
+end
 
 function CarConfig.IncomeAt(def, level)
 	return math.floor(def.income * CarConfig.IncomeMult * (1 + CarConfig.IncomeGrowth * (level - 1)) + 0.5)
@@ -193,17 +219,17 @@ function CarConfig.IsHighTier(rarity)
 	return rarity == "Epic" or rarity == "Legendary"
 end
 
-function CarConfig.PityRow(partId)
-	local row = CarConfig.DropChances[partId]
+function CarConfig.PityRow(row)
 	-- pity guarantees an Epic; a Legendary keeps its own (small) chance on top
 	local l = math.min(row.Legendary * 3, 20)
 	return { Common = 0, Uncommon = 0, Rare = 0, Epic = 100 - l, Legendary = l }
 end
 
-function CarConfig.Roll(partId, pity, r1, r2)
-	local row = CarConfig.DropChances[partId]
+-- one car from a throw worth `points` rarity points
+function CarConfig.RollPoints(points, pity, r1, r2)
+	local row = CarConfig.ChancesForPoints(points)
 	if pity and pity >= EconomyConfig.PityThreshold - 1 then
-		row = CarConfig.PityRow(partId)
+		row = CarConfig.PityRow(row)
 	end
 	local total = 0
 	for _, r in ipairs(CarConfig.RarityOrder) do

@@ -5,6 +5,7 @@ local Net = require(Shared:WaitForChild("Net"))
 local R = require(Shared:WaitForChild("RewardConfig"))
 local Util = require(Shared:WaitForChild("Util"))
 local Icons = require(Shared:WaitForChild("Icons"))
+local PartConfig = require(Shared:WaitForChild("PartConfig"))
 
 local RW = {}
 local K, UI
@@ -27,9 +28,9 @@ end
 
 local function partsText(parts)
 	local out = {}
-	for _, id in ipairs({ "bolts", "tire", "engine", "turbo", "core" }) do
+	for _, id in ipairs(PartConfig.Order) do
 		if parts and parts[id] then
-			table.insert(out, parts[id] .. " " .. id)
+			table.insert(out, parts[id] .. " " .. string.lower(PartConfig.Parts[id].name))
 		end
 	end
 	return table.concat(out, ", ")

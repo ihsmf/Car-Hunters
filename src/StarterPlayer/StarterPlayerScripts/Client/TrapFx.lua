@@ -351,7 +351,7 @@ local function body(res, baseIndex, ctx)
 			hideReal()
 			-- still black: cut the camera to the gate, then fade in
 			local d1 = (pts[2] - pts[1]).Unit
-			camSnap(CFrame.lookAt(pts[1] + d1 * 13 + Vector3.new(0, 3.6, 0), pts[1] + Vector3.new(0, 1.6, 0)))
+			camSnap(CFrame.lookAt(pts[1] - d1 * 12 + Vector3.new(0, 4.5, 0), pts[1] + d1 * 6 + Vector3.new(0, 1.5, 0)))
 			task.wait(0.05)
 			Cine.Darken(0, 0.45)
 			play("drive")
@@ -379,10 +379,10 @@ local function body(res, baseIndex, ctx)
 						end
 						local fwd = lastDir.Magnitude > 0.01 and lastDir.Unit or Vector3.new(1, 0, 0)
 						ghost.PrimaryPart.CFrame = faceCF(pos, fwd) * CFrame.new(0, math.sin(os.clock() * 18) * 0.04, 0)
-						-- camera in front of the car, looking back at its face
-						local want = pos + fwd * 13 + fwd:Cross(Vector3.yAxis) * 2.5 + Vector3.new(0, 3.6, 0)
+						-- chase camera: behind and a bit above the car, looking ahead of it
+						local want = pos - fwd * 12 + Vector3.new(0, 4.5, 0)
 						camPos = camPos and camPos:Lerp(want, 0.15) or want
-						camTarget = CFrame.lookAt(camPos, pos + Vector3.new(0, 1.6, 0))
+						camTarget = CFrame.lookAt(camPos, pos + fwd * 6 + Vector3.new(0, 1.5, 0))
 						break
 					end
 					acc = acc + seg
@@ -397,7 +397,8 @@ local function body(res, baseIndex, ctx)
 			local final = pts[#pts] - bcf:VectorToWorldSpace(Vector3.new(4, 0, 0))
 			local outDir = bcf:VectorToWorldSpace(Vector3.new(1, 0, 0))
 			tw(ghost.PrimaryPart, 0.7, { CFrame = faceCF(final, outDir) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-			camTarget = CFrame.lookAt(final + outDir * 14 + bcf:VectorToWorldSpace(Vector3.new(0, 0, 6)) + Vector3.new(0, 3, 0), final + Vector3.new(0, 1.5, 0))
+			-- parked: the camera stays where it followed the car (in the aisle) and just looks at it
+			camTarget = CFrame.lookAt(camPos or final - outDir * 11 + Vector3.new(0, 4.5, 0), final + Vector3.new(0, 1.5, 0))
 			task.wait(0.8)
 			Cine.Shake(0.3, 0.2)
 			if lvl >= 4 then

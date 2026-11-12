@@ -16,32 +16,17 @@ function Capture.Init(hub)
 	S = hub
 end
 
-function Capture.Roll(partId, r1, r2, pity)
-	return CarConfig.Roll(partId, pity or 0, r1, r2)
+function Capture.Roll(points, r1, r2, pity)
+	return CarConfig.RollPoints(points, pity or 0, r1, r2)
 end
 
-local function firstFreeSlot(d)
-	local used = {}
-	for _, c in ipairs(d.cars) do
-		if c.parkedSlot then
-			used[c.parkedSlot] = true
-		end
-	end
-	for i = 1, d.garageSlotCount do
-		if not used[i] then
-			return i
-		end
-	end
-	return nil
-end
-
--- one roll with pity + luck; records discovery. Returns rarity, def, isNew, bonus, pityUsed
-local function rollOne(s, partId)
+-- one car from a throw worth `points`, with pity + luck; records discovery. Returns rarity, def, isNew, bonus, pityUsed
+local function rollOne(s, points)
 	local d = s.data
 	local pityUsed = d.pity >= EconomyConfig.PityThreshold - 1
 	local shift = S.Shop.LuckShift(s)
 	local r1 = 1 - (1 - rng:NextNumber()) * (1 - shift) -- luck pushes the roll towards rarer cars
-	local rarity, def = Capture.Roll(partId, r1, rng:NextNumber(), d.pity)
+	local rarity, def = Capture.Roll(points, r1, rng:NextNumber(), d.pity)
 	if CarConfig.IsHighTier(rarity) then
 		d.pity = 0
 	else
@@ -126,39 +111,39 @@ function Capture.ThrowBatch(player, counts, merge)
 	if total == 0 or total > EconomyConfig.MaxBatch then
 		return
 	end
-	local limit = EconomyConfig.CatchLimit(S.Shop.Level(s, "multi"))
-	if total > limit then
-		S.Data.Notify(player, "catchLimit", { limit }, "warn")
-		return
+	-- every part adds its rarity points; the throw catches `cars` cars (Multi Catch), each rolled on those points
+	local points, bestPart = 0, nil
+	for _, id in ipairs(PartConfig.Order) do
+		if plan[id] then
+			points = points + plan[id] * PartConfig.Parts[id].points
+			bestPart = id
+		end
 	end
+	local cars = EconomyConfig.CatchLimit(S.Shop.Level(s, "multi"))
 	s.busy = true
 	local results, anyPity = {}, false
-	-- cheap parts first so pity tends to land on the rarer baits
-	for _, id in ipairs(PartConfig.Order) do
-		local n = plan[id]
-		if n then
-			S.Inventory.SpendBanked(player, id, n)
-			for _ = 1, n do
-				local rarity, def, isNew, bonus, pityUsed = rollOne(s, id)
-				anyPity = anyPity or pityUsed
-				local r = { partId = id, typeId = def.id, rarity = rarity, isNew = isNew, bonus = bonus }
-				local copy = not isNew and merge and bestCopy(d, def.id)
-				if copy and copy.level < EconomyConfig.MergeMaxLevel then
-					copy.level = copy.level + 1
-					r.merged = copy.level
-				elseif #d.cars < EconomyConfig.MaxCars then
-					local uid = HttpService:GenerateGUID(false)
-					table.insert(d.cars, { uid = uid, typeId = def.id, level = 1 })
-					r.uid = uid
-				else
-					-- storage full: pay out the car's sell value instead
-					local v = CarConfig.SellPrice(def, 1)
-					d.money = math.min(d.money + v, EconomyConfig.MaxMoney)
-					r.sold = v
-				end
-				table.insert(results, r)
-			end
+	for id, n in pairs(plan) do
+		S.Inventory.SpendBanked(player, id, n)
+	end
+	for _ = 1, cars do
+		local rarity, def, isNew, bonus, pityUsed = rollOne(s, points)
+		anyPity = anyPity or pityUsed
+		local r = { partId = bestPart, typeId = def.id, rarity = rarity, isNew = isNew, bonus = bonus }
+		local copy = not isNew and merge and bestCopy(d, def.id)
+		if copy and copy.level < EconomyConfig.MergeMaxLevel then
+			copy.level = copy.level + 1
+			r.merged = copy.level
+		elseif #d.cars < EconomyConfig.MaxCars then
+			local uid = HttpService:GenerateGUID(false)
+			table.insert(d.cars, { uid = uid, typeId = def.id, level = 1 })
+			r.uid = uid
+		else
+			-- storage full: pay out the car's sell value instead
+			local v = CarConfig.SellPrice(def, 1)
+			d.money = math.min(d.money + v, EconomyConfig.MaxMoney)
+			r.sold = v
 		end
+		table.insert(results, r)
 	end
 	d.stats.throws = d.stats.throws + total
 	S.Cars.ParkBest(s)
@@ -180,8 +165,28 @@ function Capture.ThrowBatch(player, counts, merge)
 		end
 	end
 	S.Income.Recalc(player)
-	local busyFor = (2.5 + 0.05 * total) * (S.Shop.ThrowCooldown(s) / EconomyConfig.ThrowAnimTime)
-	Net.Get("ThrowBatchResult"):FireClient(player, { cars = results, best = best, pityUsed = anyPity, total = total })
+	local animTime = S.Shop.ThrowCooldown(s)
+	local busyFor = #results == 1 and animTime + 0.15 or (2.5 + 0.3 * #results) * (animTime / EconomyConfig.ThrowAnimTime)
+	if #results == 1 then
+		-- one car: the full cinematic (part flies in, blackout reveal, drive-in); the real car stays hidden meanwhile
+		local r = results[1]
+		if r.uid then
+			s.hidden[r.uid] = os.clock() + animTime + 0.1
+			task.delay(animTime + 0.15, function()
+				s.hidden[r.uid] = nil
+				if player.Parent then
+					S.Base.RefreshAll(player)
+				end
+			end)
+		end
+		Net.Get("ThrowResult"):FireClient(player, {
+			partId = r.partId, typeId = r.typeId, uid = r.uid, rarity = r.rarity, slot = r.slot, isNew = r.isNew, bonus = r.bonus,
+			merged = r.merged, sold = r.sold, pityUsed = anyPity, points = points, parts = total,
+			animTime = animTime, speed = EconomyConfig.ThrowAnimTime / animTime,
+		})
+	else
+		Net.Get("ThrowBatchResult"):FireClient(player, { cars = results, best = best, pityUsed = anyPity, total = total, points = points })
+	end
 	S.Base.RefreshAll(player)
 	S.Data.Push(player)
 	S.Contracts.Progress(player, "throw", total)
@@ -190,70 +195,11 @@ function Capture.ThrowBatch(player, counts, merge)
 	end)
 end
 
+-- legacy single-part remote: the same as a one-part batch
 function Capture.Throw(player, partId)
-	if type(partId) ~= "string" or not PartConfig.Parts[partId] then
-		return
+	if type(partId) == "string" and PartConfig.Parts[partId] then
+		Capture.ThrowBatch(player, { [partId] = 1 }, true)
 	end
-	local s = S.Data.Get(player)
-	if not s or not s.ready then
-		return
-	end
-	if not S.Data.RateLimit(player, "throw", EconomyConfig.ThrowCooldown) then
-		return
-	end
-	if s.busy then
-		S.Data.Notify(player, "trapBusy", nil, "warn")
-		return
-	end
-	if not s.baseIndex then
-		S.Data.Notify(player, "noBase", nil, "error")
-		return
-	end
-	local hrp = S.Data.GetRoot(player)
-	if not hrp then
-		return
-	end
-	local trap = BaseLayout.ToWorld(s.baseIndex, BaseLayout.TrapLocal)
-	local flat = Vector3.new(hrp.Position.X - trap.X, 0, hrp.Position.Z - trap.Z)
-	if flat.Magnitude > EconomyConfig.ThrowMaxDistance then
-		S.Data.Notify(player, "tooFar", nil, "warn")
-		return
-	end
-	local d = s.data
-	if #d.cars >= EconomyConfig.MaxCars then
-		S.Data.Notify(player, "storageFull", nil, "error")
-		return
-	end
-	if not S.Inventory.HasBanked(s, partId, 1) then
-		S.Data.Notify(player, "noPart", nil, "error")
-		return
-	end
-
-	s.busy = true
-	S.Inventory.SpendBanked(player, partId, 1)
-	local rarity, def, isNew, bonus, pityUsed = rollOne(s, partId)
-	local uid = HttpService:GenerateGUID(false)
-	local slot = firstFreeSlot(d)
-	table.insert(d.cars, { uid = uid, typeId = def.id, level = 1, parkedSlot = slot })
-	d.stats.throws = d.stats.throws + 1
-	local animTime = S.Shop.ThrowCooldown(s)
-	s.hidden[uid] = os.clock() + animTime + 0.1
-
-	S.Income.Recalc(player)
-	Net.Get("ThrowResult"):FireClient(player, {
-		partId = partId, typeId = def.id, uid = uid, rarity = rarity, slot = slot,
-		animTime = animTime, speed = EconomyConfig.ThrowAnimTime / animTime, isNew = isNew, bonus = bonus, pityUsed = pityUsed,
-	})
-	S.Data.Push(player)
-
-	S.Contracts.Progress(player, "throw", 1)
-	task.delay(animTime + 0.15, function()
-		s.busy = false
-		s.hidden[uid] = nil
-		if player.Parent then
-			S.Base.RefreshAll(player)
-		end
-	end)
 end
 
 return Capture

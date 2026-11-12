@@ -22,6 +22,7 @@ Color3 = { fromRGB = function(r, g, b) return { r = r, g = g, b = b, R = r / 255
 Vector3 = { new = function(x, y, z) return { X = x, Y = y, Z = z } end }
 CFrame = { new = function() return {} end }
 math.clamp = function(x, a, b) return math.max(a, math.min(b, x)) end
+table.clone = function(t) local o = {} for k, v in pairs(t) do o[k] = v end return o end
 """)
 _mods = {}
 

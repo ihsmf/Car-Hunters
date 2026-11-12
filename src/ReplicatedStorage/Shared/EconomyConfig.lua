@@ -45,12 +45,12 @@ EconomyConfig.SellFraction = 0.35
 EconomyConfig.DiscoverBonusMult = 1.0
 EconomyConfig.IndexTierBonus = 0.05
 EconomyConfig.IndexFullBonus = 0.10
-EconomyConfig.PityThreshold = 120
+EconomyConfig.PityThreshold = 40 -- v13: counted per car caught (1 car per throw at the start)
 EconomyConfig.MaxLuckShift = 0.15 -- all luck sources together
 
 EconomyConfig.ThrowCooldown = 0.8
-EconomyConfig.MaxBatch = 100 -- hard cap per request (the real limit is CatchLimit)
--- cars per throw: 1 at the start, +1 per "Multi Catch" level in the Pit Stop (ShopConfig), max 4
+EconomyConfig.MaxBatch = 500 -- parts per throw (any amount: they add rarity points)
+-- cars caught per throw: 1 at the start, +1 per "Multi Catch" level in the Pit Stop (ShopConfig), max 4
 EconomyConfig.MaxCatch = 4
 function EconomyConfig.CatchLimit(multiLevel)
 	return math.clamp(1 + (tonumber(multiLevel) or 0), 1, EconomyConfig.MaxCatch)

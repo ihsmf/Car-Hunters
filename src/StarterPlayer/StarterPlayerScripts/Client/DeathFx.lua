@@ -9,7 +9,10 @@ local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local Cine = require(script.Parent:WaitForChild("CineFx"))
 
 local DeathFx = {}
-local ICON = { bolts = "🔩", tire = "🛞", engine = "⚙️", turbo = "🌀", core = "⚡" }
+local ICON = {}
+for id, p in pairs(require(game:GetService("ReplicatedStorage").Shared.PartConfig).Parts) do
+	ICON[id] = p.emoji
+end
 local running = false
 
 function DeathFx.Play(dir, lost, sfx)

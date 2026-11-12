@@ -110,11 +110,11 @@ local function buildWindow()
 	local mine = K.new("Frame", { Size = UDim2.new(0.5, -8, 1, -90), BackgroundTransparency = 1, ZIndex = 22 }, c)
 	K.text(mine, { Text = "YOUR OFFER", TextSize = 22, TextColor3 = P.ink, Outline = false, Size = UDim2.new(1, 0, 0, 26), ZIndex = 23 })
 	K.text(mine, { Text = "Tap cars to add / remove (max 8)", Font = K.BODY, TextSize = 13, TextColor3 = P.muted, Position = UDim2.fromOffset(0, 26), Size = UDim2.new(1, 0, 0, 18), ZIndex = 23 })
-	w.myCars = K.scroller(mine, UDim2.fromOffset(0, 48), UDim2.new(1, 0, 0, 230))
+	w.myCars = K.scroller(mine, UDim2.fromOffset(0, 48), UDim2.new(1, 0, 0, 150))
 	-- money
-	K.text(mine, { Text = "MONEY", TextSize = 18, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(0, 286), Size = UDim2.fromOffset(90, 24), ZIndex = 23 })
+	K.text(mine, { Text = "MONEY", TextSize = 18, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(0, 206), Size = UDim2.fromOffset(90, 24), ZIndex = 23 })
 	w.moneyBox = K.new("TextBox", { Text = "0", PlaceholderText = "0", ClearTextOnFocus = false, Font = K.BODY, TextSize = 18, TextColor3 = P.ink, BackgroundColor3 = P.white,
-		Position = UDim2.fromOffset(90, 282), Size = UDim2.fromOffset(150, 32), ZIndex = 23 }, mine)
+		Position = UDim2.fromOffset(90, 202), Size = UDim2.fromOffset(150, 32), ZIndex = 23 }, mine)
 	K.corner(w.moneyBox, 8)
 	K.stroke(w.moneyBox, P.ink, 2)
 	w.moneyBox.FocusLost:Connect(function()
@@ -123,23 +123,23 @@ local function buildWindow()
 		send()
 	end)
 	for i, add in ipairs({ 1000, 10000, 100000 }) do
-		K.toy(mine, { Text = "+" .. Util.FormatNumber(add), Color = P.yellow, Size = UDim2.fromOffset(66, 34), Position = UDim2.fromOffset(248 + (i - 1) * 72, 281), TextSize = 14, ZIndex = 24,
+		K.toy(mine, { Text = "+" .. Util.FormatNumber(add), Color = P.yellow, Size = UDim2.fromOffset(66, 34), Position = UDim2.fromOffset(248 + (i - 1) * 72, 201), TextSize = 14, ZIndex = 24,
 			OnClick = function()
 				offer.money = math.min(offer.money + add, K.store.Money)
 				send()
 			end })
 	end
-	-- parts steppers
+	-- parts steppers: 10 parts in two rows of five
 	w.partRows = {}
 	for i, id in ipairs(PartConfig.Order) do
-		local x = (i - 1) * 88
-		local img = K.new("ImageLabel", { Position = UDim2.fromOffset(x + 20, 322), Size = UDim2.fromOffset(40, 40), BackgroundTransparency = 1, Image = Icons.Get(id) or "", ZIndex = 23 }, mine)
-		local n = K.text(mine, { Text = "0", TextSize = 18, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(x, 364), Size = UDim2.fromOffset(80, 20), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 23 })
-		K.toy(mine, { Text = "-", Color = P.red, Size = UDim2.fromOffset(36, 32), Position = UDim2.fromOffset(x + 2, 388), TextSize = 20, ZIndex = 24, OnClick = function()
+		local x, y = ((i - 1) % 5) * 88, 242 + math.floor((i - 1) / 5) * 86
+		local img = K.new("ImageLabel", { Position = UDim2.fromOffset(x + 22, y), Size = UDim2.fromOffset(36, 36), BackgroundTransparency = 1, Image = Icons.Get(id) or "", ZIndex = 23 }, mine)
+		local n = K.text(mine, { Text = "0", TextSize = 17, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(x, y + 36), Size = UDim2.fromOffset(80, 18), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 23 })
+		K.toy(mine, { Text = "-", Color = P.red, Size = UDim2.fromOffset(36, 30), Position = UDim2.fromOffset(x + 2, y + 54), TextSize = 20, ZIndex = 24, OnClick = function()
 			offer.parts[id] = math.max(0, (offer.parts[id] or 0) - 1)
 			send()
 		end })
-		K.toy(mine, { Text = "+", Color = P.green, Size = UDim2.fromOffset(36, 32), Position = UDim2.fromOffset(x + 42, 388), TextSize = 20, ZIndex = 24, OnClick = function()
+		K.toy(mine, { Text = "+", Color = P.green, Size = UDim2.fromOffset(36, 30), Position = UDim2.fromOffset(x + 42, y + 54), TextSize = 20, ZIndex = 24, OnClick = function()
 			offer.parts[id] = math.min(K.store.Banked(id), (offer.parts[id] or 0) + 1)
 			send()
 		end })
