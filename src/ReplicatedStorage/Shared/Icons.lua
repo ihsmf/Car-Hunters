@@ -7,7 +7,7 @@ local Icons = {}
 function Icons.Get(name)
 	local id = ids[name]
 	if id and id > 0 then
-		return string.format("rbxthumb://type=Asset&id=%d&w=150&h=150", id)
+		return string.format("rbxthumb://type=Asset&id=%d&w=420&h=420", id)
 	end
 	return nil
 end

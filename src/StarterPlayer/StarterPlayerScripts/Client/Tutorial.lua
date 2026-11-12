@@ -82,7 +82,7 @@ local STEPS = {
 }
 
 local function build()
-	local card = K.new("Frame", { Name = "Objective", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 68), Size = UDim2.fromOffset(560, 96), BackgroundColor3 = P.white,
+	local card = K.new("Frame", { Name = "Objective", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 74), Size = UDim2.fromOffset(560, 96), BackgroundColor3 = P.white,
 		ClipsDescendants = true, Visible = false }, K.root)
 	K.corner(card, 20)
 	K.stroke(card, P.ink, 4)
@@ -170,7 +170,7 @@ local function tick()
 		pulse(nil)
 		local goal = K.hud.nextGoal
 		w.card.ZIndex = 1
-		w.card.Position = UDim2.new(0.5, 0, 0, 68)
+		w.card.Position = UDim2.new(0.5, 0, 0, 74)
 		K.hud.tutInPanel = false
 		if goal and K.state.open == nil then
 			show("goal:" .. goal[1], "GOAL", "", P.blue, goal[1], goal[2], nil, nil, false)
@@ -201,7 +201,7 @@ local function tick()
 	local inPanel = K.state.open ~= nil
 	w.card.ZIndex = inPanel and 30 or 1
 	K.hud.tutInPanel = inPanel
-	w.card.Position = UDim2.new(0.5, 0, 0, inPanel and 4 or 68)
+	w.card.Position = UDim2.new(0.5, 0, 0, inPanel and 4 or 74)
 	Guide.Point(def[4](st, hrp))
 	pulse(def[8] == "throw" and K.hud.throw or (def[8] == "garage" and K.hud.garageBtn) or nil)
 	if def == STEPS[step] and def[5](st, hrp) then

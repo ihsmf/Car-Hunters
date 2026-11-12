@@ -122,7 +122,7 @@ local function toy(parent, o)
 	if imgId then
 		-- 3D sticker (Blender render): big, with a clear gap above the label
 		content:FindFirstChildOfClass("UIListLayout").Padding = UDim.new(0, 5)
-		local sz = math.floor(h * 0.5)
+		local sz = math.floor(h * 0.58)
 		icon = new("ImageLabel", { Image = imgId, BackgroundTransparency = 1, Size = UDim2.fromOffset(sz, sz), ScaleType = Enum.ScaleType.Fit, ZIndex = face.ZIndex, LayoutOrder = 1 }, content)
 	elseif o.Icon then
 		icon = text(content, { Text = o.Icon, Font = BODY, TextSize = o.IconSize or math.floor(h * 0.34), Size = UDim2.new(1, 0, 0, math.floor(h * 0.4)), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = face.ZIndex, LayoutOrder = 1 })
@@ -228,13 +228,14 @@ local KIND_COLOR = { good = P.green, error = P.red, warn = P.orange, info = P.bl
 -- Notifications (v10): one queue for every top message. Max 3 on screen, the same text within its lifetime merges
 -- into "x2" instead of stacking, items move with their own position tweens (no list-layout snapping), and the
 -- whole pill (background, text AND outline) fades before it is destroyed.
-local notes = { items = {}, queue = {}, top = 172 }
-local NOTE_H, NOTE_GAP, NOTE_MAX, NOTE_LIFE = 36, 12, 3, 2.8 -- v11: smaller pills, more air between them
+-- v13: small pills at the very top centre (the zone banner moved to the top-left), max 2 at once
+local notes = { items = {}, queue = {}, top = 8 }
+local NOTE_H, NOTE_GAP, NOTE_MAX, NOTE_LIFE = 28, 6, 2, 2.8
 
 local function noteY(i)
 	-- with a panel open the lane sits above the panel card, so a message never covers the button just pressed
 	-- dialogs (confirm, checkpoint) also push the lane to the very top so it never covers their buttons
-	local top = (state.open or state.dialog) and (hud.tutInPanel and 108 or 6) or notes.top -- below the tutorial card on garage steps
+	local top = (state.open or state.dialog) and (hud.tutInPanel and 108 or 6) or (hud.tutInPanel and 108 or notes.top) -- below the tutorial card on garage steps
 	return top + (i - 1) * (NOTE_H + NOTE_GAP)
 end
 
@@ -284,11 +285,11 @@ end
 noteShow = function(msg, kind, n, silent)
 	local f = new("TextButton", { Name = "Note", Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, noteY(#notes.items + 1) - 10), AutomaticSize = Enum.AutomaticSize.X,
 		Size = UDim2.fromOffset(0, NOTE_H), BackgroundColor3 = KIND_COLOR[kind] or P.blue, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 50 }, hud.toasts)
-	corner(f, 18)
-	local st = stroke(f, P.ink, 2.5)
+	corner(f, 14)
+	local st = stroke(f, P.ink, 2)
 	st.Transparency = 1
-	new("UIPadding", { PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14) }, f)
-	local l = text(f, { Text = msg, TextSize = 18, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), ZIndex = 51, TextTransparency = 1 })
+	new("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }, f)
+	local l = text(f, { Text = msg, TextSize = 15, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), ZIndex = 51, TextTransparency = 1 })
 	local it = { f = f, l = l, stroke = st, msg = msg, kind = kind, n = n or 1, expire = os.clock() + NOTE_LIFE, born = os.clock() }
 	l.Text = noteLabel(it)
 	table.insert(notes.items, it)
@@ -371,14 +372,6 @@ function UI.SetNotificationsEnabled(on)
 	end
 end
 
--- the notification lane starts below whatever is shown at the top (objective card, hot drop banner)
-function UI.SetNotesTop(px)
-	if notes.top ~= px then
-		notes.top = px
-		noteLayout()
-	end
-end
-
 task.spawn(function()
 	while true do
 		task.wait(0.1)
@@ -430,17 +423,6 @@ local function buildHud()
 	hud.money = text(money, { Position = UDim2.fromOffset(64, 0), Size = UDim2.new(1, -64, 0, 42), TextSize = 40, TextColor3 = P.white, Outline = 3 })
 	hud.income = outline(text(money, { Position = UDim2.fromOffset(65, 42), Size = UDim2.new(1, -65, 0, 20), TextSize = 18, Font = BODY, TextColor3 = C(70, 220, 100) }), 2.5)
 	hud.moneyScale = new("UIScale", {}, money)
-	-- banked parts: icon, rarity underline, count
-	local row = new("Frame", { Name = "Parts", Size = UDim2.fromOffset(280, 76), BackgroundTransparency = 1, LayoutOrder = 4 }, colF)
-	list(row, Enum.FillDirection.Horizontal, 8)
-	hud.parts = {}
-	for i, id in ipairs(PartConfig.Order) do
-		local cell = new("Frame", { Size = UDim2.fromOffset(46, 76), BackgroundTransparency = 1, LayoutOrder = i }, row)
-		local img = icon(cell, id, 46)
-		local u = new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromOffset(23, 48), Size = UDim2.fromOffset(28, 3), BackgroundColor3 = rarityColor(PartConfig.Parts[id].rarity), BorderSizePixel = 0 }, cell)
-		corner(u, 2)
-		hud.parts[id] = { chip = img, n = text(cell, { Text = "0", TextSize = 20, Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 0, 22), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 }) }
-	end
 	-- loot carried on this run (only while carrying)
 	local bag = new("Frame", { Name = "Carrying", Size = UDim2.fromOffset(280, 28), BackgroundTransparency = 1, Visible = false, LayoutOrder = 3 }, colF)
 	hud.bag = bag
@@ -452,7 +434,8 @@ local function buildHud()
 	hud.icon = icon
 
 	-- zone banner + hint
-	local banner = new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), Size = UDim2.fromOffset(290, 46), BackgroundColor3 = P.white, BorderSizePixel = 0 }, root)
+	-- zone banner: top-left corner (the top centre belongs to the notifications)
+	local banner = new("Frame", { AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 16, 0, 12), Size = UDim2.fromOffset(250, 42), BackgroundColor3 = P.white, BorderSizePixel = 0 }, root)
 	corner(banner, 14)
 	stroke(banner, P.ink, 3.5)
 	hud.bannerGrad = gradient(banner, P.orange)
@@ -467,7 +450,7 @@ local function buildHud()
 	-- side buttons (minimum: 3)
 	-- phones: start higher and a bit smaller so the column ends above the jump button
 	local touch = (UIS.TouchEnabled and not UIS.KeyboardEnabled)
-	local side = new("Frame", { Name = "SideButtons", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, touch and 74 or 120), Size = UDim2.fromOffset(122, 4 * 104 + 36), BackgroundTransparency = 1 }, root)
+	local side = new("Frame", { Name = "SideButtons", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, touch and 64 or 100), Size = UDim2.fromOffset(122, 5 * 104 + 48), BackgroundTransparency = 1 }, root)
 	if touch then
 		new("UIScale", { Scale = 0.8 }, side)
 	end
@@ -1305,12 +1288,6 @@ local function refreshHud()
 	local st = store.State
 	hud.money.Text = "$" .. Util.FormatNumber(store.Money)
 	hud.income.Text = "+" .. Util.FormatNumber(store.Income) .. " / sec"
-	for id, p in pairs(hud.parts) do
-		local n = store.Banked(id)
-		p.n.Text = tostring(n)
-		p.chip.ImageTransparency = n > 0 and 0 or 0.55
-		p.n.TextColor3 = n > 0 and P.white or C(200, 200, 205)
-	end
 	local carried = store.CarriedTotal()
 	hud.bag.Visible = carried > 0
 	if carried > 0 then

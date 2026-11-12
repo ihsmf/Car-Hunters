@@ -500,7 +500,7 @@ local function buildHud()
 	w.contracts = cw
 	w.contractRows = {}
 	-- hot drop banner
-	local hb = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 172), -- own lane under the objective card
+	local hb = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 176), -- own lane under the objective card
 		 Size = UDim2.fromOffset(420, 44), BackgroundColor3 = P.red, Visible = false }, root)
 	K.corner(hb, 14)
 	K.stroke(hb, P.ink, 3)
@@ -608,8 +608,6 @@ local function tick()
 	else
 		w.hot.Visible = false
 	end
-	-- notifications go below the hot drop banner while it is shown
-	UI.SetNotesTop(w.hot.Visible and 226 or 172)
 end
 
 function X.OnHotDrop(info)
