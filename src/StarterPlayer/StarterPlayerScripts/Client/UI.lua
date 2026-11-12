@@ -628,7 +628,19 @@ end
 
 -- GARAGE
 -- confirmation popup (sell etc.)
+local confirmDim
+local function closeConfirm()
+	if confirmDim then
+		confirmDim:Destroy()
+		confirmDim = nil
+	end
+end
+
 function UI.Confirm(title, body, okText, okColor, onOk, def)
+	closeConfirm() -- never two dialogs on top of each other
+	if state.cine then
+		return
+	end
 	local dim = new("TextButton", { Name = "Confirm", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.45, ZIndex = 85 }, gui)
 	local card = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(480, def and 400 or 260), BackgroundColor3 = P.cream, ZIndex = 86 }, dim)
 	corner(card, 26)
@@ -650,6 +662,7 @@ function UI.Confirm(title, body, okText, okColor, onOk, def)
 		onOk()
 	end })
 	dim.Activated:Connect(function() dim:Destroy() end)
+	confirmDim = dim
 end
 
 state.garageTab = "parked"
@@ -874,9 +887,13 @@ local function refreshIndex()
 end
 
 function UI.TogglePanel(name)
+	if name ~= nil and state.cine then
+		return -- no menus over a cinematic
+	end
 	if name ~= nil and state.open == name then
 		name = nil
 	end
+	closeConfirm()
 	for n, p in pairs(panels) do
 		if type(p) == "table" and p.root and p.scale then
 			if n == name then
@@ -895,10 +912,54 @@ function UI.TogglePanel(name)
 	UI.Refresh()
 end
 
+-- Cinematic mode (car drop, batch reveal): the whole HUD hides, open panels close and cannot open,
+-- proximity prompts and movement are off. Calls are counted, every SetCinematic(true) has one SetCinematic(false).
+local cineDepth = 0
+function UI.SetCinematic(on)
+	cineDepth = math.max(0, cineDepth + (on and 1 or -1))
+	local active = cineDepth > 0
+	if (state.cine == true) == active then
+		return
+	end
+	state.cine = active
+	if active then
+		UI.TogglePanel(nil)
+		UI.CloseOverlays()
+	end
+	root.Visible = not active
+	pcall(function()
+		game:GetService("ProximityPromptService").Enabled = not active
+	end)
+	pcall(function()
+		local pm = require(Players.LocalPlayer:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"))
+		local controls = pm:GetControls()
+		if active then
+			controls:Disable()
+		else
+			controls:Enable()
+		end
+	end)
+	if not active then
+		UI.Refresh()
+	end
+end
+
+function UI.IsCinematic()
+	return state.cine == true
+end
+
+-- other modules register closers for their own pop-ups (trade request card, confirm dialogs, ...)
+UI.Overlays = { closeConfirm }
+function UI.CloseOverlays()
+	for _, fn in ipairs(UI.Overlays) do
+		pcall(fn)
+	end
+end
+
 ---------------------------------------------------------------- reveal
 local function buildReveal()
 	-- showcase: blurred world, rarity backdrop with turning rays + light streaks, car spinning on a glowing turntable
-	local r = new("TextButton", { Name = "Reveal", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(8, 10, 16), BackgroundTransparency = 0.15, Visible = false, ZIndex = 60 }, gui)
+	local r = new("TextButton", { Name = "Reveal", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(6, 7, 12), BackgroundTransparency = 0, Visible = false, ZIndex = 60 }, gui)
 	local glow = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.48), Size = UDim2.fromScale(1.4, 1.4), BackgroundColor3 = P.yellow, BackgroundTransparency = 0, BorderSizePixel = 0, ZIndex = 60 }, r)
 	new("UIAspectRatioConstraint", {}, glow)
 	corner(glow, 2000)

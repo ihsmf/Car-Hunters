@@ -80,14 +80,33 @@ local function card(parent, order, color, title, body, btnText, btnColor, onClic
 	K.text(top, { Text = title, TextSize = 18, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 25, Outline = 2 })
 	K.new("ImageLabel", { Position = UDim2.new(0.5, -26, 0, 40), Size = UDim2.fromOffset(52, 52), BackgroundTransparency = 1, Image = Icons.Get("gift") or "", ZIndex = 24 }, f)
 	K.text(f, { Text = body, Font = K.BODY, TextSize = 13, TextColor3 = P.ink, TextWrapped = true, Position = UDim2.fromOffset(6, 96), Size = UDim2.new(1, -12, 0, 44), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
-	K.toy(f, { Text = btnText, Color = btnColor, Size = UDim2.new(1, -16, 0, 44), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), TextSize = 16, ZIndex = 25, OnClick = onClick })
+	return K.toy(f, { Text = btnText, Color = btnColor, Size = UDim2.new(1, -16, 0, 44), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), TextSize = 16, ZIndex = 25, OnClick = onClick })
 end
 
 local function refresh(st, open)
 	w.dot.Visible = claimable(st)
 	if open ~= "rewards" or not st.daily then
+		w.sig = nil
 		return
 	end
+	-- rebuild the cards only when something changed; the chest timers tick on their own buttons
+	-- (rebuilding every second destroyed the button under the player's finger)
+	local now = sessionNow()
+	local sig = { st.daily.today, st.daily.last, st.daily.day, Util.FormatNumber(K.store.Income) }
+	for i, e in ipairs(R.Chests) do
+		table.insert(sig, (st.chests and st.chests[i]) and "g" or (now >= e.minutes * 60 and "r" or "w"))
+	end
+	sig = table.concat(sig, "|")
+	if sig == w.sig then
+		for i, e in ipairs(R.Chests) do
+			local btn = w.chestBtns[i]
+			if btn and not (st.chests and st.chests[i]) and now < e.minutes * 60 then
+				btn.SetText(fmt(e.minutes * 60 - now))
+			end
+		end
+		return
+	end
+	w.sig = sig
 	K.clear(w.days)
 	local today = st.daily.today
 	local claimedToday = st.daily.last == today
@@ -104,14 +123,14 @@ local function refresh(st, open)
 			end, isNext)
 	end
 	K.clear(w.chests)
-	local now = sessionNow()
+	w.chestBtns = {}
 	for i, e in ipairs(R.Chests) do
 		local got = st.chests and st.chests[i]
 		local left = e.minutes * 60 - now
 		local body = "$" .. Util.FormatNumber(R.Money(e, K.store.Income)) .. "\n" .. partsText(e.parts) .. (e.tuning and "\n+ tuning part" or "")
-		card(w.chests, nil, P.green, e.minutes .. " MIN", body, got and "OPENED" or (left <= 0 and "OPEN" or fmt(left)), got and P.grey or (left <= 0 and P.green or P.grey),
+		w.chestBtns[i] = card(w.chests, nil, P.green, e.minutes .. " MIN", body, got and "OPENED" or (left <= 0 and "OPEN" or fmt(left)), got and P.grey or (left <= 0 and P.green or P.grey),
 			function()
-				if not got and left <= 0 then
+				if not got and sessionNow() >= e.minutes * 60 then
 					Net.Get("ClaimChest"):FireServer(i)
 				end
 			end, left <= 0 and not got)

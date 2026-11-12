@@ -35,6 +35,12 @@ function TrapFx.SetSfx(fn)
 	sfx = fn
 end
 
+-- cinematic mode hook (UI.SetCinematic): hides the HUD, closes panels, blocks prompts + movement
+local cinema = function() end
+function TrapFx.SetCinematic(fn)
+	cinema = fn
+end
+
 local function tw(o, t, props, style, dir)
 	local x = TweenService:Create(o, TweenInfo.new(t, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out), props)
 	x:Play()
@@ -102,14 +108,18 @@ local function faceCF(pos, dir)
 end
 
 -- smooth camera: every frame the camera eases toward camTarget
-local camTarget, camConn
+local camTarget, camConn, camCur
 local function camStart(cam)
 	camTarget = cam.CFrame
-	local cur = cam.CFrame
+	camCur = cam.CFrame
 	camConn = RunService.RenderStepped:Connect(function(dt)
-		cur = cur:Lerp(camTarget, 1 - math.exp(-dt * 5))
-		cam.CFrame = cur
+		camCur = camCur:Lerp(camTarget, 1 - math.exp(-dt * 5))
+		cam.CFrame = camCur
 	end)
+end
+-- jump cut (used while the screen is black)
+local function camSnap(cf)
+	camTarget, camCur = cf, cf
 end
 local function camStop()
 	if camConn then
@@ -127,15 +137,24 @@ local function effect(class, props)
 	return e
 end
 
-function TrapFx.Play(res, baseIndex, onDone)
-	task.spawn(function()
+-- one cinematic at a time: later ones wait in a queue (e.g. "SEE BEST CAR" pressed during another reveal)
+local busy, queue = false, {}
+
+local function body(res, baseIndex, ctx)
 		local def = CarConfig.ById[res.typeId]
 		if not def or not baseIndex then
 			if def and TrapFx.Reveal then
-				TrapFx.Reveal(res)
-			end
-			if onDone then
-				onDone()
+				local shown = false
+				TrapFx.Reveal(res, function()
+					shown = true
+				end)
+				local w0 = os.clock()
+				while not shown and os.clock() - w0 < 15 do
+					task.wait(0.05)
+				end
+				if not shown and TrapFx.HideReveal then
+					TrapFx.HideReveal()
+				end
 			end
 			return
 		end
@@ -155,12 +174,15 @@ function TrapFx.Play(res, baseIndex, onDone)
 		local hrp = char and char:FindFirstChild("HumanoidRootPart")
 		local startPos = hrp and (hrp.Position + Vector3.new(0, 2.5, 0)) or (padPos + Vector3.new(14, 8, 0))
 		local cam = Cine.Take()
+		ctx.camTaken = true
 		local cam0 = cam.CFrame
+		ctx.cam0 = cam0
 		camStart(cam)
 		local side = bcf:VectorToWorldSpace(Vector3.new(0, 0, 1))
 		local front = bcf:VectorToWorldSpace(Vector3.new(1, 0, 0)) -- out of the garage, towards the plaza
 		local dof = effect("DepthOfFieldEffect", { Name = "TrapDof", FarIntensity = 0, NearIntensity = 0, FocusDistance = 30, InFocusRadius = 20 })
 		local cc = effect("ColorCorrectionEffect", { Name = "TrapCC" })
+		ctx.dof, ctx.cc = dof, cc
 
 		-- 1) over the shoulder, letterbox
 		Cine.Letterbox(true, 0.35)
@@ -170,6 +192,7 @@ function TrapFx.Play(res, baseIndex, onDone)
 		-- 2) the part flies onto the lift
 		play("throw")
 		local item = PartVisual.Build(res.partId)
+		ctx.item = item
 		item:PivotTo(CFrame.new(startPos))
 		item.Parent = Workspace
 		local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
@@ -212,6 +235,7 @@ function TrapFx.Play(res, baseIndex, onDone)
 		item:Destroy()
 		play("charge")
 		local spk = anchor(CFrame.new(padPos + Vector3.new(0, 0.4, 0)))
+		ctx.spk = spk
 		local sparks = emitter(spk, { c1 = Color3.fromRGB(255, 240, 200), c2 = rc, s1 = 0.4, life = 0.5, speed = 14, spread = Vector2.new(35, 35), acc = Vector3.new(0, -30, 0), rate = 25 + lvl * 15 })
 		sparks.EmissionDirection = Enum.NormalId.Top
 		local smoke = emitter(spk, { texture = SMOKE, c1 = Color3.fromRGB(150, 150, 150), s1 = 2, s2 = 6, t1 = 0.6, life = 1.4, speed = 3, acc = Vector3.new(0, 4, 0), rate = 6, light = 0 })
@@ -240,33 +264,36 @@ function TrapFx.Play(res, baseIndex, onDone)
 			Cine.Title(string.upper(res.rarity) .. "!", rc, 1.1, 150, 0.28)
 		end
 
-		-- 5) showcase: dark blurred screen, the car spins on a rarity backdrop (UI.ShowReveal) until tapped
-		Cine.Darken(0.55, 0.25)
+		-- 5) blackout: the screen goes fully dark, then the showcase (UI.ShowReveal) on a solid dark backdrop
 		Cine.Shake(1.2 + lvl * 0.3, 0.5)
+		task.wait(lvl >= 4 and 0.55 or 0.3)
+		Cine.Darken(1, 0.22)
+		task.wait(0.25)
 		if magnet then
-			tw(magnet, 0.6, { CFrame = magnetCF })
-			tw(light, 0.8, { Brightness = 0 })
+			magnet.CFrame = magnetCF
+			light.Brightness = 0
 		end
-		tw(dof, 0.4, { FarIntensity = 0 })
+		dof.FarIntensity = 0
 		local shown = false
 		if TrapFx.Reveal then
 			TrapFx.Reveal(res, function()
 				shown = true
 			end)
 			local w0 = os.clock()
-			while not shown and os.clock() - w0 < (lvl >= 4 and 6 or 4.5) do
+			while not shown and os.clock() - w0 < 15 do
 				task.wait(0.05)
 			end
 			if not shown and TrapFx.HideReveal then
 				TrapFx.HideReveal()
 			end
 		end
-		Cine.Darken(0, 0.3)
 
 		-- 6) drive-in: the car comes through the garage gate and parks; the camera rides in front of it
 		local ghost = VehicleFactory.BuildCar(def)
+		ctx.ghost = ghost
 		local y = BaseLayout.FloorY + 0.6
 		local real = {}
+		ctx.real = real
 		local function hideReal()
 			local cars = base and base:FindFirstChild("Cars")
 			local m = cars and res.slot and cars:FindFirstChild("Car_" .. res.slot)
@@ -301,12 +328,18 @@ function TrapFx.Play(res, baseIndex, onDone)
 			-- open the roller door locally
 			local door = base and base:FindFirstChild("PortalDoor")
 			local doorCF = door and door.CFrame
+			ctx.door, ctx.doorCF = door, doorCF
 			if door then
 				tw(door, 0.6, { CFrame = doorCF + Vector3.new(0, 10.5, 0) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 			end
 			ghost:PivotTo(faceCF(pts[1], pts[2] - pts[1]))
 			ghost.Parent = Workspace
 			hideReal()
+			-- still black: cut the camera to the gate, then fade in
+			local d1 = (pts[2] - pts[1]).Unit
+			camSnap(CFrame.lookAt(pts[1] + d1 * 13 + Vector3.new(0, 3.6, 0), pts[1] + Vector3.new(0, 1.6, 0)))
+			task.wait(0.05)
+			Cine.Darken(0, 0.45)
 			play("drive")
 			local total = 0
 			for i = 2, #pts do
@@ -360,31 +393,73 @@ function TrapFx.Play(res, baseIndex, onDone)
 				tw(door, 0.6, { CFrame = doorCF })
 			end
 		end
-		-- the real (server) car takes over
-		ghost:Destroy()
-		for m in pairs(real) do
-			for _, d in ipairs(m:GetDescendants()) do
-				if d:IsA("BasePart") then
-					d.LocalTransparencyModifier = 0
-				elseif d:IsA("BillboardGui") then
-					d.Enabled = true
-				end
-			end
-		end
-		spk:Destroy()
-
-		-- 7) hand the camera back
+		Cine.Darken(0, 0.3) -- no slot (stored car): just fade back in
+		-- 7) hand the camera back (cleanup() restores the real car and the rest)
 		Cine.Letterbox(false, 0.35)
 		camTarget = cam0
 		task.wait(0.35)
-		camStop()
-		dof:Destroy()
-		cc:Destroy()
+end
+
+-- always runs, also when the cinematic errored half-way: nothing may stay hidden, dark or scripted
+local function cleanup(ctx)
+	for _, k in ipairs({ "item", "ghost", "spk", "dof", "cc" }) do
+		if ctx[k] then
+			pcall(function()
+				ctx[k]:Destroy()
+			end)
+		end
+	end
+	for m in pairs(ctx.real or {}) do
+		for _, d in ipairs(m:GetDescendants()) do
+			if d:IsA("BasePart") then
+				d.LocalTransparencyModifier = 0
+			elseif d:IsA("BillboardGui") then
+				d.Enabled = true
+			end
+		end
+	end
+	if ctx.door and ctx.doorCF then
+		ctx.door.CFrame = ctx.doorCF
+	end
+	if TrapFx.HideReveal then
+		TrapFx.HideReveal()
+	end
+	camStop()
+	Cine.Letterbox(false, 0.2)
+	Cine.Darken(0, 0.3)
+	if ctx.camTaken then
 		Cine.Release(0.3)
+	end
+end
+
+function TrapFx.Play(res, baseIndex, onDone)
+	if busy then
+		table.insert(queue, { res, baseIndex, onDone })
+		return
+	end
+	busy = true
+	cinema(true)
+	task.spawn(function()
+		local ctx = {}
+		local ok, err = pcall(body, res, baseIndex, ctx)
+		if not ok then
+			warn("TrapFx: " .. tostring(err))
+		end
+		cleanup(ctx)
 		if onDone then
-			onDone()
+			task.spawn(onDone)
+		end
+		local nextOne = table.remove(queue, 1)
+		busy = false
+		cinema(false)
+		if nextOne then
+			TrapFx.Play(nextOne[1], nextOne[2], nextOne[3])
 		end
 	end)
+end
+
+function TrapFx.IsBusy()
+	return busy
 end
 
 return TrapFx

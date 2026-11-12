@@ -15,6 +15,7 @@ CarConfig.Rarities = {
 
 CarConfig.MaxLevel = 10
 CarConfig.IncomeGrowth = 0.25
+CarConfig.IncomeMult = 1.3 -- v9: every car earns 30 % more (first rebirth came too slowly in play)
 CarConfig.ValueMultiplier = 40
 CarConfig.UpgradeCostBase = 0.5
 CarConfig.UpgradeCostGrowth = 1.35
@@ -156,7 +157,7 @@ CarConfig.DropChances = {
 }
 
 function CarConfig.IncomeAt(def, level)
-	return math.floor(def.income * (1 + CarConfig.IncomeGrowth * (level - 1)) + 0.5)
+	return math.floor(def.income * CarConfig.IncomeMult * (1 + CarConfig.IncomeGrowth * (level - 1)) + 0.5)
 end
 
 -- income of one owned car incl. its tuning parts

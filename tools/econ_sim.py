@@ -61,7 +61,7 @@ FLOOR_COST = lt(Eco.FloorCosts)
 PERKS = {p["id"]: p for p in lt(Shop.Perks)}
 SKINS = lt(Skin.Skins)
 REB = lt(Skin.Rebirth)
-VALUE_MULT, GROWTH = Car.ValueMultiplier, Car.IncomeGrowth
+VALUE_MULT, GROWTH, INC_MULT = Car.ValueMultiplier, Car.IncomeGrowth, Car.IncomeMult
 UP_BASE, UP_GROW, MAXLV = Car.UpgradeCostBase, Car.UpgradeCostGrowth, Car.MaxLevel
 TIER = {z: lt(Map.Zones[z])["tier"] for z in ZONES}
 ARENA = {z: bool(lt(Map.Zones[z]).get("arena")) for z in ZONES}
@@ -109,7 +109,7 @@ class Player:
 
     # ---------------------------------------------------------------- economy formulas (mirror the Luau code)
     def car_income(self, c):
-        return c[0] * (1 + GROWTH * (c[1] - 1)) * c[3]
+        return c[0] * INC_MULT * (1 + GROWTH * (c[1] - 1)) * c[3]
 
     def income(self):
         best = sorted((self.car_income(c) for c in self.cars), reverse=True)[: self.slots]
@@ -344,8 +344,8 @@ def simulate(seed, hours):
     return p
 
 
-TARGETS = [("first car", 0, 2 / 60), ("unlock highway", 0.2, 0.6), ("unlock neon", 2.5, 5), ("rebirth 1", 4, 8),
-           ("R1 unlock docks", 6, 14), ("rebirth 3", 25, 45), ("R3 unlock circuit", 28, 55), ("colosseum (final boss)", 70, 140)]
+TARGETS = [("first car", 0, 2 / 60), ("unlock highway", 0.2, 0.6), ("unlock neon", 1.5, 4), ("rebirth 1", 2.5, 5),
+           ("R1 unlock docks", 4, 10), ("rebirth 3", 20, 40), ("R3 unlock circuit", 28, 55), ("colosseum (final boss)", 70, 140)]
 
 
 def main():

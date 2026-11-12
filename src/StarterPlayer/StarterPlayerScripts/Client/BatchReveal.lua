@@ -14,6 +14,7 @@ local K, UI, Cine, TrapFx
 local P
 local C = Color3.fromRGB
 local root, blur, conn
+local holding = false -- holds UI cinematic mode while the reel / grid is up
 
 local function rc(r)
 	return CarConfig.Rarities[r].color
@@ -31,6 +32,11 @@ local function close()
 	if blur then
 		blur:Destroy()
 		blur = nil
+	end
+	if holding then
+		holding = false
+		Cine.Darken(0, 0.35)
+		UI.SetCinematic(false)
 	end
 end
 
@@ -129,8 +135,9 @@ local function grid(res)
 	K.list(btns, Enum.FillDirection.Horizontal, 20, Enum.HorizontalAlignment.Center)
 	K.toy(btns, { Text = "SEE BEST CAR", Color = P.orange, Size = UDim2.fromOffset(300, 70), TextSize = 26, LayoutOrder = 1, ZIndex = 72, OnClick = function()
 		local best = res.cars[res.best]
-		close()
 		local st = K.store.State
+		-- start the showcase first so the HUD does not flash back between the grid and the cinematic
+		task.defer(close)
 		TrapFx.Play({ partId = best.partId, typeId = best.typeId, rarity = best.rarity, slot = best.slot, isNew = best.isNew, bonus = best.bonus, speed = 1.6, animTime = 0 }, st and st.baseIndex)
 	end })
 	K.toy(btns, { Text = "DONE", Color = P.green, Size = UDim2.fromOffset(220, 70), TextSize = 28, LayoutOrder = 2, ZIndex = 72, OnClick = close })
@@ -214,14 +221,15 @@ function BR.Play(res)
 		return
 	end
 	close()
-	Cine.Darken(0.5, 0.2)
+	UI.SetCinematic(true)
+	holding = true
+	-- blackout: the world fades to fully dark, the reel and the grid sit on a solid backdrop
+	Cine.Darken(1, 0.25)
 	Cine.Shake(0.9, 0.35)
 	UI.Sfx("throw")
-	root = K.new("TextButton", { Name = "BatchReveal", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(8, 10, 16), BackgroundTransparency = 0.35, ZIndex = 69 }, K.gui)
+	root = K.new("TextButton", { Name = "BatchReveal", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(6, 7, 12), BackgroundTransparency = 1, ZIndex = 69 }, K.gui)
+	K.tween(root, 0.25, { BackgroundTransparency = 0 })
 	blur = K.new("BlurEffect", { Size = 18 }, Lighting)
-	task.delay(0.25, function()
-		Cine.Darken(0, 0.3)
-	end)
 	reel(res, function()
 		if root then
 			grid(res)

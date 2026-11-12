@@ -471,17 +471,13 @@ local function buildHud()
 	-- active boosts strip to the right of the wallet card
 	w.boosts = K.new("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 310, 1, -24 - (K.hud.leftLift or 0)), Size = UDim2.fromOffset(240, 40), BackgroundTransparency = 1 }, root)
 	K.list(w.boosts, Enum.FillDirection.Horizontal, 6)
-	-- combo meter (bottom left, above the jump area of mobile thumbstick? left of THROW)
-	local combo = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -140), Size = UDim2.fromOffset(300, 74), BackgroundColor3 = P.ink, Visible = false }, root)
-	K.corner(combo, 20)
-	K.stroke(combo, P.white, 3)
+	-- combo: one compact text line above THROW ("COMBO x1.5" + small speed-bonus timer), no card
+	local combo = K.new("Frame", { Name = "Combo", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -138), Size = UDim2.fromOffset(360, 30), BackgroundTransparency = 1, Visible = false }, root)
+	K.list(combo, Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center)
 	w.combo = combo
-	w.comboText = K.text(combo, { Text = "", TextSize = 34, TextColor3 = P.yellow, Position = UDim2.fromOffset(14, 4), Size = UDim2.new(1, -28, 0, 38), TextXAlignment = Enum.TextXAlignment.Center })
-	local bar = K.new("Frame", { Position = UDim2.fromOffset(14, 46), Size = UDim2.new(1, -28, 0, 12), BackgroundColor3 = C(70, 74, 84) }, combo)
-	K.corner(bar, 6)
-	w.comboFill = K.new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = P.orange }, bar)
-	K.corner(w.comboFill, 6)
-	w.comboSub = K.text(combo, { Text = "", Font = K.BODY, TextSize = 13, TextColor3 = P.white, Position = UDim2.fromOffset(14, 58), Size = UDim2.new(1, -28, 0, 14), TextXAlignment = Enum.TextXAlignment.Center })
+	w.comboText = K.text(combo, { Text = "", TextSize = 24, TextColor3 = P.yellow, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 28), LayoutOrder = 1, Outline = 2.5 })
+	w.comboSub = K.text(combo, { Text = "", Font = K.BODY, TextSize = 15, TextColor3 = P.white, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 20), LayoutOrder = 2 })
+	K.new("UIStroke", { Color = P.ink, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual }, w.comboSub)
 	w.comboScale = K.new("UIScale", {}, combo)
 	-- contracts: plain outlined lines with a thin progress line (no card)
 	local cw = K.new("Frame", { Name = "Contracts", Size = UDim2.fromOffset(280, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 1 }, colF)
@@ -552,7 +548,6 @@ local function refreshHud(st)
 	w.jobsLabel.Text = ready > 0 and ("JOBS " .. ready .. "!") or "JOBS"
 end
 
-local NEXT_TIER = { { 2, 1.5 }, { 4, 2 }, { 7, 3 } }
 local lastMult = 1
 
 local function tick()
@@ -565,21 +560,13 @@ local function tick()
 	w.combo.Visible = picked > 0 and K.state.open == nil
 	if picked > 0 then
 		local mult = run.mult or 1
-		local nextAt, prevAt = nil, 0
-		for _, t in ipairs(NEXT_TIER) do
-			if picked < t[1] then
-				nextAt = t[1]
-				break
-			end
-			prevAt = t[1]
-		end
 		w.comboText.Text = T("combo", tostring(mult))
-		w.comboFill.Size = UDim2.fromScale(nextAt and (picked - prevAt) / (nextAt - prevAt) or 1, 1)
 		local elapsed = run.firstAt and (Workspace:GetServerTimeNow() - run.firstAt) or 999
 		local left = 40 - elapsed
-		w.comboSub.Text = left > 0 and (T("combo_hint") .. "  ⏱ " .. T("speed_bonus", math.ceil(left))) or T("combo_hint")
+		w.comboSub.Text = left > 0 and string.format("speed bonus %ds", math.ceil(left)) or "bank it at home"
+		w.comboSub.TextColor3 = left > 0 and (left <= 10 and C(255, 120, 100) or P.white) or C(200, 200, 205)
 		if mult > lastMult then
-			w.comboScale.Scale = 1.35
+			w.comboScale.Scale = 1.2
 			K.tween(w.comboScale, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
 			UI.Sfx("combo")
 		end

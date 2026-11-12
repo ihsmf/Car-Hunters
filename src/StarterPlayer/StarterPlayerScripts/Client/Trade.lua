@@ -58,7 +58,15 @@ end
 
 ---------------------------------------------------------------- incoming request
 local function requestCard(msg)
+	if w.request and w.request.Parent then
+		w.request:Destroy()
+	end
+	if UI.IsCinematic() then
+		Net.Get("TradeRespond"):FireServer(msg.from, false) -- busy watching a car reveal
+		return
+	end
 	local f = K.new("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -150, 0, 120), Size = UDim2.fromOffset(330, 150), BackgroundColor3 = P.cream, ZIndex = 70 }, K.gui)
+	w.request = f
 	K.corner(f, 20)
 	K.stroke(f, P.ink, 4)
 	K.text(f, { Text = "TRADE REQUEST", TextSize = 22, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(16, 10), Size = UDim2.new(1, -32, 0, 26), ZIndex = 71 })
@@ -168,7 +176,11 @@ end
 local function renderState(msg)
 	last = msg
 	if K.state.open ~= "trade" then
-		UI.TogglePanel("trade")
+		if UI.IsCinematic() then
+			w.pendingOpen = true
+		else
+			UI.TogglePanel("trade")
+		end
 	end
 	-- my cars: every car I own, offered ones highlighted
 	offer.cars = {}
@@ -243,9 +255,23 @@ function TR.Start(ui)
 	local lp = K.panelShell("tradeList", "TRADE WITH", 640, 520, P.blue)
 	w.list = K.scroller(lp.content, UDim2.new(), UDim2.fromScale(1, 1))
 	buildWindow()
+	local wasOpen
 	table.insert(UI.Hooks, function(_, open)
-		if open == "tradeList" then
-			refreshList()
+		-- build the player list once per opening (it fetches avatars; rebuilding on every state change flickered)
+		if open == "tradeList" and wasOpen ~= "tradeList" then
+			wasOpen = open
+			task.spawn(refreshList)
+		end
+		wasOpen = open
+		-- a trade that started during a cinematic opens its window afterwards
+		if w.pendingOpen and open == nil and not UI.IsCinematic() then
+			w.pendingOpen = false
+			task.defer(UI.TogglePanel, "trade")
+		end
+	end)
+	table.insert(UI.Overlays, function()
+		if w.request and w.request.Parent then
+			w.request:Destroy()
 		end
 	end)
 	Net.Get("TradeEvent").OnClientEvent:Connect(function(msg)
@@ -255,6 +281,7 @@ function TR.Start(ui)
 			renderState(msg)
 		elseif msg.type == "closed" then
 			last = nil
+			w.pendingOpen = false
 			if K.state.open == "trade" then
 				UI.TogglePanel(nil)
 			end
