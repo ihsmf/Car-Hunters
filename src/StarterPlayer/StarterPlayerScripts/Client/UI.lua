@@ -1103,6 +1103,7 @@ function UI.SetCinematic(on)
 	state.cine = active
 	root.Visible = not active
 	hud.toasts.Visible = not active
+	Players.LocalPlayer:SetAttribute("Cinematic", active) -- world helpers (guide beam) hide too
 	pcall(function()
 		game:GetService("ProximityPromptService").Enabled = not active and state.open == nil
 	end)

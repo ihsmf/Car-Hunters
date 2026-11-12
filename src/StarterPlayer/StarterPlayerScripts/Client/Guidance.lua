@@ -69,7 +69,7 @@ function Guidance.Start()
 		local char = Players.LocalPlayer.Character
 		local hrp = char and char:FindFirstChild("HumanoidRootPart")
 		local pos = target and (typeof(target) == "Vector3" and target or (target.Parent and target.Position))
-		if Players.LocalPlayer:GetAttribute("Opt_guide") == false then
+		if Players.LocalPlayer:GetAttribute("Opt_guide") == false or Players.LocalPlayer:GetAttribute("Cinematic") then
 			pos = nil -- Settings: guidance beam off
 		end
 		if not hrp or not pos then
