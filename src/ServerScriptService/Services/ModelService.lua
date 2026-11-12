@@ -39,18 +39,22 @@ local function style(model, anchored)
 	end
 end
 
--- pivot at the bottom centre; optional exact size (longest side in studs)
-local function normalize(model, size)
+-- pivot at the bottom centre, or (spawn models) back on the Blender origin; info = { size, c = bbox centre offset }
+local function normalize(model, info)
 	local bb, ext = model:GetBoundingBox()
-	if size then
+	if info and info.size then
 		local cur = math.max(ext.X, ext.Y, ext.Z)
-		if cur > 0.01 and math.abs(cur / size - 1) > 0.02 then
+		if cur > 0.01 and math.abs(cur / info.size - 1) > 0.02 then
 			model.WorldPivot = bb
-			model:ScaleTo(model:GetScale() * size / cur)
+			model:ScaleTo(model:GetScale() * info.size / cur)
 			bb, ext = model:GetBoundingBox()
 		end
 	end
-	model.WorldPivot = CFrame.new(bb.Position - Vector3.new(0, ext.Y / 2, 0))
+	if info and info.c then
+		model.WorldPivot = CFrame.new(bb.Position - Vector3.new(info.c[1], info.c[2], info.c[3]))
+	else
+		model.WorldPivot = CFrame.new(bb.Position - Vector3.new(0, ext.Y / 2, 0))
+	end
 end
 
 -- the imported FBX root: the first Model under the inserted container (or a Model wrapping its parts)

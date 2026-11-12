@@ -272,7 +272,7 @@ function MapConfig.SpeedLanes()
 	pairZ(MapConfig.StartZ + 14, MapConfig.EntryZ + 8)
 	for i = 1, #MapConfig.BaseCenters, 2 do
 		local z = MapConfig.BaseCenters[i].z
-		local edge = math.abs(MapConfig.BaseCenters[i].x) - MapConfig.BasePlot.x / 2 - 1
+		local edge = MapConfig.PromenadeHalfWidth - 0.8 -- stop at the curb gap, never into the garage plot
 		for _, sx in ipairs({ -1, 1 }) do
 			local x1, x2 = math.min(sx * edge, sx * (g + w + 1)), math.max(sx * edge, sx * (g + w + 1))
 			table.insert(out, { x1, x2, z + g, z + g + w, -sx, 0 }) -- to the centre
