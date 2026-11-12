@@ -1,6 +1,6 @@
 -- Sound asset ids (ElevenLabs SFX uploaded by tools/roblox_open_cloud.py). 0 = not uploaded: built-in fallback is used.
 return {
-	click = 0, open = 0, err = 0, ping = 0, throw = 0, clank = 0, charge = 0, reveal = 0, revealBig = 0, land = 0, drive = 0,
-	pickup = 0, pickupBig = 0, bank = 0, bankCombo = 0, combo = 0, cash = 0, siren = 0, crash = 0, wrecked = 0, airbag = 0,
-	whoosh = 0, fanfare = 0, ambience = 0,
+	click = 129701225439846, open = 137919267005389, err = 93818499880209, ping = 88613645625966, throw = 119327249998497, clank = 81236574431044, charge = 119801036998398, reveal = 104359112527062, revealBig = 89971480285601, land = 105360367997502, drive = 135356508628598,
+	pickup = 115648143432870, pickupBig = 88679381563835, bank = 106536817236294, bankCombo = 118911778326066, combo = 117977986909264, cash = 94389113268355, siren = 98200551751013, crash = 95389621886750, wrecked = 139719815735975, airbag = 86864075035630,
+	whoosh = 106593268383104, fanfare = 132390340647866, ambience = 0,
 }
