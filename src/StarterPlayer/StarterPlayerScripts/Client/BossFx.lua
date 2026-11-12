@@ -1,4 +1,4 @@
--- Boss HUD + effects: big "КИНЬ!" button appears when a monster truck is close, the cheapest part flies at it,
+-- Boss HUD + effects: big "THROW!" button appears when a monster truck is close, the cheapest part flies at it,
 -- stars when it is stunned, dust when it flees.
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -17,7 +17,6 @@ local BossFx = {}
 local K, UI, Cine
 local w = {}
 local RANGE = 80
-local CYR = Enum.Font.GothamBlack -- LuckiestGuy has no Cyrillic
 
 local function cheapest(st)
 	for _, id in ipairs(PartConfig.Order) do
@@ -37,16 +36,12 @@ local function build()
 	local root = K.root
 	local holder = K.new("Frame", { Name = "BossThrow", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -170), Size = UDim2.fromOffset(300, 170),
 		BackgroundTransparency = 1, Visible = false }, root)
-	local hint = K.text(holder, { Text = T("boss_hint"), Font = CYR, TextSize = 24, TextColor3 = K.P.white, Size = UDim2.new(1, 0, 0, 30), TextXAlignment = Enum.TextXAlignment.Center })
-	hint.Font = CYR
+	local hint = K.text(holder, { Text = T("boss_hint"), TextSize = 24, TextColor3 = K.P.white, Size = UDim2.new(1, 0, 0, 30), TextXAlignment = Enum.TextXAlignment.Center })
 	w.btn = K.toy(holder, { Text = T("boss_throw"), Icon = "🔧", Color = K.P.red, Size = UDim2.fromOffset(240, 110), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 38),
 		TextSize = 40, OnClick = function()
 			Net.Get("BossThrow"):FireServer()
 			UI.Sfx("throw")
 		end })
-	if w.btn.label then
-		w.btn.label.Font = CYR -- LuckiestGuy cannot draw Cyrillic
-	end
 	w.hint = hint
 	w.holder = holder
 	w.pips = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 152), Size = UDim2.fromOffset(80, 16), BackgroundTransparency = 1 }, holder)

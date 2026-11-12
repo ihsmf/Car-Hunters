@@ -43,7 +43,7 @@ local en = {
 	rebirth_keep = "You keep: car collection index, garage skins, Pit Stop upgrades, game passes, tokens",
 	rebirth_gain = "You get: +25%% income forever (now x%s) and rebirth tokens", rebirth_tokens = "TOKENS: %d", rebirth_shop = "TOKEN SHOP",
 	skin_equip = "EQUIP", skin_on = "ON", skin_bonus = "+%d%% income",
-	boss_throw = "КИНЬ!", boss_hint = "Кинь, чтобы отпугнуть", boss_empty = "Нечего кинуть!", boss_fleeing = "Boss is fleeing!",
+	boss_throw = "THROW!", boss_hint = "Throw to scare it off", boss_empty = "Nothing to throw!", boss_fleeing = "Boss is fleeing!",
 	tut_find = "Grab a glowing part - one car hit = WRECKED!",
 	tut_return = "Run back to the plaza to bank your loot!",
 	tut_throw = "Go to the trap in your garage and press THROW!",
