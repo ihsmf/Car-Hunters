@@ -472,8 +472,8 @@ end
 local function sortedCars(st)
 	local out = table.clone(st.cars)
 	table.sort(out, function(a, b)
-		local ia = CarConfig.IncomeAt(CarConfig.ById[a.typeId], a.level)
-		local ib = CarConfig.IncomeAt(CarConfig.ById[b.typeId], b.level)
+		local ia = CarConfig.CarIncome(a)
+		local ib = CarConfig.CarIncome(b)
 		if ia ~= ib then
 			return ia > ib
 		end
@@ -487,7 +487,7 @@ local function freeSlot(st)
 	for _, c in ipairs(st.cars) do
 		if c.slot then
 			used[c.slot] = true
-			local inc = CarConfig.IncomeAt(CarConfig.ById[c.typeId], c.level)
+			local inc = CarConfig.CarIncome(c)
 			if not worstInc or inc < worstInc then
 				worst, worstInc = c.slot, inc
 			end
@@ -544,9 +544,9 @@ local function refreshGarage()
 		text(row, { Text = def.name, TextSize = 24, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(28, 8), Size = UDim2.fromOffset(300, 30), ZIndex = 24 })
 		local where = c.slot and T("car_parked", c.slot) or T("car_stored")
 		text(row, { Text = string.format('<font color="#%s">%s</font>  ·  %s  ·  <font color="#1E9E40">%s</font>  ·  %s', rc:ToHex(), string.upper(T("rarity_" .. def.rarity)),
-			T("car_level", c.level), T("car_income", Util.FormatNumber(CarConfig.IncomeAt(def, c.level))), where),
-			Font = BODY, TextSize = 16, TextColor3 = P.muted, RichText = true, Position = UDim2.fromOffset(28, 44), Size = UDim2.fromOffset(420, 26), ZIndex = 24 })
-		local btns = new("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(380, 60), BackgroundTransparency = 1, ZIndex = 24 }, row)
+			T("car_level", c.level), T("car_income", Util.FormatNumber(CarConfig.CarIncome(c))), where),
+			Font = BODY, TextSize = 14, TextColor3 = P.muted, RichText = true, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(28, 44), Size = UDim2.fromOffset(350, 26), ZIndex = 24 })
+		local btns = new("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(450, 60), BackgroundTransparency = 1, ZIndex = 24 }, row)
 		list(btns, Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center)
 		if c.slot then
 			toy(btns, { Text = T("btn_remove"), Color = P.orange, Size = UDim2.fromOffset(96, 54), TextSize = 16, LayoutOrder = 1, ZIndex = 25, OnClick = function() actions.Remove(c.uid) end })
@@ -554,17 +554,27 @@ local function refreshGarage()
 			toy(btns, { Text = T("btn_place"), Color = P.green, Size = UDim2.fromOffset(96, 54), TextSize = 18, LayoutOrder = 1, ZIndex = 25, OnClick = function() actions.Place(c.uid, freeSlot(st)) end })
 		end
 		if c.level >= def.maxLevel then
-			toy(btns, { Text = T("btn_max"), Color = P.grey, Size = UDim2.fromOffset(170, 54), LayoutOrder = 2, ZIndex = 25 })
+			toy(btns, { Text = T("btn_max"), Color = P.grey, Size = UDim2.fromOffset(150, 54), LayoutOrder = 2, ZIndex = 25 })
 		else
 			local cost = CarConfig.UpgradeCost(def, c.level)
 			local partId, amount = CarConfig.UpgradeParts(def, c.level)
 			local ok = store.Money >= cost and (st.parts[partId] or 0) >= amount
 			toy(btns, { Text = T("btn_upgrade"), Sub = string.format("$%s + %s%d", Util.FormatNumber(cost), PART_ICON[partId], amount), SubSize = 14, TextSize = 18,
-				Color = ok and P.blue or P.grey, Size = UDim2.fromOffset(170, 54), LayoutOrder = 2, ZIndex = 25, OnClick = function() actions.Upgrade(c.uid, c.level) end })
+				Color = ok and P.blue or P.grey, Size = UDim2.fromOffset(150, 54), LayoutOrder = 2, ZIndex = 25, OnClick = function() actions.Upgrade(c.uid, c.level) end })
 		end
+		local tuned = 0
+		for _ in pairs(c.tune or {}) do
+			tuned = tuned + 1
+		end
+		toy(btns, { Text = T("btn_tune"), Sub = tuned > 0 and (tuned .. "/7") or nil, SubSize = 13, TextSize = 17, Color = P.yellow, Size = UDim2.fromOffset(84, 54),
+			LayoutOrder = 3, ZIndex = 25, OnClick = function()
+				if UI.OnTune then
+					UI.OnTune(c.uid)
+				end
+			end })
 		local armed = state.sellArm[c.uid] and now - state.sellArm[c.uid] < 3
 		toy(btns, { Text = armed and T("btn_sure") or T("btn_sell"), Sub = "$" .. Util.FormatNumber(CarConfig.SellPrice(def, c.level)), SubSize = 13, TextSize = 16,
-			Color = P.red, Size = UDim2.fromOffset(86, 54), LayoutOrder = 3, ZIndex = 25, OnClick = function()
+			Color = P.red, Size = UDim2.fromOffset(86, 54), LayoutOrder = 4, ZIndex = 25, OnClick = function()
 				if armed then
 					state.sellArm[c.uid] = nil
 					actions.Sell(c.uid)

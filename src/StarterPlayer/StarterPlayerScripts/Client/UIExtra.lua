@@ -11,6 +11,9 @@ local ShopConfig = require(Shared:WaitForChild("ShopConfig"))
 local DonateConfig = require(Shared:WaitForChild("DonateConfig"))
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
+local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
+local CarConfig = require(Shared:WaitForChild("CarConfig"))
+local CollectionService = game:GetService("CollectionService")
 
 local T = Strings.T
 local C = Color3.fromRGB
@@ -20,6 +23,10 @@ local P
 local w = {}
 local hot = nil -- current hot drop info
 local donateTab = "boost"
+local tonyTab = "rewards"
+local tuneUid = nil
+local TONY = C(30, 36, 58)
+local contractText -- defined with the HUD widgets
 
 local function fmtTime(sec)
 	sec = math.max(0, math.floor(sec))
@@ -121,6 +128,172 @@ local function refreshDonate(st, open)
 	end
 end
 
+---------------------------------------------------------------- Big Tony: rewards + exchange
+local function costLine(r, st)
+	local bits = {}
+	local function add(have, need, label)
+		local col = have >= need and "#1E9E40" or "#D6342C"
+		table.insert(bits, string.format('<font color="%s">%s</font>', col, label))
+	end
+	for _, part in ipairs(PartConfig.Order or { "bolts", "tire", "engine", "turbo", "core" }) do
+		local n = r.parts and r.parts[part]
+		if n then
+			add(st.parts[part] or 0, n, K.PART_ICON[part] .. n)
+		end
+	end
+	for item, n in pairs(r.tune or {}) do
+		local it = TuningConfig.Items[item]
+		add((st.tuning or {})[item] or 0, n, it.icon .. it.name .. " x" .. n)
+	end
+	add(K.store.Money, r.money, "$" .. Util.FormatNumber(r.money))
+	return table.concat(bits, "  ")
+end
+
+local function buildTony()
+	local p = K.panelShell("tony", T("tony_title"), 920, 600, TONY)
+	local tabs = K.new("Frame", { Size = UDim2.new(1, 0, 0, 56), BackgroundTransparency = 1, ZIndex = 22 }, p.content)
+	K.list(tabs, Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Center)
+	w.tonyTabs = {}
+	for i, tab in ipairs({ "rewards", "exchange" }) do
+		w.tonyTabs[tab] = K.toy(tabs, { Text = T("tony_" .. tab), Color = P.grey, Size = UDim2.fromOffset(200, 52), LayoutOrder = i, ZIndex = 23, TextSize = 20,
+			OnClick = function()
+				tonyTab = tab
+				UI.Refresh()
+			end })
+	end
+	w.tonyList = K.scroller(p.content, UDim2.fromOffset(0, 66), UDim2.new(1, 0, 1, -66))
+end
+
+local function row(parent, order, h, accent)
+	local r = K.new("Frame", { Size = UDim2.new(1, 0, 0, h), BackgroundColor3 = P.white, LayoutOrder = order, ZIndex = 23 }, parent)
+	K.corner(r, 18)
+	K.stroke(r, accent or P.ink, 3)
+	return r
+end
+
+local function refreshTony(st, open)
+	if open ~= "tony" then
+		return
+	end
+	for tab, b in pairs(w.tonyTabs) do
+		b.SetColor(tab == tonyTab and P.yellow or P.grey)
+	end
+	K.clear(w.tonyList)
+	if tonyTab == "rewards" then
+		K.text(w.tonyList, { Text = T("tony_hint"), Font = K.BODY, TextSize = 16, TextColor3 = P.muted, Size = UDim2.new(1, 0, 0, 24), LayoutOrder = 0, ZIndex = 23, TextXAlignment = Enum.TextXAlignment.Center })
+		for i, c in ipairs(st.contracts or {}) do
+			local r = row(w.tonyList, i, 84, c.ready and P.green or P.ink)
+			K.text(r, { Text = contractText(c), TextSize = 20, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(18, 10), Size = UDim2.new(1, -260, 0, 30), ZIndex = 24 })
+			local part = c.reward and K.PART_ICON[c.reward.part] or ""
+			K.text(r, { Text = string.format("%d/%d   ·   +$%s  %s x%d", c.progress, c.n, Util.FormatNumber(c.reward.money), part, c.reward.n), Font = K.BODY, TextSize = 16,
+				TextColor3 = P.muted, Position = UDim2.fromOffset(18, 44), Size = UDim2.new(1, -260, 0, 26), ZIndex = 24 })
+			K.toy(r, { Text = c.ready and T("tony_claim") or T("tony_working"), Color = c.ready and P.green or P.grey, Size = UDim2.fromOffset(200, 60), AnchorPoint = Vector2.new(1, 0.5),
+				Position = UDim2.new(1, -12, 0.5, 0), ZIndex = 25, TextSize = c.ready and 24 or 16,
+				OnClick = function()
+					if c.ready then
+						K.actions.Claim(c.id)
+					end
+				end })
+		end
+	else
+		for i, r in ipairs(TuningConfig.Recipes) do
+			local it = TuningConfig.Items[r.out]
+			local fr = row(w.tonyList, i, 78)
+			K.text(fr, { Text = it.icon, Font = K.BODY, TextSize = 34, Position = UDim2.fromOffset(12, 0), Size = UDim2.fromOffset(50, 78), ZIndex = 24, TextXAlignment = Enum.TextXAlignment.Center })
+			K.text(fr, { Text = string.format("%s  <font color=\"#1E9E40\">+%d%%</font>", string.upper(it.name), math.floor(it.bonus * 100 + 0.5)), RichText = true, TextSize = 20,
+				TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(70, 8), Size = UDim2.new(1, -300, 0, 28), ZIndex = 24 })
+			K.text(fr, { Text = costLine(r, st), RichText = true, Font = K.BODY, TextSize = 15, TextColor3 = P.muted, Position = UDim2.fromOffset(70, 40), Size = UDim2.new(1, -300, 0, 26), ZIndex = 24 })
+			K.text(fr, { Text = T("tony_have", (st.tuning or {})[r.out] or 0), Font = K.BODY, TextSize = 14, TextColor3 = P.muted, AnchorPoint = Vector2.new(1, 0.5),
+				Position = UDim2.new(1, -184, 0.5, 0), Size = UDim2.fromOffset(70, 20), ZIndex = 24, TextXAlignment = Enum.TextXAlignment.Right })
+			K.toy(fr, { Text = T("tony_build"), Color = P.orange, Size = UDim2.fromOffset(160, 58), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0),
+				ZIndex = 25, TextSize = 22, OnClick = function() K.actions.Craft(r.id) end })
+		end
+	end
+end
+
+---------------------------------------------------------------- Tuning a car
+local function buildTune()
+	local p = K.panelShell("tune", T("tune_title"), 900, 600, P.yellow)
+	w.tuneHead = K.text(p.content, { Text = "", TextSize = 22, TextColor3 = P.ink, Outline = false, Size = UDim2.new(1, 0, 0, 30), RichText = true, ZIndex = 23 })
+	w.tuneList = K.scroller(p.content, UDim2.fromOffset(0, 38), UDim2.new(1, 0, 1, -38))
+end
+
+local function refreshTune(st, open)
+	if open ~= "tune" then
+		return
+	end
+	local car
+	for _, c in ipairs(st.cars) do
+		if c.uid == tuneUid then
+			car = c
+		end
+	end
+	K.clear(w.tuneList)
+	if not car then
+		w.tuneHead.Text = ""
+		return
+	end
+	local def = CarConfig.ById[car.typeId]
+	local mult = TuningConfig.CarMult(car.tune)
+	w.tuneHead.Text = string.format('%s   <font color="#1E9E40">+%s/s  (x%.2f)</font>', def.name, Util.FormatNumber(CarConfig.CarIncome(car)), mult)
+	for i, cat in ipairs(TuningConfig.Categories) do
+		local cur = car.tune and car.tune[cat.id]
+		local curIt = cur and TuningConfig.Items[cur]
+		local fr = row(w.tuneList, i, 76, curIt and P.green or P.ink)
+		K.text(fr, { Text = cat.icon, Font = K.BODY, TextSize = 30, Position = UDim2.fromOffset(10, 0), Size = UDim2.fromOffset(46, 76), ZIndex = 24, TextXAlignment = Enum.TextXAlignment.Center })
+		K.text(fr, { Text = string.upper(cat.name), TextSize = 18, TextColor3 = P.muted, Outline = false, Position = UDim2.fromOffset(62, 6), Size = UDim2.fromOffset(160, 22), ZIndex = 24 })
+		K.text(fr, { Text = curIt and string.format("%s +%d%%", curIt.name, math.floor(curIt.bonus * 100 + 0.5)) or T("tune_empty"), TextSize = 18,
+			TextColor3 = curIt and P.ink or P.muted, Outline = false, Position = UDim2.fromOffset(62, 32), Size = UDim2.fromOffset(220, 30), ZIndex = 24 })
+		local opts = K.new("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(540, 60), BackgroundTransparency = 1, ZIndex = 24 }, fr)
+		K.list(opts, Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center)
+		local any = false
+		for _, id in ipairs(TuningConfig.Order) do
+			local it = TuningConfig.Items[id]
+			local have = (st.tuning or {})[id] or 0
+			if it.cat == cat.id and have > 0 then
+				any = true
+				K.toy(opts, { Text = it.icon .. " " .. string.rep("I", it.stage), Sub = "x" .. have, SubSize = 12, TextSize = 16, Color = P.blue, Size = UDim2.fromOffset(96, 54),
+					LayoutOrder = it.stage, ZIndex = 25, OnClick = function() K.actions.Tune(car.uid, cat.id, id) end })
+			end
+		end
+		if curIt then
+			K.toy(opts, { Text = T("tune_remove"), Color = P.red, Size = UDim2.fromOffset(110, 54), TextSize = 16, LayoutOrder = 9, ZIndex = 25,
+				OnClick = function() K.actions.Tune(car.uid, cat.id, nil) end })
+		elseif not any then
+			K.text(opts, { Text = T("tune_none"), Font = K.BODY, TextSize = 14, TextColor3 = P.muted, Size = UDim2.fromOffset(260, 30), ZIndex = 25, TextXAlignment = Enum.TextXAlignment.Right })
+		end
+	end
+end
+
+---------------------------------------------------------------- contract cards on the board (local player's jobs)
+local function refreshBoard(st)
+	for _, card in ipairs(CollectionService:GetTagged("ContractCard")) do
+		local idx = card:GetAttribute("Index")
+		local c = st.contracts and st.contracts[idx]
+		local gui = card:FindFirstChild("CardGui")
+		if not gui then
+			gui = K.new("SurfaceGui", { Name = "CardGui", Face = Enum.NormalId.Front, SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud, PixelsPerStud = 40, LightInfluence = 0.2 }, card)
+			K.new("Frame", { Name = "Bg", Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(255, 248, 228) }, gui)
+			K.text(gui, { Name = "Title", Text = "", TextSize = 30, TextColor3 = P.ink, Outline = false, Position = UDim2.new(0, 14, 0, 20), Size = UDim2.new(1, -28, 0.45, 0),
+				TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 2 })
+			K.text(gui, { Name = "Prog", Text = "", TextSize = 40, TextColor3 = P.ink, Outline = false, Position = UDim2.new(0, 0, 0.55, 0), Size = UDim2.new(1, 0, 0, 48),
+				TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 2 })
+			K.text(gui, { Name = "Reward", Text = "", Font = K.BODY, TextSize = 26, TextColor3 = C(30, 158, 64), Outline = false, Position = UDim2.new(0, 0, 0.75, 0), Size = UDim2.new(1, 0, 0, 34),
+				TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 2 })
+		end
+		if c then
+			gui.Title.Text = contractText(c)
+			gui.Prog.Text = c.ready and "✅ CLAIM AT TONY" or string.format("%d / %d", c.progress, c.n)
+			gui.Prog.TextColor3 = c.ready and C(30, 158, 64) or P.ink
+			gui.Reward.Text = "+$" .. Util.FormatNumber(c.reward.money) .. "  " .. (K.PART_ICON[c.reward.part] or "") .. "x" .. c.reward.n
+			gui.Bg.BackgroundColor3 = c.ready and C(220, 250, 226) or C(255, 248, 228)
+		else
+			gui.Title.Text, gui.Prog.Text, gui.Reward.Text = "NEW JOB SOON", "...", ""
+			gui.Bg.BackgroundColor3 = C(235, 230, 218)
+		end
+	end
+end
+
 ---------------------------------------------------------------- HUD widgets
 local function buildHud()
 	local root = K.root
@@ -163,7 +336,7 @@ local CONTRACT_PART = function(c)
 	return PartConfig.Parts[c.part] and (K.PART_ICON[c.part] .. " " .. T("part_" .. c.part)) or ""
 end
 
-local function contractText(c)
+contractText = function(c)
 	if c.kind == "bank_part" then
 		return T("c_bank_part", c.n, CONTRACT_PART(c), T("zone_" .. tostring(c.zone)))
 	elseif c.kind == "combo" then
@@ -198,10 +371,10 @@ local function refreshHud(st)
 	for i, c in ipairs(st.contracts or {}) do
 		local row = K.new("Frame", { Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, LayoutOrder = i }, w.contracts)
 		K.text(row, { Text = contractText(c), Font = K.BODY, TextSize = 14, TextColor3 = P.ink, TextWrapped = true, Size = UDim2.new(1, -60, 0, 22), RichText = false })
-		K.text(row, { Text = string.format("%d/%d", c.progress, c.n), TextSize = 16, TextColor3 = P.ink, Outline = false, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.fromOffset(56, 22), TextXAlignment = Enum.TextXAlignment.Right })
+		K.text(row, { Text = c.ready and "✅" or string.format("%d/%d", c.progress, c.n), TextSize = 16, TextColor3 = P.ink, Outline = false, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.fromOffset(56, 22), TextXAlignment = Enum.TextXAlignment.Right })
 		local bar = K.new("Frame", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 8), BackgroundColor3 = C(226, 218, 200) }, row)
 		K.corner(bar, 4)
-		local fill = K.new("Frame", { Size = UDim2.fromScale(c.progress / c.n, 1), BackgroundColor3 = P.green }, bar)
+		local fill = K.new("Frame", { Size = UDim2.fromScale(c.progress / c.n, 1), BackgroundColor3 = c.ready and P.yellow or P.green }, bar)
 		K.corner(fill, 4)
 		table.insert(w.contractRows, row)
 	end
@@ -293,11 +466,20 @@ function X.Init(ui)
 	P = K.P
 	buildShop()
 	buildDonate()
+	buildTony()
+	buildTune()
 	buildHud()
+	UI.OnTune = function(uid)
+		tuneUid = uid
+		UI.TogglePanel("tune")
+	end
 	table.insert(UI.Hooks, function(st, open)
 		refreshShop(st, open)
 		refreshDonate(st, open)
+		refreshTony(st, open)
+		refreshTune(st, open)
 		refreshHud(st)
+		refreshBoard(st)
 	end)
 	K.store.MoneyChanged.Event:Connect(function()
 		local st = K.store.State
@@ -312,6 +494,15 @@ function X.Init(ui)
 			UI.TogglePanel("shop")
 		elseif n == "DonatePrompt" then
 			UI.TogglePanel("donate")
+		elseif n == "TonyPrompt" then
+			tonyTab = "rewards"
+			for _, c in ipairs(K.store.State and K.store.State.contracts or {}) do
+				if c.ready then
+					K.actions.Claim("all") -- walking up pays out everything that's done
+					break
+				end
+			end
+			UI.TogglePanel("tony")
 		end
 	end)
 	local acc = 0

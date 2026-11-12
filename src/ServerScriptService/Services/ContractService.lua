@@ -1,4 +1,4 @@
--- Contracts board: three active jobs per player, auto-claimed on completion and replaced.
+-- Contracts board: three active jobs per player. Finished jobs wait as "ready" until claimed at Big Tony.
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -94,7 +94,8 @@ function Contracts.Fill(s)
 	end
 end
 
-local function complete(player, s, c, index)
+-- paid out by MechanicService when the player talks to Big Tony
+function Contracts.Reward(player, s, c, index)
 	local d = s.data
 	local mult = S.Shop.HasPass(s, "double_contracts") and 2 or 1
 	d.money = math.min(d.money + c.reward.money * mult, EconomyConfig.MaxMoney)
@@ -102,6 +103,7 @@ local function complete(player, s, c, index)
 	d.stats.contracts = (d.stats.contracts or 0) + 1
 	table.remove(d.contracts, index)
 	S.Data.Notify(player, "contractDone", { c.reward.money * mult }, "good")
+	S.Data.Push(player)
 	task.delay(3, function()
 		if player.Parent and S.Data.Get(player) == s then
 			Contracts.Fill(s)
@@ -134,11 +136,12 @@ function Contracts.Progress(player, event, amount, extra)
 				add = amount or 1
 			end
 		end
-		if add > 0 then
+		if add > 0 and not c.ready then
 			c.progress = math.min(c.n, c.progress + add)
 			changed = true
 			if c.progress >= c.n then
-				complete(player, s, c, i)
+				c.ready = true
+				S.Data.Notify(player, "contractReady", nil, "good")
 			end
 		end
 	end

@@ -11,6 +11,7 @@ local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 local ShopConfig = require(Shared:WaitForChild("ShopConfig"))
+local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
 
 local DataService = {}
 local S
@@ -40,6 +41,7 @@ local function newProfile(isNew)
 		boosts = {},
 		receipts = {},
 		contracts = {},
+		tuning = {},
 	}
 	if isNew then
 		for id, n in pairs(EconomyConfig.StarterParts) do
@@ -100,7 +102,16 @@ local function sanitize(raw)
 					slot = c.parkedSlot
 					seenSlot[slot] = true
 				end
-				table.insert(p.cars, { uid = c.uid, typeId = c.typeId, level = level, parkedSlot = slot })
+				local tune = {}
+				if type(c.tune) == "table" then
+					for cat, itemId in pairs(c.tune) do
+						local it = TuningConfig.Items[itemId]
+						if it and it.cat == cat then
+							tune[cat] = itemId
+						end
+					end
+				end
+				table.insert(p.cars, { uid = c.uid, typeId = c.typeId, level = level, parkedSlot = slot, tune = tune })
 			end
 		end
 	end
@@ -154,9 +165,19 @@ local function sanitize(raw)
 				table.insert(p.contracts, {
 					id = tostring(c.id), kind = c.kind, progress = math.min(toCount(c.progress, 20), c.n), n = c.n,
 					part = PartConfig.Parts[c.part] and c.part or nil, zone = type(c.zone) == "string" and c.zone or nil,
-					mult = tonumber(c.mult), seconds = tonumber(c.seconds),
+					mult = tonumber(c.mult), seconds = tonumber(c.seconds), ready = c.ready == true or nil,
 					reward = { money = toCount(c.reward.money, 1e12), part = c.reward.part, n = math.clamp(toCount(c.reward.n, 4), 1, 4) },
 				})
+			end
+		end
+	end
+	if type(raw.tuning) == "table" then
+		for id, n in pairs(raw.tuning) do
+			if TuningConfig.Items[id] then
+				local v = toCount(n, 999)
+				if v > 0 then
+					p.tuning[id] = v
+				end
 			end
 		end
 	end
@@ -388,7 +409,7 @@ function DataService.BuildState(s)
 	local d = s.data
 	local cars = {}
 	for _, c in ipairs(d.cars) do
-		table.insert(cars, { uid = c.uid, typeId = c.typeId, level = c.level, slot = c.parkedSlot })
+		table.insert(cars, { uid = c.uid, typeId = c.typeId, level = c.level, slot = c.parkedSlot, tune = Util.CopyTable(c.tune or {}) })
 	end
 	return {
 		money = d.money,
@@ -411,6 +432,7 @@ function DataService.BuildState(s)
 		boosts = { income = math.max(0, (d.boosts.income or 0) - os.time()), luck = math.max(0, (d.boosts.luck or 0) - os.time()) },
 		passes = Util.CopyTable(s.passes or {}),
 		contracts = Util.CopyTable(d.contracts),
+		tuning = Util.CopyTable(d.tuning),
 		walkSpeed = S.Shop.WalkSpeed(s),
 		pickupRadius = S.Shop.PickupRadius(s),
 		airbagIn = S.Shop.AirbagReadyIn(s),

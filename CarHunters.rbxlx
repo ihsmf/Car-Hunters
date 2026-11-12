@@ -166,6 +166,15 @@ function CarConfig.IncomeAt(def, level)
 	return math.floor(def.income * (1 + CarConfig.IncomeGrowth * (level - 1)) + 0.5)
 end
 
+-- income of one owned car incl. its tuning parts
+function CarConfig.CarIncome(car)
+	local def = CarConfig.ById[car.typeId]
+	if not def then
+		return 0
+	end
+	return math.floor(CarConfig.IncomeAt(def, car.level) * require(script.Parent.TuningConfig).CarMult(car.tune) + 0.5)
+end
+
 function CarConfig.ValueAt(def, level)
 	return math.floor(def.value * (1 + 0.3 * (level - 1)))
 end
@@ -585,6 +594,9 @@ Net.Names = {
 	"BankFx",
 	"PickupFx",
 	"BuyFloor",
+	"ClaimContract",
+	"CraftTuning",
+	"TuneCar",
 }
 
 function Net.Folder()
@@ -836,13 +848,20 @@ local en = {
 	n_needFloor = "Build the next floor first (at the lift).", n_fillFloor = "Buy all bays on this floor first.", n_floorBuilt = "Floor %d built!",
 	n_perkBought = "%s upgraded to Lv %d!", n_donateThanks = "Thank you! %s is yours!", n_donateOff = "This item is not on sale yet.",
 	n_hotDropMine = "HOT DROP! +%d %s - now run home!", n_contractDone = "Contract done! +$%s",
+	n_contractReady = "Contract complete! Claim it from Big Tony.", n_seeTony = "Walk up to Big Tony first.",
+	n_noTuneParts = "Not enough tuning parts.", n_crafted = "Tony built you a %s!", n_tuned = "%s installed!", n_untuned = "Part removed.",
+	n_tuneAtBase = "Tune your cars at your garage.",
+	tony_title = "BIG TONY", tony_rewards = "REWARDS", tony_exchange = "EXCHANGE", tony_claim = "CLAIM", tony_working = "IN PROGRESS",
+	tony_hint = "Finish contracts on the road, then come back here for the cash.", tony_build = "BUILD", tony_have = "Have: %d",
+	tune_title = "TUNING", btn_tune = "TUNE", tune_empty = "empty", tune_remove = "REMOVE", tune_none = "No parts - trade at Big Tony",
+	shop_tab_perks = "UPGRADES", shop_tab_garage = "GARAGE", map_tony = "BIG TONY",
 	n_banked2 = "Banked %d parts (+%d combo bonus, x%s) +$%s",
 	shop_title = "PIT STOP", shop_buy = "BUY", shop_max = "MAX", shop_lv = "Lv %d/%d",
 	donate_title = "GOLDEN MAGNATE", donate_boost = "BOOSTS", donate_pack = "PACKS", donate_pass = "PASSES", donate_owned = "OWNED",
 	contracts_title = "CONTRACTS", combo = "COMBO x%s", combo_hint = "Run home to bank!", speed_bonus = "Speed bonus: %ds",
 	hot_drop = "HOT DROP", hot_drop_in = "Hot Drop incoming: %s in %ds", hot_drop_taken = "%s grabbed the Hot Drop!",
 	hot_drop_called = "%s called a Hot Drop!", airbag = "AIRBAG SAVED YOU!", map_base = "MY GARAGE", map_shop = "PIT STOP",
-	map_donate = "MAGNATE", map_contracts = "CONTRACTS", btn_magnate = "SHOP",
+	map_donate = "MAGNATE", map_contracts = "TONY + CONTRACTS", btn_magnate = "SHOP",
 	c_bank_part = "Bring home %d %s from %s", c_combo = "Bank a run with combo x%s", c_speed = "Bank a run within %ds",
 	c_throw = "Throw %d parts into the trap", c_road = "Grab %d road crates", c_hotdrop = "Grab a Hot Drop",
 	lb_title = "TOP INCOME / SEC", free_garage = "FREE GARAGE", garage_of = "%s's Garage",
@@ -1440,7 +1459,7 @@ local Kinds = {
 }
 
 return Kinds
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXD538F495EA6C47A78E9DB93D956E9DF4"><Properties><string name="Name">DonateConfig</string><ProtectedString name="Source">-- Golden Magnate stall. Prices in Robux. Grants are performed on the server (DonateService).
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX69A78432C38B43B6899D2CF16976A699"><Properties><string name="Name">DonateConfig</string><ProtectedString name="Source">-- Golden Magnate stall. Prices in Robux. Grants are performed on the server (DonateService).
 local DonateConfig = {}
 
 DonateConfig.Products = {
@@ -1478,7 +1497,7 @@ for _, list in ipairs({ DonateConfig.Products, DonateConfig.Passes }) do
 end
 
 return DonateConfig
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX602B0289BD02489DBC3B4556FC89273A"><Properties><string name="Name">ExhaustFx</string><ProtectedString name="Source">-- Rarity-based exhaust for cars parked in a garage. Rarer = denser, brighter, flashier.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX6AF4E80C5B9A446CB8ECDEE15AEFC75B"><Properties><string name="Name">ExhaustFx</string><ProtectedString name="Source">-- Rarity-based exhaust for cars parked in a garage. Rarer = denser, brighter, flashier.
 local CollectionService = game:GetService("CollectionService")
 local Kinds = require(script.Parent:WaitForChild("VehicleKinds"))
 
@@ -1564,7 +1583,7 @@ function ExhaustFx.Attach(model, def, rarityIndex)
 end
 
 return ExhaustFx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXB298E8F4295A4F78BA998F0A97A1B50D"><Properties><string name="Name">GarageKit</string><ProtectedString name="Source">-- Shared garage pieces: colour style, parking bay, upper floors. Used by BuildCityMap (ground floor)
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXD65E35E15E4E45ABA52BF16665DCDBE7"><Properties><string name="Name">GarageKit</string><ProtectedString name="Source">-- Shared garage pieces: colour style, parking bay, upper floors. Used by BuildCityMap (ground floor)
 -- and BaseService (floors 2-4 are built per owner). No two visible faces share a plane.
 local BaseLayout = require(script.Parent:WaitForChild("BaseLayout"))
 local MapConfig = require(script.Parent:WaitForChild("MapConfig"))
@@ -1720,7 +1739,7 @@ function GarageKit.ApplyStyle(root, style)
 end
 
 return GarageKit
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX85292A20A35043A8B65AB5D6E2D7C9B1"><Properties><string name="Name">ProductIds</string><ProtectedString name="Source">-- Filled by tools/roblox_open_cloud.py (Open Cloud). 0 = not created yet: in Studio the purchase is simulated.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX8F33587BC99947BB9A43DB3E05965072"><Properties><string name="Name">ProductIds</string><ProtectedString name="Source">-- Filled by tools/roblox_open_cloud.py (Open Cloud). 0 = not created yet: in Studio the purchase is simulated.
 return {
 	products = {
 		cash_s = 0, cash_m = 0, cash_l = 0, cash_xl = 0,
@@ -1732,7 +1751,7 @@ return {
 		vip = 0, big_backpack = 0, auto_collect = 0, golden_car = 0, double_contracts = 0, fast_trap = 0,
 	},
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX437945A384A644699B98ACC636936729"><Properties><string name="Name">ShopConfig</string><ProtectedString name="Source">-- Pit Stop upgrades (in-game money). Effects are read on the server through ShopService.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX6A1086A0BDE04887BBC5D3AEEC9836B1"><Properties><string name="Name">ShopConfig</string><ProtectedString name="Source">-- Pit Stop upgrades (in-game money). Effects are read on the server through ShopService.
 local ShopConfig = {}
 
 local function curve(base, growth, max)
@@ -1766,12 +1785,95 @@ function ShopConfig.NextCost(id, level)
 end
 
 return ShopConfig
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4413E91B55314EF5911B4F489287FE82"><Properties><string name="Name">SoundIds</string><ProtectedString name="Source">-- Sound asset ids (ElevenLabs SFX uploaded by tools/roblox_open_cloud.py). 0 = not uploaded: built-in fallback is used.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXB5028AE359664122910780F31E199908"><Properties><string name="Name">SoundIds</string><ProtectedString name="Source">-- Sound asset ids (ElevenLabs SFX uploaded by tools/roblox_open_cloud.py). 0 = not uploaded: built-in fallback is used.
 return {
 	click = 129701225439846, open = 137919267005389, err = 93818499880209, ping = 88613645625966, throw = 119327249998497, clank = 81236574431044, charge = 119801036998398, reveal = 104359112527062, revealBig = 89971480285601, land = 105360367997502, drive = 135356508628598,
 	pickup = 115648143432870, pickupBig = 88679381563835, bank = 106536817236294, bankCombo = 118911778326066, combo = 117977986909264, cash = 94389113268355, siren = 91817872654141, crash = 95389621886750, wrecked = 139719815735975, airbag = 86864075035630,
 	whoosh = 106593268383104, fanfare = 132390340647866, ambience = 0,
 }
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7B6DF278BA4F4B2D94D74750FB090637"><Properties><string name="Name">TuningConfig</string><ProtectedString name="Source">-- Tuning parts: each car has one slot per category; parts add a % to that car's income.
+-- Stage 1-2 are traded at Big Tony (contracts board), Stage 3 only drops in the last districts/arenas.
+local TuningConfig = {}
+
+TuningConfig.Categories = {
+	{ id = "ecu", name = "ECU", icon = "💾" },
+	{ id = "boost", name = "Boost", icon = "🌀" },
+	{ id = "exhaust", name = "Exhaust", icon = "💨" },
+	{ id = "intake", name = "Intake", icon = "🌬️" },
+	{ id = "nitro", name = "Nitro", icon = "🧪" },
+	{ id = "tires", name = "Tires", icon = "🛞" },
+	{ id = "aero", name = "Aero", icon = "🪽" },
+}
+
+-- family -&gt; { category, name, icon, bonus per stage }
+local FAMILIES = {
+	ecu = { cat = "ecu", name = "Chip Tune", icon = "💾", bonus = { 0.10, 0.20, 0.35 } },
+	turbo = { cat = "boost", name = "Turbo Kit", icon = "🌀", bonus = { 0.25, 0.50, 0.90 } },
+	super = { cat = "boost", name = "Supercharger", icon = "⚙️", bonus = { 0.30, 0.60, 1.00 } },
+	exhaust = { cat = "exhaust", name = "Sport Exhaust", icon = "💨", bonus = { 0.08, 0.16, 0.28 } },
+	intake = { cat = "intake", name = "Cold Air Intake", icon = "🌬️", bonus = { 0.06, 0.12, 0.20 } },
+	nitro = { cat = "nitro", name = "Nitro Kit", icon = "🧪", bonus = { 0.12, 0.25, 0.45 } },
+	tires = { cat = "tires", name = "Racing Tires", icon = "🛞", bonus = { 0.05, 0.10, 0.18 } },
+	aero = { cat = "aero", name = "Aero Kit", icon = "🪽", bonus = { 0.06, 0.12, 0.22 } },
+}
+TuningConfig.Families = FAMILIES
+
+TuningConfig.Items = {}
+TuningConfig.Order = {}
+for _, fam in ipairs({ "ecu", "turbo", "super", "exhaust", "intake", "nitro", "tires", "aero" }) do
+	local F = FAMILIES[fam]
+	for stage = 1, 3 do
+		local id = fam .. stage
+		TuningConfig.Items[id] = { id = id, family = fam, cat = F.cat, stage = stage, bonus = F.bonus[stage],
+			name = F.name .. " " .. string.rep("I", stage), icon = F.icon }
+		table.insert(TuningConfig.Order, id)
+	end
+end
+
+-- Big Tony's exchange: parts (+ money) -&gt; tuning part. Stage 2 consumes two Stage 1 of the same family.
+TuningConfig.Recipes = {
+	{ out = "ecu1", parts = { bolts = 15, tire = 6 }, money = 2000 },
+	{ out = "intake1", parts = { bolts = 20, tire = 4 }, money = 1500 },
+	{ out = "exhaust1", parts = { bolts = 10, tire = 8 }, money = 3000 },
+	{ out = "tires1", parts = { tire = 12 }, money = 2500 },
+	{ out = "aero1", parts = { bolts = 25, tire = 5 }, money = 4000 },
+	{ out = "nitro1", parts = { engine = 3, turbo = 1 }, money = 10000 },
+	{ out = "turbo1", parts = { engine = 4, turbo = 2 }, money = 15000 },
+	{ out = "super1", parts = { engine = 5, turbo = 2 }, money = 20000 },
+}
+do
+	local stage2 = {}
+	for _, r in ipairs(TuningConfig.Recipes) do
+		local fam = TuningConfig.Items[r.out].family
+		table.insert(stage2, { out = fam .. "2", tune = { [r.out] = 2 }, parts = { core = 1 }, money = r.money * 8 })
+	end
+	for _, r in ipairs(stage2) do
+		table.insert(TuningConfig.Recipes, r)
+	end
+	for i, r in ipairs(TuningConfig.Recipes) do
+		r.id = "r" .. i
+	end
+end
+TuningConfig.RecipeById = {}
+for _, r in ipairs(TuningConfig.Recipes) do
+	TuningConfig.RecipeById[r.id] = r
+end
+
+-- multiplier for one car's tune table { [category] = itemId }
+function TuningConfig.CarMult(tune)
+	local m = 1
+	if type(tune) == "table" then
+		for cat, itemId in pairs(tune) do
+			local it = TuningConfig.Items[itemId]
+			if it and it.cat == cat then
+				m = m + it.bonus
+			end
+		end
+	end
+	return m
+end
+
+return TuningConfig
 </ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX26"><Properties><string name="Name">Remotes</string></Properties><Item class="RemoteEvent" referent="RBX1036"><Properties><string name="Name">AutoPark</string></Properties></Item><Item class="RemoteEvent" referent="RBX1035"><Properties><string name="Name">SellCar</string></Properties></Item><Item class="RemoteEvent" referent="RBX1"><Properties><string name="Name">StateUpdate</string></Properties></Item><Item class="RemoteEvent" referent="RBX2"><Properties><string name="Name">MoneySync</string></Properties></Item><Item class="RemoteEvent" referent="RBX3"><Properties><string name="Name">Notify</string></Properties></Item><Item class="RemoteEvent" referent="RBX4"><Properties><string name="Name">ThrowPart</string></Properties></Item><Item class="RemoteEvent" referent="RBX5"><Properties><string name="Name">ThrowResult</string></Properties></Item><Item class="RemoteEvent" referent="RBX6"><Properties><string name="Name">PlaceCar</string></Properties></Item><Item class="RemoteEvent" referent="RBX7"><Properties><string name="Name">RemoveCar</string></Properties></Item><Item class="RemoteEvent" referent="RBX8"><Properties><string name="Name">UpgradeCar</string></Properties></Item><Item class="RemoteEvent" referent="RBX9"><Properties><string name="Name">BuySlot</string></Properties></Item><Item class="RemoteEvent" referent="RBX10"><Properties><string name="Name">UnlockZone</string></Properties></Item><Item class="RemoteEvent" referent="RBX11"><Properties><string name="Name">HitFx</string></Properties></Item></Item></Item><Item class="ServerScriptService" referent="RBX40"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Script" referent="RBX28"><Properties><string name="Name">ServerBootstrap</string><token name="RunContext">0</token><ProtectedString name="Source">local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
@@ -1862,7 +1964,7 @@ local S = {}
 local names = { Data = "DataService", Inventory = "InventoryService", Base = "BaseService", PartSpawn = "PartSpawnService",
 	Traffic = "TrafficService", Capture = "CaptureService", Cars = "CarCollectionService", Income = "IncomeService",
 	Upgrade = "UpgradeService", Zone = "ZoneService", Warp = "WarpService", Shop = "ShopService", Donate = "DonateService",
-	HotDrop = "HotDropService", Contracts = "ContractService" }
+	HotDrop = "HotDropService", Contracts = "ContractService", Tuning = "TuningService", Mechanic = "MechanicService" }
 for key, moduleName in pairs(names) do
 	S[key] = require(Services:WaitForChild(moduleName))
 end
@@ -1885,6 +1987,9 @@ Net.Get("AutoPark").OnServerEvent:Connect(function(p) S.Cars.AutoPark(p) end)
 Net.Get("Teleport").OnServerEvent:Connect(function(p, dest) S.Warp.Go(p, dest) end)
 Net.Get("BuyPerk").OnServerEvent:Connect(function(p, id) S.Shop.Buy(p, id) end)
 Net.Get("Donate").OnServerEvent:Connect(function(p, id) S.Donate.Request(p, id) end)
+Net.Get("ClaimContract").OnServerEvent:Connect(function(p, id) S.Mechanic.Claim(p, id) end)
+Net.Get("CraftTuning").OnServerEvent:Connect(function(p, id) S.Mechanic.Craft(p, id) end)
+Net.Get("TuneCar").OnServerEvent:Connect(function(p, uid, cat, item) S.Tuning.Set(p, uid, cat, item) end)
 
 local function hookCharacter(player, char)
 	local hum = char:WaitForChild("Humanoid", 10)
@@ -1957,6 +2062,7 @@ end)
 
 print("[CarHunters] server ready. Spawn points:", S.PartSpawn.PointCount())
 </ProtectedString></Properties></Item><Item class="Folder" referent="RBX39"><Properties><string name="Name">Services</string></Properties><Item class="ModuleScript" referent="RBX29"><Properties><string name="Name">BaseService</string><ProtectedString name="Source">local Players = game:GetService("Players")
+local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -1970,6 +2076,7 @@ local ExhaustFx = require(Shared:WaitForChild("ExhaustFx"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 local Util = require(Shared:WaitForChild("Util"))
 local GarageKit = require(Shared:WaitForChild("GarageKit"))
+local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
 
 local Base = {}
 local S
@@ -2117,10 +2224,46 @@ function Base.IsNearOwnBase(player)
 	return (hrp.Position - center).Magnitude &lt;= EconomyConfig.BaseActionDistance
 end
 
-local function buildCarModel(def, level, slotCF)
+-- visible tuning: aero adds a wing, boost/nitro make the exhaust spit flames
+local function applyTuneVisuals(model, def, tune)
+	local root = model.PrimaryPart
+	if not root or type(tune) ~= "table" then
+		return
+	end
+	if tune.boost or tune.nitro then
+		for _, att in ipairs(root:GetChildren()) do
+			if att:IsA("Attachment") and att.Name == "Exhaust" then
+				CollectionService:AddTag(att, "Backfire")
+				att:SetAttribute("Color", tune.nitro and Color3.fromRGB(90, 170, 255) or Color3.fromRGB(255, 140, 40))
+			end
+		end
+	end
+	if tune.aero then
+		local ext = model:GetExtentsSize()
+		local stage = TuningConfig.Items[tune.aero].stage
+		local back = root.CFrame * CFrame.new(-ext.X / 2 + 0.9, ext.Y / 2 + 0.3 + stage * 0.15, 0)
+		local function wingPart(size, cf)
+			local p = Instance.new("Part")
+			p.Name = "Wing"
+			p.Size = size
+			p.CFrame = cf
+			p.Color = stage == 3 and Color3.fromRGB(30, 30, 34) or def.body or Color3.fromRGB(30, 30, 34)
+			p.Material = stage == 3 and Enum.Material.Carbon or Enum.Material.SmoothPlastic
+			p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.Massless = true, false, false, false, true
+			p.Parent = model
+		end
+		wingPart(Vector3.new(1.1, 0.14, ext.Z * 0.9), back)
+		for _, z in ipairs({ -1, 1 }) do
+			wingPart(Vector3.new(0.5, 0.8, 0.14), back * CFrame.new(0.1, -0.45, z * ext.Z * 0.3))
+		end
+	end
+end
+
+local function buildCarModel(def, level, slotCF, car)
 	local model = VehicleFactory.BuildCar(def)
 	model:PivotTo(slotCF)
 	ExhaustFx.Attach(model, def, CarConfig.Rarities[def.rarity].index)
+	applyTuneVisuals(model, def, car and car.tune)
 	local rarity = CarConfig.Rarities[def.rarity]
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Tag"
@@ -2137,7 +2280,7 @@ local function buildCarModel(def, level, slotCF)
 	label.TextSize = 14
 	label.TextColor3 = rarity.color
 	label.TextStrokeTransparency = 0.3
-	label.Text = string.format("%s  Lv%d\n+%s/s", def.name, level, Util.FormatNumber(CarConfig.IncomeAt(def, level)))
+	label.Text = string.format("%s  Lv%d\n+%s/s", def.name, level, Util.FormatNumber(car and CarConfig.CarIncome(car) or CarConfig.IncomeAt(def, level)))
 	label.Parent = gui
 	gui.Parent = model.PrimaryPart
 	return model
@@ -2177,7 +2320,7 @@ function Base.RefreshAll(player)
 		else
 			setPad(pad, "free")
 		end
-		local want = (car and not hidden) and (car.uid .. ":" .. car.level) or nil
+		local want = (car and not hidden) and (car.uid .. ":" .. car.level .. ":" .. TuningConfig.CarMult(car.tune)) or nil
 		if b.sig[slot] ~= want then
 			if b.carModels[slot] then
 				b.carModels[slot]:Destroy()
@@ -2186,7 +2329,7 @@ function Base.RefreshAll(player)
 			b.sig[slot] = want
 			if want then
 				local def = CarConfig.ById[car.typeId]
-				local model = buildCarModel(def, car.level, BaseLayout.SlotCFrame(b.index, slot))
+				local model = buildCarModel(def, car.level, BaseLayout.SlotCFrame(b.index, slot), car)
 				model.Name = "Car_" .. slot
 				model.Parent = b.cars
 				b.carModels[slot] = model
@@ -2459,8 +2602,8 @@ function Cars.AutoPark(player)
 		end
 	end
 	table.sort(list, function(a, b)
-		local ia = CarConfig.IncomeAt(CarConfig.ById[a.typeId], a.level)
-		local ib = CarConfig.IncomeAt(CarConfig.ById[b.typeId], b.level)
+		local ia = CarConfig.CarIncome(a)
+		local ib = CarConfig.CarIncome(b)
 		if ia ~= ib then
 			return ia &gt; ib
 		end
@@ -2499,6 +2642,7 @@ local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 local ShopConfig = require(Shared:WaitForChild("ShopConfig"))
+local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
 
 local DataService = {}
 local S
@@ -2528,6 +2672,7 @@ local function newProfile(isNew)
 		boosts = {},
 		receipts = {},
 		contracts = {},
+		tuning = {},
 	}
 	if isNew then
 		for id, n in pairs(EconomyConfig.StarterParts) do
@@ -2588,7 +2733,16 @@ local function sanitize(raw)
 					slot = c.parkedSlot
 					seenSlot[slot] = true
 				end
-				table.insert(p.cars, { uid = c.uid, typeId = c.typeId, level = level, parkedSlot = slot })
+				local tune = {}
+				if type(c.tune) == "table" then
+					for cat, itemId in pairs(c.tune) do
+						local it = TuningConfig.Items[itemId]
+						if it and it.cat == cat then
+							tune[cat] = itemId
+						end
+					end
+				end
+				table.insert(p.cars, { uid = c.uid, typeId = c.typeId, level = level, parkedSlot = slot, tune = tune })
 			end
 		end
 	end
@@ -2642,9 +2796,19 @@ local function sanitize(raw)
 				table.insert(p.contracts, {
 					id = tostring(c.id), kind = c.kind, progress = math.min(toCount(c.progress, 20), c.n), n = c.n,
 					part = PartConfig.Parts[c.part] and c.part or nil, zone = type(c.zone) == "string" and c.zone or nil,
-					mult = tonumber(c.mult), seconds = tonumber(c.seconds),
+					mult = tonumber(c.mult), seconds = tonumber(c.seconds), ready = c.ready == true or nil,
 					reward = { money = toCount(c.reward.money, 1e12), part = c.reward.part, n = math.clamp(toCount(c.reward.n, 4), 1, 4) },
 				})
+			end
+		end
+	end
+	if type(raw.tuning) == "table" then
+		for id, n in pairs(raw.tuning) do
+			if TuningConfig.Items[id] then
+				local v = toCount(n, 999)
+				if v &gt; 0 then
+					p.tuning[id] = v
+				end
 			end
 		end
 	end
@@ -2876,7 +3040,7 @@ function DataService.BuildState(s)
 	local d = s.data
 	local cars = {}
 	for _, c in ipairs(d.cars) do
-		table.insert(cars, { uid = c.uid, typeId = c.typeId, level = c.level, slot = c.parkedSlot })
+		table.insert(cars, { uid = c.uid, typeId = c.typeId, level = c.level, slot = c.parkedSlot, tune = Util.CopyTable(c.tune or {}) })
 	end
 	return {
 		money = d.money,
@@ -2899,6 +3063,7 @@ function DataService.BuildState(s)
 		boosts = { income = math.max(0, (d.boosts.income or 0) - os.time()), luck = math.max(0, (d.boosts.luck or 0) - os.time()) },
 		passes = Util.CopyTable(s.passes or {}),
 		contracts = Util.CopyTable(d.contracts),
+		tuning = Util.CopyTable(d.tuning),
 		walkSpeed = S.Shop.WalkSpeed(s),
 		pickupRadius = S.Shop.PickupRadius(s),
 		airbagIn = S.Shop.AirbagReadyIn(s),
@@ -2962,7 +3127,7 @@ function Income.Recalc(player)
 		if def then
 			value = value + CarConfig.ValueAt(def, c.level)
 			if c.parkedSlot then
-				inc = inc + CarConfig.IncomeAt(def, c.level)
+				inc = inc + CarConfig.CarIncome(c)
 			end
 		end
 	end
@@ -3684,7 +3849,7 @@ function Zone.Start()
 end
 
 return Zone
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXA1FFB5A527A44802AE289F007B7BED85"><Properties><string name="Name">ContractService</string><ProtectedString name="Source">-- Contracts board: three active jobs per player, auto-claimed on completion and replaced.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4D2C6563496A4724B12748A12CF638E5"><Properties><string name="Name">ContractService</string><ProtectedString name="Source">-- Contracts board: three active jobs per player. Finished jobs wait as "ready" until claimed at Big Tony.
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -3780,7 +3945,8 @@ function Contracts.Fill(s)
 	end
 end
 
-local function complete(player, s, c, index)
+-- paid out by MechanicService when the player talks to Big Tony
+function Contracts.Reward(player, s, c, index)
 	local d = s.data
 	local mult = S.Shop.HasPass(s, "double_contracts") and 2 or 1
 	d.money = math.min(d.money + c.reward.money * mult, EconomyConfig.MaxMoney)
@@ -3788,6 +3954,7 @@ local function complete(player, s, c, index)
 	d.stats.contracts = (d.stats.contracts or 0) + 1
 	table.remove(d.contracts, index)
 	S.Data.Notify(player, "contractDone", { c.reward.money * mult }, "good")
+	S.Data.Push(player)
 	task.delay(3, function()
 		if player.Parent and S.Data.Get(player) == s then
 			Contracts.Fill(s)
@@ -3820,11 +3987,12 @@ function Contracts.Progress(player, event, amount, extra)
 				add = amount or 1
 			end
 		end
-		if add &gt; 0 then
+		if add &gt; 0 and not c.ready then
 			c.progress = math.min(c.n, c.progress + add)
 			changed = true
 			if c.progress &gt;= c.n then
-				complete(player, s, c, i)
+				c.ready = true
+				S.Data.Notify(player, "contractReady", nil, "good")
 			end
 		end
 	end
@@ -3852,7 +4020,7 @@ function Contracts.Start()
 end
 
 return Contracts
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX20123FCF74054E5DA51466A16FD12544"><Properties><string name="Name">DonateService</string><ProtectedString name="Source">-- Golden Magnate stall: developer products + game passes, with idempotent receipt processing.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXA5047EDB928B49C6B56EF3D94E521297"><Properties><string name="Name">DonateService</string><ProtectedString name="Source">-- Golden Magnate stall: developer products + game passes, with idempotent receipt processing.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -4136,7 +4304,7 @@ function Donate.Start()
 end
 
 return Donate
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX08E7646E045446858BFACDFCBC669829"><Properties><string name="Name">HotDropService</string><ProtectedString name="Source">-- Hot Drop: every ~80 s a rare crate parachutes onto a dangerous spot. First player to grab it wins.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX15783CC591C145E888E428A47C5BD085"><Properties><string name="Name">HotDropService</string><ProtectedString name="Source">-- Hot Drop: every ~80 s a rare crate parachutes onto a dangerous spot. First player to grab it wins.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -4346,7 +4514,181 @@ function HotDrop.Start()
 end
 
 return HotDrop
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX59EB4B605C474D4492600445FC4D90EF"><Properties><string name="Name">ShopService</string><ProtectedString name="Source">-- Pit Stop: perks bought with in-game money + the mechanic NPC. All perk effects are read through this module.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX9143677EB00A42CAB2002511E91484B1"><Properties><string name="Name">MechanicService</string><ProtectedString name="Source">-- Big Tony, the rich mechanic next to the contracts board: hands out finished contract rewards
+-- and trades banked parts for tuning parts.
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
+
+local Mechanic = {}
+local S
+local spotPos
+local anims
+
+function Mechanic.Init(hub)
+	S = hub
+end
+
+local function nearTony(player)
+	local hrp = S.Data.GetRoot(player)
+	return hrp and spotPos and (hrp.Position - spotPos).Magnitude &lt;= 24
+end
+
+local function gesture()
+	if anims and anims.point then
+		anims.point:Play()
+	elseif anims and anims.wave then
+		anims.wave:Play()
+	end
+end
+
+function Mechanic.Claim(player, id)
+	local s = S.Data.Get(player)
+	if not s or not s.ready or not S.Data.RateLimit(player, "claim", 0.3) then
+		return
+	end
+	if not nearTony(player) then
+		S.Data.Notify(player, "seeTony", nil, "warn")
+		return
+	end
+	local d = s.data
+	for i = #d.contracts, 1, -1 do
+		local c = d.contracts[i]
+		if (id == "all" or c.id == id) and c.ready then
+			S.Contracts.Reward(player, s, c, i)
+			gesture()
+		end
+	end
+end
+
+function Mechanic.Craft(player, recipeId)
+	local s = S.Data.Get(player)
+	local r = type(recipeId) == "string" and TuningConfig.RecipeById[recipeId]
+	if not s or not s.ready or not r or not S.Data.RateLimit(player, "craft", 0.3) then
+		return
+	end
+	if not nearTony(player) then
+		S.Data.Notify(player, "seeTony", nil, "warn")
+		return
+	end
+	local d = s.data
+	if d.money &lt; r.money then
+		S.Data.Notify(player, "noMoney", nil, "error")
+		return
+	end
+	for part, n in pairs(r.parts or {}) do
+		if (d.parts[part] or 0) &lt; n then
+			S.Data.Notify(player, "noParts", nil, "error")
+			return
+		end
+	end
+	for item, n in pairs(r.tune or {}) do
+		if (d.tuning[item] or 0) &lt; n then
+			S.Data.Notify(player, "noTuneParts", nil, "error")
+			return
+		end
+	end
+	d.money = d.money - r.money
+	for part, n in pairs(r.parts or {}) do
+		d.parts[part] = d.parts[part] - n
+	end
+	for item, n in pairs(r.tune or {}) do
+		d.tuning[item] = d.tuning[item] - n
+		if d.tuning[item] &lt;= 0 then
+			d.tuning[item] = nil
+		end
+	end
+	d.tuning[r.out] = math.min((d.tuning[r.out] or 0) + 1, 999)
+	S.Data.Notify(player, "crafted", { TuningConfig.Items[r.out].name }, "good")
+	gesture()
+	S.Data.Push(player)
+end
+
+local function dressTony(n)
+	local A = S.Shop.Attach
+	local GOLD, BLACK, WHITE = Color3.fromRGB(240, 190, 60), Color3.fromRGB(24, 24, 28), Color3.fromRGB(250, 250, 250)
+	local M = Enum.Material
+	-- fedora
+	A(n, "Head", Vector3.new(1.9, 0.12, 1.9), CFrame.new(0, 0.55, 0), BLACK)
+	A(n, "Head", Vector3.new(1.25, 0.6, 1.25), CFrame.new(0, 0.86, 0), BLACK)
+	A(n, "Head", Vector3.new(1.28, 0.14, 1.28), CFrame.new(0, 0.66, 0), GOLD)
+	-- shades + cigar
+	A(n, "Head", Vector3.new(1.0, 0.22, 0.1), CFrame.new(0, 0.12, -0.6), BLACK, M.Glass)
+	A(n, "Head", Vector3.new(0.12, 0.12, 0.6), CFrame.new(0.25, -0.28, -0.75), Color3.fromRGB(120, 70, 40))
+	A(n, "Head", Vector3.new(0.13, 0.13, 0.08), CFrame.new(0.25, -0.28, -1.06), Color3.fromRGB(255, 120, 40), M.Neon)
+	-- white shirt, gold tie, gold chain, pocket square
+	A(n, "UpperTorso", Vector3.new(0.7, 1.4, 0.1), CFrame.new(0, 0.15, -0.52), WHITE)
+	A(n, "UpperTorso", Vector3.new(0.22, 1.1, 0.12), CFrame.new(0, 0.05, -0.58), GOLD, M.Metal)
+	A(n, "UpperTorso", Vector3.new(1.2, 0.12, 0.12), CFrame.new(0, 0.62, -0.56), GOLD, M.Metal)
+	A(n, "UpperTorso", Vector3.new(0.3, 0.22, 0.1), CFrame.new(-0.6, 0.45, -0.53), Color3.fromRGB(214, 52, 44))
+	-- gold watch + rings, chrome wrench
+	A(n, "LeftLowerArm", Vector3.new(0.62, 0.22, 0.62), CFrame.new(0, -0.3, 0), GOLD, M.Metal)
+	A(n, "RightHand", Vector3.new(0.18, 0.18, 0.18), CFrame.new(0.2, -0.1, -0.2), GOLD, M.Metal)
+	local wrench = A(n, "RightHand", Vector3.new(0.22, 1.7, 0.22), CFrame.new(0, -0.6, 0), Color3.fromRGB(230, 232, 236), M.Metal)
+	if wrench then
+		wrench.Reflectance = 0.4
+	end
+	-- polished shoes
+	A(n, "LeftFoot", Vector3.new(0.8, 0.3, 1.2), CFrame.new(0, -0.1, -0.1), BLACK, M.SmoothPlastic)
+	A(n, "RightFoot", Vector3.new(0.8, 0.3, 1.2), CFrame.new(0, -0.1, -0.1), BLACK, M.SmoothPlastic)
+end
+
+function Mechanic.Start()
+	task.spawn(function()
+		local map = Workspace:WaitForChild("GeneratedMap", 60)
+		local stand = map and map:FindFirstChild("ContractStand", true)
+		local spot = stand and stand:FindFirstChild("TonySpot")
+		if not spot then
+			warn("[Mechanic] ContractStand/TonySpot not found")
+			return
+		end
+		spotPos = spot.Position
+		local prompt = stand:FindFirstChild("TonyPrompt")
+		if prompt then
+			local pp = Instance.new("ProximityPrompt")
+			pp.ActionText = "Talk"
+			pp.ObjectText = "Big Tony"
+			pp.HoldDuration = 0
+			pp.MaxActivationDistance = 14
+			pp.RequiresLineOfSight = false
+			pp.Parent = prompt
+		end
+		local npc
+		npc, anims = S.Shop.MakeNpc("BigTony", {
+			skin = Color3.fromRGB(214, 164, 126), arms = Color3.fromRGB(30, 36, 58),
+			torso = Color3.fromRGB(30, 36, 58), legs = Color3.fromRGB(34, 38, 48),
+		}, spot, dressTony)
+		if not npc then
+			return
+		end
+		npc:ScaleTo(1.12)
+		npc:PivotTo(npc:GetPivot() + Vector3.new(0, 0.37, 0))
+		-- nod at players who have rewards waiting
+		local cool = 0
+		while npc.Parent do
+			task.wait(0.5)
+			cool = cool - 0.5
+			if cool &lt;= 0 then
+				for _, p in ipairs(Players:GetPlayers()) do
+					local hrp = S.Data.GetRoot(p)
+					if hrp and (hrp.Position - spotPos).Magnitude &lt; 22 then
+						if anims.wave then
+							anims.wave:Play()
+						end
+						cool = 9
+						break
+					end
+				end
+			end
+		end
+	end)
+end
+
+return Mechanic
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX89DA548A58AF412D803AE8BEB202BFC5"><Properties><string name="Name">ShopService</string><ProtectedString name="Source">-- Pit Stop: perks bought with in-game money + the mechanic NPC. All perk effects are read through this module.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -4631,7 +4973,82 @@ function Shop.Start()
 end
 
 return Shop
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX283019130E474B928ED0A8FD60B2F0FD"><Properties><string name="Name">WarpService</string><ProtectedString name="Source">-- Teleport buttons: home garage or any unlocked district. Server-validated.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX334B79EEEAB240B39487D0DD1A4FA085"><Properties><string name="Name">TuningService</string><ProtectedString name="Source">-- Install / remove tuning parts on owned cars. Removing returns the part to the inventory.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
+
+local Tuning = {}
+local S
+
+function Tuning.Init(hub)
+	S = hub
+end
+
+local CATS = {}
+for _, c in ipairs(TuningConfig.Categories) do
+	CATS[c.id] = true
+end
+
+-- itemId = nil removes the part in that category
+function Tuning.Set(player, uid, cat, itemId)
+	local s = S.Data.Get(player)
+	if not s or not s.ready or type(uid) ~= "string" or not CATS[cat] then
+		return
+	end
+	if not S.Data.RateLimit(player, "tune", 0.3) then
+		return
+	end
+	if not S.Base.IsNearOwnBase(player) then
+		S.Data.Notify(player, "tuneAtBase", nil, "warn")
+		return
+	end
+	local d = s.data
+	local car
+	for _, c in ipairs(d.cars) do
+		if c.uid == uid then
+			car = c
+		end
+	end
+	if not car then
+		return
+	end
+	car.tune = car.tune or {}
+	local it = itemId ~= nil and TuningConfig.Items[itemId]
+	if itemId ~= nil and (not it or it.cat ~= cat or (d.tuning[itemId] or 0) &lt; 1) then
+		return
+	end
+	local old = car.tune[cat]
+	if old == itemId then
+		return
+	end
+	if old then
+		d.tuning[old] = (d.tuning[old] or 0) + 1
+	end
+	if it then
+		d.tuning[itemId] = d.tuning[itemId] - 1
+		if d.tuning[itemId] &lt;= 0 then
+			d.tuning[itemId] = nil
+		end
+	end
+	car.tune[cat] = itemId
+	S.Data.Notify(player, it and "tuned" or "untuned", { it and it.name or "" }, "good")
+	S.Income.Recalc(player)
+	S.Base.RefreshAll(player)
+	S.Data.Push(player)
+end
+
+-- grant a tuning drop (Tier 3 districts, arenas)
+function Tuning.Give(player, itemId, n)
+	local s = S.Data.Get(player)
+	if s and s.data and TuningConfig.Items[itemId] then
+		s.data.tuning[itemId] = math.min((s.data.tuning[itemId] or 0) + (n or 1), 999)
+		S.Data.Push(player)
+	end
+end
+
+return Tuning
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXD32A745237BD4F18B936E5F1F5FD7EEE"><Properties><string name="Name">WarpService</string><ProtectedString name="Source">-- Teleport buttons: home garage or any unlocked district. Server-validated.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
@@ -5187,49 +5604,53 @@ local function buildShop(ctx)
 	local function mk(name, size, off, color, mat, o)
 		return Part(m, name, size, cf * CFrame.new(off), color, mat, o)
 	end
-	local W, D, H = 34, 22, 13
-	local RED, WHITE, DARK2, GLASS2 = C(214, 52, 44), C(244, 242, 236), C(36, 40, 48), C(150, 200, 230)
-	mk("Slab", Vector3.new(W + 8, 0.6, D + 12), Vector3.new(0, 0.1, -4), C(210, 206, 198), M.Concrete)
-	mk("Body", Vector3.new(W, H, D), Vector3.new(0, H / 2 + 0.4, 6), WHITE, M.SmoothPlastic)
-	mk("BaseStripe", Vector3.new(W + 0.2, 1.4, D + 0.2), Vector3.new(0, 1.1, 6), DARK2, M.SmoothPlastic)
-	mk("RoofCap", Vector3.new(W + 1.4, 1.2, D + 1.4), Vector3.new(0, H + 1, 6), RED, M.SmoothPlastic)
-	-- shop window and counter opening
-	mk("Window", Vector3.new(W - 10, 6, 0.3), Vector3.new(0, 6.2, 6 - D / 2 - 0.05), GLASS2, M.Glass, { t = 0.35 })
-	for x = -W / 2 + 5, W / 2 - 5, (W - 10) / 4 do
-		mk("Mullion", Vector3.new(0.4, 6, 0.5), Vector3.new(x, 6.2, 6 - D / 2 - 0.1), DARK2, M.Metal)
+	-- compact kiosk 12 x 8: walls never share a visible plane, the roof caps them
+	local W, D, H = 12, 8, 8.5
+	local G = 0.5 -- top of the slab
+	local RED, WHITE, DARK2, WOOD = C(214, 52, 44), C(246, 244, 238), C(36, 40, 48), C(150, 104, 62)
+	mk("Slab", Vector3.new(18, 0.6, 16), Vector3.new(0, 0.2, -2), C(206, 204, 198), M.SmoothPlastic)
+	mk("BackWall", Vector3.new(W, H, 0.6), Vector3.new(0, G + H / 2, D / 2 - 0.3), WHITE)
+	for _, sx in ipairs({ -1, 1 }) do
+		mk("SideWall", Vector3.new(0.6, H, D - 0.6), Vector3.new(sx * (W / 2 - 0.3), G + H / 2, -0.3), WHITE)
+		mk("Corner", Vector3.new(0.8, H + 0.4, 0.8), Vector3.new(sx * (W / 2 - 0.2), G + (H + 0.4) / 2, -D / 2 + 0.2), RED)
 	end
-	mk("Counter", Vector3.new(W - 8, 3.6, 3), Vector3.new(0, 2.2, 6 - D / 2 - 1.6), RED, M.SmoothPlastic)
-	mk("CounterTop", Vector3.new(W - 7, 0.4, 3.6), Vector3.new(0, 4.2, 6 - D / 2 - 1.6), C(60, 64, 72), M.Metal)
-	-- striped awning
-	for k = 0, 9 do
-		local c = (k % 2 == 0) and RED or WHITE
-		local x = -W / 2 + (k + 0.5) * (W / 10)
-		Part(m, "Awning", Vector3.new(W / 10, 0.4, 7), cf * CFrame.new(x, 10.4, 6 - D / 2 - 3.2) * CFrame.Angles(math.rad(-16), 0, 0), c, M.SmoothPlastic, { collide = false })
+	mk("Counter", Vector3.new(W - 1.6, 3.6, 1.1), Vector3.new(0, G + 1.8, -D / 2 + 0.75), RED)
+	mk("CounterTop", Vector3.new(W - 1.2, 0.3, 1.8), Vector3.new(0, G + 3.75, -D / 2 + 0.7), WOOD, M.Wood)
+	mk("Header", Vector3.new(W - 1.6, 1.6, 0.5), Vector3.new(0, G + H - 0.8, -D / 2 + 0.45), DARK2)
+	mk("Roof", Vector3.new(W + 1.6, 0.6, D + 2), Vector3.new(0, G + H + 0.3, -0.6), DARK2)
+	mk("RoofTrim", Vector3.new(W + 1.8, 0.3, 0.3), Vector3.new(0, G + H + 0.15, -D / 2 - 1.75), C(255, 196, 40))
+	-- red/white awning over the counter
+	for k = 0, 5 do
+		Part(m, "Awning", Vector3.new(W / 6, 0.25, 3.2), cf * CFrame.new(-W / 2 + (k + 0.5) * W / 6, G + H - 1.9, -D / 2 - 1.3) * CFrame.Angles(math.rad(-18), 0, 0),
+			(k % 2 == 0) and RED or WHITE, M.SmoothPlastic, { collide = false })
 	end
-	-- big sign
-	local sign = mk("ShopSign", Vector3.new(W - 4, 4.6, 0.6), Vector3.new(0, H + 4, 6 - D / 2 + 1), DARK2, M.SmoothPlastic)
-	Label(sign, Enum.NormalId.Front, "PIT STOP  UPGRADES", C(255, 210, 63))
-	for _, s in ipairs({ -1, 1 }) do
-		mk("SignLeg", Vector3.new(0.6, 3, 0.6), Vector3.new(s * (W / 2 - 4), H + 1.4, 6 - D / 2 + 1), DARK2, M.Metal)
+	-- sign on the roof
+	local sign = mk("ShopSign", Vector3.new(W - 1, 2.6, 0.5), Vector3.new(0, G + H + 1.9, -D / 2 + 0.6), DARK2)
+	Label(sign, Enum.NormalId.Front, "PIT STOP", C(255, 210, 63))
+	-- back shelves with parts for sale
+	for k, y in ipairs({ 3.2, 5.6 }) do
+		mk("Shelf", Vector3.new(W - 2.4, 0.25, 1.2), Vector3.new(0, G + y, D / 2 - 1.2), WOOD, M.Wood)
+		for i = 0, 3 do
+			local x = -W / 2 + 2.2 + i * 2.5
+			if (i + k) % 2 == 0 then
+				Part(m, "ShelfTire", Vector3.new(0.7, 1.5, 1.5), cf * CFrame.new(x, G + y + 0.88, D / 2 - 1.2) * CFrame.Angles(0, math.pi / 2, 0), C(34, 34, 38), M.SmoothPlastic, { shape = CYL, collide = false })
+			else
+				mk("OilCan", Vector3.new(0.8, 1.2, 0.6), Vector3.new(x, G + y + 0.73, D / 2 - 1.2), ({ C(255, 196, 40), C(40, 120, 200), C(50, 160, 80), RED })[i + 1], M.SmoothPlastic, { collide = false })
+			end
+		end
 	end
-	-- props: tire rack, oil cans, a lifted showcase engine
-	Prefabs.TireStack(m, cf:PointToWorldSpace(Vector3.new(-W / 2 - 1, 0.4, -5)), ctx.rng)
-	Prefabs.TireStack(m, cf:PointToWorldSpace(Vector3.new(W / 2 + 1, 0.4, -5)), ctx.rng)
-	for k = 0, 2 do
-		mk("OilCan", Vector3.new(1.2, 1.6, 1), Vector3.new(-6 + k * 1.6, 5.2, 6 - D / 2 - 1.4), ({ C(255, 196, 40), C(40, 120, 200), C(50, 160, 80) })[k + 1], M.SmoothPlastic)
-	end
-	local npcSpot = mk("NpcSpot", Vector3.new(2, 0.2, 2), Vector3.new(0, 0.5, 6 - D / 2 + 1.5), WHITE, M.SmoothPlastic, { t = 1, collide = false })
+	-- warm light inside
+	local bulb = mk("KioskLight", Vector3.new(0.4, 0.4, 0.4), Vector3.new(0, G + H - 0.6, 0.5), C(255, 240, 210), M.SmoothPlastic, { collide = false, t = 1 })
+	local l = Instance.new("PointLight")
+	l.Range = 14
+	l.Brightness = 1.3
+	l.Color = C(255, 230, 190)
+	l.Parent = bulb
+	Prefabs.TireStack(m, cf:PointToWorldSpace(Vector3.new(-W / 2 - 1.6, G, -2)), ctx.rng)
+	local npcSpot = mk("NpcSpot", Vector3.new(2, 0.2, 2), Vector3.new(0, G + 0.1, 0.4), WHITE, M.SmoothPlastic, { t = 1, collide = false })
 	npcSpot:SetAttribute("Yaw", cfg.yaw)
-	local prompt = mk("ShopPrompt", Vector3.new(6, 6, 2), Vector3.new(0, 3.5, 6 - D / 2 - 4), WHITE, M.SmoothPlastic, { t = 1, collide = false })
+	local prompt = mk("ShopPrompt", Vector3.new(6, 6, 2), Vector3.new(0, 3.5, -D / 2 - 2.4), WHITE, M.SmoothPlastic, { t = 1, collide = false })
 	CollectionService:AddTag(prompt, "ShopPrompt")
-	for _, s in ipairs({ -1, 1 }) do
-		local lamp = mk("ShopLamp", Vector3.new(0.6, 0.6, 0.6), Vector3.new(s * 8, 9.8, 6 - D / 2 - 2), C(255, 240, 210), M.Neon, { light = true, collide = false })
-		local l = Instance.new("PointLight")
-		l.Range = 16
-		l.Brightness = 1.4
-		l.Color = C(255, 230, 190)
-		l.Parent = lamp
-	end
 	m.Parent = f.Buildings
 end
 
@@ -5348,13 +5769,54 @@ local function buildPlaza(ctx)
 	rows.TextColor3 = C(255, 255, 255)
 	rows.Text = ""
 	rows.Parent = gui
+	-- contracts stand: lit board with three job cards + Big Tony's spot (NPC spawned by MechanicService)
 	local cb = MapConfig.ContractBoard
-	for _, s in ipairs({ -1, 1 }) do
-		Part(f.StreetProps, "CBPost", Vector3.new(0.8, 9, 0.8), CFrame.new(cb.x + s * 7, 4.5, cb.z), C(110, 70, 40), M.Wood)
+	local st = Instance.new("Model")
+	st.Name = "ContractStand"
+	local bcf = CFrame.new(cb.x, 0.4, cb.z) -- front faces -Z
+	local function sp(name, size, off, color, mat, o)
+		return Part(st, name, size, bcf * CFrame.new(off), color, mat, o)
 	end
-	local cboard = Part(f.StreetProps, "ContractBoard", Vector3.new(15, 7, 0.6), CFrame.new(cb.x, 7, cb.z), C(140, 96, 56), M.Wood)
-	Label(cboard, Enum.NormalId.Front, "CONTRACTS", C(255, 240, 200))
-	CollectionService:AddTag(cboard, "ContractBoard")
+	local STEEL, WOODD, CREAM2, ORANGE = C(40, 44, 52), C(96, 62, 36), C(250, 240, 214), C(240, 120, 30)
+	sp("StandBase", Vector3.new(30, 0.5, 9), Vector3.new(-4, 0.25, 0.5), C(196, 194, 188), M.SmoothPlastic)
+	for _, x in ipairs({ -11, 11 }) do
+		sp("StandPost", Vector3.new(1.2, 13.5, 1.2), Vector3.new(x, 0.5 + 6.75, 1), STEEL, M.Metal)
+	end
+	local panel = sp("ContractBoard", Vector3.new(21, 9.5, 0.8), Vector3.new(0, 7.3, 1), WOODD, M.Wood)
+	CollectionService:AddTag(panel, "ContractBoard")
+	local head = sp("BoardHeader", Vector3.new(24, 2.6, 1.4), Vector3.new(0, 13.4, 1), ORANGE, M.SmoothPlastic)
+	Label(head, Enum.NormalId.Front, "CONTRACTS", C(255, 255, 255))
+	sp("HeaderTrim", Vector3.new(24.4, 0.35, 1.6), Vector3.new(0, 12, 1), STEEL, M.Metal)
+	for i, x in ipairs({ -6.8, 0, 6.8 }) do
+		local card = sp("ContractCard" .. i, Vector3.new(6, 7.4, 0.2), Vector3.new(x, 7.1, 0.45), CREAM2, M.SmoothPlastic)
+		card:SetAttribute("Index", i)
+		CollectionService:AddTag(card, "ContractCard")
+		sp("CardPin", Vector3.new(0.35, 0.5, 0.5), Vector3.new(x, 10.5, 0.2), C(214, 52, 44), M.SmoothPlastic, { shape = CYL, collide = false })
+	end
+	-- two arm lamps light the cards
+	for _, x in ipairs({ -6, 6 }) do
+		sp("LampArm", Vector3.new(0.3, 0.3, 2.6), Vector3.new(x, 12, -0.6), STEEL, M.Metal, { collide = false })
+		local shade = sp("LampShade", Vector3.new(1.4, 0.6, 1), Vector3.new(x, 11.7, -1.9), STEEL, M.Metal, { collide = false })
+		local sl = Instance.new("SpotLight")
+		sl.Face = Enum.NormalId.Bottom
+		sl.Angle = 80
+		sl.Range = 14
+		sl.Brightness = 2.2
+		sl.Color = C(255, 236, 200)
+		sl.Parent = shade
+	end
+	-- Big Tony's corner: gold-trimmed tool chest and a chrome car jack
+	local TX, TZ = -15, -1
+	sp("ToolChest", Vector3.new(3, 4, 2), Vector3.new(TX - 2.8, 0.5 + 2, TZ + 3), C(200, 30, 36), M.SmoothPlastic)
+	for k = 0, 3 do
+		sp("ChestHandle", Vector3.new(2, 0.15, 0.2), Vector3.new(TX - 2.8, 1.3 + k * 0.9, TZ + 1.93), C(240, 190, 60), M.Metal, { collide = false })
+	end
+	sp("Jack", Vector3.new(2.4, 0.5, 1), Vector3.new(TX + 2.4, 0.75, TZ + 2), C(220, 222, 228), M.Metal, { refl = 0.3 })
+	local spot = sp("TonySpot", Vector3.new(2, 0.2, 2), Vector3.new(TX, 0.6, TZ), CREAM2, M.SmoothPlastic, { t = 1, collide = false })
+	spot:SetAttribute("Yaw", 0)
+	local tp = sp("TonyPrompt", Vector3.new(6, 6, 4), Vector3.new(TX, 3.5, TZ - 3), CREAM2, M.SmoothPlastic, { t = 1, collide = false })
+	CollectionService:AddTag(tp, "TonyPrompt")
+	st.Parent = f.StreetProps
 
 	-- greenery and street furniture, kept clear of the running lanes and garage connectors
 	local rng = ctx.rng
@@ -6520,7 +6982,7 @@ function Prefabs.Building(kind, parent, cf, w, d, h, pal, rng)
 end
 
 return Prefabs
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX6A4EBBFC6A3942AE858544771E517161"><Properties><string name="Name">CarStoreTool</string><ProtectedString name="Source">-- Installs real car models from the Roblox Creator Store (free models) into ReplicatedStorage.CarModels.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX29B763B0B32545A89A1D89AD5937BD9E"><Properties><string name="Name">CarStoreTool</string><ProtectedString name="Source">-- Installs real car models from the Roblox Creator Store (free models) into ReplicatedStorage.CarModels.
 -- Run in Studio (edit mode), View &gt; Command Bar:
 --   require(game.ServerStorage.Tools.CarStoreTool).InstallAll()
 --   require(game.ServerStorage.Tools.CarStoreTool).Install("bmv_m3", 2629351758)   -- any other asset id
@@ -6981,6 +7443,9 @@ local actions = {
 	AutoPark = function() Net.Get("AutoPark"):FireServer() end,
 	BuyPerk = function(id) Net.Get("BuyPerk"):FireServer(id) end,
 	Donate = function(id) Net.Get("Donate"):FireServer(id) end,
+	Claim = function(id) Net.Get("ClaimContract"):FireServer(id) end,
+	Craft = function(id) Net.Get("CraftTuning"):FireServer(id) end,
+	Tune = function(uid, cat, item) Net.Get("TuneCar"):FireServer(uid, cat, item) end,
 	Teleport = function(dest)
 		UI.Sfx("whoosh")
 		CineFx.Flash(Color3.fromRGB(46, 168, 255), 0.2, 0.5)
@@ -8119,8 +8584,8 @@ end
 local function sortedCars(st)
 	local out = table.clone(st.cars)
 	table.sort(out, function(a, b)
-		local ia = CarConfig.IncomeAt(CarConfig.ById[a.typeId], a.level)
-		local ib = CarConfig.IncomeAt(CarConfig.ById[b.typeId], b.level)
+		local ia = CarConfig.CarIncome(a)
+		local ib = CarConfig.CarIncome(b)
 		if ia ~= ib then
 			return ia &gt; ib
 		end
@@ -8134,7 +8599,7 @@ local function freeSlot(st)
 	for _, c in ipairs(st.cars) do
 		if c.slot then
 			used[c.slot] = true
-			local inc = CarConfig.IncomeAt(CarConfig.ById[c.typeId], c.level)
+			local inc = CarConfig.CarIncome(c)
 			if not worstInc or inc &lt; worstInc then
 				worst, worstInc = c.slot, inc
 			end
@@ -8191,9 +8656,9 @@ local function refreshGarage()
 		text(row, { Text = def.name, TextSize = 24, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(28, 8), Size = UDim2.fromOffset(300, 30), ZIndex = 24 })
 		local where = c.slot and T("car_parked", c.slot) or T("car_stored")
 		text(row, { Text = string.format('&lt;font color="#%s"&gt;%s&lt;/font&gt;  ·  %s  ·  &lt;font color="#1E9E40"&gt;%s&lt;/font&gt;  ·  %s', rc:ToHex(), string.upper(T("rarity_" .. def.rarity)),
-			T("car_level", c.level), T("car_income", Util.FormatNumber(CarConfig.IncomeAt(def, c.level))), where),
-			Font = BODY, TextSize = 16, TextColor3 = P.muted, RichText = true, Position = UDim2.fromOffset(28, 44), Size = UDim2.fromOffset(420, 26), ZIndex = 24 })
-		local btns = new("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(380, 60), BackgroundTransparency = 1, ZIndex = 24 }, row)
+			T("car_level", c.level), T("car_income", Util.FormatNumber(CarConfig.CarIncome(c))), where),
+			Font = BODY, TextSize = 14, TextColor3 = P.muted, RichText = true, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(28, 44), Size = UDim2.fromOffset(350, 26), ZIndex = 24 })
+		local btns = new("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(450, 60), BackgroundTransparency = 1, ZIndex = 24 }, row)
 		list(btns, Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center)
 		if c.slot then
 			toy(btns, { Text = T("btn_remove"), Color = P.orange, Size = UDim2.fromOffset(96, 54), TextSize = 16, LayoutOrder = 1, ZIndex = 25, OnClick = function() actions.Remove(c.uid) end })
@@ -8201,17 +8666,27 @@ local function refreshGarage()
 			toy(btns, { Text = T("btn_place"), Color = P.green, Size = UDim2.fromOffset(96, 54), TextSize = 18, LayoutOrder = 1, ZIndex = 25, OnClick = function() actions.Place(c.uid, freeSlot(st)) end })
 		end
 		if c.level &gt;= def.maxLevel then
-			toy(btns, { Text = T("btn_max"), Color = P.grey, Size = UDim2.fromOffset(170, 54), LayoutOrder = 2, ZIndex = 25 })
+			toy(btns, { Text = T("btn_max"), Color = P.grey, Size = UDim2.fromOffset(150, 54), LayoutOrder = 2, ZIndex = 25 })
 		else
 			local cost = CarConfig.UpgradeCost(def, c.level)
 			local partId, amount = CarConfig.UpgradeParts(def, c.level)
 			local ok = store.Money &gt;= cost and (st.parts[partId] or 0) &gt;= amount
 			toy(btns, { Text = T("btn_upgrade"), Sub = string.format("$%s + %s%d", Util.FormatNumber(cost), PART_ICON[partId], amount), SubSize = 14, TextSize = 18,
-				Color = ok and P.blue or P.grey, Size = UDim2.fromOffset(170, 54), LayoutOrder = 2, ZIndex = 25, OnClick = function() actions.Upgrade(c.uid, c.level) end })
+				Color = ok and P.blue or P.grey, Size = UDim2.fromOffset(150, 54), LayoutOrder = 2, ZIndex = 25, OnClick = function() actions.Upgrade(c.uid, c.level) end })
 		end
+		local tuned = 0
+		for _ in pairs(c.tune or {}) do
+			tuned = tuned + 1
+		end
+		toy(btns, { Text = T("btn_tune"), Sub = tuned &gt; 0 and (tuned .. "/7") or nil, SubSize = 13, TextSize = 17, Color = P.yellow, Size = UDim2.fromOffset(84, 54),
+			LayoutOrder = 3, ZIndex = 25, OnClick = function()
+				if UI.OnTune then
+					UI.OnTune(c.uid)
+				end
+			end })
 		local armed = state.sellArm[c.uid] and now - state.sellArm[c.uid] &lt; 3
 		toy(btns, { Text = armed and T("btn_sure") or T("btn_sell"), Sub = "$" .. Util.FormatNumber(CarConfig.SellPrice(def, c.level)), SubSize = 13, TextSize = 16,
-			Color = P.red, Size = UDim2.fromOffset(86, 54), LayoutOrder = 3, ZIndex = 25, OnClick = function()
+			Color = P.red, Size = UDim2.fromOffset(86, 54), LayoutOrder = 4, ZIndex = 25, OnClick = function()
 				if armed then
 					state.sellArm[c.uid] = nil
 					actions.Sell(c.uid)
@@ -8688,7 +9163,7 @@ function Fx.Hit(dir, flashFrame)
 end
 
 return Fx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX59D6D7373E1444F692748938A24653ED"><Properties><string name="Name">CineFx</string><ProtectedString name="Source">-- Cinematic toolkit: camera shake / zoom / takeover, letterbox, darken, flash, glitch, big titles.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX13A54EF417F24A3D9446742C0CD674E2"><Properties><string name="Name">CineFx</string><ProtectedString name="Source">-- Cinematic toolkit: camera shake / zoom / takeover, letterbox, darken, flash, glitch, big titles.
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
@@ -8879,7 +9354,7 @@ function Cine.Reset(t)
 end
 
 return Cine
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7DB590CB707F4D899F207948167AFDFD"><Properties><string name="Name">ClientFx</string><ProtectedString name="Source">-- Small feedback effects: pickups, banking, donations, airbag, the Golden Magnate's coin toss.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX019EAA19755044B0B1E942CAA807D282"><Properties><string name="Name">ClientFx</string><ProtectedString name="Source">-- Small feedback effects: pickups, banking, donations, airbag, the Golden Magnate's coin toss.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
@@ -9097,7 +9572,7 @@ function Fx.Init(ui)
 end
 
 return Fx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7D9309CC8B334675B424E2747750AD60"><Properties><string name="Name">DeathFx</string><ProtectedString name="Source">-- WRECKED! sequence: impact flash, heavy shake, glitch, grayscale-red grade, crane-up camera, countdown.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXC83906048DEB46298BE82003CF5C8420"><Properties><string name="Name">DeathFx</string><ProtectedString name="Source">-- WRECKED! sequence: impact flash, heavy shake, glitch, grayscale-red grade, crane-up camera, countdown.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -9253,7 +9728,7 @@ function DeathFx.Recover()
 end
 
 return DeathFx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX901E4DEB767348F599A2B124023407B2"><Properties><string name="Name">GaragePrompts</string><ProtectedString name="Source">-- Own-garage interactions created on this client only: buy the next bay right at the bay,
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX3F6149286B51491298D7E9C23B9C8B2D"><Properties><string name="Name">GaragePrompts</string><ProtectedString name="Source">-- Own-garage interactions created on this client only: buy the next bay right at the bay,
 -- build the next floor at the lift, ride the lift between floors.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -9378,7 +9853,7 @@ function GP.Start(kit, cine)
 end
 
 return GP
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX381761C7A4044957964627D3ED3B6BA9"><Properties><string name="Name">Markers</string><ProtectedString name="Source">-- World markers (always on top) + an edge arrow pointing to the current objective.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX73A0C6E0D40E4331BFFF20A351AD7FFC"><Properties><string name="Name">Markers</string><ProtectedString name="Source">-- World markers (always on top) + an edge arrow pointing to the current objective.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -9568,7 +10043,7 @@ function Markers.Start(kit, extraModule)
 end
 
 return Markers
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXC744D05B4E1A46589F40977356DE4CA4"><Properties><string name="Name">SpeedLanes</string><ProtectedString name="Source">-- Running lanes: dark strips with white arrows. Boost only while running the way the arrows point.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXBED736B9DC8C49A6A83574E12B1119D8"><Properties><string name="Name">SpeedLanes</string><ProtectedString name="Source">-- Running lanes: dark strips with white arrows. Boost only while running the way the arrows point.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -9608,7 +10083,7 @@ function SpeedLanes.Start(getBaseSpeed)
 end
 
 return SpeedLanes
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXEAE750162F7141AA808DEAEF51ECB866"><Properties><string name="Name">UIExtra</string><ProtectedString name="Source">-- Extra HUD + panels: Pit Stop perks, Golden Magnate donations, combo meter, contracts, hot drop banner, boosts.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXA3CC099A731B43E7A1C02C5AF3C14AB7"><Properties><string name="Name">UIExtra</string><ProtectedString name="Source">-- Extra HUD + panels: Pit Stop perks, Golden Magnate donations, combo meter, contracts, hot drop banner, boosts.
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -9621,6 +10096,9 @@ local ShopConfig = require(Shared:WaitForChild("ShopConfig"))
 local DonateConfig = require(Shared:WaitForChild("DonateConfig"))
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
+local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
+local CarConfig = require(Shared:WaitForChild("CarConfig"))
+local CollectionService = game:GetService("CollectionService")
 
 local T = Strings.T
 local C = Color3.fromRGB
@@ -9630,6 +10108,10 @@ local P
 local w = {}
 local hot = nil -- current hot drop info
 local donateTab = "boost"
+local tonyTab = "rewards"
+local tuneUid = nil
+local TONY = C(30, 36, 58)
+local contractText -- defined with the HUD widgets
 
 local function fmtTime(sec)
 	sec = math.max(0, math.floor(sec))
@@ -9731,6 +10213,172 @@ local function refreshDonate(st, open)
 	end
 end
 
+---------------------------------------------------------------- Big Tony: rewards + exchange
+local function costLine(r, st)
+	local bits = {}
+	local function add(have, need, label)
+		local col = have &gt;= need and "#1E9E40" or "#D6342C"
+		table.insert(bits, string.format('&lt;font color="%s"&gt;%s&lt;/font&gt;', col, label))
+	end
+	for _, part in ipairs(PartConfig.Order or { "bolts", "tire", "engine", "turbo", "core" }) do
+		local n = r.parts and r.parts[part]
+		if n then
+			add(st.parts[part] or 0, n, K.PART_ICON[part] .. n)
+		end
+	end
+	for item, n in pairs(r.tune or {}) do
+		local it = TuningConfig.Items[item]
+		add((st.tuning or {})[item] or 0, n, it.icon .. it.name .. " x" .. n)
+	end
+	add(K.store.Money, r.money, "$" .. Util.FormatNumber(r.money))
+	return table.concat(bits, "  ")
+end
+
+local function buildTony()
+	local p = K.panelShell("tony", T("tony_title"), 920, 600, TONY)
+	local tabs = K.new("Frame", { Size = UDim2.new(1, 0, 0, 56), BackgroundTransparency = 1, ZIndex = 22 }, p.content)
+	K.list(tabs, Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Center)
+	w.tonyTabs = {}
+	for i, tab in ipairs({ "rewards", "exchange" }) do
+		w.tonyTabs[tab] = K.toy(tabs, { Text = T("tony_" .. tab), Color = P.grey, Size = UDim2.fromOffset(200, 52), LayoutOrder = i, ZIndex = 23, TextSize = 20,
+			OnClick = function()
+				tonyTab = tab
+				UI.Refresh()
+			end })
+	end
+	w.tonyList = K.scroller(p.content, UDim2.fromOffset(0, 66), UDim2.new(1, 0, 1, -66))
+end
+
+local function row(parent, order, h, accent)
+	local r = K.new("Frame", { Size = UDim2.new(1, 0, 0, h), BackgroundColor3 = P.white, LayoutOrder = order, ZIndex = 23 }, parent)
+	K.corner(r, 18)
+	K.stroke(r, accent or P.ink, 3)
+	return r
+end
+
+local function refreshTony(st, open)
+	if open ~= "tony" then
+		return
+	end
+	for tab, b in pairs(w.tonyTabs) do
+		b.SetColor(tab == tonyTab and P.yellow or P.grey)
+	end
+	K.clear(w.tonyList)
+	if tonyTab == "rewards" then
+		K.text(w.tonyList, { Text = T("tony_hint"), Font = K.BODY, TextSize = 16, TextColor3 = P.muted, Size = UDim2.new(1, 0, 0, 24), LayoutOrder = 0, ZIndex = 23, TextXAlignment = Enum.TextXAlignment.Center })
+		for i, c in ipairs(st.contracts or {}) do
+			local r = row(w.tonyList, i, 84, c.ready and P.green or P.ink)
+			K.text(r, { Text = contractText(c), TextSize = 20, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(18, 10), Size = UDim2.new(1, -260, 0, 30), ZIndex = 24 })
+			local part = c.reward and K.PART_ICON[c.reward.part] or ""
+			K.text(r, { Text = string.format("%d/%d   ·   +$%s  %s x%d", c.progress, c.n, Util.FormatNumber(c.reward.money), part, c.reward.n), Font = K.BODY, TextSize = 16,
+				TextColor3 = P.muted, Position = UDim2.fromOffset(18, 44), Size = UDim2.new(1, -260, 0, 26), ZIndex = 24 })
+			K.toy(r, { Text = c.ready and T("tony_claim") or T("tony_working"), Color = c.ready and P.green or P.grey, Size = UDim2.fromOffset(200, 60), AnchorPoint = Vector2.new(1, 0.5),
+				Position = UDim2.new(1, -12, 0.5, 0), ZIndex = 25, TextSize = c.ready and 24 or 16,
+				OnClick = function()
+					if c.ready then
+						K.actions.Claim(c.id)
+					end
+				end })
+		end
+	else
+		for i, r in ipairs(TuningConfig.Recipes) do
+			local it = TuningConfig.Items[r.out]
+			local fr = row(w.tonyList, i, 78)
+			K.text(fr, { Text = it.icon, Font = K.BODY, TextSize = 34, Position = UDim2.fromOffset(12, 0), Size = UDim2.fromOffset(50, 78), ZIndex = 24, TextXAlignment = Enum.TextXAlignment.Center })
+			K.text(fr, { Text = string.format("%s  &lt;font color=\"#1E9E40\"&gt;+%d%%&lt;/font&gt;", string.upper(it.name), math.floor(it.bonus * 100 + 0.5)), RichText = true, TextSize = 20,
+				TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(70, 8), Size = UDim2.new(1, -300, 0, 28), ZIndex = 24 })
+			K.text(fr, { Text = costLine(r, st), RichText = true, Font = K.BODY, TextSize = 15, TextColor3 = P.muted, Position = UDim2.fromOffset(70, 40), Size = UDim2.new(1, -300, 0, 26), ZIndex = 24 })
+			K.text(fr, { Text = T("tony_have", (st.tuning or {})[r.out] or 0), Font = K.BODY, TextSize = 14, TextColor3 = P.muted, AnchorPoint = Vector2.new(1, 0.5),
+				Position = UDim2.new(1, -184, 0.5, 0), Size = UDim2.fromOffset(70, 20), ZIndex = 24, TextXAlignment = Enum.TextXAlignment.Right })
+			K.toy(fr, { Text = T("tony_build"), Color = P.orange, Size = UDim2.fromOffset(160, 58), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0),
+				ZIndex = 25, TextSize = 22, OnClick = function() K.actions.Craft(r.id) end })
+		end
+	end
+end
+
+---------------------------------------------------------------- Tuning a car
+local function buildTune()
+	local p = K.panelShell("tune", T("tune_title"), 900, 600, P.yellow)
+	w.tuneHead = K.text(p.content, { Text = "", TextSize = 22, TextColor3 = P.ink, Outline = false, Size = UDim2.new(1, 0, 0, 30), RichText = true, ZIndex = 23 })
+	w.tuneList = K.scroller(p.content, UDim2.fromOffset(0, 38), UDim2.new(1, 0, 1, -38))
+end
+
+local function refreshTune(st, open)
+	if open ~= "tune" then
+		return
+	end
+	local car
+	for _, c in ipairs(st.cars) do
+		if c.uid == tuneUid then
+			car = c
+		end
+	end
+	K.clear(w.tuneList)
+	if not car then
+		w.tuneHead.Text = ""
+		return
+	end
+	local def = CarConfig.ById[car.typeId]
+	local mult = TuningConfig.CarMult(car.tune)
+	w.tuneHead.Text = string.format('%s   &lt;font color="#1E9E40"&gt;+%s/s  (x%.2f)&lt;/font&gt;', def.name, Util.FormatNumber(CarConfig.CarIncome(car)), mult)
+	for i, cat in ipairs(TuningConfig.Categories) do
+		local cur = car.tune and car.tune[cat.id]
+		local curIt = cur and TuningConfig.Items[cur]
+		local fr = row(w.tuneList, i, 76, curIt and P.green or P.ink)
+		K.text(fr, { Text = cat.icon, Font = K.BODY, TextSize = 30, Position = UDim2.fromOffset(10, 0), Size = UDim2.fromOffset(46, 76), ZIndex = 24, TextXAlignment = Enum.TextXAlignment.Center })
+		K.text(fr, { Text = string.upper(cat.name), TextSize = 18, TextColor3 = P.muted, Outline = false, Position = UDim2.fromOffset(62, 6), Size = UDim2.fromOffset(160, 22), ZIndex = 24 })
+		K.text(fr, { Text = curIt and string.format("%s +%d%%", curIt.name, math.floor(curIt.bonus * 100 + 0.5)) or T("tune_empty"), TextSize = 18,
+			TextColor3 = curIt and P.ink or P.muted, Outline = false, Position = UDim2.fromOffset(62, 32), Size = UDim2.fromOffset(220, 30), ZIndex = 24 })
+		local opts = K.new("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(540, 60), BackgroundTransparency = 1, ZIndex = 24 }, fr)
+		K.list(opts, Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center)
+		local any = false
+		for _, id in ipairs(TuningConfig.Order) do
+			local it = TuningConfig.Items[id]
+			local have = (st.tuning or {})[id] or 0
+			if it.cat == cat.id and have &gt; 0 then
+				any = true
+				K.toy(opts, { Text = it.icon .. " " .. string.rep("I", it.stage), Sub = "x" .. have, SubSize = 12, TextSize = 16, Color = P.blue, Size = UDim2.fromOffset(96, 54),
+					LayoutOrder = it.stage, ZIndex = 25, OnClick = function() K.actions.Tune(car.uid, cat.id, id) end })
+			end
+		end
+		if curIt then
+			K.toy(opts, { Text = T("tune_remove"), Color = P.red, Size = UDim2.fromOffset(110, 54), TextSize = 16, LayoutOrder = 9, ZIndex = 25,
+				OnClick = function() K.actions.Tune(car.uid, cat.id, nil) end })
+		elseif not any then
+			K.text(opts, { Text = T("tune_none"), Font = K.BODY, TextSize = 14, TextColor3 = P.muted, Size = UDim2.fromOffset(260, 30), ZIndex = 25, TextXAlignment = Enum.TextXAlignment.Right })
+		end
+	end
+end
+
+---------------------------------------------------------------- contract cards on the board (local player's jobs)
+local function refreshBoard(st)
+	for _, card in ipairs(CollectionService:GetTagged("ContractCard")) do
+		local idx = card:GetAttribute("Index")
+		local c = st.contracts and st.contracts[idx]
+		local gui = card:FindFirstChild("CardGui")
+		if not gui then
+			gui = K.new("SurfaceGui", { Name = "CardGui", Face = Enum.NormalId.Front, SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud, PixelsPerStud = 40, LightInfluence = 0.2 }, card)
+			K.new("Frame", { Name = "Bg", Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(255, 248, 228) }, gui)
+			K.text(gui, { Name = "Title", Text = "", TextSize = 30, TextColor3 = P.ink, Outline = false, Position = UDim2.new(0, 14, 0, 20), Size = UDim2.new(1, -28, 0.45, 0),
+				TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 2 })
+			K.text(gui, { Name = "Prog", Text = "", TextSize = 40, TextColor3 = P.ink, Outline = false, Position = UDim2.new(0, 0, 0.55, 0), Size = UDim2.new(1, 0, 0, 48),
+				TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 2 })
+			K.text(gui, { Name = "Reward", Text = "", Font = K.BODY, TextSize = 26, TextColor3 = C(30, 158, 64), Outline = false, Position = UDim2.new(0, 0, 0.75, 0), Size = UDim2.new(1, 0, 0, 34),
+				TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 2 })
+		end
+		if c then
+			gui.Title.Text = contractText(c)
+			gui.Prog.Text = c.ready and "✅ CLAIM AT TONY" or string.format("%d / %d", c.progress, c.n)
+			gui.Prog.TextColor3 = c.ready and C(30, 158, 64) or P.ink
+			gui.Reward.Text = "+$" .. Util.FormatNumber(c.reward.money) .. "  " .. (K.PART_ICON[c.reward.part] or "") .. "x" .. c.reward.n
+			gui.Bg.BackgroundColor3 = c.ready and C(220, 250, 226) or C(255, 248, 228)
+		else
+			gui.Title.Text, gui.Prog.Text, gui.Reward.Text = "NEW JOB SOON", "...", ""
+			gui.Bg.BackgroundColor3 = C(235, 230, 218)
+		end
+	end
+end
+
 ---------------------------------------------------------------- HUD widgets
 local function buildHud()
 	local root = K.root
@@ -9773,7 +10421,7 @@ local CONTRACT_PART = function(c)
 	return PartConfig.Parts[c.part] and (K.PART_ICON[c.part] .. " " .. T("part_" .. c.part)) or ""
 end
 
-local function contractText(c)
+contractText = function(c)
 	if c.kind == "bank_part" then
 		return T("c_bank_part", c.n, CONTRACT_PART(c), T("zone_" .. tostring(c.zone)))
 	elseif c.kind == "combo" then
@@ -9808,10 +10456,10 @@ local function refreshHud(st)
 	for i, c in ipairs(st.contracts or {}) do
 		local row = K.new("Frame", { Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, LayoutOrder = i }, w.contracts)
 		K.text(row, { Text = contractText(c), Font = K.BODY, TextSize = 14, TextColor3 = P.ink, TextWrapped = true, Size = UDim2.new(1, -60, 0, 22), RichText = false })
-		K.text(row, { Text = string.format("%d/%d", c.progress, c.n), TextSize = 16, TextColor3 = P.ink, Outline = false, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.fromOffset(56, 22), TextXAlignment = Enum.TextXAlignment.Right })
+		K.text(row, { Text = c.ready and "✅" or string.format("%d/%d", c.progress, c.n), TextSize = 16, TextColor3 = P.ink, Outline = false, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.fromOffset(56, 22), TextXAlignment = Enum.TextXAlignment.Right })
 		local bar = K.new("Frame", { Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 8), BackgroundColor3 = C(226, 218, 200) }, row)
 		K.corner(bar, 4)
-		local fill = K.new("Frame", { Size = UDim2.fromScale(c.progress / c.n, 1), BackgroundColor3 = P.green }, bar)
+		local fill = K.new("Frame", { Size = UDim2.fromScale(c.progress / c.n, 1), BackgroundColor3 = c.ready and P.yellow or P.green }, bar)
 		K.corner(fill, 4)
 		table.insert(w.contractRows, row)
 	end
@@ -9903,11 +10551,20 @@ function X.Init(ui)
 	P = K.P
 	buildShop()
 	buildDonate()
+	buildTony()
+	buildTune()
 	buildHud()
+	UI.OnTune = function(uid)
+		tuneUid = uid
+		UI.TogglePanel("tune")
+	end
 	table.insert(UI.Hooks, function(st, open)
 		refreshShop(st, open)
 		refreshDonate(st, open)
+		refreshTony(st, open)
+		refreshTune(st, open)
 		refreshHud(st)
+		refreshBoard(st)
 	end)
 	K.store.MoneyChanged.Event:Connect(function()
 		local st = K.store.State
@@ -9922,6 +10579,15 @@ function X.Init(ui)
 			UI.TogglePanel("shop")
 		elseif n == "DonatePrompt" then
 			UI.TogglePanel("donate")
+		elseif n == "TonyPrompt" then
+			tonyTab = "rewards"
+			for _, c in ipairs(K.store.State and K.store.State.contracts or {}) do
+				if c.ready then
+					K.actions.Claim("all") -- walking up pays out everything that's done
+					break
+				end
+			end
+			UI.TogglePanel("tony")
 		end
 	end)
 	local acc = 0

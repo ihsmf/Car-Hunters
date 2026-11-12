@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -12,6 +13,7 @@ local ExhaustFx = require(Shared:WaitForChild("ExhaustFx"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 local Util = require(Shared:WaitForChild("Util"))
 local GarageKit = require(Shared:WaitForChild("GarageKit"))
+local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
 
 local Base = {}
 local S
@@ -159,10 +161,46 @@ function Base.IsNearOwnBase(player)
 	return (hrp.Position - center).Magnitude <= EconomyConfig.BaseActionDistance
 end
 
-local function buildCarModel(def, level, slotCF)
+-- visible tuning: aero adds a wing, boost/nitro make the exhaust spit flames
+local function applyTuneVisuals(model, def, tune)
+	local root = model.PrimaryPart
+	if not root or type(tune) ~= "table" then
+		return
+	end
+	if tune.boost or tune.nitro then
+		for _, att in ipairs(root:GetChildren()) do
+			if att:IsA("Attachment") and att.Name == "Exhaust" then
+				CollectionService:AddTag(att, "Backfire")
+				att:SetAttribute("Color", tune.nitro and Color3.fromRGB(90, 170, 255) or Color3.fromRGB(255, 140, 40))
+			end
+		end
+	end
+	if tune.aero then
+		local ext = model:GetExtentsSize()
+		local stage = TuningConfig.Items[tune.aero].stage
+		local back = root.CFrame * CFrame.new(-ext.X / 2 + 0.9, ext.Y / 2 + 0.3 + stage * 0.15, 0)
+		local function wingPart(size, cf)
+			local p = Instance.new("Part")
+			p.Name = "Wing"
+			p.Size = size
+			p.CFrame = cf
+			p.Color = stage == 3 and Color3.fromRGB(30, 30, 34) or def.body or Color3.fromRGB(30, 30, 34)
+			p.Material = stage == 3 and Enum.Material.Carbon or Enum.Material.SmoothPlastic
+			p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.Massless = true, false, false, false, true
+			p.Parent = model
+		end
+		wingPart(Vector3.new(1.1, 0.14, ext.Z * 0.9), back)
+		for _, z in ipairs({ -1, 1 }) do
+			wingPart(Vector3.new(0.5, 0.8, 0.14), back * CFrame.new(0.1, -0.45, z * ext.Z * 0.3))
+		end
+	end
+end
+
+local function buildCarModel(def, level, slotCF, car)
 	local model = VehicleFactory.BuildCar(def)
 	model:PivotTo(slotCF)
 	ExhaustFx.Attach(model, def, CarConfig.Rarities[def.rarity].index)
+	applyTuneVisuals(model, def, car and car.tune)
 	local rarity = CarConfig.Rarities[def.rarity]
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Tag"
@@ -179,7 +217,7 @@ local function buildCarModel(def, level, slotCF)
 	label.TextSize = 14
 	label.TextColor3 = rarity.color
 	label.TextStrokeTransparency = 0.3
-	label.Text = string.format("%s  Lv%d\n+%s/s", def.name, level, Util.FormatNumber(CarConfig.IncomeAt(def, level)))
+	label.Text = string.format("%s  Lv%d\n+%s/s", def.name, level, Util.FormatNumber(car and CarConfig.CarIncome(car) or CarConfig.IncomeAt(def, level)))
 	label.Parent = gui
 	gui.Parent = model.PrimaryPart
 	return model
@@ -219,7 +257,7 @@ function Base.RefreshAll(player)
 		else
 			setPad(pad, "free")
 		end
-		local want = (car and not hidden) and (car.uid .. ":" .. car.level) or nil
+		local want = (car and not hidden) and (car.uid .. ":" .. car.level .. ":" .. TuningConfig.CarMult(car.tune)) or nil
 		if b.sig[slot] ~= want then
 			if b.carModels[slot] then
 				b.carModels[slot]:Destroy()
@@ -228,7 +266,7 @@ function Base.RefreshAll(player)
 			b.sig[slot] = want
 			if want then
 				local def = CarConfig.ById[car.typeId]
-				local model = buildCarModel(def, car.level, BaseLayout.SlotCFrame(b.index, slot))
+				local model = buildCarModel(def, car.level, BaseLayout.SlotCFrame(b.index, slot), car)
 				model.Name = "Car_" .. slot
 				model.Parent = b.cars
 				b.carModels[slot] = model

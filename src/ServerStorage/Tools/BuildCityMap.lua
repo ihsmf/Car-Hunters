@@ -283,49 +283,53 @@ local function buildShop(ctx)
 	local function mk(name, size, off, color, mat, o)
 		return Part(m, name, size, cf * CFrame.new(off), color, mat, o)
 	end
-	local W, D, H = 34, 22, 13
-	local RED, WHITE, DARK2, GLASS2 = C(214, 52, 44), C(244, 242, 236), C(36, 40, 48), C(150, 200, 230)
-	mk("Slab", Vector3.new(W + 8, 0.6, D + 12), Vector3.new(0, 0.1, -4), C(210, 206, 198), M.Concrete)
-	mk("Body", Vector3.new(W, H, D), Vector3.new(0, H / 2 + 0.4, 6), WHITE, M.SmoothPlastic)
-	mk("BaseStripe", Vector3.new(W + 0.2, 1.4, D + 0.2), Vector3.new(0, 1.1, 6), DARK2, M.SmoothPlastic)
-	mk("RoofCap", Vector3.new(W + 1.4, 1.2, D + 1.4), Vector3.new(0, H + 1, 6), RED, M.SmoothPlastic)
-	-- shop window and counter opening
-	mk("Window", Vector3.new(W - 10, 6, 0.3), Vector3.new(0, 6.2, 6 - D / 2 - 0.05), GLASS2, M.Glass, { t = 0.35 })
-	for x = -W / 2 + 5, W / 2 - 5, (W - 10) / 4 do
-		mk("Mullion", Vector3.new(0.4, 6, 0.5), Vector3.new(x, 6.2, 6 - D / 2 - 0.1), DARK2, M.Metal)
+	-- compact kiosk 12 x 8: walls never share a visible plane, the roof caps them
+	local W, D, H = 12, 8, 8.5
+	local G = 0.5 -- top of the slab
+	local RED, WHITE, DARK2, WOOD = C(214, 52, 44), C(246, 244, 238), C(36, 40, 48), C(150, 104, 62)
+	mk("Slab", Vector3.new(18, 0.6, 16), Vector3.new(0, 0.2, -2), C(206, 204, 198), M.SmoothPlastic)
+	mk("BackWall", Vector3.new(W, H, 0.6), Vector3.new(0, G + H / 2, D / 2 - 0.3), WHITE)
+	for _, sx in ipairs({ -1, 1 }) do
+		mk("SideWall", Vector3.new(0.6, H, D - 0.6), Vector3.new(sx * (W / 2 - 0.3), G + H / 2, -0.3), WHITE)
+		mk("Corner", Vector3.new(0.8, H + 0.4, 0.8), Vector3.new(sx * (W / 2 - 0.2), G + (H + 0.4) / 2, -D / 2 + 0.2), RED)
 	end
-	mk("Counter", Vector3.new(W - 8, 3.6, 3), Vector3.new(0, 2.2, 6 - D / 2 - 1.6), RED, M.SmoothPlastic)
-	mk("CounterTop", Vector3.new(W - 7, 0.4, 3.6), Vector3.new(0, 4.2, 6 - D / 2 - 1.6), C(60, 64, 72), M.Metal)
-	-- striped awning
-	for k = 0, 9 do
-		local c = (k % 2 == 0) and RED or WHITE
-		local x = -W / 2 + (k + 0.5) * (W / 10)
-		Part(m, "Awning", Vector3.new(W / 10, 0.4, 7), cf * CFrame.new(x, 10.4, 6 - D / 2 - 3.2) * CFrame.Angles(math.rad(-16), 0, 0), c, M.SmoothPlastic, { collide = false })
+	mk("Counter", Vector3.new(W - 1.6, 3.6, 1.1), Vector3.new(0, G + 1.8, -D / 2 + 0.75), RED)
+	mk("CounterTop", Vector3.new(W - 1.2, 0.3, 1.8), Vector3.new(0, G + 3.75, -D / 2 + 0.7), WOOD, M.Wood)
+	mk("Header", Vector3.new(W - 1.6, 1.6, 0.5), Vector3.new(0, G + H - 0.8, -D / 2 + 0.45), DARK2)
+	mk("Roof", Vector3.new(W + 1.6, 0.6, D + 2), Vector3.new(0, G + H + 0.3, -0.6), DARK2)
+	mk("RoofTrim", Vector3.new(W + 1.8, 0.3, 0.3), Vector3.new(0, G + H + 0.15, -D / 2 - 1.75), C(255, 196, 40))
+	-- red/white awning over the counter
+	for k = 0, 5 do
+		Part(m, "Awning", Vector3.new(W / 6, 0.25, 3.2), cf * CFrame.new(-W / 2 + (k + 0.5) * W / 6, G + H - 1.9, -D / 2 - 1.3) * CFrame.Angles(math.rad(-18), 0, 0),
+			(k % 2 == 0) and RED or WHITE, M.SmoothPlastic, { collide = false })
 	end
-	-- big sign
-	local sign = mk("ShopSign", Vector3.new(W - 4, 4.6, 0.6), Vector3.new(0, H + 4, 6 - D / 2 + 1), DARK2, M.SmoothPlastic)
-	Label(sign, Enum.NormalId.Front, "PIT STOP  UPGRADES", C(255, 210, 63))
-	for _, s in ipairs({ -1, 1 }) do
-		mk("SignLeg", Vector3.new(0.6, 3, 0.6), Vector3.new(s * (W / 2 - 4), H + 1.4, 6 - D / 2 + 1), DARK2, M.Metal)
+	-- sign on the roof
+	local sign = mk("ShopSign", Vector3.new(W - 1, 2.6, 0.5), Vector3.new(0, G + H + 1.9, -D / 2 + 0.6), DARK2)
+	Label(sign, Enum.NormalId.Front, "PIT STOP", C(255, 210, 63))
+	-- back shelves with parts for sale
+	for k, y in ipairs({ 3.2, 5.6 }) do
+		mk("Shelf", Vector3.new(W - 2.4, 0.25, 1.2), Vector3.new(0, G + y, D / 2 - 1.2), WOOD, M.Wood)
+		for i = 0, 3 do
+			local x = -W / 2 + 2.2 + i * 2.5
+			if (i + k) % 2 == 0 then
+				Part(m, "ShelfTire", Vector3.new(0.7, 1.5, 1.5), cf * CFrame.new(x, G + y + 0.88, D / 2 - 1.2) * CFrame.Angles(0, math.pi / 2, 0), C(34, 34, 38), M.SmoothPlastic, { shape = CYL, collide = false })
+			else
+				mk("OilCan", Vector3.new(0.8, 1.2, 0.6), Vector3.new(x, G + y + 0.73, D / 2 - 1.2), ({ C(255, 196, 40), C(40, 120, 200), C(50, 160, 80), RED })[i + 1], M.SmoothPlastic, { collide = false })
+			end
+		end
 	end
-	-- props: tire rack, oil cans, a lifted showcase engine
-	Prefabs.TireStack(m, cf:PointToWorldSpace(Vector3.new(-W / 2 - 1, 0.4, -5)), ctx.rng)
-	Prefabs.TireStack(m, cf:PointToWorldSpace(Vector3.new(W / 2 + 1, 0.4, -5)), ctx.rng)
-	for k = 0, 2 do
-		mk("OilCan", Vector3.new(1.2, 1.6, 1), Vector3.new(-6 + k * 1.6, 5.2, 6 - D / 2 - 1.4), ({ C(255, 196, 40), C(40, 120, 200), C(50, 160, 80) })[k + 1], M.SmoothPlastic)
-	end
-	local npcSpot = mk("NpcSpot", Vector3.new(2, 0.2, 2), Vector3.new(0, 0.5, 6 - D / 2 + 1.5), WHITE, M.SmoothPlastic, { t = 1, collide = false })
+	-- warm light inside
+	local bulb = mk("KioskLight", Vector3.new(0.4, 0.4, 0.4), Vector3.new(0, G + H - 0.6, 0.5), C(255, 240, 210), M.SmoothPlastic, { collide = false, t = 1 })
+	local l = Instance.new("PointLight")
+	l.Range = 14
+	l.Brightness = 1.3
+	l.Color = C(255, 230, 190)
+	l.Parent = bulb
+	Prefabs.TireStack(m, cf:PointToWorldSpace(Vector3.new(-W / 2 - 1.6, G, -2)), ctx.rng)
+	local npcSpot = mk("NpcSpot", Vector3.new(2, 0.2, 2), Vector3.new(0, G + 0.1, 0.4), WHITE, M.SmoothPlastic, { t = 1, collide = false })
 	npcSpot:SetAttribute("Yaw", cfg.yaw)
-	local prompt = mk("ShopPrompt", Vector3.new(6, 6, 2), Vector3.new(0, 3.5, 6 - D / 2 - 4), WHITE, M.SmoothPlastic, { t = 1, collide = false })
+	local prompt = mk("ShopPrompt", Vector3.new(6, 6, 2), Vector3.new(0, 3.5, -D / 2 - 2.4), WHITE, M.SmoothPlastic, { t = 1, collide = false })
 	CollectionService:AddTag(prompt, "ShopPrompt")
-	for _, s in ipairs({ -1, 1 }) do
-		local lamp = mk("ShopLamp", Vector3.new(0.6, 0.6, 0.6), Vector3.new(s * 8, 9.8, 6 - D / 2 - 2), C(255, 240, 210), M.Neon, { light = true, collide = false })
-		local l = Instance.new("PointLight")
-		l.Range = 16
-		l.Brightness = 1.4
-		l.Color = C(255, 230, 190)
-		l.Parent = lamp
-	end
 	m.Parent = f.Buildings
 end
 
@@ -444,13 +448,54 @@ local function buildPlaza(ctx)
 	rows.TextColor3 = C(255, 255, 255)
 	rows.Text = ""
 	rows.Parent = gui
+	-- contracts stand: lit board with three job cards + Big Tony's spot (NPC spawned by MechanicService)
 	local cb = MapConfig.ContractBoard
-	for _, s in ipairs({ -1, 1 }) do
-		Part(f.StreetProps, "CBPost", Vector3.new(0.8, 9, 0.8), CFrame.new(cb.x + s * 7, 4.5, cb.z), C(110, 70, 40), M.Wood)
+	local st = Instance.new("Model")
+	st.Name = "ContractStand"
+	local bcf = CFrame.new(cb.x, 0.4, cb.z) -- front faces -Z
+	local function sp(name, size, off, color, mat, o)
+		return Part(st, name, size, bcf * CFrame.new(off), color, mat, o)
 	end
-	local cboard = Part(f.StreetProps, "ContractBoard", Vector3.new(15, 7, 0.6), CFrame.new(cb.x, 7, cb.z), C(140, 96, 56), M.Wood)
-	Label(cboard, Enum.NormalId.Front, "CONTRACTS", C(255, 240, 200))
-	CollectionService:AddTag(cboard, "ContractBoard")
+	local STEEL, WOODD, CREAM2, ORANGE = C(40, 44, 52), C(96, 62, 36), C(250, 240, 214), C(240, 120, 30)
+	sp("StandBase", Vector3.new(30, 0.5, 9), Vector3.new(-4, 0.25, 0.5), C(196, 194, 188), M.SmoothPlastic)
+	for _, x in ipairs({ -11, 11 }) do
+		sp("StandPost", Vector3.new(1.2, 13.5, 1.2), Vector3.new(x, 0.5 + 6.75, 1), STEEL, M.Metal)
+	end
+	local panel = sp("ContractBoard", Vector3.new(21, 9.5, 0.8), Vector3.new(0, 7.3, 1), WOODD, M.Wood)
+	CollectionService:AddTag(panel, "ContractBoard")
+	local head = sp("BoardHeader", Vector3.new(24, 2.6, 1.4), Vector3.new(0, 13.4, 1), ORANGE, M.SmoothPlastic)
+	Label(head, Enum.NormalId.Front, "CONTRACTS", C(255, 255, 255))
+	sp("HeaderTrim", Vector3.new(24.4, 0.35, 1.6), Vector3.new(0, 12, 1), STEEL, M.Metal)
+	for i, x in ipairs({ -6.8, 0, 6.8 }) do
+		local card = sp("ContractCard" .. i, Vector3.new(6, 7.4, 0.2), Vector3.new(x, 7.1, 0.45), CREAM2, M.SmoothPlastic)
+		card:SetAttribute("Index", i)
+		CollectionService:AddTag(card, "ContractCard")
+		sp("CardPin", Vector3.new(0.35, 0.5, 0.5), Vector3.new(x, 10.5, 0.2), C(214, 52, 44), M.SmoothPlastic, { shape = CYL, collide = false })
+	end
+	-- two arm lamps light the cards
+	for _, x in ipairs({ -6, 6 }) do
+		sp("LampArm", Vector3.new(0.3, 0.3, 2.6), Vector3.new(x, 12, -0.6), STEEL, M.Metal, { collide = false })
+		local shade = sp("LampShade", Vector3.new(1.4, 0.6, 1), Vector3.new(x, 11.7, -1.9), STEEL, M.Metal, { collide = false })
+		local sl = Instance.new("SpotLight")
+		sl.Face = Enum.NormalId.Bottom
+		sl.Angle = 80
+		sl.Range = 14
+		sl.Brightness = 2.2
+		sl.Color = C(255, 236, 200)
+		sl.Parent = shade
+	end
+	-- Big Tony's corner: gold-trimmed tool chest and a chrome car jack
+	local TX, TZ = -15, -1
+	sp("ToolChest", Vector3.new(3, 4, 2), Vector3.new(TX - 2.8, 0.5 + 2, TZ + 3), C(200, 30, 36), M.SmoothPlastic)
+	for k = 0, 3 do
+		sp("ChestHandle", Vector3.new(2, 0.15, 0.2), Vector3.new(TX - 2.8, 1.3 + k * 0.9, TZ + 1.93), C(240, 190, 60), M.Metal, { collide = false })
+	end
+	sp("Jack", Vector3.new(2.4, 0.5, 1), Vector3.new(TX + 2.4, 0.75, TZ + 2), C(220, 222, 228), M.Metal, { refl = 0.3 })
+	local spot = sp("TonySpot", Vector3.new(2, 0.2, 2), Vector3.new(TX, 0.6, TZ), CREAM2, M.SmoothPlastic, { t = 1, collide = false })
+	spot:SetAttribute("Yaw", 0)
+	local tp = sp("TonyPrompt", Vector3.new(6, 6, 4), Vector3.new(TX, 3.5, TZ - 3), CREAM2, M.SmoothPlastic, { t = 1, collide = false })
+	CollectionService:AddTag(tp, "TonyPrompt")
+	st.Parent = f.StreetProps
 
 	-- greenery and street furniture, kept clear of the running lanes and garage connectors
 	local rng = ctx.rng

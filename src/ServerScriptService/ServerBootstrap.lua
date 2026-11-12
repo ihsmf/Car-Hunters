@@ -88,7 +88,7 @@ local S = {}
 local names = { Data = "DataService", Inventory = "InventoryService", Base = "BaseService", PartSpawn = "PartSpawnService",
 	Traffic = "TrafficService", Capture = "CaptureService", Cars = "CarCollectionService", Income = "IncomeService",
 	Upgrade = "UpgradeService", Zone = "ZoneService", Warp = "WarpService", Shop = "ShopService", Donate = "DonateService",
-	HotDrop = "HotDropService", Contracts = "ContractService" }
+	HotDrop = "HotDropService", Contracts = "ContractService", Tuning = "TuningService", Mechanic = "MechanicService" }
 for key, moduleName in pairs(names) do
 	S[key] = require(Services:WaitForChild(moduleName))
 end
@@ -111,6 +111,9 @@ Net.Get("AutoPark").OnServerEvent:Connect(function(p) S.Cars.AutoPark(p) end)
 Net.Get("Teleport").OnServerEvent:Connect(function(p, dest) S.Warp.Go(p, dest) end)
 Net.Get("BuyPerk").OnServerEvent:Connect(function(p, id) S.Shop.Buy(p, id) end)
 Net.Get("Donate").OnServerEvent:Connect(function(p, id) S.Donate.Request(p, id) end)
+Net.Get("ClaimContract").OnServerEvent:Connect(function(p, id) S.Mechanic.Claim(p, id) end)
+Net.Get("CraftTuning").OnServerEvent:Connect(function(p, id) S.Mechanic.Craft(p, id) end)
+Net.Get("TuneCar").OnServerEvent:Connect(function(p, uid, cat, item) S.Tuning.Set(p, uid, cat, item) end)
 
 local function hookCharacter(player, char)
 	local hum = char:WaitForChild("Humanoid", 10)

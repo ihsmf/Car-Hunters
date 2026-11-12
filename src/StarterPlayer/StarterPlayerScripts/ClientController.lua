@@ -38,6 +38,9 @@ local actions = {
 	AutoPark = function() Net.Get("AutoPark"):FireServer() end,
 	BuyPerk = function(id) Net.Get("BuyPerk"):FireServer(id) end,
 	Donate = function(id) Net.Get("Donate"):FireServer(id) end,
+	Claim = function(id) Net.Get("ClaimContract"):FireServer(id) end,
+	Craft = function(id) Net.Get("CraftTuning"):FireServer(id) end,
+	Tune = function(uid, cat, item) Net.Get("TuneCar"):FireServer(uid, cat, item) end,
 	Teleport = function(dest)
 		UI.Sfx("whoosh")
 		CineFx.Flash(Color3.fromRGB(46, 168, 255), 0.2, 0.5)

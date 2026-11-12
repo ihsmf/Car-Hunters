@@ -39,7 +39,7 @@ function Income.Recalc(player)
 		if def then
 			value = value + CarConfig.ValueAt(def, c.level)
 			if c.parkedSlot then
-				inc = inc + CarConfig.IncomeAt(def, c.level)
+				inc = inc + CarConfig.CarIncome(c)
 			end
 		end
 	end

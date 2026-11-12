@@ -117,6 +117,15 @@ function CarConfig.IncomeAt(def, level)
 	return math.floor(def.income * (1 + CarConfig.IncomeGrowth * (level - 1)) + 0.5)
 end
 
+-- income of one owned car incl. its tuning parts
+function CarConfig.CarIncome(car)
+	local def = CarConfig.ById[car.typeId]
+	if not def then
+		return 0
+	end
+	return math.floor(CarConfig.IncomeAt(def, car.level) * require(script.Parent.TuningConfig).CarMult(car.tune) + 0.5)
+end
+
 function CarConfig.ValueAt(def, level)
 	return math.floor(def.value * (1 + 0.3 * (level - 1)))
 end

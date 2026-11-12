@@ -135,8 +135,8 @@ function Cars.AutoPark(player)
 		end
 	end
 	table.sort(list, function(a, b)
-		local ia = CarConfig.IncomeAt(CarConfig.ById[a.typeId], a.level)
-		local ib = CarConfig.IncomeAt(CarConfig.ById[b.typeId], b.level)
+		local ia = CarConfig.CarIncome(a)
+		local ib = CarConfig.CarIncome(b)
 		if ia ~= ib then
 			return ia > ib
 		end
