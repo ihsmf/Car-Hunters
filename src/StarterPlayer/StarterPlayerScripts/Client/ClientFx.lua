@@ -111,6 +111,7 @@ function Fx.Bank(info)
 	local sc = K.new("UIScale", { Scale = 0.2 }, big)
 	tw(sc, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
 	Fx._bankPop = big
+	big.Visible = K.state.open == nil -- never draw over an open panel
 	task.delay(1.3, function()
 		if not big.Parent then
 			return
@@ -124,10 +125,15 @@ function Fx.Bank(info)
 		task.wait(0.32)
 		big:Destroy()
 	end)
+	local quiet = os.clock() < (UI.QuietBankUntil or 0) -- banked through a checkpoint: one soft sound only
 	if info.cash and info.cash > 0 then
-		UI.Toast("⏱ SPEED BONUS +$" .. info.cash, "good")
+		UI.Toast("⏱ SPEED BONUS +$" .. info.cash, "good", true)
 	end
-	UI.Sfx(info.bonus > 0 and "bankCombo" or "bank")
+	if quiet then
+		UI.Sfx("soft")
+	else
+		UI.Sfx(info.bonus > 0 and "bankCombo" or "bank")
+	end
 end
 
 -- golden coin rain over the screen (buyer) / gold burst (everyone else)

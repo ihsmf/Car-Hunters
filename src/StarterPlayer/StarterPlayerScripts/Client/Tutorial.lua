@@ -87,9 +87,13 @@ local function build()
 	K.corner(card, 20)
 	K.stroke(card, P.ink, 4)
 	w.card = card
+	-- the colour badge follows the card's rounded left corners (ClipsDescendants ignores UICorner, so a square badge
+	-- used to stick out of the outline): rounded badge + a square filler on its right half
 	w.badge = K.new("Frame", { Size = UDim2.fromOffset(96, 96), BackgroundColor3 = P.yellow, BorderSizePixel = 0 }, card)
-	w.badgeText = K.text(w.badge, { Text = "1/7", TextSize = 30, Position = UDim2.fromOffset(0, 18), Size = UDim2.new(1, 0, 0, 36), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 })
-	w.badgeSub = K.text(w.badge, { Text = "STEP", Font = K.BODY, TextSize = 12, Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Center })
+	K.corner(w.badge, 20)
+	w.badgeFill = K.new("Frame", { Position = UDim2.fromOffset(48, 0), Size = UDim2.fromOffset(48, 96), BackgroundColor3 = P.yellow, BorderSizePixel = 0 }, w.badge)
+	w.badgeText = K.text(w.badge, { Text = "1/7", TextSize = 30, ZIndex = 2, Position = UDim2.fromOffset(0, 18), Size = UDim2.new(1, 0, 0, 36), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 })
+	w.badgeSub = K.text(w.badge, { Text = "STEP", Font = K.BODY, TextSize = 12, ZIndex = 2, Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Center })
 	w.title = K.text(card, { Text = "", TextSize = 24, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(112, 10), Size = UDim2.fromOffset(400, 28) })
 	w.body = K.text(card, { Text = "", Font = K.BODY, TextSize = 15, TextColor3 = P.muted, TextWrapped = true, Position = UDim2.fromOffset(112, 40), Size = UDim2.fromOffset(436, 34) })
 	local bar = K.new("Frame", { Position = UDim2.fromOffset(112, 76), Size = UDim2.fromOffset(300, 8), BackgroundColor3 = C(230, 232, 236), Visible = false }, card)
@@ -128,6 +132,7 @@ local shownKey
 local function show(key, badge, sub, color, title, body, prog, progText, canSkip)
 	w.card.Visible = true
 	w.badge.BackgroundColor3 = color
+	w.badgeFill.BackgroundColor3 = color
 	w.badgeText.Text = badge
 	local lim = w.badgeText:FindFirstChildOfClass("UITextSizeConstraint")
 	if lim then

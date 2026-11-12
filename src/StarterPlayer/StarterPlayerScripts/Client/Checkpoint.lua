@@ -21,6 +21,7 @@ local function close()
 	if open then
 		open:Destroy()
 		open = nil
+		UI.SetDialog(false)
 	end
 end
 
@@ -33,6 +34,7 @@ local function show(o)
 	UI.Sfx("ping")
 	local dim = K.new("Frame", { Name = "Checkpoint", Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.55, ZIndex = 80 }, K.overlay)
 	open = dim
+	UI.SetDialog(true)
 	local card = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(760, 420), BackgroundColor3 = P.cream, ZIndex = 81 }, dim)
 	K.corner(card, 28)
 	K.stroke(card, P.ink, 5)
@@ -62,6 +64,7 @@ local function show(o)
 			end })
 	end
 	choice(28, P.green, "SAVE", string.format("Bank your loot now and teleport home.\n\n<b>+%d parts</b> safe in your garage.", banked), "SAVE & GO HOME", true, function()
+		UI.QuietBankUntil = os.clock() + 4 -- the bank that follows plays one soft sound, not a fanfare stack
 		Net.Get("CheckpointChoice"):FireServer("save")
 	end)
 	local riskText, can
@@ -93,8 +96,7 @@ function CP.Start(ui, cine)
 			Cine.Title("RISK " .. fmtMult(fx.risk), Color3.fromRGB(255, 90, 70), 1.2, 110, 0.35)
 			UI.Sfx("whoosh")
 		else
-			Cine.Flash(Color3.fromRGB(80, 220, 120), 0.3, 0.6)
-			UI.Sfx("bank")
+			Cine.Flash(Color3.fromRGB(80, 220, 120), 0.2, 0.5) -- (the bank sound already played: no second chime)
 		end
 	end)
 end

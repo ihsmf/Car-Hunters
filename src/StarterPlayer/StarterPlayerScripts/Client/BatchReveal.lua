@@ -47,8 +47,9 @@ local function card(parent, r, order, big)
 	local f = K.new("Frame", { Size = UDim2.fromOffset(big and 170 or 150, big and 190 or 160), BackgroundColor3 = P.white, LayoutOrder = order, ZIndex = 72 }, parent)
 	K.corner(f, 16)
 	K.stroke(f, rc(r.rarity), 4)
-	local band = K.new("Frame", { Size = UDim2.new(1, 0, 0, 8), BackgroundColor3 = rc(r.rarity), BorderSizePixel = 0, ZIndex = 73 }, f)
-	K.corner(band, 4)
+	-- rarity strip inside the straight part of the top edge (it used to poke out of the rounded corners)
+	local band = K.new("Frame", { Position = UDim2.fromOffset(16, 4), Size = UDim2.new(1, -32, 0, 6), BackgroundColor3 = rc(r.rarity), BorderSizePixel = 0, ZIndex = 73 }, f)
+	K.corner(band, 3)
 	return f, def
 end
 

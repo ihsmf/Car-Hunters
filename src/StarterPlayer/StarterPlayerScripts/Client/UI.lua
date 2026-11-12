@@ -195,6 +195,9 @@ end
 
 ---------------------------------------------------------------- sound / toasts
 function UI.Sfx(name)
+	if name == "soft" then
+		name = "step" -- the quiet two-note chime (ElevenLabs) is the one calm "done" sound
+	end
 	local s = sounds[name]
 	if s then
 		s:Play()
@@ -209,11 +212,12 @@ local KIND_COLOR = { good = P.green, error = P.red, warn = P.orange, info = P.bl
 -- into "x2" instead of stacking, items move with their own position tweens (no list-layout snapping), and the
 -- whole pill (background, text AND outline) fades before it is destroyed.
 local notes = { items = {}, queue = {}, top = 172 }
-local NOTE_H, NOTE_GAP, NOTE_MAX, NOTE_LIFE = 44, 8, 3, 2.8
+local NOTE_H, NOTE_GAP, NOTE_MAX, NOTE_LIFE = 36, 12, 3, 2.8 -- v11: smaller pills, more air between them
 
 local function noteY(i)
 	-- with a panel open the lane sits above the panel card, so a message never covers the button just pressed
-	local top = state.open and (hud.tutInPanel and 108 or 6) or notes.top -- below the tutorial card on garage steps
+	-- dialogs (confirm, checkpoint) also push the lane to the very top so it never covers their buttons
+	local top = (state.open or state.dialog) and (hud.tutInPanel and 108 or 6) or notes.top -- below the tutorial card on garage steps
 	return top + (i - 1) * (NOTE_H + NOTE_GAP)
 end
 
@@ -252,7 +256,7 @@ local function noteRemove(it)
 		nextOne = table.remove(notes.queue, 1) -- stale ("Not enough money" 8 s later helps nobody)
 	end
 	if nextOne then
-		noteShow(nextOne.msg, nextOne.kind, nextOne.n)
+		noteShow(nextOne.msg, nextOne.kind, nextOne.n, nextOne.silent)
 	end
 end
 
@@ -260,26 +264,36 @@ local function noteLabel(it)
 	return it.n > 1 and (it.msg .. "   x" .. it.n) or it.msg
 end
 
-noteShow = function(msg, kind, n)
-	local f = new("Frame", { Name = "Note", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, noteY(#notes.items + 1) - 10), AutomaticSize = Enum.AutomaticSize.X,
+noteShow = function(msg, kind, n, silent)
+	local f = new("TextButton", { Name = "Note", Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, noteY(#notes.items + 1) - 10), AutomaticSize = Enum.AutomaticSize.X,
 		Size = UDim2.fromOffset(0, NOTE_H), BackgroundColor3 = KIND_COLOR[kind] or P.blue, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 50 }, hud.toasts)
-	corner(f, 22)
-	local st = stroke(f, P.ink, 3)
+	corner(f, 18)
+	local st = stroke(f, P.ink, 2.5)
 	st.Transparency = 1
-	new("UIPadding", { PaddingLeft = UDim.new(0, 18), PaddingRight = UDim.new(0, 18) }, f)
-	local l = text(f, { Text = msg, TextSize = 22, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), ZIndex = 51, TextTransparency = 1 })
+	new("UIPadding", { PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14) }, f)
+	local l = text(f, { Text = msg, TextSize = 18, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), ZIndex = 51, TextTransparency = 1 })
 	local it = { f = f, l = l, stroke = st, msg = msg, kind = kind, n = n or 1, expire = os.clock() + NOTE_LIFE, born = os.clock() }
 	l.Text = noteLabel(it)
 	table.insert(notes.items, it)
+	f.Activated:Connect(function() -- tap a message to hide it right away
+		noteRemove(it)
+	end)
 	tween(f, 0.2, { BackgroundTransparency = 0 })
 	tween(l, 0.2, { TextTransparency = 0 })
 	tween(st, 0.2, { Transparency = 0 })
 	noteLayout()
-	UI.Sfx(kind == "error" and "err" or "ping")
+	if not silent then
+		UI.Sfx(kind == "error" and "err" or "ping")
+	end
 end
 
-function UI.Toast(msg, kind)
+-- silent = no ping (e.g. a message that comes with its own sound); notifications can be switched off in Settings
+-- (errors still show: the player must know why an action failed)
+function UI.Toast(msg, kind, silent)
 	msg = tostring(msg)
+	if state.notesOff and kind ~= "error" and kind ~= "warn" then
+		return
+	end
 	-- same message already on screen or waiting: count it instead of adding another pill
 	for _, it in ipairs(notes.items) do
 		if not it.dead and it.msg == msg then
@@ -297,7 +311,7 @@ function UI.Toast(msg, kind)
 		end
 	end
 	if #notes.items >= NOTE_MAX then
-		table.insert(notes.queue, { msg = msg, kind = kind, n = 1, at = os.clock() })
+		table.insert(notes.queue, { msg = msg, kind = kind, n = 1, at = os.clock(), silent = silent })
 		while #notes.queue > 5 do
 			table.remove(notes.queue, 1) -- a burst: drop the oldest waiting messages
 		end
@@ -306,7 +320,22 @@ function UI.Toast(msg, kind)
 		oldest.expire = math.min(oldest.expire, os.clock() + 0.6)
 		return
 	end
-	noteShow(msg, kind, 1)
+	noteShow(msg, kind, 1, silent)
+end
+
+-- a modal dialog (confirm, checkpoint) is up: the notification lane moves to the very top
+function UI.SetDialog(on)
+	state.dialog = on and true or nil
+	noteLayout()
+end
+
+function UI.SetNotificationsEnabled(on)
+	state.notesOff = not on
+	if not on then
+		for _, it in ipairs(table.clone(notes.items)) do
+			noteRemove(it)
+		end
+	end
 end
 
 -- the notification lane starts below whatever is shown at the top (objective card, hot drop banner)
@@ -337,7 +366,8 @@ function UI.Notify(payload)
 	if type(payload) ~= "table" then
 		return
 	end
-	UI.Toast(T("n_" .. tostring(payload.key), table.unpack(payload.args or {})), payload.kind)
+	local SILENT = { banked = true, banked2 = true, contractDone = true, contractsDone = true, dailyClaimed = true, chestClaimed = true }
+	UI.Toast(T("n_" .. tostring(payload.key), table.unpack(payload.args or {})), payload.kind, SILENT[payload.key])
 end
 
 ---------------------------------------------------------------- HUD
@@ -786,6 +816,10 @@ function UI.Confirm(title, body, okText, okColor, onOk, def)
 	end })
 	dim.Activated:Connect(function() dim:Destroy() end)
 	confirmDim = dim
+	UI.SetDialog(true)
+	dim.Destroying:Connect(function()
+		UI.SetDialog(false)
+	end)
 end
 
 state.garageTab = "parked"
