@@ -53,6 +53,16 @@ if cm is not None:
             cm.remove(c)
 tree.write(out, encoding='utf-8', xml_declaration=False)
 print('built', out, count)
+# smoke test: every Shared module must load (catches wrong enums/datatypes that only fail inside Roblox)
+import shutil as _sh, subprocess as _sp
+_lune = _sh.which('lune') or os.path.expanduser('~/.cargo/bin/lune')
+if os.path.exists(_lune):
+    _r = _sp.run([_lune, 'run', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'smoke_test.luau'),
+                  os.path.join(src, 'ReplicatedStorage', 'Shared')], capture_output=True, text=True)
+    print((_r.stdout.strip().splitlines() or ['smoke test: no output'])[-1])
+    if 'failing at load: 0' not in _r.stdout:
+        print(_r.stdout)
+        raise SystemExit('!!! smoke test failed - fix the modules above before shipping')
 # embed downloaded 3D models (tools/fetch_assets.py) with lune, so nothing is downloaded at runtime
 import shutil, subprocess
 rbxm = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets', 'rbxm')

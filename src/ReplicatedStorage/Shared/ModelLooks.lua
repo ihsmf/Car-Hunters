@@ -6,7 +6,7 @@ return {
 	Rubber = { M.SmoothPlastic, C(26, 26, 30), 0, 0 }, Metal = { M.Metal, C(160, 164, 172), 0.05, 0 },
 	Chrome = { M.Metal, C(226, 230, 236), 0.35, 0 }, Dark = { M.SmoothPlastic, C(30, 32, 38), 0, 0 },
 	Copper = { M.Metal, C(190, 104, 56), 0.1, 0 }, Accent = { M.SmoothPlastic, C(214, 40, 36), 0.05, 0 },
-	Glow = { M.Neon, C(255, 236, 190), 0, 0, false }, Carbon = { M.Carbon, C(20, 20, 24), 0.05, 0 },
+	Glow = { M.Neon, C(255, 236, 190), 0, 0, false }, Carbon = { M.SmoothPlastic, C(20, 20, 24), 0.08, 0 },
 	Blue = { M.SmoothPlastic, C(30, 110, 220), 0.05, 0 }, Gold = { M.Metal, C(255, 190, 60), 0.3, 0 },
 	Green = { M.SmoothPlastic, C(40, 170, 80), 0, 0 }, White = { M.SmoothPlastic, C(244, 244, 242), 0, 0 },
 	Marble = { M.Marble, C(238, 234, 226), 0.05, 0 }, Glass = { M.Glass, C(150, 200, 235), 0.1, 0.4 },

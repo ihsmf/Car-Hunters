@@ -119,7 +119,7 @@ local PART_LOOK = {
 	Rubber = { Enum.Material.SmoothPlastic, C(26, 26, 30), 0 }, Metal = { Enum.Material.Metal, C(160, 164, 172), 0.05 },
 	Chrome = { Enum.Material.Metal, C(226, 230, 236), 0.35 }, Dark = { Enum.Material.Metal, C(34, 36, 42), 0 },
 	Copper = { Enum.Material.Metal, C(190, 104, 56), 0.1 }, Accent = { Enum.Material.SmoothPlastic, C(214, 40, 36), 0.05 },
-	Glow = { Enum.Material.Neon, C(60, 230, 255), 0 }, Carbon = { Enum.Material.Carbon, C(20, 20, 24), 0.05 },
+	Glow = { Enum.Material.Neon, C(60, 230, 255), 0 }, Carbon = { Enum.Material.SmoothPlastic, C(20, 20, 24), 0.08 },
 	Blue = { Enum.Material.SmoothPlastic, C(30, 90, 220), 0.1 }, Gold = { Enum.Material.Metal, C(255, 190, 60), 0.3 },
 	Green = { Enum.Material.SmoothPlastic, C(20, 110, 50), 0 },
 }

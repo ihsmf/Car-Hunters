@@ -90,6 +90,8 @@ function ModelService.LoadAll()
 	local n = 0
 	local stats = { embedded = 0, downloaded = 0, missing = {} }
 	for name, id in pairs(ids) do
+		-- each model on its own: one broken model must never stop the others
+		local okOne, errOne = pcall(function()
 		if id and id > 0 then
 			-- 1) embedded in the place file (tools/bake_models.luau)  2) LoadAsset (needs the game owner to own the asset)
 			local emb = ServerStorage:FindFirstChild("Embedded")
@@ -137,7 +139,13 @@ function ModelService.LoadAll()
 				warn(string.format("[Models] %s (%s) did not load: %s", name, tostring(id), tostring(res)))
 			end
 		end
+		end)
+		if not okOne then
+			table.insert(stats.missing, name)
+			warn(string.format("[Models] %s failed while preparing: %s", name, tostring(errOne)))
+		end
 	end
+	ModelService.Report = { installed = n, missing = stats.missing }
 	print(string.format("[Models] %d Blender models installed (embedded %d, downloaded %d)%s", n, stats.embedded, stats.downloaded,
 		#stats.missing > 0 and ("  MISSING: " .. table.concat(stats.missing, ", ")) or ""))
 	return n

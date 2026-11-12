@@ -85,7 +85,15 @@ local okCars, carsOrErr = pcall(function()
 	return require(ServerStorage:WaitForChild("Tools"):WaitForChild("CarStoreTool")).InstallMissingEmbedded()
 end)
 if okCars then
-	print(string.format("[CarHunters] %d store car models installed from the place file", carsOrErr))
+	local carModels = game:GetService("ReplicatedStorage"):FindFirstChild("CarModels")
+	local real = 0
+	for _, m in ipairs(carModels and carModels:GetChildren() or {}) do
+		if m:IsA("Model") and m:FindFirstChildWhichIsA("BasePart", true) then
+			real = real + 1
+		end
+	end
+	Workspace:SetAttribute("RealCars", real)
+	print(string.format("[CarHunters] %d store car models installed from the place file (%d real car models in total)", carsOrErr, real))
 else
 	warn("[CarHunters] car models failed:", carsOrErr)
 end
@@ -205,6 +213,13 @@ local function onPlayerAdded(player)
 	S.Income.PayOffline(player)
 	S.Data.Push(player)
 	player:LoadCharacter()
+	-- Studio only: say right in the game how many real 3D models are in use (no digging through Output)
+	if game:GetService("RunService"):IsStudio() then
+		local rep = require(ServerScriptService.Services.ModelService).Report or { installed = 0, missing = {} }
+		task.delay(4, function()
+			S.Data.Notify(player, "modelReport", { rep.installed, Workspace:GetAttribute("RealCars") or 0, #rep.missing }, #rep.missing > 0 and "warn" or "good")
+		end)
+	end
 	if s.leftEarly then cleanup(player) end
 end
 

@@ -1344,7 +1344,7 @@ function UI.Init(storeModule, actionTable)
 	local player = Players.LocalPlayer
 	gui = new("ScreenGui", { Name = "MainUI", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 10 })
 	pcall(function()
-		gui.ScreenInsets = Enum.ScreenInsets.CoreUISafe
+		gui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
 	end)
 	root = new("Frame", { Name = "Root", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1) }, gui)
 	local uiScale = new("UIScale", {}, root)

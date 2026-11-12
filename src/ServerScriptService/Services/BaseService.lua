@@ -191,7 +191,7 @@ local function applyTuneVisuals(model, def, tune)
 			p.Size = size
 			p.CFrame = cf
 			p.Color = stage == 3 and Color3.fromRGB(30, 30, 34) or def.body or Color3.fromRGB(30, 30, 34)
-			p.Material = stage == 3 and Enum.Material.Carbon or Enum.Material.SmoothPlastic
+			p.Material = stage == 3 and Enum.Material.Metal or Enum.Material.SmoothPlastic -- (Material.Carbon does not exist)
 			p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.Massless = true, false, false, false, true
 			p.Parent = model
 		end
