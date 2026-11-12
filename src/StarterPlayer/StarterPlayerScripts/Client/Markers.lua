@@ -169,6 +169,7 @@ function Markers.Start(kit, extraModule)
 			else
 				local inset = game:GetService("GuiService"):GetGuiInset()
 				vp = vp - inset
+				p = Vector3.new(p.X - inset.X, p.Y - inset.Y, p.Z)
 				local cx, cy = vp.X / 2, vp.Y / 2
 				local dx, dy = p.X - cx, p.Y - cy
 				if p.Z < 0 then

@@ -55,9 +55,10 @@ end
 local function grid(res)
 	local scr = K.new("Frame", { Name = "Grid", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(940, 600), BackgroundColor3 = P.cream, ZIndex = 70, Active = true }, root)
 	-- a tap outside the card closes the results (on small screens the buttons were the only way out)
+	local r = root
 	task.delay(0.6, function()
-		if root then
-			root.Activated:Connect(close)
+		if r and root == r then -- only the results screen it was made for
+			r.Activated:Connect(close)
 		end
 	end)
 	K.corner(scr, 28)

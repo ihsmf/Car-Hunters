@@ -213,7 +213,7 @@ local NOTE_H, NOTE_GAP, NOTE_MAX, NOTE_LIFE = 44, 8, 3, 2.8
 
 local function noteY(i)
 	-- with a panel open the lane sits above the panel card, so a message never covers the button just pressed
-	local top = state.open and 6 or notes.top
+	local top = state.open and (hud.tutInPanel and 108 or 6) or notes.top -- below the tutorial card on garage steps
 	return top + (i - 1) * (NOTE_H + NOTE_GAP)
 end
 
