@@ -922,14 +922,15 @@ function UI.SetCinematic(on)
 		return
 	end
 	state.cine = active
-	if active then
-		UI.TogglePanel(nil)
-		UI.CloseOverlays()
-	end
 	root.Visible = not active
 	pcall(function()
 		game:GetService("ProximityPromptService").Enabled = not active
 	end)
+	if active then
+		-- a failing hook must never leave the game half in cinematic mode
+		pcall(UI.CloseOverlays)
+		pcall(UI.TogglePanel, nil) -- closing is allowed in cinematic mode, opening is not
+	end
 	pcall(function()
 		local pm = require(Players.LocalPlayer:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"))
 		local controls = pm:GetControls()
@@ -940,7 +941,7 @@ function UI.SetCinematic(on)
 		end
 	end)
 	if not active then
-		UI.Refresh()
+		pcall(UI.Refresh)
 	end
 end
 

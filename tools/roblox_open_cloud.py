@@ -189,7 +189,11 @@ def create_products(args):
     cfg = os.path.join(SHARED, "DonateConfig.lua")
     u = args.universe
     prods, passes = {}, {}
+    # re-runs are safe: items that already have an id in ProductIds.lua are skipped (no duplicates on Roblox)
+    have = {m.group(1): int(m.group(2)) for m in re.finditer(r"(\w+) = (\d+)", open(os.path.join(SHARED, "ProductIds.lua"), encoding="utf-8").read())}
     for it in lua_list(cfg, "Products"):
+        if have.get(it["id"], 0) > 0:
+            continue
         body, hdr = multipart({"name": it["name"], "description": it["desc"], "price": str(it["price"]), "isForSale": "true"}, {})
         st, res = request("POST", f"{API}/developer-products/v2/universes/{u}/developer-products", body, hdr)
         pid = res.get("productId") or res.get("id")
@@ -197,6 +201,8 @@ def create_products(args):
         if pid:
             prods[it["id"]] = int(pid)
     for it in lua_list(cfg, "Passes"):
+        if have.get(it["id"], 0) > 0:
+            continue
         body, hdr = multipart({"name": it["name"], "description": it["desc"], "price": str(it["price"]), "isForSale": "true"}, {})
         st, res = request("POST", f"{API}/game-passes/v1/universes/{u}/game-passes", body, hdr)
         gid = res.get("gamePassId") or res.get("id")

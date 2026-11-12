@@ -35,7 +35,9 @@ local function close()
 	end
 	if holding then
 		holding = false
-		Cine.Darken(0, 0.35)
+		if not TrapFx.IsBusy() then -- the car showcase keeps its own blackout
+			Cine.Darken(0, 0.35)
+		end
 		UI.SetCinematic(false)
 	end
 end
@@ -221,8 +223,8 @@ function BR.Play(res)
 		return
 	end
 	close()
-	UI.SetCinematic(true)
 	holding = true
+	UI.SetCinematic(true)
 	-- blackout: the world fades to fully dark, the reel and the grid sit on a solid backdrop
 	Cine.Darken(1, 0.25)
 	Cine.Shake(0.9, 0.35)
@@ -236,6 +238,8 @@ function BR.Play(res)
 		end
 	end)
 end
+
+BR.Close = close
 
 function BR.Start(ui, cine, trap)
 	UI = ui

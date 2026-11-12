@@ -270,6 +270,9 @@ function TR.Start(ui)
 		end
 	end)
 	table.insert(UI.Overlays, function()
+		if last ~= nil then
+			w.pendingOpen = true -- the trade window comes back after the cinematic
+		end
 		if w.request and w.request.Parent then
 			w.request:Destroy()
 		end

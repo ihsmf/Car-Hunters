@@ -9,6 +9,15 @@ local Strings = require(Shared:WaitForChild("Strings"))
 local Util = require(Shared:WaitForChild("Util"))
 local ShopConfig = require(Shared:WaitForChild("ShopConfig"))
 local DonateConfig = require(Shared:WaitForChild("DonateConfig"))
+local ProductIds = require(Shared:WaitForChild("ProductIds"))
+local IS_STUDIO = game:GetService("RunService"):IsStudio()
+local randomRestricted = false
+task.spawn(function()
+	local ok, info = pcall(function()
+		return game:GetService("PolicyService"):GetPolicyInfoForPlayerAsync(game:GetService("Players").LocalPlayer)
+	end)
+	randomRestricted = ok and info and info.ArePaidRandomItemsRestricted == true or false
+end)
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
@@ -164,7 +173,8 @@ local function refreshDonate(st, open)
 	K.clear(w.donateGrid)
 	local items = donateTab == "pass" and DonateConfig.Passes or DonateConfig.Products
 	for _, it in ipairs(items) do
-		if it.tab == donateTab then
+		-- live game: only products that exist on Roblox, and no paid random items where they are not allowed
+		if it.tab == donateTab and DonateConfig.Available(it, ProductIds, IS_STUDIO, randomRestricted) then
 			local owned = it.isPass and st.passes and st.passes[it.id]
 			local card = K.new("Frame", { BackgroundColor3 = C(255, 250, 236), LayoutOrder = it.order, ZIndex = 23 }, w.donateGrid)
 			K.corner(card, 20)
@@ -345,11 +355,14 @@ local function showOffline(info)
 	local btns = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -22), Size = UDim2.fromOffset(470, 76), BackgroundTransparency = 1, ZIndex = 82 }, card)
 	K.list(btns, Enum.FillDirection.Horizontal, 16, Enum.HorizontalAlignment.Center)
 	K.toy(btns, { Text = "COLLECT", Color = P.green, Size = UDim2.fromOffset(210, 72), TextSize = 26, LayoutOrder = 1, ZIndex = 83, OnClick = closeCard })
-	K.toy(btns, { Text = "x2", Sub = "R$ " .. ((DonateConfig.ById.offline_x2 or {}).price or "?"), Color = GOLD, Size = UDim2.fromOffset(150, 72), TextSize = 28, SubSize = 14, LayoutOrder = 2, ZIndex = 83,
-		OnClick = function()
-			K.actions.Donate("offline_x2")
-			closeCard()
-		end })
+	local x2 = DonateConfig.ById.offline_x2
+	if x2 and DonateConfig.Available(x2, ProductIds, IS_STUDIO, randomRestricted) then
+		K.toy(btns, { Text = "x2", Sub = "R$ " .. x2.price, Color = GOLD, Size = UDim2.fromOffset(150, 72), TextSize = 28, SubSize = 14, LayoutOrder = 2, ZIndex = 83,
+			OnClick = function()
+				K.actions.Donate("offline_x2")
+				closeCard()
+			end })
+	end
 	UI.Sfx("cash")
 end
 

@@ -139,6 +139,13 @@ end
 
 -- one cinematic at a time: later ones wait in a queue (e.g. "SEE BEST CAR" pressed during another reveal)
 local busy, queue = false, {}
+local current -- ctx of the running cinematic
+
+local function check(ctx)
+	if ctx.aborted then
+		error("aborted", 0)
+	end
+end
 
 local function body(res, baseIndex, ctx)
 		local def = CarConfig.ById[res.typeId]
@@ -161,6 +168,7 @@ local function body(res, baseIndex, ctx)
 		local k = 1 / math.max(1, res.speed or 1) -- fast trap pass halves every beat
 		local function wait(t)
 			task.wait(t * k)
+			check(ctx)
 		end
 		local tStart = os.clock()
 		local lvl = CarConfig.Rarities[res.rarity].index
@@ -215,6 +223,7 @@ local function body(res, baseIndex, ctx)
 				break
 			end
 			RunService.RenderStepped:Wait()
+			check(ctx)
 		end
 		Cine.Shake(0.8, 0.25)
 		burst(target, { c1 = Color3.fromRGB(255, 220, 140), c2 = Color3.fromRGB(255, 140, 40), s1 = 0.5, life = 0.5, speed = 16, acc = Vector3.new(0, -40, 0) }, 30)
@@ -227,6 +236,7 @@ local function body(res, baseIndex, ctx)
 		light.Color = rc
 		light.Range = 4
 		light.Brightness = 0
+		ctx.light, ctx.magnet, ctx.magnetCF = light, magnet, magnetCF
 		if magnet then
 			light.Parent = magnet
 			tw(magnet, 0.5 * k, { CFrame = magnetCF - Vector3.new(0, 5, 0) }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
@@ -248,6 +258,7 @@ local function body(res, baseIndex, ctx)
 			Cine.Shake(0.1 + f * 0.25 * lvl, 0.12)
 			camTarget = CFrame.lookAt(padPos + side * (16 - f * 5) + front * (10 - f * 3) + Vector3.new(0, 9 - f * 2, 0), padPos + Vector3.new(0, 3, 0))
 			task.wait(0.08)
+			check(ctx)
 		end
 
 		-- 4) climax
@@ -267,8 +278,10 @@ local function body(res, baseIndex, ctx)
 		-- 5) blackout: the screen goes fully dark, then the showcase (UI.ShowReveal) on a solid dark backdrop
 		Cine.Shake(1.2 + lvl * 0.3, 0.5)
 		task.wait(lvl >= 4 and 0.55 or 0.3)
+		check(ctx)
 		Cine.Darken(1, 0.22)
 		task.wait(0.25)
+		check(ctx)
 		if magnet then
 			magnet.CFrame = magnetCF
 			light.Brightness = 0
@@ -287,6 +300,7 @@ local function body(res, baseIndex, ctx)
 				TrapFx.HideReveal()
 			end
 		end
+		check(ctx)
 
 		-- 6) drive-in: the car comes through the garage gate and parks; the camera rides in front of it
 		local ghost = VehicleFactory.BuildCar(def)
@@ -330,7 +344,7 @@ local function body(res, baseIndex, ctx)
 			local doorCF = door and door.CFrame
 			ctx.door, ctx.doorCF = door, doorCF
 			if door then
-				tw(door, 0.6, { CFrame = doorCF + Vector3.new(0, 10.5, 0) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+				ctx.doorTween = tw(door, 0.6, { CFrame = doorCF + Vector3.new(0, 10.5, 0) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 			end
 			ghost:PivotTo(faceCF(pts[1], pts[2] - pts[1]))
 			ghost.Parent = Workspace
@@ -377,6 +391,7 @@ local function body(res, baseIndex, ctx)
 					break
 				end
 				RunService.RenderStepped:Wait()
+				check(ctx)
 			end
 			-- reverse-style final: swing into the bay facing out, hero shot
 			local final = pts[#pts] - bcf:VectorToWorldSpace(Vector3.new(4, 0, 0))
@@ -390,7 +405,7 @@ local function body(res, baseIndex, ctx)
 			end
 			task.wait(1.1)
 			if door then
-				tw(door, 0.6, { CFrame = doorCF })
+				ctx.doorTween = tw(door, 0.6, { CFrame = doorCF })
 			end
 		end
 		Cine.Darken(0, 0.3) -- no slot (stored car): just fade back in
@@ -402,7 +417,15 @@ end
 
 -- always runs, also when the cinematic errored half-way: nothing may stay hidden, dark or scripted
 local function cleanup(ctx)
-	for _, k in ipairs({ "item", "ghost", "spk", "dof", "cc" }) do
+	if ctx.doorTween then
+		pcall(function()
+			ctx.doorTween:Cancel()
+		end)
+	end
+	if ctx.magnet and ctx.magnetCF then
+		ctx.magnet.CFrame = ctx.magnetCF
+	end
+	for _, k in ipairs({ "item", "ghost", "spk", "dof", "cc", "light" }) do
 		if ctx[k] then
 			pcall(function()
 				ctx[k]:Destroy()
@@ -422,13 +445,23 @@ local function cleanup(ctx)
 		ctx.door.CFrame = ctx.doorCF
 	end
 	if TrapFx.HideReveal then
-		TrapFx.HideReveal()
+		pcall(TrapFx.HideReveal)
 	end
 	camStop()
 	Cine.Letterbox(false, 0.2)
-	Cine.Darken(0, 0.3)
-	if ctx.camTaken then
-		Cine.Release(0.3)
+	if not ctx.aborted then -- aborted = the player was wrecked: DeathFx owns the camera and the screen now
+		Cine.Darken(0, 0.3)
+		if ctx.camTaken then
+			Cine.Release(0.3)
+		end
+	end
+end
+
+-- stop the running cinematic right away (the player got wrecked); queued ones are dropped
+function TrapFx.Abort()
+	queue = {}
+	if current then
+		current.aborted = true
 	end
 end
 
@@ -438,23 +471,28 @@ function TrapFx.Play(res, baseIndex, onDone)
 		return
 	end
 	busy = true
-	cinema(true)
+	pcall(cinema, true)
 	task.spawn(function()
 		local ctx = {}
+		current = ctx
 		local ok, err = pcall(body, res, baseIndex, ctx)
-		if not ok then
+		if not ok and err ~= "aborted" then
 			warn("TrapFx: " .. tostring(err))
 		end
-		cleanup(ctx)
+		local ok2, err2 = pcall(cleanup, ctx)
+		if not ok2 then
+			warn("TrapFx cleanup: " .. tostring(err2))
+		end
+		current = nil
 		if onDone then
 			task.spawn(onDone)
 		end
 		local nextOne = table.remove(queue, 1)
 		busy = false
-		cinema(false)
 		if nextOne then
-			TrapFx.Play(nextOne[1], nextOne[2], nextOne[3])
+			TrapFx.Play(nextOne[1], nextOne[2], nextOne[3]) -- holds its own cinematic count before ours is released
 		end
+		pcall(cinema, false)
 	end)
 end
 

@@ -3,8 +3,8 @@ local DonateConfig = {}
 
 DonateConfig.Products = {
 	{ id = "boost_income", tab = "boost", icon = "💸", name = "x2 Income", desc = "Double garage income for 30 min", price = 49, boost = "income", seconds = 1800 },
-	{ id = "boost_luck", tab = "boost", icon = "🍀", name = "Lucky Hour", desc = "Better car rarity from the trap for 15 min", price = 39, boost = "luck", seconds = 900 },
-	{ id = "pity", tab = "boost", icon = "🎯", name = "Sure Shot", desc = "Your next throw is Epic or better", price = 59 },
+	{ id = "boost_luck", tab = "boost", icon = "🍀", name = "Lucky Hour", desc = "Better car rarity from the trap for 15 min", price = 39, boost = "luck", seconds = 900, random = true },
+	{ id = "pity", tab = "boost", icon = "🎯", name = "Sure Shot", desc = "Next throw: Epic or better (odds in THROW menu)", price = 59, random = true },
 	{ id = "hotdrop", tab = "boost", icon = "📦", name = "Call a Hot Drop", desc = "A rare crate lands in your best district right now", price = 25 },
 	{ id = "revive", tab = "boost", icon = "❤️", name = "Insurance", desc = "Get back the loot you lost in your last crash", price = 19 },
 	{ id = "cash_s", tab = "pack", icon = "💵", name = "Cash Stack", desc = "5 min of income (min $5K)", price = 25, cash = { 300, 5000 } },
@@ -35,6 +35,16 @@ for _, list in ipairs({ DonateConfig.Products, DonateConfig.Passes }) do
 		it.isPass = list == DonateConfig.Passes
 		DonateConfig.ById[it.id] = it
 	end
+end
+
+-- random = true: the item changes a random outcome. Roblox requires hiding paid random items where
+-- PolicyService says ArePaidRandomItemsRestricted (client hides, server refuses).
+function DonateConfig.Available(it, productIds, isStudio, randomRestricted)
+	if it.random and randomRestricted then
+		return false
+	end
+	local id = it.isPass and productIds.passes[it.id] or productIds.products[it.id]
+	return isStudio or (id ~= nil and id > 0)
 end
 
 return DonateConfig

@@ -171,6 +171,15 @@ function Donate.Request(player, key)
 	if not item or not S.Data.RateLimit(player, "donate", 1) then
 		return
 	end
+	if item.random then
+		local ok, info = pcall(function()
+			return game:GetService("PolicyService"):GetPolicyInfoForPlayerAsync(player)
+		end)
+		if not ok or not info or info.ArePaidRandomItemsRestricted then
+			S.Data.Notify(player, "donateOff", nil, "warn")
+			return
+		end
+	end
 	local id = item.isPass and ProductIds.passes[key] or ProductIds.products[key]
 	if id and id > 0 then
 		if item.isPass then

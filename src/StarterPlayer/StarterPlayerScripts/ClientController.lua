@@ -108,6 +108,8 @@ Net.Get("HitFx").OnClientEvent:Connect(function(dir, kind)
 		return
 	end
 	local lost = Store.State and Util.CopyTable(Store.State.carried) or {}
+	TrapFx.Abort()
+	BatchReveal.Close()
 	UI.TogglePanel(nil)
 	UI.CloseOverlays()
 	UI.HideReveal()
