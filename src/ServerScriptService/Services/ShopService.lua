@@ -42,7 +42,7 @@ function Shop.CarryCap(s)
 end
 
 function Shop.PickupRadius(s)
-	local r = EconomyConfig.PickupRadius + ShopConfig.ById.magnet.per * lvl(s, "magnet")
+	local r = (EconomyConfig.PickupRadius + ShopConfig.ById.magnet.per * lvl(s, "magnet")) * (1 + 0.25 * S.Rebirth.PerkLevel(s, "magnet"))
 	return pass(s, "auto_collect") and r * 2 or r
 end
 
@@ -59,7 +59,7 @@ end
 
 -- 0..1 shift towards rarer cars (applied to the roll's random number)
 function Shop.LuckShift(s)
-	local shift = ShopConfig.ById.lucky.per * lvl(s, "lucky")
+	local shift = ShopConfig.ById.lucky.per * lvl(s, "lucky") + 0.02 * S.Rebirth.PerkLevel(s, "luck")
 	if boostActive(s, "luck") then
 		shift = shift + 0.08
 	end

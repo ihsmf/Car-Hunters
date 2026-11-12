@@ -24,6 +24,7 @@ DonateConfig.Passes = {
 	{ id = "golden_car", tab = "pass", icon = "🏎️", name = "Golden Magnat GT", desc = "Exclusive gold supercar, earns $2K/s", price = 499 },
 	{ id = "double_contracts", tab = "pass", icon = "📜", name = "Contract Boss", desc = "x2 contract rewards", price = 149 },
 	{ id = "fast_trap", tab = "pass", icon = "⚡", name = "Fast Trap", desc = "Throw parts twice as often", price = 99 },
+	{ id = "golden_garage", tab = "pass", icon = "👑", name = "Golden Garage", desc = "Gold garage skin, +20% income", price = 249 },
 }
 
 DonateConfig.ById = {}

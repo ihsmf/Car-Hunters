@@ -114,6 +114,36 @@ local function installProp(m)
 	m.Parent = props
 end
 
+-- realistic pickup / tuning parts from blender/make_parts.py -> ReplicatedStorage.PartModels
+local PART_LOOK = {
+	Rubber = { Enum.Material.SmoothPlastic, C(26, 26, 30), 0 }, Metal = { Enum.Material.Metal, C(160, 164, 172), 0.05 },
+	Chrome = { Enum.Material.Metal, C(226, 230, 236), 0.35 }, Dark = { Enum.Material.Metal, C(34, 36, 42), 0 },
+	Copper = { Enum.Material.Metal, C(190, 104, 56), 0.1 }, Accent = { Enum.Material.SmoothPlastic, C(214, 40, 36), 0.05 },
+	Glow = { Enum.Material.Neon, C(60, 230, 255), 0 }, Carbon = { Enum.Material.Carbon, C(20, 20, 24), 0.05 },
+	Blue = { Enum.Material.SmoothPlastic, C(30, 90, 220), 0.1 }, Gold = { Enum.Material.Metal, C(255, 190, 60), 0.3 },
+	Green = { Enum.Material.SmoothPlastic, C(20, 110, 50), 0 },
+}
+local function installPart(m)
+	local dest = ensure(ReplicatedStorage, "Folder", "PartModels")
+	local old = dest:FindFirstChild(m.Name)
+	if old then
+		old:Destroy()
+	end
+	for _, d in ipairs(m:GetDescendants()) do
+		if d:IsA("BasePart") then
+			local key = string.match(d.Name, "^(%a+)") or ""
+			local look = PART_LOOK[key]
+			if look then
+				d.Name, d.Material, d.Color, d.Reflectance = key, look[1], look[2], look[3]
+			end
+			d.Anchored, d.CanCollide, d.CanQuery, d.CanTouch, d.CastShadow = false, false, false, false, false
+		end
+	end
+	local bb, size = m:GetBoundingBox()
+	m.WorldPivot = CFrame.new(bb.Position - Vector3.new(0, size.Y / 2, 0))
+	m.Parent = dest
+end
+
 local function styleCar(model, def)
 	for _, d in ipairs(model:GetDescendants()) do
 		if d:IsA("BasePart") then
@@ -159,6 +189,11 @@ function Tool.ApplyImported(container)
 			if m:IsA("Model") then
 				if PROPS[m.Name] then
 					installProp(m)
+					moved = moved + 1
+					continue
+				end
+				if string.match(m.Name, "^Part_") or string.match(m.Name, "^Tune_") then
+					installPart(m)
 					moved = moved + 1
 					continue
 				end

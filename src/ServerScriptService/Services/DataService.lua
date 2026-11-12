@@ -12,6 +12,7 @@ local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 local ShopConfig = require(Shared:WaitForChild("ShopConfig"))
 local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
+local SkinConfig = require(Shared:WaitForChild("SkinConfig"))
 
 local DataService = {}
 local S
@@ -42,6 +43,11 @@ local function newProfile(isNew)
 		receipts = {},
 		contracts = {},
 		tuning = {},
+		rebirths = 0,
+		tokens = 0,
+		tokenPerks = {},
+		skins = { classic = true },
+		skin = "classic",
 	}
 	if isNew then
 		for id, n in pairs(EconomyConfig.StarterParts) do
@@ -180,6 +186,26 @@ local function sanitize(raw)
 				end
 			end
 		end
+	end
+	p.rebirths = toCount(raw.rebirths, 1000)
+	p.tokens = toCount(raw.tokens, 1e6)
+	if type(raw.tokenPerks) == "table" then
+		for _, def in ipairs(SkinConfig.TokenPerks) do
+			local v = toCount(raw.tokenPerks[def.id], def.max)
+			if v > 0 then
+				p.tokenPerks[def.id] = v
+			end
+		end
+	end
+	if type(raw.skins) == "table" then
+		for id, v in pairs(raw.skins) do
+			if v == true and SkinConfig.ById[id] then
+				p.skins[id] = true
+			end
+		end
+	end
+	if type(raw.skin) == "string" and SkinConfig.ById[raw.skin] then
+		p.skin = raw.skin
 	end
 	p.saveCount = toCount(raw.saveCount, 1e12)
 	return p
@@ -433,6 +459,11 @@ function DataService.BuildState(s)
 		passes = Util.CopyTable(s.passes or {}),
 		contracts = Util.CopyTable(d.contracts),
 		tuning = Util.CopyTable(d.tuning),
+		rebirths = d.rebirths,
+		tokens = d.tokens,
+		tokenPerks = Util.CopyTable(d.tokenPerks),
+		skins = Util.CopyTable(d.skins),
+		skin = d.skin,
 		walkSpeed = S.Shop.WalkSpeed(s),
 		pickupRadius = S.Shop.PickupRadius(s),
 		airbagIn = S.Shop.AirbagReadyIn(s),

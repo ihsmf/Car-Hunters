@@ -7,6 +7,6 @@ return {
 		hotdrop = 0, pity = 0, revive = 0, slots = 0,
 	},
 	passes = {
-		vip = 0, big_backpack = 0, auto_collect = 0, golden_car = 0, double_contracts = 0, fast_trap = 0,
+		vip = 0, big_backpack = 0, auto_collect = 0, golden_car = 0, double_contracts = 0, fast_trap = 0, golden_garage = 0,
 	},
 }

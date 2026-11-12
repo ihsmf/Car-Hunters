@@ -6,6 +6,48 @@ local METAL = Color3.fromRGB(90, 96, 108)
 local SILVER = Color3.fromRGB(205, 210, 220)
 local DARK = Color3.fromRGB(30, 30, 34)
 
+-- clone a template's parts into model, scaled so its longest side = size, centred on root, welded
+function PartVisual.FromTemplate(model, root, tpl, size)
+	local c = tpl:Clone()
+	local _, ext = c:GetBoundingBox()
+	c:ScaleTo(c:GetScale() * size / math.max(ext.X, ext.Y, ext.Z, 0.01))
+	local cf2 = c:GetBoundingBox()
+	local n = 0
+	for _, p in ipairs(c:GetDescendants()) do
+		if p:IsA("BasePart") then
+			p.CFrame = cf2:Inverse() * p.CFrame -- centre on origin
+			p.Anchored = false
+			local w = Instance.new("Weld")
+			w.Part0, w.Part1, w.C0 = root, p, p.CFrame
+			w.Parent = p
+			p.Parent = model
+			n = n + 1
+		end
+	end
+	c:Destroy()
+	return n > 0
+end
+
+-- tuning part showcase model (Tony's counter, reveal)
+function PartVisual.BuildTuning(family, size)
+	local folder = game:GetService("ReplicatedStorage"):FindFirstChild("PartModels")
+	local tpl = folder and folder:FindFirstChild("Tune_" .. family)
+	if not tpl then
+		return nil
+	end
+	local model = Instance.new("Model")
+	model.Name = "Tune_" .. family
+	local root = Instance.new("Part")
+	root.Name = "Root"
+	root.Size = Vector3.one
+	root.Anchored, root.CanCollide, root.CanQuery, root.CanTouch = true, false, false, false
+	root.Transparency = 1
+	root.Parent = model
+	model.PrimaryPart = root
+	PartVisual.FromTemplate(model, root, tpl, size or 3)
+	return model
+end
+
 function PartVisual.Build(partId)
 	local def = PartConfig.Parts[partId] or PartConfig.Parts.bolts
 	local col = def.color
@@ -57,7 +99,12 @@ function PartVisual.Build(partId)
 	local BALL = Enum.PartType.Ball
 	local upright = CFrame.Angles(0, 0, math.pi / 2)
 
-	if def.id == "bolts" then
+	-- imported Blender model (blender/make_parts.py) when installed, procedural fallback otherwise
+	local folder = game:GetService("ReplicatedStorage"):FindFirstChild("PartModels")
+	local tpl = folder and folder:FindFirstChild("Part_" .. def.id)
+	if tpl and PartVisual.FromTemplate(model, root, tpl, 3.2) then
+		-- template parts added; glow/particles below still apply
+	elseif def.id == "bolts" then
 		add("Nut", Vector3.new(0.9, 2.0, 2.0), upright, SILVER, Enum.Material.Metal, 0, CYL)
 		add("NutGlow", Vector3.new(0.95, 1.2, 1.2), upright, col, Enum.Material.Neon, 0, CYL)
 		add("Shaft", Vector3.new(2.2, 0.8, 0.8), CFrame.new(0, -1.5, 0) * upright, METAL, Enum.Material.Metal, 0, CYL)

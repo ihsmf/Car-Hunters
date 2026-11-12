@@ -13,6 +13,7 @@ local MapConfig = require(Shared:WaitForChild("MapConfig"))
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
 local CarConfig = require(Shared:WaitForChild("CarConfig"))
+local SkinConfig = require(Shared:WaitForChild("SkinConfig"))
 local CollectionService = game:GetService("CollectionService")
 
 local T = Strings.T
@@ -24,8 +25,11 @@ local w = {}
 local hot = nil -- current hot drop info
 local donateTab = "boost"
 local tonyTab = "rewards"
+local shopTab = "perks"
 local tuneUid = nil
 local TONY = C(30, 36, 58)
+local GOLD = C(232, 178, 50)
+local TEAL = C(40, 150, 140) -- rebirth teal (no purple in this UI)
 local contractText -- defined with the HUD widgets
 
 local function fmtTime(sec)
@@ -35,18 +39,74 @@ end
 
 ---------------------------------------------------------------- Pit Stop
 local function buildShop()
-	local p = K.panelShell("shop", T("shop_title"), 900, 580, P.red)
-	local grid = K.new("ScrollingFrame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8,
+	local p = K.panelShell("shop", T("shop_title"), 900, 600, P.red)
+	local tabs = K.new("Frame", { Size = UDim2.new(1, 0, 0, 56), BackgroundTransparency = 1, ZIndex = 22 }, p.content)
+	K.list(tabs, Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Center)
+	w.shopTabs = {}
+	for i, tab in ipairs({ "perks", "garage" }) do
+		w.shopTabs[tab] = K.toy(tabs, { Text = T("shop_tab_" .. tab), Color = P.grey, Size = UDim2.fromOffset(200, 52), LayoutOrder = i, ZIndex = 23, TextSize = 20,
+			OnClick = function()
+				shopTab = tab
+				UI.Refresh()
+			end })
+	end
+	local grid = K.new("ScrollingFrame", { Position = UDim2.fromOffset(0, 66), Size = UDim2.new(1, 0, 1, -66), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8,
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 22 }, p.content)
 	K.new("UIGridLayout", { CellSize = UDim2.fromOffset(204, 214), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder }, grid)
 	w.shopGrid = grid
+end
+
+local function refreshSkins(st)
+	for _, def in ipairs(SkinConfig.Skins) do
+		local owned = (st.skins and st.skins[def.id]) or (def.pass and st.passes and st.passes[def.pass])
+		local on = st.skin == def.id
+		local card = K.new("Frame", { BackgroundColor3 = def.style.wall:Lerp(Color3.new(1, 1, 1), 0.75), LayoutOrder = def.order, ZIndex = 23 }, w.shopGrid)
+		K.corner(card, 20)
+		K.stroke(card, on and P.green or P.ink, on and 5 or 3)
+		-- mini swatch of the skin colours
+		local sw = K.new("Frame", { Position = UDim2.new(0.5, 0, 0, 10), AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(150, 40), BackgroundTransparency = 1, ZIndex = 24 }, card)
+		K.list(sw, Enum.FillDirection.Horizontal, 4, Enum.HorizontalAlignment.Center)
+		for _, k in ipairs({ "wall", "floor", "frame", "accent" }) do
+			local c = K.new("Frame", { Size = UDim2.fromOffset(32, 40), BackgroundColor3 = def.style[k], ZIndex = 25 }, sw)
+			K.corner(c, 8)
+			K.stroke(c, P.ink, 2)
+		end
+		K.text(card, { Text = def.icon .. " " .. string.upper(def.name), TextSize = 18, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(0, 56), Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
+		K.text(card, { Text = def.bonus > 0 and T("skin_bonus", math.floor(def.bonus * 100 + 0.5)) or "-", Font = K.BODY, TextSize = 18, TextColor3 = C(30, 158, 64), Position = UDim2.fromOffset(0, 86), Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
+		local label, color, can
+		if on then
+			label, color = T("skin_on"), P.green
+		elseif owned then
+			label, color, can = T("skin_equip"), P.blue, true
+		elseif def.pass then
+			local it = DonateConfig.ById[def.pass]
+			label, color, can = "R$ " .. (it and it.price or "?"), GOLD, true
+		elseif def.tokens then
+			label, color, can = "🪙 " .. def.tokens, (st.tokens or 0) >= def.tokens and P.orange or P.grey, true
+		else
+			label, color, can = "$" .. Util.FormatNumber(def.money), K.store.Money >= def.money and P.green or P.grey, true
+		end
+		K.toy(card, { Text = label, Color = color, Size = UDim2.fromOffset(176, 62), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), ZIndex = 25, TextSize = 22,
+			OnClick = function()
+				if can then
+					K.actions.SetSkin(def.id)
+				end
+			end })
+	end
 end
 
 local function refreshShop(st, open)
 	if open ~= "shop" then
 		return
 	end
+	for tab, b in pairs(w.shopTabs) do
+		b.SetColor(tab == shopTab and P.yellow or P.grey)
+	end
 	K.clear(w.shopGrid)
+	if shopTab == "garage" then
+		refreshSkins(st)
+		return
+	end
 	for _, def in ipairs(ShopConfig.Perks) do
 		local lvl = st.perks and st.perks[def.id] or 0
 		local cost = ShopConfig.NextCost(def.id, lvl)
@@ -76,7 +136,6 @@ local function refreshShop(st, open)
 end
 
 ---------------------------------------------------------------- Golden Magnate
-local GOLD = C(232, 178, 50)
 local function buildDonate()
 	local p = K.panelShell("donate", T("donate_title"), 920, 600, GOLD)
 	local tabs = K.new("Frame", { Size = UDim2.new(1, 0, 0, 56), BackgroundTransparency = 1, ZIndex = 22 }, p.content)
@@ -262,6 +321,70 @@ local function refreshTune(st, open)
 		elseif not any then
 			K.text(opts, { Text = T("tune_none"), Font = K.BODY, TextSize = 14, TextColor3 = P.muted, Size = UDim2.fromOffset(260, 30), ZIndex = 25, TextXAlignment = Enum.TextXAlignment.Right })
 		end
+	end
+end
+
+---------------------------------------------------------------- Rebirth + token shop
+local function buildRebirth()
+	local p = K.panelShell("rebirth", T("rebirth_title"), 860, 600, TEAL)
+	w.rbInfo = K.text(p.content, { Text = "", Font = K.BODY, TextSize = 19, TextColor3 = P.ink, RichText = true, TextWrapped = true, Size = UDim2.new(1, 0, 0, 150),
+		TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 23 })
+	w.rbGo = K.toy(p.content, { Text = T("rebirth_go"), Color = P.grey, Size = UDim2.fromOffset(300, 70), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 158),
+		ZIndex = 24, TextSize = 28, OnClick = function()
+			if w.rbArmed and os.clock() - w.rbArmed < 3 then
+				w.rbArmed = nil
+				K.actions.Rebirth()
+				UI.TogglePanel(nil)
+			else
+				w.rbArmed = os.clock()
+				UI.Refresh()
+			end
+		end })
+	w.rbTokens = K.text(p.content, { Text = "", TextSize = 22, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(0, 240), Size = UDim2.new(1, 0, 0, 28), ZIndex = 23 })
+	w.rbShop = K.new("Frame", { Position = UDim2.fromOffset(0, 276), Size = UDim2.new(1, 0, 0, 200), BackgroundTransparency = 1, ZIndex = 23 }, p.content)
+	K.new("UIGridLayout", { CellSize = UDim2.fromOffset(256, 190), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center }, w.rbShop)
+	-- button in the garage panel
+	local gp = K.panels.garage
+	if gp then
+		K.toy(gp.content, { Text = T("btn_rebirth"), Icon = "♻️", Color = TEAL, Size = UDim2.fromOffset(150, 54), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -372, 0, -2),
+			ZIndex = 23, TextSize = 17, OnClick = function() UI.TogglePanel("rebirth") end })
+	end
+end
+
+local function refreshRebirth(st, open)
+	if open ~= "rebirth" then
+		return
+	end
+	local n = st.rebirths or 0
+	local zone, money = SkinConfig.RebirthNeeds(n)
+	local zoneOk = st.zones and st.zones[zone]
+	local ok = zoneOk and K.store.Money >= money
+	local mult = 1 + SkinConfig.Rebirth.incomePer * (n + 1)
+	local function mark(b)
+		return b and '<font color="#1E9E40">✔</font>' or '<font color="#D6342C">✘</font>'
+	end
+	w.rbInfo.Text = string.format("%s %s\n%s\n%s\n%s", mark(ok), T("rebirth_need", T("zone_" .. zone), Util.FormatNumber(money)),
+		'<font color="#D6342C">' .. T("rebirth_lose") .. "</font>", '<font color="#1E9E40">' .. T("rebirth_keep") .. "</font>", T("rebirth_gain", string.format("%.2f", mult)))
+	local armed = w.rbArmed and os.clock() - w.rbArmed < 3
+	w.rbGo.SetText(armed and T("btn_sure") or T("rebirth_go"), nil)
+	w.rbGo.SetColor(ok and (armed and P.red or TEAL) or P.grey)
+	w.rbTokens.Text = "🪙 " .. T("rebirth_tokens", st.tokens or 0) .. "   ·   " .. T("rebirth_shop")
+	K.clear(w.rbShop)
+	for i, def in ipairs(SkinConfig.TokenPerks) do
+		local lvl = st.tokenPerks and st.tokenPerks[def.id] or 0
+		local card = K.new("Frame", { BackgroundColor3 = P.white, LayoutOrder = i, ZIndex = 24 }, w.rbShop)
+		K.corner(card, 18)
+		K.stroke(card, P.ink, 3)
+		K.text(card, { Text = def.icon, Font = K.BODY, TextSize = 36, Size = UDim2.new(1, 0, 0, 44), Position = UDim2.fromOffset(0, 6), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 25 })
+		K.text(card, { Text = string.upper(def.name), TextSize = 17, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(6, 54), Size = UDim2.new(1, -12, 0, 40), TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 25 })
+		K.text(card, { Text = string.format("%d / %d", lvl, def.max), Font = K.BODY, TextSize = 15, TextColor3 = P.muted, Position = UDim2.fromOffset(0, 96), Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 25 })
+		local maxed = lvl >= def.max
+		K.toy(card, { Text = maxed and T("shop_max") or ("🪙 " .. def.cost), Color = maxed and P.yellow or ((st.tokens or 0) >= def.cost and P.orange or P.grey), Size = UDim2.fromOffset(170, 56),
+			AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), ZIndex = 26, TextSize = 20, OnClick = function()
+				if not maxed then
+					K.actions.TokenPerk(def.id)
+				end
+			end })
 	end
 end
 
@@ -468,6 +591,7 @@ function X.Init(ui)
 	buildDonate()
 	buildTony()
 	buildTune()
+	buildRebirth()
 	buildHud()
 	UI.OnTune = function(uid)
 		tuneUid = uid
@@ -478,6 +602,7 @@ function X.Init(ui)
 		refreshDonate(st, open)
 		refreshTony(st, open)
 		refreshTune(st, open)
+		refreshRebirth(st, open)
 		refreshHud(st)
 		refreshBoard(st)
 	end)

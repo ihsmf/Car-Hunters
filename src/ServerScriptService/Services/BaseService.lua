@@ -14,6 +14,8 @@ local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 local Util = require(Shared:WaitForChild("Util"))
 local GarageKit = require(Shared:WaitForChild("GarageKit"))
 local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
+local SkinConfig = require(Shared:WaitForChild("SkinConfig"))
+local PartVisual = require(Shared:WaitForChild("PartVisual"))
 
 local Base = {}
 local S
@@ -107,6 +109,10 @@ function Base.SetFree(b)
 	b.carModels = {}
 	b.sig = {}
 	ensureFloors(b, 1)
+	if b.skin and b.skin ~= "classic" then
+		GarageKit.ApplyStyle(b.model, GarageKit.Style)
+	end
+	b.skin = "classic"
 	for _, pad in pairs(b.pads) do
 		setPad(pad, "locked")
 	end
@@ -189,9 +195,16 @@ local function applyTuneVisuals(model, def, tune)
 			p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.Massless = true, false, false, false, true
 			p.Parent = model
 		end
-		wingPart(Vector3.new(1.1, 0.14, ext.Z * 0.9), back)
-		for _, z in ipairs({ -1, 1 }) do
-			wingPart(Vector3.new(0.5, 0.8, 0.14), back * CFrame.new(0.1, -0.45, z * ext.Z * 0.3))
+		local wing = PartVisual.BuildTuning("aero", ext.Z * 0.85)
+		if wing then
+			-- Blender wing: its span lies along Y in Blender = along Z here, uprights point down
+			wing:PivotTo(back * CFrame.new(0, -0.6, 0))
+			wing.Parent = model
+		else
+			wingPart(Vector3.new(1.1, 0.14, ext.Z * 0.9), back)
+			for _, z in ipairs({ -1, 1 }) do
+				wingPart(Vector3.new(0.5, 0.8, 0.14), back * CFrame.new(0.1, -0.45, z * ext.Z * 0.3))
+			end
 		end
 	end
 end
@@ -233,7 +246,12 @@ function Base.RefreshAll(player)
 		return
 	end
 	local d = s.data
-	ensureFloors(b, d.floors or 1)
+	local skin = SkinConfig.ById[d.skin] or SkinConfig.ById.classic
+	ensureFloors(b, d.floors or 1, skin.style)
+	if b.skin ~= skin.id or b.skinFloors ~= d.floors then
+		b.skin, b.skinFloors = skin.id, d.floors
+		GarageKit.ApplyStyle(b.model, skin.style)
+	end
 	local now = os.clock()
 	local bySlot = {}
 	for _, c in ipairs(d.cars) do

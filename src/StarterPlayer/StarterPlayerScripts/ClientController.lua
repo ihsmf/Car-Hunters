@@ -43,6 +43,9 @@ local actions = {
 	Claim = function(id) Net.Get("ClaimContract"):FireServer(id) end,
 	Craft = function(id) Net.Get("CraftTuning"):FireServer(id) end,
 	Tune = function(uid, cat, item) Net.Get("TuneCar"):FireServer(uid, cat, item) end,
+	Rebirth = function() Net.Get("Rebirth"):FireServer() end,
+	SetSkin = function(id) Net.Get("SetSkin"):FireServer(id) end,
+	TokenPerk = function(id) Net.Get("TokenPerk"):FireServer(id) end,
 	Teleport = function(dest)
 		UI.Sfx("whoosh")
 		CineFx.Flash(Color3.fromRGB(46, 168, 255), 0.2, 0.5)

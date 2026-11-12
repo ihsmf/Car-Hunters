@@ -31,6 +31,9 @@ Net.Names = {
 	"TuneCar",
 	"BossThrow",
 	"BossFx",
+	"Rebirth",
+	"SetSkin",
+	"TokenPerk",
 }
 
 function Net.Folder()

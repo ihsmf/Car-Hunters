@@ -464,7 +464,7 @@ end
 local function buildGarage()
 	local p = panelShell("garage", T("garage_title"), 900, 580, P.orange)
 	local c = p.content
-	panels.garageInfo = text(c, { Text = "", Font = BODY, TextSize = 20, TextColor3 = P.ink, Size = UDim2.new(1, -380, 0, 50), ZIndex = 22, RichText = true })
+	panels.garageInfo = text(c, { Text = "", Font = BODY, TextSize = 18, TextColor3 = P.ink, Size = UDim2.new(1, -530, 0, 50), ZIndex = 22, RichText = true, TextWrapped = true })
 	panels.autoBtn = toy(c, { Text = T("btn_autopark"), Color = P.green, Size = UDim2.fromOffset(170, 54), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -190, 0, -2), ZIndex = 23, OnClick = function() actions.AutoPark() end })
 	panels.slotBtn = toy(c, { Text = T("btn_buyslot"), Sub = "", Color = P.blue, Size = UDim2.fromOffset(176, 54), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, -2), ZIndex = 23, SubSize = 14,
 		OnClick = function()
