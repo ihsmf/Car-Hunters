@@ -1,38 +1,36 @@
 # CAR HUNTERS — публикация в Roblox
 
-Что уже сделано в проекте (v9) и что нужно сделать вам. Шаги идут по порядку; всё, что помечено **(вы)**, делается
+Что уже сделано в проекте (v10) и что нужно сделать вам. Шаги идут по порядку; всё, что помечено **(вы)**, делается
 руками в Roblox Studio или в Creator Dashboard (create.roblox.com) — у меня туда доступа нет.
 
 ## Уже готово в плейсе
 
 - Весь текст в игре на английском, названия машин — пародии (без настоящих брендов).
-- Сохранения через DataStore (`CarHunters_Profiles_v1`), сессионная блокировка, сохранение при выходе и при выключении сервера.
+- Сохранения через DataStore (`CarHunters_Profiles_v1`): сессионная блокировка, автосейв раз в 60 с, сохранение при
+  выходе и при выключении сервера, лут в руках сохраняется вместе с сейвом. Если Roblox не смог загрузить сейв —
+  игрока просят перезайти (играть «вхолостую» с потерей прогресса нельзя). Если сейв открыт на другом сервере —
+  этот сервер его не перезаписывает. Сундуки за время игры сохраняются на день (перезаход их не сбрасывает).
+- Глобальный лидерборд по всем серверам (вкладка WORLD на табло, OrderedDataStore).
+- **3D-модели встроены прямо в `CarHunters.rbxlx`** (`ServerStorage.Embedded`): Blender-модели карты и машины из
+  Creator Store ставятся при старте сервера без скачивания. Ничего запускать в Studio не нужно.
 - Все покупки проверяются на сервере (`ProcessReceipt`, `UserOwnsGamePassAsync`).
 - Донат-товары, которых ещё нет на Roblox (id = 0), **скрыты** в опубликованной игре; в Studio покупка симулируется.
 - Платные «случайные» товары (Sure Shot, Lucky Hour) скрываются и не продаются там, где Roblox их запрещает
   (`PolicyService.ArePaidRandomItemsRestricted`). Шансы ловушки показаны в меню THROW.
 - HTTP-запросы не нужны (Allow HTTP Requests можно оставить выключенным).
-- Иконка и обложки страницы игры: `docs/store/icon.png` (1024×1024), `docs/store/thumb_1.png`, `docs/store/thumb_2.png`
-  (1920×1080) — рендер в Blender из моделей игры (`blender/make_store_art.py`, текст — `tools/store_art_text.py`).
+- Обложки страницы игры: `docs/store/thumb_1.png`, `docs/store/thumb_2.png` (1920×1080). Иконка — ваша
+  (запасная: `docs/store/icon.png`).
 
-## 1. Проверить аккаунт (вы)
+## 1. Аккаунт (вы)
 
-Модели Blender, звуки и иконки загружены от аккаунта Roblox **userId 1221663569**. Опубликованная игра может загружать
-такие ассеты (`InsertService:LoadAsset`, звуки) только если она принадлежит **тому же аккаунту**.
+Публикуйте с аккаунта **userId 1221663569** — ему принадлежат загруженные модели, звуки и иконки
+(звуки и картинки Roblox показывает только в играх того же владельца).
 
-- Публикуете от этого аккаунта — ничего делать не нужно.
-- Хотите публиковать от группы — скажите мне id группы: я перезалью ассеты командой
-  `python3 tools/roblox_open_cloud.py models|sounds|icons --creator-group <id>`.
-  Без этого игра будет работать на процедурных моделях и стандартных звуках.
+## 2. Открыть плейс (вы)
 
-## 2. Подготовить плейс в Studio (вы)
-
-1. Открыть `CarHunters.rbxlx` в свежем Roblox Studio.
-2. View → Command Bar, выполнить (ставит модели машин из Creator Store, ~2–5 мин):
-   ```lua
-   require(game.ServerStorage.Tools.CarStoreTool).InstallAll()
-   ```
-3. File → Save (чтобы установленные модели остались в файле).
+Открыть свежий `CarHunters.rbxlx` в Roblox Studio. В Output при Play должно быть:
+`[Models] 43 Blender models installed (embedded 43 ...)` и `[CarHunters] N store car models installed from the place file`.
+Если вместо этого `MISSING` — напишите мне, что там в списке.
 
 ## 3. Первая публикация (вы)
 
@@ -63,12 +61,12 @@
 `src/ReplicatedStorage/Shared/DonateConfig.lua` (имя, описание, цена) и вписать id в
 `src/ReplicatedStorage/Shared/ProductIds.lua`.
 
-После этого: открыть свежий `CarHunters.rbxlx` → снова `InstallAll()` → **File → Publish to Roblox As → выбрать эту игру**.
+После этого: открыть свежий `CarHunters.rbxlx` → **File → Publish to Roblox As → выбрать эту игру**.
 
 ## 5. Страница игры (вы)
 
 Creator Dashboard → игра → Configure → Places/Experience:
-- **Icon**: `docs/store/icon.png`.
+- **Icon**: ваша аватарка для плейса (512×512 PNG/JPG).
 - **Thumbnails**: `docs/store/thumb_1.png`, `docs/store/thumb_2.png` (можно добавить скриншоты из игры).
 - Иконки геймпассов (по желанию): любые 512×512 PNG, например рендеры из `assets/icons/`.
 
@@ -107,6 +105,6 @@ Creator Dashboard → игра → Overview/Settings → **Privacy: Public**. Е
 ## Обновления после выхода
 
 1. Я меняю код → `python3 tools/build_place.py` → новый `CarHunters.rbxlx` в ветке.
-2. Вы: открыть его → `InstallAll()` → **File → Publish to Roblox As → эта игра** (перезаписывает плейс).
+2. Вы: открыть его → **File → Publish to Roblox As → эта игра** (перезаписывает плейс).
 3. Если менялась карта, поднимается `MapConfig.Version` — сервер перестроит карту сам.
 4. Сохранения игроков не теряются: ключ DataStore не меняется, старые профили мигрируют при входе.

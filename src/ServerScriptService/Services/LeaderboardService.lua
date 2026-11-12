@@ -18,7 +18,60 @@ LB.Tabs = {
 	{ id = "income", title = "TOP INCOME", fmt = function(v) return "+$" .. Util.FormatNumber(v) .. "/s" end, value = function(s) return s.income or 0 end },
 	{ id = "collection", title = "BIGGEST COLLECTION", fmt = function(v) return "$" .. Util.FormatNumber(v) end, value = function(s) return s.collectionValue or 0 end },
 	{ id = "rebirths", title = "MOST REBIRTHS", fmt = function(v) return v .. " REBIRTHS" end, value = function(s) return s.data and s.data.rebirths or 0 end },
+	-- all servers: OrderedDataStore, refreshed every 2 min
+	{ id = "world", title = "WORLD TOP COLLECTION", fmt = function(v) return "$" .. Util.FormatNumber(v) end, global = true },
 }
+
+-- global ranking (OrderedDataStore): every player's collection value is written every 2 min, top 10 read every 2 min
+local ORDERED_NAME = "CarHunters_TopCollection_v1"
+local worldTop = {} -- { { userId, name, v } }
+local names = {}
+local function nameOf(userId)
+	if names[userId] == nil then
+		names[userId] = "Player"
+		local ok, n = pcall(function()
+			return Players:GetNameFromUserIdAsync(userId)
+		end)
+		if ok and n then
+			names[userId] = n
+		end
+	end
+	return names[userId]
+end
+
+local function worldLoop()
+	local ok, ordered = pcall(function()
+		return game:GetService("DataStoreService"):GetOrderedDataStore(ORDERED_NAME)
+	end)
+	if not ok then
+		return -- Studio without API access: the WORLD tab just shows this server
+	end
+	while true do
+		for _, p in ipairs(Players:GetPlayers()) do
+			local sess = S.Data.Get(p)
+			if sess and sess.ready and not sess.ephemeral then
+				pcall(function()
+					ordered:SetAsync(tostring(p.UserId), math.floor(math.min(sess.collectionValue or 0, 9e15)))
+				end)
+				task.wait(0.5)
+			end
+		end
+		local okTop, pages = pcall(function()
+			return ordered:GetSortedAsync(false, 10)
+		end)
+		if okTop and pages then
+			local list = {}
+			for _, e in ipairs(pages:GetCurrentPage()) do
+				local uid = tonumber(e.key)
+				if uid then
+					table.insert(list, { userId = uid, name = nameOf(uid), v = e.value })
+				end
+			end
+			worldTop = list
+		end
+		task.wait(120)
+	end
+end
 
 function LB.Init(hub)
 	S = hub
@@ -61,7 +114,7 @@ local function build(screen)
 	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0.02, 0), HorizontalAlignment = Enum.HorizontalAlignment.Center }, tabs)
 	ui.tabs = {}
 	for i, t in ipairs(LB.Tabs) do
-		local pill = new("TextLabel", { Size = UDim2.new(0.3, 0, 1, 0), BackgroundColor3 = C(40, 46, 66), Font = Enum.Font.FredokaOne, TextScaled = true,
+		local pill = new("TextLabel", { Size = UDim2.new(0.23, 0, 1, 0), BackgroundColor3 = C(40, 46, 66), Font = Enum.Font.FredokaOne, TextScaled = true,
 			TextColor3 = C(200, 206, 220), Text = string.upper(t.id), LayoutOrder = i }, tabs)
 		new("UICorner", { CornerRadius = UDim.new(0.5, 0) }, pill)
 		ui.tabs[i] = pill
@@ -167,10 +220,17 @@ local function refresh()
 	tabIndex = tabIndex % #LB.Tabs + 1
 	local tab = LB.Tabs[tabIndex]
 	local entries = {}
-	for _, p in ipairs(Players:GetPlayers()) do
-		local s = S.Data.Get(p)
-		if s and s.ready then
-			table.insert(entries, { player = p, v = tab.value(s) })
+	if tab.global then
+		for _, e in ipairs(worldTop) do
+			table.insert(entries, { userId = e.userId, name = e.name, v = e.v })
+		end
+	end
+	if #entries == 0 then -- local ranking (also the fallback for the world tab before the first read)
+		for _, p in ipairs(Players:GetPlayers()) do
+			local s = S.Data.Get(p)
+			if s and s.ready then
+				table.insert(entries, { userId = p.UserId, name = p.DisplayName, v = tab.value and tab.value(s) or (s.collectionValue or 0) })
+			end
 		end
 	end
 	table.sort(entries, function(a, b)
@@ -185,9 +245,9 @@ local function refresh()
 		local e = entries[i]
 		r.row.Visible = e ~= nil
 		if e then
-			r.name.Text = e.player.DisplayName
+			r.name.Text = e.name
 			r.value.Text = tab.fmt(e.v)
-			r.face.Image = headshot(e.player.UserId)
+			r.face.Image = headshot(e.userId)
 		end
 	end
 	-- statues always show the income podium
@@ -222,6 +282,7 @@ function LB.Start()
 				table.insert(ui.spots, d)
 			end
 		end
+		task.spawn(worldLoop)
 		while true do
 			pcall(refresh)
 			task.wait(8)
