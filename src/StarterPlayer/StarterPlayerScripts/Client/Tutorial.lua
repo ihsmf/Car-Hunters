@@ -105,6 +105,7 @@ local function build()
 		Net.Get("TutorialStep"):FireServer("skip")
 	end)
 	w.scale = K.new("UIScale", {}, card)
+	w.tick = K.text(w.badge, { Text = "OK!", TextSize = 30, TextColor3 = C(120, 255, 150), Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, Visible = false, ZIndex = 5 })
 end
 
 local pulses = {}
@@ -128,7 +129,10 @@ local function show(key, badge, sub, color, title, body, prog, progText, canSkip
 	w.card.Visible = true
 	w.badge.BackgroundColor3 = color
 	w.badgeText.Text = badge
-	w.badgeText.TextSize = #badge > 3 and 22 or 30
+	local lim = w.badgeText:FindFirstChildOfClass("UITextSizeConstraint")
+	if lim then
+		lim.MaxTextSize = #badge > 3 and 22 or 30
+	end
 	w.badgeSub.Text = sub
 	w.title.Text = title
 	w.body.Text = body
@@ -145,7 +149,6 @@ local function show(key, badge, sub, color, title, body, prog, progText, canSkip
 		shownKey = key
 		w.scale.Scale = 0.7
 		K.tween(w.scale, 0.3, { Scale = 1 }, Enum.EasingStyle.Back)
-		UI.Sfx("ping")
 	end
 end
 
@@ -192,12 +195,17 @@ local function tick()
 		localStep = step + 1
 		events.banked = step >= 3 and events.banked
 		Net.Get("TutorialStep"):FireServer(step + 1)
-		UI.Sfx("bankCombo")
+		UI.Sfx("step")
 		if step + 1 == DONE then
-			Cine.Title("TUTORIAL COMPLETE!", P.yellow, 1.6, 110, 0.35)
-			Cine.Flash(Color3.fromRGB(255, 220, 90), 0.3, 0.6)
+			Cine.Title("TUTORIAL COMPLETE!", P.yellow, 1.4, 90, 0.35)
 		else
-			Cine.Flash(Color3.fromRGB(120, 220, 140), 0.15, 0.4)
+			-- quiet confirmation: green tick on the card
+			w.tick.Visible = true
+			w.tick.TextTransparency = 0
+			K.tween(w.tick, 0.9, { TextTransparency = 1 })
+			task.delay(0.9, function()
+				w.tick.Visible = false
+			end)
 		end
 	end
 end

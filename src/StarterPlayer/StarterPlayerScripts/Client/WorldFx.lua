@@ -27,6 +27,7 @@ local MOODS = {
 local mood = { clock = 14.3, bright = 2.3, tint = Color3.fromRGB(255, 250, 244), sat = 0.16, amb = Color3.fromRGB(132, 128, 118) }
 local tintFx
 local lastBackfire = 0
+local spinAcc = 0
 
 local Fx = {}
 local spinning = {}
@@ -102,10 +103,17 @@ function Fx.Start(storeModule)
 			tintFx.Saturation = mood.sat
 		end
 		local t = os.clock()
-		for _, m in ipairs(CollectionService:GetTagged("Turntable")) do
-			if m:IsA("Model") then
-				local p = m:GetPivot()
-				m:PivotTo(CFrame.new(p.Position) * CFrame.Angles(0, (select(2, p:ToEulerAnglesYXZ())) + dt * 0.4, 0))
+		-- showcase cars: turn only the anchored root (welded parts follow), 30 Hz, only near the camera
+		spinAcc = spinAcc + dt
+		if spinAcc >= 1 / 30 then
+			local step = spinAcc
+			spinAcc = 0
+			local camPos = cam and cam.CFrame.Position or Vector3.zero
+			for _, m in ipairs(CollectionService:GetTagged("Turntable")) do
+				local root = m:IsA("Model") and m.PrimaryPart
+				if root and (root.Position - camPos).Magnitude < 150 then
+					root.CFrame = root.CFrame * CFrame.Angles(0, step * 0.4, 0)
+				end
 			end
 		end
 		if t - lastBackfire > 2.2 then

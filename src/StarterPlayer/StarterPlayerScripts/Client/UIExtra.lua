@@ -451,7 +451,7 @@ local function buildHud()
 	local root = K.root
 	local colF = K.hud.leftCol
 	-- SHOP + JOBS: square toy buttons with the 3D icons, label underneath
-	local brow = K.new("Frame", { Name = "Buttons", Size = UDim2.fromOffset(280, 88), BackgroundTransparency = 1, LayoutOrder = 4 }, colF)
+	local brow = K.new("Frame", { Name = "Buttons", Size = UDim2.fromOffset(280, 88), BackgroundTransparency = 1, LayoutOrder = 2 }, colF)
 	K.list(brow, Enum.FillDirection.Horizontal, 12)
 	local function iconButton(name, label, color, order, onClick)
 		local holder = K.new("Frame", { Size = UDim2.fromOffset(66, 88), BackgroundTransparency = 1, LayoutOrder = order }, brow)
@@ -469,7 +469,7 @@ local function buildHud()
 		UI.Refresh()
 	end)
 	-- active boosts strip to the right of the wallet card
-	w.boosts = K.new("Frame", { Position = UDim2.fromOffset(310, 18), Size = UDim2.fromOffset(240, 40), BackgroundTransparency = 1 }, root)
+	w.boosts = K.new("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 310, 1, -24 - (K.hud.leftLift or 0)), Size = UDim2.fromOffset(240, 40), BackgroundTransparency = 1 }, root)
 	K.list(w.boosts, Enum.FillDirection.Horizontal, 6)
 	-- combo meter (bottom left, above the jump area of mobile thumbstick? left of THROW)
 	local combo = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -140), Size = UDim2.fromOffset(300, 74), BackgroundColor3 = P.ink, Visible = false }, root)
@@ -484,7 +484,7 @@ local function buildHud()
 	w.comboSub = K.text(combo, { Text = "", Font = K.BODY, TextSize = 13, TextColor3 = P.white, Position = UDim2.fromOffset(14, 58), Size = UDim2.new(1, -28, 0, 14), TextXAlignment = Enum.TextXAlignment.Center })
 	w.comboScale = K.new("UIScale", {}, combo)
 	-- contracts: plain outlined lines with a thin progress line (no card)
-	local cw = K.new("Frame", { Name = "Contracts", Size = UDim2.fromOffset(280, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 5 }, colF)
+	local cw = K.new("Frame", { Name = "Contracts", Size = UDim2.fromOffset(280, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 1 }, colF)
 	K.list(cw, Enum.FillDirection.Vertical, 7)
 	w.contracts = cw
 	w.contractRows = {}

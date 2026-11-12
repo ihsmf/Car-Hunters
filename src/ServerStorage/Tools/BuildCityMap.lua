@@ -262,9 +262,19 @@ local function buildBase(ctx, i)
 		mk("PortalHeader", Vector3.new(2, 2.4, 20.4), Vector3.new(pl.X, 13.6, pl.Z), G.frame, M.Metal)
 	end
 	local sign = mk("PortalSign", Vector3.new(0.6, 3.2, 17), Vector3.new(pl.X + 0.6, gate and 18.2 or 16.4, pl.Z), C(20, 24, 34), M.SmoothPlastic)
-	Label(sign, Enum.NormalId.Right, "NEW CARS ENTER HERE", C(255, 210, 63))
-	Label(sign, Enum.NormalId.Left, "NEW CARS ENTER HERE", C(255, 210, 63))
+	Label(sign, Enum.NormalId.Right, "NEW CARS DRIVE IN HERE", C(255, 210, 63))
+	Label(sign, Enum.NormalId.Left, "NEW CARS DRIVE IN HERE", C(255, 210, 63))
 	mk("PortalDoor", Vector3.new(0.4, 11.4, 17.2), Vector3.new(pl.X - 0.4, 6.4, pl.Z), G.door, M.SmoothPlastic, { collide = false })
+
+	-- privacy: invisible walls around the plot; each client makes them solid only for OTHER players' garages
+	for _, w in ipairs({
+		{ Vector3.new(1, 30, PZ * 2), Vector3.new(PX + 0.5, 15, 0) }, { Vector3.new(1, 30, PZ * 2), Vector3.new(-PX - 0.5, 15, 0) },
+		{ Vector3.new(PX * 2, 30, 1), Vector3.new(0, 15, PZ + 0.5) }, { Vector3.new(PX * 2, 30, 1), Vector3.new(0, 15, -PZ - 0.5) },
+	}) do
+		local pw = mk("PrivacyWall", w[1], w[2], C(255, 255, 255), M.SmoothPlastic, { t = 1, collide = false, cast = false })
+		pw.CanQuery = false
+		pw:SetAttribute("BaseIndex", i)
+	end
 
 	-- garage terminal (menu)
 	local tm = BaseLayout.TerminalLocal
@@ -419,10 +429,19 @@ local function buildPlaza(ctx)
 	local len = zE - zS
 	local zm = (zS + zE) / 2
 	Part(f.Ground, "PlazaGround", Vector3.new(2 * HW, 2, len), CFrame.new(0, -1, zm), P.ground, M.Grass)
-	Part(f.Ground, "Promenade", Vector3.new(2 * PW, 0.4, len - 6), CFrame.new(0, 0, zm - 1), P.paving, M.Concrete)
-	-- paving pattern: large slabs with thin joints
-	for z = zS + 8, zE - 8, 12 do
-		Part(f.Ground, "PavingJoint", Vector3.new(2 * PW - 2, 0.04, 0.25), CFrame.new(0, 0.22, z), C(208, 200, 186), M.SmoothPlastic, { collide = false, cast = false })
+	-- paving: one level of 12x12 slabs in two tones (no thin overlays -> no flicker)
+	local pz0, pz1 = zS + 2, zE - 4
+	local nx = math.floor(2 * PW / 12)
+	local sx = 2 * PW / nx
+	local nz = math.floor((pz1 - pz0) / 12)
+	local sz = (pz1 - pz0) / nz
+	local T1, T2 = P.paving, P.paving:Lerp(C(150, 140, 126), 0.18)
+	for i = 0, nx - 1 do
+		for j = 0, nz - 1 do
+			local edge = i == 0 or i == nx - 1
+			local col = edge and C(120, 118, 114) or (((i + j) % 2 == 0) and T1 or T2)
+			Part(f.Ground, "Paving", Vector3.new(sx, 0.4, sz), CFrame.new(-PW + (i + 0.5) * sx, 0, pz0 + (j + 0.5) * sz), col, M.SmoothPlastic, { cast = false })
+		end
 	end
 	for _, s in ipairs({ -1, 1 }) do
 		Part(f.Ground, "Curb", Vector3.new(1.2, 0.6, len - 6), CFrame.new(s * PW, 0.3, zm - 1), C(150, 150, 146), M.Concrete)
@@ -615,7 +634,7 @@ local function buildPlaza(ctx)
 			Prefabs.Count = Prefabs.Count + 1
 		end
 	end
-	Part(f.Ground, "MarbleInlay", Vector3.new(2 * PW - 24, 0.05, MapConfig.BaseCenters[5].z - MapConfig.BaseCenters[3].z - 24), CFrame.new(0, 0.235, (MapConfig.BaseCenters[3].z + MapConfig.BaseCenters[5].z) / 2), C(238, 232, 220), M.Marble, { collide = false, cast = false })
+	-- (marble inlay removed: overlays on the paving flickered)
 
 	-- 3) RACE PADDOCK (towards the exit): trophy fountain, grandstand, tyre walls
 	local pz = MapConfig.BaseCenters[7].z - 30
@@ -1200,7 +1219,7 @@ local function buildZone(ctx, zid)
 		CollectionService:AddTag(trig, "Checkpoint")
 		for k = 0, 39 do
 			local x = -HW + 6 + (k + 0.5) * (2 * HW - 12) / 40
-			Part(f.StreetProps, "CheckpointStripe", Vector3.new((2 * HW - 12) / 40, 0.06, 2), CFrame.new(x, 0.2, cz), (k % 2 == 0) and C(255, 200, 40) or C(28, 28, 32), M.SmoothPlastic, { collide = false, cast = false })
+			Part(f.StreetProps, "CheckpointStripe", Vector3.new((2 * HW - 12) / 40, 0.06, 2), CFrame.new(x, 0.27, cz), (k % 2 == 0) and C(255, 200, 40) or C(28, 28, 32), M.SmoothPlastic, { collide = false, cast = false })
 		end
 		for _, sx in ipairs({ -1, 1 }) do
 			Part(f.StreetProps, "CheckpointPost", Vector3.new(1.6, 13, 1.6), CFrame.new(sx * 16, 6.5, cz), C(40, 44, 52), M.Metal)

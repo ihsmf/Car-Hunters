@@ -71,12 +71,18 @@ local function text(parent, props)
 		Size = UDim2.new(1, 0, 0, 28), TextXAlignment = Enum.TextXAlignment.Left,
 	}, parent)
 	for k, v in pairs(props) do
-		if k ~= "Outline" then
+		if k ~= "Outline" and k ~= "NoFit" then
 			l[k] = v
 		end
 	end
 	if props.Outline ~= false and l.Font == HEAD then
 		new("UIStroke", { Color = P.ink, Thickness = props.Outline or 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual }, l)
+	end
+	-- never overflow the frame: fixed-size labels shrink to fit (up to the requested size)
+	if l.AutomaticSize == Enum.AutomaticSize.None and not l.TextScaled and props.NoFit ~= true then
+		local want = l.TextSize
+		l.TextScaled = true
+		new("UITextSizeConstraint", { MaxTextSize = want, MinTextSize = math.min(9, want) }, l)
 	end
 	return l
 end
@@ -220,7 +226,11 @@ end
 ---------------------------------------------------------------- HUD
 local function buildHud()
 	-- left column (Figma "08 — HUD Left Clean"): no cards, outlined type, real 3D icons
-	local colF = new("Frame", { Name = "LeftColumn", Position = UDim2.fromOffset(18, 12), Size = UDim2.fromOffset(280, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1 }, root)
+	-- bottom-left corner; on phones lifted above the movement thumbstick
+	local UIS = game:GetService("UserInputService")
+	local lift = (UIS.TouchEnabled and not UIS.KeyboardEnabled) and 210 or 0
+	hud.leftLift = lift
+	local colF = new("Frame", { Name = "LeftColumn", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 18, 1, -16 - lift), Size = UDim2.fromOffset(280, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1 }, root)
 	list(colF, Enum.FillDirection.Vertical, 12)
 	hud.leftCol = colF
 	local function outline(l, th)
@@ -235,13 +245,13 @@ local function buildHud()
 		return img
 	end
 	-- money
-	local money = new("Frame", { Name = "Money", Size = UDim2.fromOffset(280, 64), BackgroundTransparency = 1, LayoutOrder = 1 }, colF)
+	local money = new("Frame", { Name = "Money", Size = UDim2.fromOffset(280, 64), BackgroundTransparency = 1, LayoutOrder = 5 }, colF)
 	icon(money, "coin", 56, UDim2.fromOffset(0, 4))
 	hud.money = text(money, { Position = UDim2.fromOffset(64, 0), Size = UDim2.new(1, -64, 0, 42), TextSize = 40, TextColor3 = P.white, Outline = 3 })
 	hud.income = outline(text(money, { Position = UDim2.fromOffset(65, 42), Size = UDim2.new(1, -65, 0, 20), TextSize = 18, Font = BODY, TextColor3 = C(70, 220, 100) }), 2.5)
 	hud.moneyScale = new("UIScale", {}, money)
 	-- banked parts: icon, rarity underline, count
-	local row = new("Frame", { Name = "Parts", Size = UDim2.fromOffset(280, 76), BackgroundTransparency = 1, LayoutOrder = 2 }, colF)
+	local row = new("Frame", { Name = "Parts", Size = UDim2.fromOffset(280, 76), BackgroundTransparency = 1, LayoutOrder = 4 }, colF)
 	list(row, Enum.FillDirection.Horizontal, 8)
 	hud.parts = {}
 	for i, id in ipairs(PartConfig.Order) do
@@ -1168,11 +1178,12 @@ function UI.Init(storeModule, actionTable)
 		airbag = { "rbxasset://sounds/Rocket shot.wav", 0.5, 1.6 }, whoosh = { "rbxasset://sounds/swoosh.wav", 0.6, 0.8 },
 		fanfare = { "rbxasset://sounds/victory.wav", 0.5 }, hit = { "rbxasset://sounds/collide.wav", 0.9, 0.8 },
 		boom = { "rbxasset://sounds/Rocket shot.wav", 0.7, 0.7 },
+		step = { "rbxasset://sounds/electronicpingshort.wav", 0.18, 1.6 }, -- tutorial step: soft and short
 	}
 	for name, fb in pairs(FALLBACK) do
 		local id = SoundIds[name]
 		if id and id > 0 then
-			makeSound(name, "rbxassetid://" .. id, fb[2] + 0.15, 1)
+			makeSound(name, "rbxassetid://" .. id, name == "step" and 0.35 or fb[2] + 0.15, 1)
 		else
 			makeSound(name, fb[1], fb[2], fb[3])
 		end

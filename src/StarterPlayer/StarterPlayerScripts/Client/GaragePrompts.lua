@@ -141,6 +141,21 @@ local function rebuild()
 	end
 end
 
+-- other players' garages are closed to you (no walking in, no stealing); yours stays open
+local lastPrivacy
+local function privacy(st)
+	if lastPrivacy == st.baseIndex then
+		return
+	end
+	lastPrivacy = st.baseIndex
+	local map = Workspace:FindFirstChild("GeneratedMap")
+	for _, d in ipairs(map and map:GetDescendants() or {}) do
+		if d.Name == "PrivacyWall" and d:IsA("BasePart") then
+			d.CanCollide = d:GetAttribute("BaseIndex") ~= st.baseIndex
+		end
+	end
+end
+
 function GP.Start(kit, cine)
 	K = kit
 	store = K.store
@@ -148,7 +163,12 @@ function GP.Start(kit, cine)
 	folder = Instance.new("Folder")
 	folder.Name = "GaragePrompts"
 	folder.Parent = Workspace
-	store.Changed.Event:Connect(rebuild)
+	store.Changed.Event:Connect(function()
+		rebuild()
+		if store.State and store.State.baseIndex then
+			privacy(store.State)
+		end
+	end)
 	rebuild()
 	Net.Get("BuyFloor") -- make sure the remote exists before the first click
 end
