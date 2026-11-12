@@ -248,10 +248,7 @@ function TR.Start(ui)
 	P = K.P
 	-- right-side button under CARS
 	local holder = K.new("Frame", { Size = UDim2.fromOffset(122, 104), BackgroundTransparency = 1, LayoutOrder = 4 }, K.hud.side)
-	local b = K.toy(holder, { Text = "TRADE", Icon = " ", Color = P.blue, Size = UDim2.fromOffset(122, 104), OnClick = function() UI.TogglePanel("tradeList") end })
-	local img = K.new("ImageLabel", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.fromOffset(52, 52), BackgroundTransparency = 1,
-		Image = Icons.Get("trade") or "", ZIndex = b.face.ZIndex + 1 }, b.face)
-	img.ImageTransparency = 0
+	K.toy(holder, { Text = "TRADE", Image = "trade", Icon = "🤝", Color = P.blue, Size = UDim2.fromOffset(122, 104), OnClick = function() UI.TogglePanel("tradeList") end })
 	local lp = K.panelShell("tradeList", "TRADE WITH", 640, 520, P.blue)
 	w.list = K.scroller(lp.content, UDim2.new(), UDim2.fromScale(1, 1))
 	buildWindow()

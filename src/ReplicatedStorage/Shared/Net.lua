@@ -42,6 +42,7 @@ Net.Names = {
 	"CheckpointChoice",
 	"CheckpointFx",
 	"TutorialStep",
+	"SaveSettings",
 	"ClaimDaily",
 	"ClaimChest",
 	"TradeRequest",

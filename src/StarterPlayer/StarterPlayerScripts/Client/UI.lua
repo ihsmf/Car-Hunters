@@ -115,11 +115,18 @@ local function toy(parent, o)
 	list(content, Enum.FillDirection.Vertical, 0, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center)
 	local h = holder.Size.Y.Offset
 	local icon
-	if o.Icon then
+	local imgId = o.Image and Icons.Get(o.Image)
+	if imgId then
+		-- 3D sticker (Blender render): big, with a clear gap above the label
+		content:FindFirstChildOfClass("UIListLayout").Padding = UDim.new(0, 5)
+		local sz = math.floor(h * 0.5)
+		icon = new("ImageLabel", { Image = imgId, BackgroundTransparency = 1, Size = UDim2.fromOffset(sz, sz), ScaleType = Enum.ScaleType.Fit, ZIndex = face.ZIndex, LayoutOrder = 1 }, content)
+	elseif o.Icon then
 		icon = text(content, { Text = o.Icon, Font = BODY, TextSize = o.IconSize or math.floor(h * 0.34), Size = UDim2.new(1, 0, 0, math.floor(h * 0.4)), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = face.ZIndex, LayoutOrder = 1 })
 	end
-	local label = text(content, { Text = o.Text or "", TextSize = o.TextSize or math.floor(h * (o.Icon and 0.2 or 0.36)), RichText = true,
-		Size = UDim2.new(1, -8, 0, math.floor(h * (o.Icon and 0.26 or 0.5))), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5, ZIndex = face.ZIndex, LayoutOrder = 2 })
+	local withIcon = icon ~= nil
+	local label = text(content, { Text = o.Text or "", TextSize = o.TextSize or math.floor(h * (withIcon and 0.19 or 0.36)), RichText = true,
+		Size = UDim2.new(1, -8, 0, math.floor(h * (withIcon and 0.24 or 0.5))), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5, ZIndex = face.ZIndex, LayoutOrder = 2 })
 	local sub
 	if o.Sub then
 		sub = text(content, { Text = o.Sub, Font = BODY, TextSize = o.SubSize or math.floor(h * 0.15), TextColor3 = P.ink, Size = UDim2.new(1, -8, 0, math.floor(h * 0.2)), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = face.ZIndex, LayoutOrder = 3, RichText = true })
@@ -203,8 +210,15 @@ function UI.Sfx(name)
 		s:Play()
 	end
 end
+-- two volume groups for the Settings sliders: SFX (every UI/game sound) and Music
+local function soundGroup(name, vol)
+	local g = SoundService:FindFirstChild(name) or new("SoundGroup", { Name = name, Volume = vol }, SoundService)
+	return g
+end
+UI.SfxGroup = soundGroup("SFX", 0.8)
+UI.MusicGroup = soundGroup("Music", 0.5)
 local function makeSound(name, id, vol, speed)
-	sounds[name] = new("Sound", { Name = "UI_" .. name, SoundId = id, Volume = vol or 0.5, PlaybackSpeed = speed or 1 }, SoundService)
+	sounds[name] = new("Sound", { Name = "UI_" .. name, SoundId = id, Volume = vol or 0.5, PlaybackSpeed = speed or 1, SoundGroup = UI.SfxGroup }, SoundService)
 end
 
 local KIND_COLOR = { good = P.green, error = P.red, warn = P.orange, info = P.blue }
@@ -440,9 +454,9 @@ local function buildHud()
 	end
 	hud.side = side
 	list(side, Enum.FillDirection.Vertical, 12)
-	local tpBtn = toy(side, { Text = T("btn_teleport"), Icon = "🚀", Color = P.blue, Size = UDim2.fromOffset(122, 104), LayoutOrder = 1, OnClick = function() UI.TogglePanel("teleport") end })
-	hud.garageBtn = toy(side, { Text = T("btn_garage"), Icon = "🏁", Color = P.orange, Size = UDim2.fromOffset(122, 104), LayoutOrder = 2, OnClick = function() UI.TogglePanel("garage") end })
-	toy(side, { Text = T("btn_index"), Icon = "🚗", Color = P.green, Size = UDim2.fromOffset(122, 104), LayoutOrder = 3, OnClick = function() UI.TogglePanel("index") end })
+	local tpBtn = toy(side, { Text = T("btn_teleport"), Image = "teleport", Icon = "🚀", Color = P.blue, Size = UDim2.fromOffset(122, 104), LayoutOrder = 1, OnClick = function() UI.TogglePanel("teleport") end })
+	hud.garageBtn = toy(side, { Text = T("btn_garage"), Image = "garage", Icon = "🏁", Color = P.orange, Size = UDim2.fromOffset(122, 104), LayoutOrder = 2, OnClick = function() UI.TogglePanel("garage") end })
+	toy(side, { Text = T("btn_index"), Image = "index", Icon = "🚗", Color = P.green, Size = UDim2.fromOffset(122, 104), LayoutOrder = 3, OnClick = function() UI.TogglePanel("index") end })
 	-- on the TELEPORT button itself (as a child of the list it used to push every button down)
 	hud.newDot = new("Frame", { Size = UDim2.fromOffset(22, 22), Position = UDim2.new(1, -16, 0, -6), BackgroundColor3 = P.red, Visible = false, ZIndex = 5 }, tpBtn.holder)
 	corner(hud.newDot, 11)
@@ -1424,8 +1438,13 @@ function UI.Init(storeModule, actionTable)
 		end
 	end
 	if SoundIds.ambience and SoundIds.ambience > 0 then
-		local amb = new("Sound", { Name = "Ambience", SoundId = "rbxassetid://" .. SoundIds.ambience, Volume = 0.25, Looped = true }, SoundService)
+		local amb = new("Sound", { Name = "Ambience", SoundId = "rbxassetid://" .. SoundIds.ambience, Volume = 0.25, Looped = true, SoundGroup = UI.MusicGroup }, SoundService)
 		amb:Play()
+	end
+	-- relaxing background music (ElevenLabs), looped; its volume is the Music slider (Settings)
+	if SoundIds.music and SoundIds.music > 0 then
+		local music = new("Sound", { Name = "Music", SoundId = "rbxassetid://" .. SoundIds.music, Volume = 0.6, Looped = true, SoundGroup = UI.MusicGroup }, SoundService)
+		music:Play()
 	end
 	buildHud()
 	buildThrow()

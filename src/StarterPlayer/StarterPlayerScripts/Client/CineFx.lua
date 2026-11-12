@@ -68,6 +68,9 @@ function Cine.Init(gui)
 end
 
 function Cine.Shake(mag, dur)
+	if game:GetService("Players").LocalPlayer:GetAttribute("Opt_shake") == false then
+		return -- Settings: camera shake off
+	end
 	table.insert(shakes, { mag = mag, dur = dur or 0.4, t0 = os.clock() })
 end
 

@@ -42,6 +42,7 @@ local function newProfile(isNew)
 		tutorial = 0,
 		daily = { day = 0, last = 0 },
 		play = { day = 0, sec = 0, chests = { false, false, false, false, false } }, -- today's playtime + opened playtime chests (saved: rejoining does not reset them)
+		settings = DataService.SanitizeSettings(nil), -- volumes + on/off switches (Settings panel)
 		perks = {},
 		boosts = {},
 		receipts = {},
@@ -214,6 +215,7 @@ local function sanitize(raw)
 	p.saveCount = toCount(raw.saveCount, 1e12)
 	p.lastSeen = toCount(raw.lastSeen, 4e9)
 	p.tutorial = toCount(raw.tutorial, 8)
+	p.settings = DataService.SanitizeSettings(raw.settings)
 	if type(raw.play) == "table" then
 		-- dense array of booleans (a sparse table would not save in a DataStore)
 		local chests = { false, false, false, false, false }
@@ -509,6 +511,7 @@ function DataService.BuildState(s)
 		contracts = Util.CopyTable(d.contracts),
 		tuning = Util.CopyTable(d.tuning),
 		tutorial = d.tutorial,
+		settings = Util.CopyTable(d.settings or DataService.SanitizeSettings(nil)),
 		daily = { day = d.daily.day, last = d.daily.last, today = math.floor(os.time() / 86400) },
 		chests = Util.CopyTable(d.play and d.play.chests or {}),
 		sessionTime = DataService.PlayTime(s), -- today's playtime
@@ -522,6 +525,32 @@ function DataService.BuildState(s)
 		airbagIn = S.Shop.AirbagReadyIn(s),
 		run = { picked = s.run and s.run.picked or 0, mult = s.run and s.run.mult or 1, firstAt = s.run and s.run.firstAt, risk = s.run and s.run.risk or 1 },
 	}
+end
+
+-- player settings (Settings panel): volumes 0..1 and on/off switches; anything unknown is dropped
+local SETTING_FLAGS = { "markers", "notes", "shake", "fov", "guide" }
+function DataService.SanitizeSettings(raw)
+	raw = type(raw) == "table" and raw or {}
+	local function vol(v, def)
+		v = tonumber(v)
+		if not v or v ~= v then
+			return def
+		end
+		return math.clamp(math.floor(v * 100 + 0.5) / 100, 0, 1)
+	end
+	local out = { music = vol(raw.music, 0.5), sfx = vol(raw.sfx, 0.8) }
+	for _, k in ipairs(SETTING_FLAGS) do
+		out[k] = raw[k] ~= false
+	end
+	return out
+end
+
+function DataService.SaveSettings(player, t)
+	local s = sessions[player]
+	if not s or not s.ready or type(t) ~= "table" or not DataService.RateLimit(player, "settings", 0.5) then
+		return
+	end
+	s.data.settings = DataService.SanitizeSettings(t) -- saved with the next autosave; no state push needed
 end
 
 -- tutorial progress: only moves forward; finishing (not skipping) pays a small reward once

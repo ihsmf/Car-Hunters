@@ -155,7 +155,8 @@ function Markers.Start(kit, extraModule)
 		end
 		-- edge arrow
 		local obj = objective()
-		local busy = K.state.open ~= nil or K.state.cine == true -- no arrow / world labels over panels or cinematics
+		-- no arrow / world labels over panels or cinematics, or when switched off in Settings
+		local busy = K.state.open ~= nil or K.state.cine == true or game:GetService("Players").LocalPlayer:GetAttribute("Opt_markers") == false
 		for _, m in pairs(marks) do
 			if m.bb then
 				m.bb.Enabled = not busy

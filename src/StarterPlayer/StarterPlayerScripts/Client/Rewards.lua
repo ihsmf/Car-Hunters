@@ -53,10 +53,10 @@ end
 local function build()
 	-- button next to SHOP / JOBS
 	local brow = K.hud.leftCol:FindFirstChild("Buttons")
-	local holder = K.new("Frame", { Size = UDim2.fromOffset(66, 88), BackgroundTransparency = 1, LayoutOrder = 3 }, brow)
+	local holder = K.new("Frame", { Size = UDim2.fromOffset(66, 94), BackgroundTransparency = 1, LayoutOrder = 3 }, brow)
 	local b = K.toy(holder, { Text = "", Color = P.green, Size = UDim2.fromOffset(66, 66), OnClick = function() UI.TogglePanel("rewards") end })
-	K.hud.icon(b.face, "gift", 46, UDim2.fromOffset(10, 8)).ZIndex = b.face.ZIndex + 1
-	K.text(holder, { Text = "GIFTS", TextSize = 15, Position = UDim2.fromOffset(0, 66), Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 })
+	K.hud.icon(b.face, "gift", 54, UDim2.fromOffset(6, 3)).ZIndex = b.face.ZIndex + 1
+	K.text(holder, { Text = "GIFTS", TextSize = 15, Position = UDim2.fromOffset(0, 72), Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 })
 	w.dot = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(60, 4), Size = UDim2.fromOffset(18, 18), BackgroundColor3 = P.red, ZIndex = 30, Visible = false }, holder)
 	K.corner(w.dot, 9)
 	K.stroke(w.dot, P.white, 2)

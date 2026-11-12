@@ -465,13 +465,14 @@ local function buildHud()
 	local root = K.root
 	local colF = K.hud.leftCol
 	-- SHOP + JOBS: square toy buttons with the 3D icons, label underneath
-	local brow = K.new("Frame", { Name = "Buttons", Size = UDim2.fromOffset(280, 88), BackgroundTransparency = 1, LayoutOrder = 2 }, colF)
+	local brow = K.new("Frame", { Name = "Buttons", Size = UDim2.fromOffset(300, 94), BackgroundTransparency = 1, LayoutOrder = 2 }, colF)
 	K.list(brow, Enum.FillDirection.Horizontal, 12)
 	local function iconButton(name, label, color, order, onClick)
-		local holder = K.new("Frame", { Size = UDim2.fromOffset(66, 88), BackgroundTransparency = 1, LayoutOrder = order }, brow)
+		-- bigger 3D sticker (54 px) and a clear gap to the label below the button
+		local holder = K.new("Frame", { Size = UDim2.fromOffset(66, 94), BackgroundTransparency = 1, LayoutOrder = order }, brow)
 		local b = K.toy(holder, { Name = label .. "Btn", Text = "", Color = color, Size = UDim2.fromOffset(66, 66), OnClick = onClick })
-		K.hud.icon(b.face, name, 46, UDim2.fromOffset(10, 8)).ZIndex = b.face.ZIndex + 1
-		local l = K.text(holder, { Text = label, TextSize = 15, Position = UDim2.fromOffset(0, 66), Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 })
+		K.hud.icon(b.face, name, 54, UDim2.fromOffset(6, 3)).ZIndex = b.face.ZIndex + 1
+		local l = K.text(holder, { Text = label, TextSize = 15, Position = UDim2.fromOffset(0, 72), Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 })
 		return b, l
 	end
 	w.shopBtn = iconButton("shop", T("btn_magnate"), GOLD, 1, function()

@@ -31,7 +31,8 @@ function SpeedLanes.Start(getBaseSpeed)
 		end
 		SpeedLanes.Boosting = boost
 		if cam and cam.CameraType == Enum.CameraType.Custom then
-			fov = fov + ((boost and 80 or 70) - fov) * math.min(1, dt * 5)
+			local kick = boost and game:GetService("Players").LocalPlayer:GetAttribute("Opt_fov") ~= false -- Settings
+			fov = fov + ((kick and 80 or 70) - fov) * math.min(1, dt * 5)
 			cam.FieldOfView = fov
 		end
 	end)
