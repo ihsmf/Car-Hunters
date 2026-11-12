@@ -31,11 +31,7 @@ local function ctx(player, uid)
 	if not S.Data.RateLimit(player, "cars", EconomyConfig.ActionCooldown) then
 		return nil
 	end
-	if not S.Base.IsNearOwnBase(player) then
-		S.Data.Notify(player, "tooFar", nil, "warn")
-		return nil
-	end
-	return s
+	return s -- garage actions work from anywhere (menu or the prompt at the car)
 end
 
 local function finish(player)
@@ -66,8 +62,10 @@ function Cars.Place(player, uid, slot)
 	end
 	local oldSlot = car.parkedSlot
 	car.parkedSlot = slot
+	car.benched = nil
 	if occupant then
 		occupant.parkedSlot = oldSlot
+		occupant.benched = oldSlot == nil or nil -- swapped out to storage: keep it there
 	end
 	finish(player)
 end
@@ -82,6 +80,7 @@ function Cars.Remove(player, uid)
 		return
 	end
 	car.parkedSlot = nil
+	car.benched = true -- stays in storage until you park it again (auto-park after throws skips it)
 	finish(player)
 end
 
@@ -115,12 +114,50 @@ function Cars.Sell(player, uid)
 	finish(player)
 end
 
+-- sell several cars at once (garage menu "sell all ..."); max 100 per call
+function Cars.SellMany(player, uids)
+	if type(uids) ~= "table" or #uids == 0 or #uids > 100 then
+		return
+	end
+	local s = S.Data.Get(player)
+	if not s or not s.ready or not S.Data.RateLimit(player, "sellmany", 1) then
+		return
+	end
+	local d = s.data
+	local want = {}
+	for _, uid in ipairs(uids) do
+		if type(uid) == "string" and #uid <= 64 then
+			want[uid] = true
+		end
+	end
+	local total, n = 0, 0
+	for i = #d.cars, 1, -1 do
+		local car = d.cars[i]
+		if want[car.uid] and not s.hidden[car.uid] then
+			local def = CarConfig.ById[car.typeId]
+			total = total + CarConfig.SellPrice(def, car.level)
+			n = n + 1
+			table.remove(d.cars, i)
+		end
+	end
+	if n == 0 then
+		return
+	end
+	d.money = math.min(d.money + total, EconomyConfig.MaxMoney)
+	d.stats.sold = (d.stats.sold or 0) + n
+	S.Data.Notify(player, "soldMany", { n, total }, "good")
+	finish(player)
+end
+
 -- best-earning cars take the bays (cars mid-animation keep theirs); no checks, used after throws too
-function Cars.ParkBest(s)
+function Cars.ParkBest(s, includeBenched)
 	local d = s.data
 	local list = {}
 	for _, c in ipairs(d.cars) do
-		if not s.hidden[c.uid] then
+		if includeBenched then
+			c.benched = nil
+		end
+		if not s.hidden[c.uid] and not c.benched then
 			table.insert(list, c)
 		end
 	end
@@ -161,7 +198,7 @@ function Cars.AutoPark(player)
 		S.Data.Notify(player, "tooFar", nil, "warn")
 		return
 	end
-	Cars.ParkBest(s)
+	Cars.ParkBest(s, true)
 	S.Data.Notify(player, "autoParked", nil, "good")
 	finish(player)
 end

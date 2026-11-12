@@ -39,6 +39,7 @@ local actions = {
 	BuyFloor = function(floors) Net.Get("BuyFloor"):FireServer(floors) end,
 	Unlock = function(zoneId) Net.Get("UnlockZone"):FireServer(zoneId) end,
 	Sell = function(uid) Net.Get("SellCar"):FireServer(uid) end,
+	SellMany = function(uids) Net.Get("SellCars"):FireServer(uids) end,
 	AutoPark = function() Net.Get("AutoPark"):FireServer() end,
 	BuyPerk = function(id) Net.Get("BuyPerk"):FireServer(id) end,
 	Donate = function(id) Net.Get("Donate"):FireServer(id) end,

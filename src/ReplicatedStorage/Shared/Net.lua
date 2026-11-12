@@ -37,6 +37,7 @@ Net.Names = {
 	"ThrowBatch",
 	"ThrowBatchResult",
 	"OfflineEarnings",
+	"SellCars",
 }
 
 function Net.Folder()

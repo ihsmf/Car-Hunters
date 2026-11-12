@@ -118,7 +118,7 @@ local function sanitize(raw)
 						end
 					end
 				end
-				table.insert(p.cars, { uid = c.uid, typeId = c.typeId, level = level, parkedSlot = slot, tune = tune })
+				table.insert(p.cars, { uid = c.uid, typeId = c.typeId, level = level, parkedSlot = slot, tune = tune, benched = c.benched == true or nil })
 			end
 		end
 	end

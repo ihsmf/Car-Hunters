@@ -12,6 +12,7 @@ local Util = require(Shared:WaitForChild("Util"))
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local Icons = require(Shared:WaitForChild("Icons"))
+local PartVisual = require(Shared:WaitForChild("PartVisual"))
 local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 local VehicleFactory = require(Shared:WaitForChild("VehicleFactory"))
@@ -347,7 +348,22 @@ local function buildThrow()
 		local r = new("Frame", { Size = UDim2.fromOffset(560, 74), BackgroundColor3 = P.white, LayoutOrder = i, ZIndex = 23 }, rows)
 		corner(r, 18)
 		local st = stroke(r, rc, 4)
-		local img = new("ImageLabel", { Position = UDim2.fromOffset(12, 9), Size = UDim2.fromOffset(56, 56), BackgroundTransparency = 1, Image = Icons.Get(id) or "", ZIndex = 24 }, r)
+		-- the real 3D part (same model as on the map), slowly turning
+		local img = new("ViewportFrame", { Position = UDim2.fromOffset(8, 5), Size = UDim2.fromOffset(64, 64), BackgroundTransparency = 1, Ambient = C(190, 190, 200),
+			LightColor = C(255, 250, 240), LightDirection = Vector3.new(-1, -1.5, -1), ZIndex = 24 }, r)
+		local pm = PartVisual.Build(id)
+		for _, d in ipairs(pm:GetDescendants()) do
+			if d:IsA("ParticleEmitter") or d:IsA("Light") then
+				d:Destroy()
+			end
+		end
+		pm:PivotTo(CFrame.new())
+		pm.Parent = img
+		local cam = new("Camera", { FieldOfView = 30 }, img)
+		img.CurrentCamera = cam
+		local _, ext = pm:GetBoundingBox()
+		panels.partSpin = panels.partSpin or {}
+		table.insert(panels.partSpin, { cam = cam, dist = math.max(ext.X, ext.Y, ext.Z) * 2.4, centre = pm:GetBoundingBox().Position })
 		text(r, { Text = string.upper(T("part_" .. id)), TextSize = 22, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(80, 12), Size = UDim2.fromOffset(150, 26), ZIndex = 24 })
 		local owned = text(r, { Text = "", Font = BODY, TextSize = 14, TextColor3 = P.muted, Position = UDim2.fromOffset(80, 40), Size = UDim2.fromOffset(150, 20), ZIndex = 24 })
 		local function stepBtn(label, color, x, w, onClick)
@@ -460,6 +476,18 @@ local function buildThrow()
 			UI.TogglePanel(nil)
 		end })
 end
+
+-- turn the part previews while the throw menu is open
+RunService.RenderStepped:Connect(function()
+	if state.open ~= "throw" or not panels.partSpin then
+		return
+	end
+	local a = os.clock() * 0.9
+	for _, sp in ipairs(panels.partSpin) do
+		local off = Vector3.new(math.cos(a), 0.55, math.sin(a)).Unit * sp.dist
+		sp.cam.CFrame = CFrame.lookAt(sp.centre + off, sp.centre)
+	end
+end)
 
 local function refreshThrow()
 	local st = store.State
@@ -588,10 +616,36 @@ local function refreshTeleport()
 end
 
 -- GARAGE
+-- confirmation popup (sell etc.)
+function UI.Confirm(title, body, okText, okColor, onOk, def)
+	local dim = new("TextButton", { Name = "Confirm", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.45, ZIndex = 85 }, gui)
+	local card = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(480, def and 400 or 260), BackgroundColor3 = P.cream, ZIndex = 86 }, dim)
+	corner(card, 26)
+	stroke(card, P.ink, 5)
+	local sc = new("UIScale", { Scale = 0.6 }, card)
+	tween(sc, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
+	text(card, { Text = title, TextSize = 32, Position = UDim2.fromOffset(0, 16), Size = UDim2.new(1, 0, 0, 40), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 87, Outline = 3 })
+	local y = 62
+	if def then
+		carViewport(card, def, { Position = UDim2.fromOffset(90, 56), Size = UDim2.fromOffset(300, 140), ZIndex = 87 })
+		y = 200
+	end
+	text(card, { Text = body, Font = BODY, TextSize = 20, TextColor3 = P.ink, RichText = true, TextWrapped = true, Position = UDim2.fromOffset(24, y), Size = UDim2.new(1, -48, 0, 70), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 87 })
+	local btns = new("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -18), Size = UDim2.fromOffset(440, 70), BackgroundTransparency = 1, ZIndex = 87 }, card)
+	list(btns, Enum.FillDirection.Horizontal, 16, Enum.HorizontalAlignment.Center)
+	toy(btns, { Text = "KEEP", Color = P.grey, Size = UDim2.fromOffset(170, 66), TextSize = 24, LayoutOrder = 1, ZIndex = 88, OnClick = function() dim:Destroy() end })
+	toy(btns, { Text = okText, Color = okColor or P.red, Size = UDim2.fromOffset(220, 66), TextSize = 24, LayoutOrder = 2, ZIndex = 88, OnClick = function()
+		dim:Destroy()
+		onOk()
+	end })
+	dim.Activated:Connect(function() dim:Destroy() end)
+end
+
+state.garageTab = "parked"
 local function buildGarage()
-	local p = panelShell("garage", T("garage_title"), 900, 580, P.orange)
+	local p = panelShell("garage", T("garage_title"), 940, 600, P.orange)
 	local c = p.content
-	panels.garageInfo = text(c, { Text = "", Font = BODY, TextSize = 18, TextColor3 = P.ink, Size = UDim2.new(1, -530, 0, 50), ZIndex = 22, RichText = true, TextWrapped = true })
+	panels.garageInfo = text(c, { Text = "", Font = BODY, TextSize = 18, TextColor3 = P.ink, Size = UDim2.new(1, -540, 0, 50), ZIndex = 22, RichText = true, TextWrapped = true })
 	panels.autoBtn = toy(c, { Text = T("btn_autopark"), Color = P.green, Size = UDim2.fromOffset(170, 54), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -190, 0, -2), ZIndex = 23, OnClick = function() actions.AutoPark() end })
 	panels.slotBtn = toy(c, { Text = T("btn_buyslot"), Sub = "", Color = P.blue, Size = UDim2.fromOffset(176, 54), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, -2), ZIndex = 23, SubSize = 14,
 		OnClick = function()
@@ -602,7 +656,38 @@ local function buildGarage()
 				actions.BuySlot(st.slots)
 			end
 		end })
-	panels.carList = scroller(c, UDim2.fromOffset(0, 62), UDim2.new(1, 0, 1, -62))
+	-- tabs + bulk sell
+	local tabs = new("Frame", { Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, 0, 0, 50), BackgroundTransparency = 1, ZIndex = 22 }, c)
+	list(tabs, Enum.FillDirection.Horizontal, 10)
+	panels.garageTabs = {}
+	for i, tab in ipairs({ "parked", "storage" }) do
+		panels.garageTabs[tab] = toy(tabs, { Text = string.upper(tab), Color = P.grey, Size = UDim2.fromOffset(170, 48), TextSize = 20, LayoutOrder = i, ZIndex = 23, OnClick = function()
+			state.garageTab = tab
+			UI.Refresh()
+		end })
+	end
+	panels.bulk = {}
+	for i, r in ipairs({ "Common", "Uncommon" }) do
+		panels.bulk[r] = toy(tabs, { Text = "SELL ALL " .. string.upper(r), Color = P.red, Size = UDim2.fromOffset(250, 48), TextSize = 16, LayoutOrder = 10 + i, ZIndex = 23, OnClick = function()
+			local st = store.State
+			local uids, total = {}, 0
+			for _, car in ipairs(st.cars) do
+				local def = CarConfig.ById[car.typeId]
+				if not car.slot and def.rarity == r and #uids < 100 then
+					table.insert(uids, car.uid)
+					total = total + CarConfig.SellPrice(def, car.level)
+				end
+			end
+			if #uids == 0 then
+				UI.Toast("No " .. r .. " cars in storage", "warn")
+				return
+			end
+			UI.Confirm("SELL " .. #uids .. " CARS?", string.format("All %s cars in storage for <b>$%s</b>.\nParked cars are never sold.", r, Util.FormatNumber(total)), "SELL ALL", P.red, function()
+				actions.SellMany(uids)
+			end)
+		end })
+	end
+	panels.carList = scroller(c, UDim2.fromOffset(0, 120), UDim2.new(1, 0, 1, -120))
 end
 
 local function sortedCars(st)
@@ -642,13 +727,15 @@ local function refreshGarage()
 	if not st or state.open ~= "garage" then
 		return
 	end
-	local parked = 0
+	local parked, stored = 0, 0
 	for _, c in ipairs(st.cars) do
 		if c.slot then
 			parked = parked + 1
+		else
+			stored = stored + 1
 		end
 	end
-	panels.garageInfo.Text = string.format('<font color="#1E9E40">+%s/s</font>   🅿 %d/%d   🚗 %d', Util.FormatNumber(store.Income), parked, st.slots, #st.cars)
+	panels.garageInfo.Text = string.format('<font color="#1E9E40">+%s/s</font>   Bays %d/%d   Cars %d', Util.FormatNumber(store.Income), parked, st.slots, #st.cars)
 	local cost = EconomyConfig.SlotCosts[st.slots + 1]
 	local floors = st.floors or 1
 	if cost and st.slots + 1 > floors * 6 then
@@ -662,63 +749,72 @@ local function refreshGarage()
 		panels.slotBtn.SetText(T("btn_max"), "")
 		panels.slotBtn.SetColor(P.grey)
 	end
+	local tab = state.garageTab
+	panels.garageTabs.parked.SetText(string.format("PARKED %d", parked), nil)
+	panels.garageTabs.storage.SetText(string.format("STORAGE %d", stored), nil)
+	panels.garageTabs.parked.SetColor(tab == "parked" and P.orange or P.grey)
+	panels.garageTabs.storage.SetColor(tab == "storage" and P.orange or P.grey)
+	for _, b in pairs(panels.bulk) do
+		b.holder.Visible = tab == "storage"
+	end
 	clear(panels.carList)
-	local cars = sortedCars(st)
+	local cars = {}
+	for _, car in ipairs(sortedCars(st)) do
+		if (tab == "parked") == (car.slot ~= nil) then
+			table.insert(cars, car)
+		end
+	end
 	if #cars == 0 then
-		text(panels.carList, { Text = T("garage_empty"), Font = BODY, TextSize = 20, TextColor3 = P.muted, TextWrapped = true, Size = UDim2.new(1, 0, 0, 60), ZIndex = 23 })
+		local msg = #st.cars == 0 and T("garage_empty") or (tab == "parked" and "No cars parked. Open STORAGE and press PARK." or "Storage is empty. Cars you REMOVE from the garage wait here.")
+		text(panels.carList, { Text = msg, Font = BODY, TextSize = 20, TextColor3 = P.muted, TextWrapped = true, Size = UDim2.new(1, 0, 0, 60), ZIndex = 23 })
 		return
 	end
-	local now = os.clock()
 	for i, c in ipairs(cars) do
 		local def = CarConfig.ById[c.typeId]
 		local rc = rarityColor(def.rarity)
-		local row = new("Frame", { Size = UDim2.new(1, 0, 0, 84), BackgroundColor3 = P.white, LayoutOrder = i, ZIndex = 23 }, panels.carList)
+		local row = new("Frame", { Size = UDim2.new(1, 0, 0, 88), BackgroundColor3 = P.white, LayoutOrder = i, ZIndex = 23 }, panels.carList)
 		corner(row, 18)
 		stroke(row, rc, 4)
-		local band = new("Frame", { Size = UDim2.new(0, 10, 1, -16), Position = UDim2.fromOffset(8, 8), BackgroundColor3 = rc, BorderSizePixel = 0, ZIndex = 24 }, row)
-		corner(band, 5)
-		text(row, { Text = def.name, TextSize = 24, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(28, 8), Size = UDim2.fromOffset(300, 30), ZIndex = 24 })
-		local where = c.slot and T("car_parked", c.slot) or T("car_stored")
-		text(row, { Text = string.format('<font color="#%s">%s</font>  ·  %s  ·  <font color="#1E9E40">%s</font>  ·  %s', rc:ToHex(), string.upper(T("rarity_" .. def.rarity)),
-			T("car_level", c.level), T("car_income", Util.FormatNumber(CarConfig.CarIncome(c))), where),
-			Font = BODY, TextSize = 14, TextColor3 = P.muted, RichText = true, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(28, 44), Size = UDim2.fromOffset(350, 26), ZIndex = 24 })
-		local btns = new("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(450, 60), BackgroundTransparency = 1, ZIndex = 24 }, row)
+		if i <= 24 then
+			carViewport(row, def, { Position = UDim2.fromOffset(8, 6), Size = UDim2.fromOffset(120, 76), ZIndex = 24 })
+		end
+		text(row, { Text = def.name, TextSize = 22, TextColor3 = P.ink, Outline = false, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(136, 10), Size = UDim2.fromOffset(260, 28), ZIndex = 24 })
+		local where = c.slot and ("Bay " .. c.slot) or "Storage"
+		text(row, { Text = string.format('<font color="#%s">%s</font> · Lv %d · <font color="#1E9E40">+%s/s</font> · %s', rc:ToHex(), string.upper(T("rarity_" .. def.rarity)),
+			c.level, Util.FormatNumber(CarConfig.CarIncome(c)), where),
+			Font = BODY, TextSize = 14, TextColor3 = P.muted, RichText = true, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(136, 46), Size = UDim2.fromOffset(260, 24), ZIndex = 24 })
+		local btns = new("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(470, 60), BackgroundTransparency = 1, ZIndex = 24 }, row)
 		list(btns, Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center)
 		if c.slot then
-			toy(btns, { Text = T("btn_remove"), Color = P.orange, Size = UDim2.fromOffset(96, 54), TextSize = 16, LayoutOrder = 1, ZIndex = 25, OnClick = function() actions.Remove(c.uid) end })
+			toy(btns, { Text = T("btn_remove"), Sub = "to storage", SubSize = 12, Color = P.orange, Size = UDim2.fromOffset(104, 56), TextSize = 17, LayoutOrder = 1, ZIndex = 25, OnClick = function() actions.Remove(c.uid) end })
 		else
-			toy(btns, { Text = T("btn_place"), Color = P.green, Size = UDim2.fromOffset(96, 54), TextSize = 18, LayoutOrder = 1, ZIndex = 25, OnClick = function() actions.Place(c.uid, freeSlot(st)) end })
+			toy(btns, { Text = T("btn_place"), Sub = "in a bay", SubSize = 12, Color = P.green, Size = UDim2.fromOffset(104, 56), TextSize = 18, LayoutOrder = 1, ZIndex = 25, OnClick = function() actions.Place(c.uid, freeSlot(st)) end })
 		end
 		if c.level >= def.maxLevel then
-			toy(btns, { Text = T("btn_max"), Color = P.grey, Size = UDim2.fromOffset(150, 54), LayoutOrder = 2, ZIndex = 25 })
+			toy(btns, { Text = T("btn_max"), Color = P.grey, Size = UDim2.fromOffset(140, 56), LayoutOrder = 2, ZIndex = 25 })
 		else
-			local cost = CarConfig.UpgradeCost(def, c.level)
+			local ucost = CarConfig.UpgradeCost(def, c.level)
 			local partId, amount = CarConfig.UpgradeParts(def, c.level)
-			local ok = store.Money >= cost and (st.parts[partId] or 0) >= amount
-			toy(btns, { Text = T("btn_upgrade"), Sub = string.format("$%s + %s%d", Util.FormatNumber(cost), PART_ICON[partId], amount), SubSize = 14, TextSize = 18,
-				Color = ok and P.blue or P.grey, Size = UDim2.fromOffset(150, 54), LayoutOrder = 2, ZIndex = 25, OnClick = function() actions.Upgrade(c.uid, c.level) end })
+			local ok = store.Money >= ucost and (st.parts[partId] or 0) >= amount
+			toy(btns, { Text = T("btn_upgrade"), Sub = string.format("$%s + %d %s", Util.FormatNumber(ucost), amount, T("part_" .. partId)), SubSize = 12, TextSize = 17,
+				Color = ok and P.blue or P.grey, Size = UDim2.fromOffset(140, 56), LayoutOrder = 2, ZIndex = 25, OnClick = function() actions.Upgrade(c.uid, c.level) end })
 		end
 		local tuned = 0
 		for _ in pairs(c.tune or {}) do
 			tuned = tuned + 1
 		end
-		toy(btns, { Text = T("btn_tune"), Sub = tuned > 0 and (tuned .. "/7") or nil, SubSize = 13, TextSize = 17, Color = P.yellow, Size = UDim2.fromOffset(84, 54),
+		toy(btns, { Text = T("btn_tune"), Sub = tuned > 0 and (tuned .. "/7") or nil, SubSize = 12, TextSize = 17, Color = P.yellow, Size = UDim2.fromOffset(84, 56),
 			LayoutOrder = 3, ZIndex = 25, OnClick = function()
 				if UI.OnTune then
 					UI.OnTune(c.uid)
 				end
 			end })
-		local armed = state.sellArm[c.uid] and now - state.sellArm[c.uid] < 3
-		toy(btns, { Text = armed and T("btn_sure") or T("btn_sell"), Sub = "$" .. Util.FormatNumber(CarConfig.SellPrice(def, c.level)), SubSize = 13, TextSize = 16,
-			Color = P.red, Size = UDim2.fromOffset(86, 54), LayoutOrder = 4, ZIndex = 25, OnClick = function()
-				if armed then
-					state.sellArm[c.uid] = nil
+		local price = CarConfig.SellPrice(def, c.level)
+		toy(btns, { Text = T("btn_sell"), Sub = "$" .. Util.FormatNumber(price), SubSize = 12, TextSize = 17, Color = P.red, Size = UDim2.fromOffset(96, 56), LayoutOrder = 4, ZIndex = 25,
+			OnClick = function()
+				UI.Confirm("SELL THIS CAR?", string.format("<b>%s</b>  Lv %d\nfor <b>$%s</b>", def.name, c.level, Util.FormatNumber(price)), "SELL $" .. Util.FormatNumber(price), P.red, function()
 					actions.Sell(c.uid)
-				else
-					state.sellArm[c.uid] = os.clock()
-					refreshGarage()
-					task.delay(3.1, refreshGarage)
-				end
+				end, def)
 			end })
 	end
 end
@@ -1117,7 +1213,7 @@ function UI.Kit()
 		new = new, toy = toy, text = text, corner = corner, stroke = stroke, gradient = gradient, list = list, clear = clear,
 		tween = tween, pill = pill, lift = lift, panelShell = panelShell, scroller = scroller, carViewport = carViewport,
 		P = P, HEAD = HEAD, BODY = BODY, root = root, gui = gui, hud = hud, panels = panels, state = state, store = store,
-		actions = actions, PART_ICON = PART_ICON,
+		actions = actions, PART_ICON = PART_ICON, confirm = UI.Confirm,
 	}
 end
 

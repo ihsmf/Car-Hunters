@@ -10,6 +10,7 @@ local BaseLayout = require(Shared:WaitForChild("BaseLayout"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 local Util = require(Shared:WaitForChild("Util"))
 local Net = require(Shared:WaitForChild("Net"))
+local CarConfig = require(Shared:WaitForChild("CarConfig"))
 
 local GP = {}
 local K, store, Cine
@@ -67,7 +68,14 @@ local function rebuild()
 		return
 	end
 	local floors = st.floors or 1
-	local key = table.concat({ st.baseIndex, st.slots, floors }, ":")
+	local carKey = {}
+	for _, c in ipairs(st.cars) do
+		if c.slot then
+			table.insert(carKey, c.uid .. "@" .. c.slot .. "L" .. c.level)
+		end
+	end
+	table.sort(carKey)
+	local key = table.concat({ st.baseIndex, st.slots, floors, table.concat(carKey, ",") }, ":")
 	if key == sig then
 		return
 	end
@@ -85,6 +93,29 @@ local function rebuild()
 		prompt(a, "Buy bay $" .. Util.FormatNumber(cost), "Parking bay " .. nextSlot, function()
 			K.actions.BuySlot(st.slots)
 		end)
+	end
+
+	-- every parked car: take it out of the garage, or sell it right there
+	for _, c in ipairs(st.cars) do
+		if c.slot then
+			local def = CarConfig.ById[c.typeId]
+			local p = BaseLayout.SlotLocal(c.slot)
+			local a = anchor("Car" .. c.slot, bcf * CFrame.new(p.X, BaseLayout.FloorY + p.Y + 3, p.Z))
+			local rm = prompt(a, "Remove", def and def.name or "Car", function()
+				K.actions.Remove(c.uid)
+			end)
+			rm.KeyboardKeyCode = Enum.KeyCode.E
+			rm.MaxActivationDistance = 9
+			local price = def and CarConfig.SellPrice(def, c.level) or 0
+			local sp = prompt(a, "Sell $" .. Util.FormatNumber(price), def and def.name or "Car", function()
+				K.confirm("SELL THIS CAR?", string.format("<b>%s</b>  Lv %d\nfor <b>$%s</b>", def.name, c.level, Util.FormatNumber(price)), "SELL $" .. Util.FormatNumber(price), K.P.red, function()
+					K.actions.Sell(c.uid)
+				end, def)
+			end)
+			sp.KeyboardKeyCode = Enum.KeyCode.F
+			sp.MaxActivationDistance = 9
+			sp.UIOffset = Vector2.new(0, 70)
+		end
 	end
 
 	-- lift: build the next floor, or ride to any built floor
