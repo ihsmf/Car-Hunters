@@ -3,7 +3,7 @@ local DonateConfig = {}
 
 DonateConfig.Products = {
 	{ id = "boost_income", tab = "boost", icon = "💸", name = "x2 Income", desc = "Double garage income for 30 min", price = 49, boost = "income", seconds = 1800 },
-	{ id = "boost_luck", tab = "boost", icon = "🍀", name = "x2 Luck", desc = "Much rarer cars from the trap for 15 min", price = 39, boost = "luck", seconds = 900 },
+	{ id = "boost_luck", tab = "boost", icon = "🍀", name = "Lucky Hour", desc = "Better car rarity from the trap for 15 min", price = 39, boost = "luck", seconds = 900 },
 	{ id = "pity", tab = "boost", icon = "🎯", name = "Sure Shot", desc = "Your next throw is Epic or better", price = 59 },
 	{ id = "hotdrop", tab = "boost", icon = "📦", name = "Call a Hot Drop", desc = "A rare crate lands in your best district right now", price = 25 },
 	{ id = "revive", tab = "boost", icon = "❤️", name = "Insurance", desc = "Get back the loot you lost in your last crash", price = 19 },

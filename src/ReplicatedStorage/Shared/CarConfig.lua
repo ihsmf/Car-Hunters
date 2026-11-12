@@ -105,12 +105,13 @@ for _, def in ipairs(CarConfig.Exclusive) do
 	CarConfig.ById[def.id] = def
 end
 
+-- top cars are rare on purpose: a Legendary from bolts is 1 in 1000
 CarConfig.DropChances = {
-	bolts = { Common = 55, Uncommon = 25, Rare = 13, Epic = 6, Legendary = 1 },
-	tire = { Common = 40, Uncommon = 30, Rare = 18, Epic = 9, Legendary = 3 },
-	engine = { Common = 22, Uncommon = 30, Rare = 26, Epic = 16, Legendary = 6 },
-	turbo = { Common = 10, Uncommon = 22, Rare = 30, Epic = 26, Legendary = 12 },
-	core = { Common = 4, Uncommon = 10, Rare = 26, Epic = 36, Legendary = 24 },
+	bolts = { Common = 70, Uncommon = 22, Rare = 7, Epic = 0.9, Legendary = 0.1 },
+	tire = { Common = 58, Uncommon = 28, Rare = 11, Epic = 2.6, Legendary = 0.4 },
+	engine = { Common = 42, Uncommon = 33, Rare = 19, Epic = 5, Legendary = 1 },
+	turbo = { Common = 28, Uncommon = 34, Rare = 26, Epic = 10, Legendary = 2 },
+	core = { Common = 15, Uncommon = 30, Rare = 34, Epic = 17, Legendary = 4 },
 }
 
 function CarConfig.IncomeAt(def, level)
@@ -152,9 +153,9 @@ end
 
 function CarConfig.PityRow(partId)
 	local row = CarConfig.DropChances[partId]
-	local e, l = row.Epic, row.Legendary
-	local t = e + l
-	return { Common = 0, Uncommon = 0, Rare = 0, Epic = e / t * 100, Legendary = l / t * 100 }
+	-- pity guarantees an Epic; a Legendary keeps its own (small) chance on top
+	local l = math.min(row.Legendary * 3, 20)
+	return { Common = 0, Uncommon = 0, Rare = 0, Epic = 100 - l, Legendary = l }
 end
 
 function CarConfig.Roll(partId, pity, r1, r2)

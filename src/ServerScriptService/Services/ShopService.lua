@@ -61,9 +61,9 @@ end
 function Shop.LuckShift(s)
 	local shift = ShopConfig.ById.lucky.per * lvl(s, "lucky")
 	if boostActive(s, "luck") then
-		shift = shift + 0.25
+		shift = shift + 0.08
 	end
-	return math.min(shift, 0.6)
+	return math.min(shift, EconomyConfig.MaxLuckShift)
 end
 
 function Shop.RespawnTime(s)

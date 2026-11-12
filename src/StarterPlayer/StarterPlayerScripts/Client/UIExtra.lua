@@ -354,7 +354,7 @@ end
 local function refreshHud(st)
 	-- boosts
 	K.clear(w.boosts)
-	for _, b in ipairs({ { "income", "💸 x2" }, { "luck", "🍀 x2" } }) do
+	for _, b in ipairs({ { "income", "💸 x2" }, { "luck", "🍀 LUCK" } }) do
 		local left = st.boosts and st.boosts[b[1]] or 0
 		if left > 0 then
 			K.pill(w.boosts, b[2] .. " " .. fmtTime(left), GOLD, { H = 34, TextSize = 18 })

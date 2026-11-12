@@ -32,7 +32,8 @@ EconomyConfig.SellFraction = 0.35
 EconomyConfig.DiscoverBonusMult = 1.0
 EconomyConfig.IndexTierBonus = 0.05
 EconomyConfig.IndexFullBonus = 0.10
-EconomyConfig.PityThreshold = 40
+EconomyConfig.PityThreshold = 120
+EconomyConfig.MaxLuckShift = 0.15 -- all luck sources together
 
 EconomyConfig.ThrowCooldown = 0.8
 EconomyConfig.ThrowAnimTime = 5.2
