@@ -41,6 +41,7 @@ local function newProfile(isNew)
 		lastSeen = 0,
 		tutorial = 0,
 		daily = { day = 0, last = 0 },
+		play = { day = 0, sec = 0, chests = {} }, -- today's playtime + opened playtime chests (saved: rejoining does not reset them)
 		perks = {},
 		boosts = {},
 		receipts = {},
@@ -131,8 +132,8 @@ local function sanitize(raw)
 		p.stats.sold = toCount(raw.stats.sold, 1e9)
 	end
 	if type(raw.discovered) == "table" then
-		for id, v in pairs(raw.discovered) do
-			id = CarConfig.LegacyIds[id] or id
+		for rawId, v in pairs(raw.discovered) do
+			local id = CarConfig.LegacyIds[rawId] or rawId
 			if v == true and CarConfig.ById[id] then
 				p.discovered[id] = true
 			end
@@ -213,6 +214,17 @@ local function sanitize(raw)
 	p.saveCount = toCount(raw.saveCount, 1e12)
 	p.lastSeen = toCount(raw.lastSeen, 4e9)
 	p.tutorial = toCount(raw.tutorial, 8)
+	if type(raw.play) == "table" then
+		local chests = {}
+		if type(raw.play.chests) == "table" then
+			for i = 1, 10 do
+				if raw.play.chests[i] == true then
+					chests[i] = true
+				end
+			end
+		end
+		p.play = { day = toCount(raw.play.day, 1e7), sec = toCount(raw.play.sec, 86400), chests = chests }
+	end
 	if type(raw.daily) == "table" then
 		p.daily = { day = math.clamp(toCount(raw.daily.day, 7), 0, 7), last = toCount(raw.daily.last, 1e6) }
 	end
@@ -333,7 +345,7 @@ function DataService.Load(player)
 	local s = {
 		player = player, ready = false, carried = {}, hidden = {}, rl = {}, income = 0, collectionValue = 0,
 		moneyFrac = 0, busy = false, protectedUntil = 0, lastHit = 0, baseIndex = nil, joinedAt = os.clock(), chests = {},
-		ephemeral = false, loadFailed = false,
+		ephemeral = false, loadFailed = false, playMark = os.clock(),
 	}
 	sessions[player] = s
 
@@ -357,16 +369,30 @@ function DataService.Load(player)
 		s.data = newProfile(true)
 		DataService.Notify(player, "studioNoSave", nil, "warn")
 	else
+		-- live game: never let anyone play on a profile that cannot be saved (all progress would be lost)
 		warn("[CarHunters] Profile load failed for", player.Name, raw)
-		s.ephemeral = true
-		s.loadFailed = true
-		s.data = newProfile(true)
-		DataService.Notify(player, "dataFail", nil, "error")
+		sessions[player] = nil
+		player:Kick("Roblox could not load your save right now. Please rejoin in a minute - your progress is safe.")
+		return nil
 	end
 	return s
 end
 
+-- today's playtime in seconds (rolls over at 00:00 UTC: new day = new chests)
+function DataService.PlayTime(s)
+	local d = s.data
+	local today = math.floor(os.time() / 86400)
+	local now = os.clock()
+	if type(d.play) ~= "table" or d.play.day ~= today then
+		d.play = { day = today, sec = 0, chests = {} } -- time since the last mark still counts for the new day
+	end
+	d.play.sec = d.play.sec + (now - (s.playMark or now))
+	s.playMark = now
+	return d.play.sec
+end
+
 local function snapshot(s, mergeCarried)
+	DataService.PlayTime(s) -- fold the running playtime into the saved number
 	local d = Util.CopyTable(s.data)
 	if mergeCarried then
 		for id, n in pairs(s.carried) do
@@ -390,14 +416,17 @@ function DataService.Save(player, release)
 		waited = waited + 0.1
 	end
 	s.saving = true
-	local snap = snapshot(s, release)
+	-- carried loot is saved as banked on every save, so a server crash never loses it
+	local snap = snapshot(s, true)
 	local key = keyFor(player.UserId)
-	local success = false
+	local success, stolen = false, false
 	for attempt = 1, 3 do
 		local ok, err = pcall(function()
 			store:UpdateAsync(key, function(old)
+				stolen = false
 				if type(old) == "table" and type(old.lock) == "table" and old.lock.id ~= SERVER_ID
 					and os.time() - (tonumber(old.lock.time) or 0) < LOCK_TIMEOUT then
+					stolen = true -- another server owns this profile now: writing would overwrite its progress
 					return nil
 				end
 				local out = { data = snap }
@@ -407,8 +436,10 @@ function DataService.Save(player, release)
 				return out
 			end)
 		end)
-		if ok then
+		if ok and not stolen then
 			success = true
+			break
+		elseif ok and stolen then
 			break
 		end
 		warn("[CarHunters] Save failed (" .. attempt .. "):", err)
@@ -417,6 +448,13 @@ function DataService.Save(player, release)
 	s.saving = false
 	if success then
 		s.data.saveCount = snap.saveCount
+		s.lastSaved = os.time()
+	elseif stolen then
+		warn("[CarHunters] Profile of", player.Name, "is locked by another server - this session stops saving")
+		s.locked = false
+		if player.Parent and not release then
+			player:Kick("Your save was opened on another server. Please rejoin.")
+		end
 	end
 	return success
 end
@@ -473,8 +511,8 @@ function DataService.BuildState(s)
 		tuning = Util.CopyTable(d.tuning),
 		tutorial = d.tutorial,
 		daily = { day = d.daily.day, last = d.daily.last, today = math.floor(os.time() / 86400) },
-		chests = Util.CopyTable(s.chests or {}),
-		sessionTime = os.clock() - (s.joinedAt or os.clock()),
+		chests = Util.CopyTable(d.play and d.play.chests or {}),
+		sessionTime = DataService.PlayTime(s), -- today's playtime
 		rebirths = d.rebirths,
 		tokens = d.tokens,
 		tokenPerks = Util.CopyTable(d.tokenPerks),

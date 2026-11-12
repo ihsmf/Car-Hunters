@@ -1312,6 +1312,10 @@ function Build.Build(opts)
 		summary[section] = Prefabs.Count - before
 	end
 	root:SetAttribute("MapVersion", MapConfig.Version)
+	-- how many Blender templates were available: a map built while models were missing is rebuilt once they are there
+	local props = game:GetService("ServerStorage"):FindFirstChild("BuilderAssets")
+	props = props and props:FindFirstChild("Props")
+	root:SetAttribute("Templates", props and #props:GetChildren() or 0)
 	local missing = {}
 	for n in pairs(Prefabs.TemplateUse.missing) do
 		table.insert(missing, n)

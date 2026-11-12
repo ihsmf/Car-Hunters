@@ -73,14 +73,31 @@ for _, name in ipairs({ "RuntimeTraffic", "RuntimeDrops" }) do
 	end
 end
 
--- Blender models (uploaded via Open Cloud) must be in place before the map is built
-pcall(function()
+-- Blender models must be in place before the map is built (embedded in the place; LoadAsset only as a fallback)
+local okModels, errModels = pcall(function()
 	require(ServerScriptService:WaitForChild("Services"):WaitForChild("ModelService")).LoadAll()
 end)
+if not okModels then
+	warn("[CarHunters] ModelService failed:", errModels)
+end
+-- real car models from the assets embedded in the place (Creator Store cars)
+local okCars, carsOrErr = pcall(function()
+	return require(ServerStorage:WaitForChild("Tools"):WaitForChild("CarStoreTool")).InstallMissingEmbedded()
+end)
+if okCars then
+	print(string.format("[CarHunters] %d store car models installed from the place file", carsOrErr))
+else
+	warn("[CarHunters] car models failed:", carsOrErr)
+end
 
 local savedMap = Workspace:FindFirstChild("GeneratedMap")
+local propsNow = ServerStorage:FindFirstChild("BuilderAssets") and ServerStorage.BuilderAssets:FindFirstChild("Props")
+local templatesNow = propsNow and #propsNow:GetChildren() or 0
 if savedMap and savedMap:GetAttribute("MapVersion") ~= MapConfig.Version then
 	warn("[CarHunters] saved map is outdated - rebuilding")
+	savedMap:Destroy()
+elseif savedMap and templatesNow > (savedMap:GetAttribute("Templates") or 0) then
+	warn("[CarHunters] saved map was built without some 3D models - rebuilding")
 	savedMap:Destroy()
 end
 if not Workspace:FindFirstChild("GeneratedMap") then

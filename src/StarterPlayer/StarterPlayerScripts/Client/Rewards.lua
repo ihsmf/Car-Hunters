@@ -66,7 +66,7 @@ local function build()
 	K.text(c, { Text = "DAILY STREAK  -  come back every day, missing a day starts again", Font = K.BODY, TextSize = 17, TextColor3 = P.ink, Size = UDim2.new(1, 0, 0, 24), ZIndex = 22 })
 	w.days = K.new("Frame", { Position = UDim2.fromOffset(0, 30), Size = UDim2.new(1, 0, 0, 200), BackgroundTransparency = 1, ZIndex = 22 }, c)
 	K.list(w.days, Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Center)
-	K.text(c, { Text = "PLAYTIME CHESTS  -  open them as you play this session", Font = K.BODY, TextSize = 17, TextColor3 = P.ink, Position = UDim2.fromOffset(0, 246), Size = UDim2.new(1, 0, 0, 24), ZIndex = 22 })
+	K.text(c, { Text = "PLAYTIME CHESTS  -  play today to open them, new chests every day", Font = K.BODY, TextSize = 17, TextColor3 = P.ink, Position = UDim2.fromOffset(0, 246), Size = UDim2.new(1, 0, 0, 24), ZIndex = 22 })
 	w.chests = K.new("Frame", { Position = UDim2.fromOffset(0, 276), Size = UDim2.new(1, 0, 0, 200), BackgroundTransparency = 1, ZIndex = 22 }, c)
 	K.list(w.chests, Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Center)
 end

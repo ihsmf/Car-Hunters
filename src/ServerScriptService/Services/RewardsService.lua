@@ -54,14 +54,12 @@ function Rewards.ClaimChest(player, i)
 	if not s or not s.ready or not entry or not S.Data.RateLimit(player, "chest", 0.5) then
 		return
 	end
-	s.chests = s.chests or {}
-	if s.chests[i] then
+	local played = S.Data.PlayTime(s) -- today's playtime, saved across rejoins
+	local chests = s.data.play.chests
+	if chests[i] or played < entry.minutes * 60 then
 		return
 	end
-	if os.clock() - (s.joinedAt or os.clock()) < entry.minutes * 60 then
-		return
-	end
-	s.chests[i] = true
+	chests[i] = true
 	local cash = give(player, s, entry)
 	S.Data.Notify(player, "chestClaimed", { entry.minutes, cash }, "good")
 	S.Data.Push(player)

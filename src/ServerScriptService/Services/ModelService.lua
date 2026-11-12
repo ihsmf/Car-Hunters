@@ -88,11 +88,24 @@ function ModelService.LoadAll()
 	local props = ensure(ensure(ServerStorage, "BuilderAssets"), "Props")
 	local partModels = ensure(ReplicatedStorage, "PartModels")
 	local n = 0
+	local stats = { embedded = 0, downloaded = 0, missing = {} }
 	for name, id in pairs(ids) do
 		if id and id > 0 then
-			local ok, res = pcall(function()
-				return InsertService:LoadAsset(id)
-			end)
+			-- 1) embedded in the place file (tools/bake_models.luau)  2) LoadAsset (needs the game owner to own the asset)
+			local emb = ServerStorage:FindFirstChild("Embedded")
+			emb = emb and emb:FindFirstChild("Assets") and emb.Assets:FindFirstChild("A" .. tostring(id))
+			local ok, res
+			if emb then
+				ok, res = true, emb:Clone()
+				stats.embedded = stats.embedded + 1
+			else
+				ok, res = pcall(function()
+					return InsertService:LoadAsset(id)
+				end)
+				if ok and res then
+					stats.downloaded = stats.downloaded + 1
+				end
+			end
 			if ok and res then
 				if name == "PartsKit" or name == "PropsKit" then
 					for _, m in ipairs(res:GetDescendants()) do
@@ -120,11 +133,13 @@ function ModelService.LoadAll()
 				end
 				res:Destroy()
 			else
+				table.insert(stats.missing, name)
 				warn(string.format("[Models] %s (%s) did not load: %s", name, tostring(id), tostring(res)))
 			end
 		end
 	end
-	print(string.format("[Models] %d Blender models installed", n))
+	print(string.format("[Models] %d Blender models installed (embedded %d, downloaded %d)%s", n, stats.embedded, stats.downloaded,
+		#stats.missing > 0 and ("  MISSING: " .. table.concat(stats.missing, ", ")) or ""))
 	return n
 end
 

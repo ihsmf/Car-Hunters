@@ -105,7 +105,25 @@ local function keep(inst)
 	return false
 end
 
+-- assets embedded into the place by tools/bake_models.luau: ServerStorage.Embedded.Assets.A<id>
+local function embedded(id)
+	local e = game:GetService("ServerStorage"):FindFirstChild("Embedded")
+	local a = e and e:FindFirstChild("Assets")
+	return a and a:FindFirstChild("A" .. tostring(id))
+end
+Tool.Embedded = embedded
+
 local function load(id)
+	local emb = embedded(id)
+	if emb then
+		local out = {}
+		for _, c in ipairs(emb:GetChildren()) do
+			table.insert(out, c:Clone())
+		end
+		if #out > 0 then
+			return out
+		end
+	end
 	local ok, res = pcall(function()
 		return game:GetObjects("rbxassetid://" .. id)
 	end)
@@ -305,6 +323,25 @@ function Tool.InstallAll()
 			warn("[CarStore] failed: " .. tostring(err))
 		end
 	end)
+end
+
+-- server start: every car that has no model yet is installed from the assets embedded in the place
+-- (no downloads, works in an unpublished place and in the live game)
+function Tool.InstallMissingEmbedded()
+	local root = ReplicatedStorage:FindFirstChild("CarModels")
+	local done = 0
+	for _, def in ipairs(CarConfig.List) do
+		local cur = root and root:FindFirstChild(def.id)
+		if not (cur and cur:FindFirstChildWhichIsA("BasePart", true)) then
+			for _, id in ipairs(Tool.Candidates[def.id] or {}) do
+				if embedded(id) and Tool.Install(def.id, id) then
+					done = done + 1
+					break
+				end
+			end
+		end
+	end
+	return done
 end
 
 function Tool.InstallAllNow()

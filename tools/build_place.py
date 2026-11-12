@@ -53,3 +53,12 @@ if cm is not None:
             cm.remove(c)
 tree.write(out, encoding='utf-8', xml_declaration=False)
 print('built', out, count)
+# embed downloaded 3D models (tools/fetch_assets.py) with lune, so nothing is downloaded at runtime
+import shutil, subprocess
+rbxm = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets', 'rbxm')
+lune = shutil.which('lune') or os.path.expanduser('~/.cargo/bin/lune')
+if os.path.isdir(rbxm) and any(f.endswith('.rbxm') for f in os.listdir(rbxm)):
+    if os.path.exists(lune):
+        subprocess.run([lune, 'run', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bake_models.luau'), out, rbxm], check=True)
+    else:
+        print('! lune not found (cargo install lune --locked): 3D models were NOT embedded')
