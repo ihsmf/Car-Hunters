@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Kinds = require(script.Parent.VehicleKinds)
+local WheelKit = require(script.Parent.WheelKit)
 
 local VehicleFactory = {}
 VehicleFactory.Kinds = Kinds
@@ -67,6 +68,16 @@ local function prepareTemplate(tpl, targetL, opts)
 	local root = newRoot()
 	root.CFrame = CFrame.new(bb.Position.X, bottom, bb.Position.Z) * CFrame.Angles(0, yaw, 0)
 	root.Parent = m
+	-- safety net: put a wheel wherever one should be and nothing visible is (store cars lose theirs)
+	if not tpl:GetAttribute("NoWheelFix") then
+		local ok, err = pcall(function()
+			local fwd = alongZ and Vector3.new(0, 0, -1) or Vector3.new(1, 0, 0)
+			WheelKit.Ensure(m, fwd, WheelKit.Load(m, scale))
+		end)
+		if not ok then
+			warn("[CarModels] wheel fix failed for", tpl.Name, err)
+		end
+	end
 	local recolor = tpl:GetAttribute("Recolor") == true
 	for _, d in ipairs(m:GetDescendants()) do
 		if d:IsA("BasePart") and d ~= root then

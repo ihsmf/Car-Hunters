@@ -8,6 +8,7 @@ local InsertService = game:GetService("InsertService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local CarConfig = require(Shared:WaitForChild("CarConfig"))
+local WheelKit = require(Shared:WaitForChild("WheelKit"))
 
 local Tool = {}
 
@@ -104,6 +105,21 @@ local function pickCar(objs)
 	return car, seat, holder
 end
 
+-- chassis scripts often show wheel meshes only at runtime: keep wheel-named parts that carry a real mesh
+local function hiddenWheelMesh(d)
+	local named = WheelKit.IsWheelName(d.Name) or (d.Parent and WheelKit.IsWheelName(d.Parent.Name))
+	if not named then
+		return false
+	end
+	local mesh = d:FindFirstChildWhichIsA("SpecialMesh") or d:FindFirstChildWhichIsA("FileMesh")
+	local hasMesh = (d:IsA("MeshPart") and d.MeshId ~= "") or (mesh and mesh.MeshId ~= "")
+	if hasMesh then
+		d.Transparency = 0
+		return true
+	end
+	return false
+end
+
 local function sanitize(car)
 	local parts = 0
 	for _, d in ipairs(car:GetDescendants()) do
@@ -115,7 +131,7 @@ local function sanitize(car)
 		if d:IsA("BasePart") then
 			if d.Name == "WheelMarker" then
 				d.CanCollide = false
-			elseif d.Transparency >= 0.99 and not d:FindFirstChildWhichIsA("Decal") then
+			elseif d.Transparency >= 0.99 and not d:FindFirstChildWhichIsA("Decal") and not (hiddenWheelMesh(d)) then
 				d:Destroy() -- hitboxes, wheel colliders, seat blocks
 			else
 				d.Anchored = true
@@ -133,121 +149,9 @@ local function sanitize(car)
 	return parts
 end
 
----------------------------------------------------------------- wheels
--- Store cars often keep their visible wheels in transparent collider parts or spawn them from chassis
--- scripts (which we strip). We remember where the wheels are and rebuild any wheel that is missing.
-local WHEEL_NAMES = { "^fl$", "^fr$", "^rl$", "^rr$", "^lf$", "^rf$", "^lr$", "^wheel", "^tire", "^tyre", "^rim", "wheel$" }
-
-local function isWheelName(n)
-	n = string.lower(n)
-	for _, pat in ipairs(WHEEL_NAMES) do
-		if string.find(n, pat) then
-			return true
-		end
-	end
-	return false
-end
-
-local function wheelCandidates(car)
-	local out = {}
-	for _, d in ipairs(car:GetDescendants()) do
-		if d:IsA("BasePart") then
-			local named = isWheelName(d.Name) or (d.Parent and isWheelName(d.Parent.Name))
-			local sz = d.Size
-			local dims = { sz.X, sz.Y, sz.Z }
-			table.sort(dims)
-			local roundish = dims[3] > 0.6 and dims[2] / dims[3] > 0.8 and dims[1] < dims[3] * 0.85
-			if named and roundish then
-				local pos = d.Position
-				local merged = false
-				for _, w in ipairs(out) do
-					if (w.pos - pos).Magnitude < dims[3] * 0.6 then
-						w.r = math.max(w.r, dims[3] / 2)
-						merged = true
-						break
-					end
-				end
-				if not merged then
-					table.insert(out, { pos = pos, r = dims[3] / 2 })
-				end
-			end
-		end
-	end
-	return out
-end
-
-local function guessWheels(car, forward)
-	local bb, size = car:GetBoundingBox()
-	local f = forward
-	local right = f:Cross(Vector3.yAxis).Unit
-	local len = math.abs(size:Dot(Vector3.new(math.abs(f.X), 0, math.abs(f.Z))))
-	local wid = math.abs(size:Dot(Vector3.new(math.abs(right.X), 0, math.abs(right.Z))))
-	local r = math.clamp(size.Y * 0.2, 0.9, 2.2)
-	local bottom = bb.Position.Y - size.Y / 2
-	local out = {}
-	for _, a in ipairs({ 0.33, -0.33 }) do
-		for _, s in ipairs({ -1, 1 }) do
-			local p = Vector3.new(bb.Position.X, bottom + r, bb.Position.Z) + f * (len * a) + right * s * (wid / 2 - r * 0.45)
-			table.insert(out, { pos = p, r = r })
-		end
-	end
-	return out
-end
-
-local function hasVisibleAt(car, pos, r)
-	for _, d in ipairs(car:GetDescendants()) do
-		if d:IsA("BasePart") and d.Transparency < 0.9 and d.Name ~= "AddedWheel" then
-			local lp = d.CFrame:PointToObjectSpace(pos)
-			local h = d.Size / 2
-			local m = r * 0.35
-			if math.abs(lp.X) <= h.X + m and math.abs(lp.Y) <= h.Y + m and math.abs(lp.Z) <= h.Z + m then
-				local dims = { d.Size.X, d.Size.Y, d.Size.Z }
-				table.sort(dims)
-				-- wheel-sized: not a thin trim strip, not the whole body shell whose box covers the arch
-				if dims[2] >= r * 0.9 and dims[3] <= r * 4 then
-					return true
-				end
-			end
-		end
-	end
-	return false
-end
-
-local function addWheel(car, pos, r, right)
-	local folder = car:FindFirstChild("AddedWheels") or Instance.new("Model")
-	folder.Name = "AddedWheels"
-	folder.Parent = car
-	local axis = CFrame.lookAt(pos, pos + right) * CFrame.Angles(0, math.rad(90), 0) -- cylinder X axis = right
-	local function cyl(name, d, w, color, mat, off)
-		local p = Instance.new("Part")
-		p.Name = name
-		p.Shape = Enum.PartType.Cylinder
-		p.Size = Vector3.new(w, d, d)
-		p.CFrame = axis * CFrame.new(off or 0, 0, 0)
-		p.Color = color
-		p.Material = mat
-		p.Anchored, p.CanCollide, p.CanTouch, p.CanQuery, p.Massless = true, false, false, false, true
-		p.Parent = folder
-		return p
-	end
-	local w = math.max(0.7, r * 0.75)
-	cyl("Tire", r * 2, w, Color3.fromRGB(24, 24, 28), Enum.Material.SmoothPlastic)
-	cyl("Rim", r * 1.3, w + 0.06, Color3.fromRGB(196, 200, 208), Enum.Material.Metal)
-	cyl("Hub", r * 0.45, w + 0.12, Color3.fromRGB(60, 62, 70), Enum.Material.Metal)
-end
-
--- returns how many wheels had to be rebuilt
+---------------------------------------------------------------- wheels (see Shared/WheelKit.lua)
 local function ensureWheels(car, forward, known)
-	local right = forward:Cross(Vector3.yAxis).Unit
-	local wheels = (known and #known >= 3) and known or guessWheels(car, forward)
-	local added = 0
-	for _, w in ipairs(wheels) do
-		if not hasVisibleAt(car, w.pos, w.r) then
-			addWheel(car, w.pos, w.r, right)
-			added = added + 1
-		end
-	end
-	return added
+	return WheelKit.Ensure(car, forward, known)
 end
 
 local function flat(v)
@@ -278,8 +182,16 @@ function Tool.Install(carId, assetId, yaw)
 	end
 	local car, seat, holder = pickCar(objs)
 	local forward = seat and flat(seat.CFrame.LookVector) or Vector3.new(0, 0, -1)
+	-- wheels kept in a sibling model (outside the seat's model) belong to the car too
+	if holder ~= car then
+		for _, o in ipairs(holder:GetChildren()) do
+			if o ~= car and (WheelKit.IsWheelName(o.Name) or #WheelKit.Candidates(o) > 0) then
+				o.Parent = car
+			end
+		end
+	end
 	-- markers survive sanitize/normalize so wheel positions stay in the car's own frame
-	for _, w in ipairs(wheelCandidates(car)) do
+	for _, w in ipairs(WheelKit.Candidates(car)) do
 		local mk = Instance.new("Part")
 		mk.Name = "WheelMarker"
 		mk.Size = Vector3.one * 0.2
@@ -307,7 +219,9 @@ function Tool.Install(carId, assetId, yaw)
 			mk:Destroy()
 		end
 	end
-	local added = ensureWheels(car, Vector3.new(0, 0, -1), known)
+	local spots = (#known >= 3) and known or WheelKit.Guess(car, Vector3.new(0, 0, -1))
+	local added = ensureWheels(car, Vector3.new(0, 0, -1), spots)
+	WheelKit.Save(car, spots)
 	local len, wid = size.Z, size.X
 	if len / math.max(wid, 0.1) < 1.4 or len / math.max(wid, 0.1) > 4.5 or len / math.max(size.Y, 0.1) < 1.5 or parts > Tool.MaxParts then
 		holder:Destroy()
@@ -399,7 +313,7 @@ function Tool.FixWheels()
 			local yaw = math.rad(m:GetAttribute("Yaw") or 0)
 			local fwd = size.Z >= size.X and Vector3.new(0, 0, -1) or Vector3.new(1, 0, 0)
 			fwd = (CFrame.Angles(0, yaw, 0) * CFrame.new(fwd)).Position
-			local n = ensureWheels(m, flat(fwd), nil)
+			local n = ensureWheels(m, flat(fwd), WheelKit.Load(m, 1))
 			if n > 0 then
 				fixed = fixed + 1
 				print(string.format("[CarStore] %s: rebuilt %d wheels", m.Name, n))
@@ -407,6 +321,18 @@ function Tool.FixWheels()
 		end
 	end
 	print(string.format("[CarStore] FixWheels done, %d models repaired", fixed))
+end
+
+-- how many wheels each installed car shows (real + rebuilt)
+function Tool.WheelReport()
+	local root = ReplicatedStorage:FindFirstChild("CarModels")
+	for _, m in ipairs(root and root:GetChildren() or {}) do
+		if m:IsA("Model") and CarConfig.ById[m.Name] then
+			local real = #WheelKit.Candidates(m)
+			local added = m:FindFirstChild("AddedWheels") and #m.AddedWheels:GetChildren() or 0
+			print(string.format("[CarStore] %-22s wheels found %d, rebuilt parts %d, saved spots %s", m.Name, real, added, m:GetAttribute("Wheels") and "yes" or "no"))
+		end
+	end
 end
 
 function Tool.Flip(carId)
