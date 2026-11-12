@@ -195,6 +195,25 @@ for _, z in pairs(MapConfig.Zones) do
 	z.style = z.style or z.id
 end
 
+-- Gentle traffic (v12): every road runs slower, most of all at the start, and cars leave bigger gaps.
+-- Trains and planes keep their timing. Server and clients read the same numbers (TrafficMath), so it stays in sync.
+MapConfig.TrafficEase = {
+	city = 0.55, highway = 0.62, industrial = 0.68, neon = 0.7, scrapyard = 0.72,
+	docks = 0.75, desert = 0.75, bridge = 0.78, airport = 0.78, canyon = 0.8,
+	circuit = 0.82, drift = 0.82, storm = 0.85, rush = 0.85, colosseum = 0.85,
+}
+MapConfig.TrafficGap = 1.2 -- spacing between cars x1.2
+for _, r in ipairs(MapConfig.Roads) do
+	local special = r.kinds and (r.kinds[1] == "train" or r.kinds[1] == "plane")
+	if not special then
+		local e = MapConfig.TrafficEase[r.zone] or 0.8
+		r.speed = { r.speed[1] * e, r.speed[2] * e }
+		if r.spacing then
+			r.spacing = { r.spacing[1] * MapConfig.TrafficGap, r.spacing[2] * MapConfig.TrafficGap }
+		end
+	end
+end
+
 -- river crossing in the bridge district: z range of water between its two roads
 MapConfig.River = { zone = "bridge", z1 = MapConfig.Zones.bridge.zMin + 84, z2 = MapConfig.Zones.bridge.zMin + 146, bridges = { { x = 0, w = 16 }, { x = -96, w = 8 }, { x = 96, w = 8 } } }
 

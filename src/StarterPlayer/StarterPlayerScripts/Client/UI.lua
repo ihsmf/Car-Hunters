@@ -508,9 +508,14 @@ local function mixTotal()
 	end
 	return n
 end
+-- how many cars one throw may catch (1..4, "Multi Catch" perk in the Pit Stop)
+local function catchLimit()
+	local st = store.State
+	return EconomyConfig.CatchLimit(st and st.perks and st.perks.multi or 0)
+end
 local function setMix(id, n)
 	local total = mixTotal() - math.min(state.mix[id] or 0, store.Banked(id))
-	state.mix[id] = math.clamp(n, 0, math.min(store.Banked(id), EconomyConfig.MaxBatch - total))
+	state.mix[id] = math.clamp(n, 0, math.min(store.Banked(id), catchLimit() - total))
 	UI.Refresh()
 end
 
@@ -520,6 +525,8 @@ local function buildThrow()
 	local rows = new("Frame", { Size = UDim2.fromOffset(560, 410), BackgroundTransparency = 1, ZIndex = 22 }, c)
 	list(rows, Enum.FillDirection.Vertical, 10)
 	panels.throwRows = {}
+	-- cars per throw (1 at the start, up to 4 with the "Multi Catch" Pit Stop upgrade)
+	panels.catchInfo = text(c, { Text = "", Font = BODY, TextSize = 17, TextColor3 = P.ink, RichText = true, Position = UDim2.fromOffset(0, 420), Size = UDim2.fromOffset(560, 26), ZIndex = 23 })
 	for i, id in ipairs(PartConfig.Order) do
 		local rc = rarityColor(PartConfig.Parts[id].rarity)
 		local r = new("Frame", { Size = UDim2.fromOffset(560, 74), BackgroundColor3 = P.white, LayoutOrder = i, ZIndex = 23 }, rows)
@@ -572,9 +579,9 @@ local function buildThrow()
 	end
 	-- right column: quick picks, expected cars, merge toggle, throw
 	local right = new("Frame", { Position = UDim2.fromOffset(582, 0), Size = UDim2.fromOffset(312, 480), BackgroundTransparency = 1, ZIndex = 22 }, c)
-	toy(right, { Text = "ALL", Color = P.orange, Size = UDim2.fromOffset(98, 46), Position = UDim2.fromOffset(0, 0), TextSize = 20, ZIndex = 23, OnClick = function()
+	toy(right, { Text = "FILL", Color = P.orange, Size = UDim2.fromOffset(98, 46), Position = UDim2.fromOffset(0, 0), TextSize = 20, ZIndex = 23, OnClick = function()
 		state.mix = {}
-		local left = EconomyConfig.MaxBatch
+		local left = catchLimit()
 		for _, id in ipairs(PartConfig.Order) do
 			local n = math.min(store.Banked(id), left)
 			state.mix[id] = n
@@ -582,11 +589,12 @@ local function buildThrow()
 		end
 		UI.Refresh()
 	end })
-	toy(right, { Text = "x10", Color = P.blue, Size = UDim2.fromOffset(98, 46), Position = UDim2.fromOffset(107, 0), TextSize = 20, ZIndex = 23, OnClick = function()
-		-- ten of the cheapest parts you have
+	toy(right, { Text = "RARE", Color = P.blue, Size = UDim2.fromOffset(98, 46), Position = UDim2.fromOffset(107, 0), TextSize = 20, ZIndex = 23, OnClick = function()
+		-- the rarest parts you have, up to your cars-per-throw limit
 		state.mix = {}
-		local left = 10
-		for _, id in ipairs(PartConfig.Order) do
+		local left = catchLimit()
+		for i = #PartConfig.Order, 1, -1 do
+			local id = PartConfig.Order[i]
 			local n = math.min(store.Banked(id), left)
 			state.mix[id] = n
 			left = left - n
@@ -689,6 +697,20 @@ local function refreshThrow()
 		return
 	end
 	state.mixTouched = true
+	-- the limit can drop below the current pick (e.g. after a rebirth): trim the pick
+	local lim = catchLimit()
+	while mixTotal() > lim do
+		for i = 1, #PartConfig.Order do
+			local id = PartConfig.Order[i]
+			if (state.mix[id] or 0) > 0 then
+				state.mix[id] = state.mix[id] - 1
+				break
+			end
+		end
+	end
+	panels.catchInfo.Text = lim < EconomyConfig.MaxCatch
+		and string.format("<b>%d / %d</b> cars per throw  ·  get more with <b>Multi Catch</b> in the Pit Stop", lim, EconomyConfig.MaxCatch)
+		or string.format("<b>%d / %d</b> cars per throw (max)", lim, EconomyConfig.MaxCatch)
 	local expected = {}
 	for _, r in ipairs(CarConfig.RarityOrder) do
 		expected[r] = 0

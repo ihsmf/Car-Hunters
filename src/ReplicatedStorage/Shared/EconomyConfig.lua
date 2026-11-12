@@ -49,7 +49,12 @@ EconomyConfig.PityThreshold = 120
 EconomyConfig.MaxLuckShift = 0.15 -- all luck sources together
 
 EconomyConfig.ThrowCooldown = 0.8
-EconomyConfig.MaxBatch = 100 -- parts per batch throw
+EconomyConfig.MaxBatch = 100 -- hard cap per request (the real limit is CatchLimit)
+-- cars per throw: 1 at the start, +1 per "Multi Catch" level in the Pit Stop (ShopConfig), max 4
+EconomyConfig.MaxCatch = 4
+function EconomyConfig.CatchLimit(multiLevel)
+	return math.clamp(1 + (tonumber(multiLevel) or 0), 1, EconomyConfig.MaxCatch)
+end
 EconomyConfig.MergeMaxLevel = 3 -- duplicates level a car up to this; beyond needs upgrades
 EconomyConfig.ThrowAnimTime = 5.2
 EconomyConfig.ThrowMaxDistance = 45

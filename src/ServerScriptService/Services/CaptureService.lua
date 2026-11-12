@@ -126,6 +126,11 @@ function Capture.ThrowBatch(player, counts, merge)
 	if total == 0 or total > EconomyConfig.MaxBatch then
 		return
 	end
+	local limit = EconomyConfig.CatchLimit(S.Shop.Level(s, "multi"))
+	if total > limit then
+		S.Data.Notify(player, "catchLimit", { limit }, "warn")
+		return
+	end
 	s.busy = true
 	local results, anyPity = {}, false
 	-- cheap parts first so pity tends to land on the rarer baits
