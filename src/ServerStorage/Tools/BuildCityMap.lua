@@ -227,11 +227,7 @@ local function buildBase(ctx, i)
 	local el = BaseLayout.ElevatorLocal
 	mk("ElevatorPad", Vector3.new(8, 0.4, 8), Vector3.new(el.X, 0.7, el.Z), G.frame, M.Metal)
 	mk("ElevatorStripe", Vector3.new(7, 0.06, 0.4), Vector3.new(el.X, 0.95, el.Z - 3.4), G.accent, M.SmoothPlastic, { collide = false, cast = false })
-	for _, sx in ipairs({ -1, 1 }) do
-		for _, sz in ipairs({ -1, 1 }) do
-			mk("ElevatorPost", Vector3.new(0.6, H, 0.6), Vector3.new(el.X + sx * 4.3, H / 2 + 0.5, el.Z + sz * 4.3), G.frame, M.Metal)
-		end
-	end
+	GarageKit.Lift(mk, 0.5, H, G.frame, G.accent)
 
 	-- the trap: a clean steel car lift with a magnetic crane
 	local t = BaseLayout.TrapLocal
@@ -589,17 +585,12 @@ local function buildPlaza(ctx)
 		end
 	end
 	Prefabs.FromTemplate("FoodTruck", f.Buildings, CFrame.new(-42, 0.2, zS + 26) * CFrame.Angles(0, math.pi / 2, 0))
+	-- (v13: no parked cars in the safe zone - only the Golden Magnat GT on its podium; planters instead)
 	for _, p in ipairs({ { 38, zS + 22 }, { 40, zS + 85 } }) do
-		Prefabs.ParkedCar(f.StreetProps, CFrame.new(p[1], 0.35, p[2]) * CFrame.Angles(0, math.pi / 2, 0), ctx.rng, { "sport", "muscle", "supercar" })
+		Prefabs.FlowerBed(f.StreetProps, Vector3.new(p[1], 0.2, p[2]), 8, 5, ctx.rng)
 	end
 	for _, p in ipairs({ { -26, zS + 40, 0 }, { 26, zS + 41, math.pi }, { -28, zS + 100, math.pi / 2 } }) do
 		bench(p[1], p[2], p[3])
-	end
-	local meetSign = Part(f.StreetProps, "MeetSign", Vector3.new(18, 3.2, 0.6), CFrame.new(-30, 9, MapConfig.BaseCenters[1].z + 20), C(20, 24, 34), M.SmoothPlastic)
-	Label(meetSign, Enum.NormalId.Back, "CAR MEET", C(255, 160, 50))
-	Label(meetSign, Enum.NormalId.Front, "CAR MEET", C(255, 160, 50))
-	for _, sx in ipairs({ -1, 1 }) do
-		Part(f.StreetProps, "MeetSignPost", Vector3.new(0.4, 8, 0.4), CFrame.new(-30 + sx * 8, 4, MapConfig.BaseCenters[1].z + 20), C(40, 44, 52), M.Metal)
 	end
 
 	-- 2) GARDEN SQUARE (middle, v11): green islands with flower beds, trees, benches and lamps, a fountain,

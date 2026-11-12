@@ -40,6 +40,9 @@ local function part(parent, name, size, cf, color, mat, o)
 	if o.refl then
 		p.Reflectance = o.refl
 	end
+	if o.t then
+		p.Transparency = o.t
+	end
 	p.Parent = parent
 	return p
 end
@@ -66,6 +69,31 @@ function GarageKit.Label(p, face, text, color)
 end
 
 -- one parking bay; topY = height of the surface it lies on. Returns the pad.
+-- lift cabin for one storey (y0 = floor level): steel frame, tinted glass on three sides (open towards the deck, -X),
+-- a canopy with a LIFT sign and a call-button panel. mk(name, size, localPos, color, material, opts)
+function GarageKit.Lift(mk, y0, H, frame, accent)
+	local el = BaseLayout.ElevatorLocal
+	local GLASS = C(150, 190, 215)
+	for _, sx in ipairs({ -1, 1 }) do
+		for _, sz in ipairs({ -1, 1 }) do
+			mk("ElevatorPost", Vector3.new(0.6, H, 0.6), Vector3.new(el.X + sx * 4.3, y0 + H / 2, el.Z + sz * 4.3), frame, M.Metal)
+		end
+	end
+	-- glass back (+X) and sides (+-Z), set 0.1 inside the posts so no faces touch
+	mk("LiftGlass", Vector3.new(0.2, H - 1.2, 8), Vector3.new(el.X + 4.3, y0 + H / 2 - 0.3, el.Z), GLASS, M.Glass, { t = 0.55 })
+	for _, sz in ipairs({ -1, 1 }) do
+		mk("LiftGlass", Vector3.new(8, H - 1.2, 0.2), Vector3.new(el.X, y0 + H / 2 - 0.3, el.Z + sz * 4.3), GLASS, M.Glass, { t = 0.55 })
+	end
+	mk("LiftCanopy", Vector3.new(9.4, 0.5, 9.4), Vector3.new(el.X, y0 + H - 0.55, el.Z), frame, M.Metal)
+	local sign = mk("LiftSign", Vector3.new(0.3, 1.2, 4), Vector3.new(el.X - 4.75, y0 + H - 1.6, el.Z), C(20, 24, 34), M.SmoothPlastic, { collide = false })
+	GarageKit.Label(sign, Enum.NormalId.Left, "LIFT", accent)
+	-- call panel on the front post: a small plate with two lit buttons
+	mk("LiftPanel", Vector3.new(0.25, 1.6, 0.8), Vector3.new(el.X - 4.75, y0 + 4, el.Z - 3.2), C(40, 44, 52), M.Metal, { collide = false })
+	for i, dy in ipairs({ 0.35, -0.35 }) do
+		mk("LiftButton" .. i, Vector3.new(0.12, 0.35, 0.35), Vector3.new(el.X - 4.94, y0 + 4 + dy, el.Z - 3.2), accent, M.Neon, { collide = false, cast = false })
+	end
+end
+
 function GarageKit.Bay(slotsFolder, model, bcf, slot, topY, style)
 	style = style or GarageKit.Style
 	local p = BaseLayout.SlotLocal(slot)
@@ -125,11 +153,7 @@ function GarageKit.BuildFloor(parent, bcf, f, style)
 		sl.Color = C(255, 238, 210)
 		sl.Parent = lamp
 	end
-	for _, sx in ipairs({ -1, 1 }) do
-		for _, sz in ipairs({ -1, 1 }) do
-			mk("ElevatorPost", Vector3.new(0.6, H, 0.6), Vector3.new(el.X + sx * 4.3, y0 + H / 2, el.Z + sz * 4.3), style.frame, M.Metal)
-		end
-	end
+	GarageKit.Lift(mk, y0, H, style.frame, style.accent)
 	local slots = Instance.new("Folder")
 	slots.Name = "Slots"
 	slots.Parent = m

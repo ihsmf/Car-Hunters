@@ -123,21 +123,27 @@ local function rebuild()
 	for f = 1, floors do
 		local y = (f - 1) * BaseLayout.FloorHeight
 		local stop = anchor("LiftStop" .. f, bcf * CFrame.new(f == 1 and el.X or -15, BaseLayout.FloorY + y + 2, el.Z))
+		-- one key per destination (1-4), so every ride shows up instead of fighting over E
 		for g = 1, floors do
 			if g ~= f then
-				prompt(stop, g == 1 and "Ground floor" or ("Level " .. g), "Lift", function()
+				local pp = prompt(stop, g == 1 and "Ground floor" or ("Level " .. g), "Lift", function()
 					ride((g - 1) * BaseLayout.FloorHeight + BaseLayout.FloorY, bcf)
 				end)
+				pp.KeyboardKeyCode = ({ Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four })[g]
+				pp.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
 			end
 		end
-		if f == 1 and floors < BaseLayout.MaxFloors then
-			local cost = EconomyConfig.FloorCosts[floors + 1]
-			local full = st.slots >= floors * BaseLayout.SlotsPerFloor
-			priceTag(stop, (full and "🏗️ $" or "🔒 $") .. Util.FormatNumber(cost), (full and store.Money >= cost) and K.P.orange or K.P.grey)
-			prompt(stop, "Build level " .. (floors + 1) .. " $" .. Util.FormatNumber(cost), "Lift", function()
-				K.actions.BuyFloor(floors)
-			end)
-		end
+	end
+	-- BUY NEXT FLOOR: its own panel beside the lift (it used to share the lift's E key and could not be pressed)
+	if floors < BaseLayout.MaxFloors then
+		local cost = EconomyConfig.FloorCosts[floors + 1]
+		local full = st.slots >= floors * BaseLayout.SlotsPerFloor
+		local buy = anchor("FloorBuy", bcf * CFrame.new(el.X, BaseLayout.FloorY + 2, el.Z - 9))
+		priceTag(buy, (full and "BUY LEVEL " or "LOCKED ") .. (floors + 1) .. "  $" .. Util.FormatNumber(cost), (full and store.Money >= cost) and K.P.orange or K.P.grey)
+		local pp = prompt(buy, full and ("Buy level " .. (floors + 1)) or "Fill this floor first", "$" .. Util.FormatNumber(cost), function()
+			K.actions.BuyFloor(floors)
+		end)
+		pp.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
 	end
 end
 
