@@ -18,7 +18,7 @@ Tool.Candidates = {
 	ferarri_romma = { 15340193334 },
 	rimak_nevara = { 8012562725, 7241154110 },
 	hunda_jazzy = { 13200015838, 10827323038, 8076000678 },
-	toyoda_korolla = { 13502579667, 17061648891, 12744369162 },
+	toyoda_korolla = { 17061648891, 12744369162 }, -- 13502579667 was a bicycle
 	nisan_mikra = { 15600763990, 14890692638, 13486163316 },
 	kia_soal = { 108421174315791, 17354859552, 4461667186 },
 	hyunday_elantro = { 16199951681, 15795666461, 862662444 },
@@ -41,7 +41,7 @@ Tool.Candidates = {
 	porshe_kayen = { 72050021754521, 11065956984, 8891456182 },
 	mursides_amg = { 17502702727, 11842943363 },
 	porshe_taykun = { 10941247427, 8623478043, 6991417619 },
-	maklaren_720 = { 10743564799, 9462000605, 8033912611 },
+	maklaren_720 = { 9462000605, 8033912611 }, -- 10743564799 held six cars
 	awdi_rs6 = { 110824542790869, 13688270910 },
 	bentli_bentaiga = { 2059545883, 1491636091, 1074220268 },
 	mursides_maibah = { 18898395160, 15307766180, 5179619275 },
@@ -159,21 +159,18 @@ local function pickCar(objs)
 	return car, seat, holder
 end
 
--- chassis scripts often show wheel meshes only at runtime: keep wheel-named parts that carry a real mesh
-local function hiddenWheelMesh(d)
-	local named = WheelKit.IsWheelName(d.Name) or (d.Parent and WheelKit.IsWheelName(d.Parent.Name))
-	if not named then
-		return false
-	end
-	local mesh = d:FindFirstChildWhichIsA("SpecialMesh") or d:FindFirstChildWhichIsA("FileMesh")
-	local hasMesh = (d:IsA("MeshPart") and d.MeshId ~= "") or (mesh and mesh.MeshId ~= "")
-	if hasMesh then
-		d.Transparency = 0
-		return true
+local function hasVisibleDescendant(d)
+	for _, x in ipairs(d:GetDescendants()) do
+		if x:IsA("BasePart") and x.Transparency < 0.99 then
+			return true
+		end
 	end
 	return false
 end
 
+-- keeps only what is drawn. An invisible part that carries visible parts (A-Chassis wheel hubs: Wheels/FL holds
+-- the real tire + rim meshes) stays as an invisible holder - deleting it used to delete the real wheels.
+-- Hidden parts are never made visible again (they are alternative rim sets, airbags, colliders).
 local function sanitize(car)
 	local parts = 0
 	for _, d in ipairs(car:GetDescendants()) do
@@ -182,12 +179,16 @@ local function sanitize(car)
 		end
 	end
 	for _, d in ipairs(car:GetDescendants()) do
-		if d:IsA("BasePart") then
-			if d.Name == "WheelMarker" then
-				d.CanCollide = false
-			elseif d.Transparency >= 0.99 and not d:FindFirstChildWhichIsA("Decal") and not (hiddenWheelMesh(d)) then
-				d:Destroy() -- hitboxes, wheel colliders, seat blocks
+		if d:IsA("BasePart") and d.Parent then
+			local hidden = d.Transparency >= 0.99 and not d:FindFirstChildWhichIsA("Decal")
+			if hidden and not hasVisibleDescendant(d) then
+				d:Destroy() -- hitboxes, colliders, seat blocks, hidden alternative wheel sets
 			else
+				if hidden then
+					d.Transparency = 1
+				else
+					parts = parts + 1
+				end
 				d.Anchored = true
 				d.CanCollide = false
 				d.CanTouch = false
@@ -196,11 +197,58 @@ local function sanitize(car)
 				if d:IsA("Seat") or d:IsA("VehicleSeat") then
 					d.Disabled = true
 				end
-				parts = parts + 1
 			end
 		end
 	end
 	return parts
+end
+
+-- the car's OWN wheels (same rules as tools/wheel_report.luau). Returns source, count:
+--   "achassis": Wheels/<FL,FR,RL,RR> hubs with visible wheel meshes inside
+--   "named":    visible parts called wheel/tire/tyre/rim (no steering wheels, airbags, spares), grouped by position
+--   "baked":    no separate wheel parts - the wheels are part of the body mesh
+local EXCLUDE = { "steer", "airbag", "spare", "detector", "hitbox", "collider" }
+local function wheelName(n)
+	n = string.lower(n)
+	for _, x in ipairs(EXCLUDE) do
+		if string.find(n, x, 1, true) then
+			return false
+		end
+	end
+	return string.find(n, "wheel", 1, true) or string.find(n, "tire", 1, true) or string.find(n, "tyre", 1, true)
+		or string.find(n, "rim", 1, true) or string.find(n, "llanta", 1, true) or string.find(n, "_whl", 1, true)
+end
+
+function Tool.DetectWheels(car)
+	local wheels = car:FindFirstChild("Wheels", true)
+	if wheels and (wheels:IsA("Model") or wheels:IsA("Folder")) then
+		local n = 0
+		for _, c in ipairs(wheels:GetChildren()) do
+			if (c:IsA("BasePart") and c.Transparency < 0.99) or hasVisibleDescendant(c) then
+				n = n + 1
+			end
+		end
+		return "achassis", n
+	end
+	local clusters = {}
+	for _, d in ipairs(car:GetDescendants()) do
+		if d:IsA("BasePart") and d.Transparency < 0.99 and (wheelName(d.Name) or (d.Parent and wheelName(d.Parent.Name))) then
+			local found = false
+			for _, c in ipairs(clusters) do
+				if (c - d.Position).Magnitude < 2.5 then
+					found = true
+					break
+				end
+			end
+			if not found then
+				table.insert(clusters, d.Position)
+			end
+		end
+	end
+	if #clusters >= 3 then
+		return "named", #clusters
+	end
+	return "baked", 0
 end
 
 ---------------------------------------------------------------- wheels (see Shared/WheelKit.lua)
@@ -239,21 +287,10 @@ function Tool.Install(carId, assetId, yaw)
 	-- wheels kept in a sibling model (outside the seat's model) belong to the car too
 	if holder ~= car then
 		for _, o in ipairs(holder:GetChildren()) do
-			if o ~= car and (WheelKit.IsWheelName(o.Name) or #WheelKit.Candidates(o) > 0) then
+			if o ~= car and o.Name == "Wheels" then
 				o.Parent = car
 			end
 		end
-	end
-	-- markers survive sanitize/normalize so wheel positions stay in the car's own frame
-	for _, w in ipairs(WheelKit.Candidates(car)) do
-		local mk = Instance.new("Part")
-		mk.Name = "WheelMarker"
-		mk.Size = Vector3.one * 0.2
-		mk.Position = w.pos
-		mk.Anchored = true
-		mk.Transparency = 0.5
-		mk:SetAttribute("R", w.r)
-		mk.Parent = car
 	end
 	local parts = sanitize(car)
 	if parts == 0 then
@@ -266,16 +303,13 @@ function Tool.Install(carId, assetId, yaw)
 		normalize(car, Vector3.new(1, 0, 0))
 		_, size = car:GetBoundingBox()
 	end
-	local known = {}
-	for _, mk in ipairs(car:GetChildren()) do
-		if mk.Name == "WheelMarker" then
-			table.insert(known, { pos = mk.Position, r = mk:GetAttribute("R") })
-			mk:Destroy()
-		end
+	-- only the model's own wheels: nothing is guessed or added (that made duplicates and wrong sizes)
+	local wheelSource, wheelCount = Tool.DetectWheels(car)
+	if wheelSource == "achassis" and wheelCount < 4 then
+		holder:Destroy()
+		warn(string.format("[CarStore] %s: asset %s rejected (only %d of 4 wheels)", carId, tostring(assetId), wheelCount))
+		return false
 	end
-	local spots = (#known >= 3) and known or WheelKit.Guess(car, Vector3.new(0, 0, -1))
-	local added = ensureWheels(car, Vector3.new(0, 0, -1), spots)
-	WheelKit.Save(car, spots)
 	local len, wid = size.Z, size.X
 	if len / math.max(wid, 0.1) < 1.4 or len / math.max(wid, 0.1) > 4.5 or len / math.max(size.Y, 0.1) < 1.5 or parts > Tool.MaxParts then
 		holder:Destroy()
@@ -298,11 +332,14 @@ function Tool.Install(carId, assetId, yaw)
 	car:SetAttribute("CarName", def.name)
 	car:SetAttribute("Rarity", def.rarity)
 	car:SetAttribute("StoreAssetId", tostring(assetId))
+	car:SetAttribute("NoWheelFix", true) -- VehicleFactory must not add wheels: the model has its own
+	car:SetAttribute("WheelSource", wheelSource)
+	car:SetAttribute("WheelCount", wheelCount)
 	car.Parent = root
 	if holder ~= car then
 		holder:Destroy()
 	end
-	print(string.format("[CarStore] %-22s <- asset %s  (%d parts%s)", carId, tostring(assetId), parts, added > 0 and (", rebuilt " .. added .. " wheels") or ""))
+	print(string.format("[CarStore] %-22s <- asset %s  (%d parts, own wheels: %s %d)", carId, tostring(assetId), parts, wheelSource, wheelCount))
 	return true
 end
 
@@ -383,6 +420,9 @@ function Tool.FixWheels()
 			if old then
 				old:Destroy()
 			end
+			if m:GetAttribute("NoWheelFix") then
+				continue -- store model with its own wheels: never add a second set
+			end
 			local _, size = m:GetBoundingBox()
 			local yaw = math.rad(m:GetAttribute("Yaw") or 0)
 			local fwd = size.Z >= size.X and Vector3.new(0, 0, -1) or Vector3.new(1, 0, 0)
@@ -402,9 +442,9 @@ function Tool.WheelReport()
 	local root = ReplicatedStorage:FindFirstChild("CarModels")
 	for _, m in ipairs(root and root:GetChildren() or {}) do
 		if m:IsA("Model") and CarConfig.ById[m.Name] then
-			local real = #WheelKit.Candidates(m)
+			local src, n = Tool.DetectWheels(m)
 			local added = m:FindFirstChild("AddedWheels") and #m.AddedWheels:GetChildren() or 0
-			print(string.format("[CarStore] %-22s wheels found %d, rebuilt parts %d, saved spots %s", m.Name, real, added, m:GetAttribute("Wheels") and "yes" or "no"))
+			print(string.format("[CarStore] %-22s own wheels: %s %d, added wheel parts %d", m.Name, src, n, added))
 		end
 	end
 end
