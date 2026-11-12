@@ -278,7 +278,7 @@ local function buildHud()
 	local side = new("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 120), Size = UDim2.fromOffset(122, 3 * 104 + 24), BackgroundTransparency = 1 }, root)
 	list(side, Enum.FillDirection.Vertical, 12)
 	toy(side, { Text = T("btn_teleport"), Icon = "🚀", Color = P.blue, Size = UDim2.fromOffset(122, 104), LayoutOrder = 1, OnClick = function() UI.TogglePanel("teleport") end })
-	toy(side, { Text = T("btn_garage"), Icon = "🏁", Color = P.orange, Size = UDim2.fromOffset(122, 104), LayoutOrder = 2, OnClick = function() UI.TogglePanel("garage") end })
+	hud.garageBtn = toy(side, { Text = T("btn_garage"), Icon = "🏁", Color = P.orange, Size = UDim2.fromOffset(122, 104), LayoutOrder = 2, OnClick = function() UI.TogglePanel("garage") end })
 	toy(side, { Text = T("btn_index"), Icon = "🚗", Color = P.green, Size = UDim2.fromOffset(122, 104), LayoutOrder = 3, OnClick = function() UI.TogglePanel("index") end })
 	hud.newDot = new("Frame", { Size = UDim2.fromOffset(22, 22), Position = UDim2.new(1, -16, 0, -6), BackgroundColor3 = P.red, Visible = false, ZIndex = 5 }, side)
 	corner(hud.newDot, 11)
@@ -1058,39 +1058,34 @@ local function refreshHud()
 	hud.canUnlock = dot
 end
 
+-- the single next goal after the tutorial: { title, body } (shown by Tutorial's objective card)
 local function refreshHint()
 	local st = store.State
-	local msg
-	local throws = st.stats and st.stats.throws or 0
+	local goal
 	if store.CarriedTotal() > 0 then
-		msg = T("tut_return")
-	elseif throws == 0 then
-		msg = store.BankedTotal() == 0 and T("tut_find") or T("tut_throw")
-	elseif (st.stats.upgrades or 0) == 0 and #st.cars > 0 then
-		msg = T("tut_upgrade")
+		goal = { "BANK YOUR LOOT", "Run home to the plaza, or reach the district CHECKPOINT to save it" }
+	elseif store.BankedTotal() > 0 and state.nearTrap then
+		goal = { "THROW YOUR PARTS", "Press THROW and pick how many of each part" }
 	elseif hud.canUnlock then
-		msg = T("tut_zone")
+		goal = { "NEW DISTRICT READY", "Open TELEPORT and unlock it" }
 	else
-		-- always one clear next goal: the next district, then the next rebirth
 		for i, zid in ipairs(MapConfig.ZoneOrder) do
 			local req = EconomyConfig.ZoneUnlock[zid]
 			if req and not st.zones[zid] and (i == 1 or st.zones[MapConfig.ZoneOrder[i - 1]]) then
 				if (req.rebirths or 0) > (st.rebirths or 0) then
 					local SkinConfig = require(ReplicatedStorage.Shared.SkinConfig)
 					local need, money = SkinConfig.RebirthNeeds(st.rebirths or 0)
-					msg = st.zones[need] and string.format("Next goal: REBIRTH at $%s (you have $%s)", Util.FormatNumber(money), Util.FormatNumber(store.Money))
-						or string.format("Next goal: reach %s, then rebirth", T("zone_" .. need))
+					goal = st.zones[need] and { "NEXT: REBIRTH", string.format("Garage > REBIRTH  ·  $%s  ·  you have $%s", Util.FormatNumber(money), Util.FormatNumber(store.Money)) }
+						or { "NEXT: REACH " .. string.upper(T("zone_" .. need)), "Then you can rebirth for +25% income forever" }
 				else
-					msg = string.format("Next goal: unlock %s - $%s", T("zone_" .. zid), Util.FormatNumber(req.cost))
+					goal = { "NEXT: UNLOCK " .. string.upper(T("zone_" .. zid)), string.format("Open TELEPORT  ·  $%s  ·  you have $%s", Util.FormatNumber(req.cost), Util.FormatNumber(store.Money)) }
 				end
 				break
 			end
 		end
 	end
-	hud.hintFrame.Visible = msg ~= nil and state.open == nil
-	if msg then
-		hud.hint.Text = msg
-	end
+	hud.nextGoal = goal
+	hud.hintFrame.Visible = false
 end
 
 UI.Hooks = {}

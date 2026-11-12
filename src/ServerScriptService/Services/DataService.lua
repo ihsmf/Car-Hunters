@@ -39,6 +39,7 @@ local function newProfile(isNew)
 		pity = 0,
 		saveCount = 0,
 		lastSeen = 0,
+		tutorial = 0,
 		perks = {},
 		boosts = {},
 		receipts = {},
@@ -210,6 +211,10 @@ local function sanitize(raw)
 	end
 	p.saveCount = toCount(raw.saveCount, 1e12)
 	p.lastSeen = toCount(raw.lastSeen, 4e9)
+	p.tutorial = toCount(raw.tutorial, 8)
+	if raw.tutorial == nil and p.stats.throws > 0 then
+		p.tutorial = 8 -- players from before the tutorial existed
+	end
 	return p
 end
 DataService.Sanitize = sanitize
@@ -462,6 +467,7 @@ function DataService.BuildState(s)
 		passes = Util.CopyTable(s.passes or {}),
 		contracts = Util.CopyTable(d.contracts),
 		tuning = Util.CopyTable(d.tuning),
+		tutorial = d.tutorial,
 		rebirths = d.rebirths,
 		tokens = d.tokens,
 		tokenPerks = Util.CopyTable(d.tokenPerks),
@@ -472,6 +478,29 @@ function DataService.BuildState(s)
 		airbagIn = S.Shop.AirbagReadyIn(s),
 		run = { picked = s.run and s.run.picked or 0, mult = s.run and s.run.mult or 1, firstAt = s.run and s.run.firstAt, risk = s.run and s.run.risk or 1 },
 	}
+end
+
+-- tutorial progress: only moves forward; finishing (not skipping) pays a small reward once
+DataService.TutorialSteps = 7
+function DataService.Tutorial(player, step)
+	local s = sessions[player]
+	if not s or not s.ready or not DataService.RateLimit(player, "tut", 0.3) then
+		return
+	end
+	local d = s.data
+	if step == "skip" then
+		d.tutorial = DataService.TutorialSteps + 1
+	elseif type(step) == "number" and step % 1 == 0 and step > d.tutorial and step <= DataService.TutorialSteps + 1 then
+		local finished = step == DataService.TutorialSteps + 1 and d.tutorial < step
+		d.tutorial = step
+		if finished then
+			d.money = math.min(d.money + 500, EconomyConfig.MaxMoney)
+			DataService.Notify(player, "tutDone", { 500 }, "good")
+		end
+	else
+		return
+	end
+	DataService.Push(player)
 end
 
 function DataService.Push(player)
