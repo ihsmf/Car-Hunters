@@ -69,13 +69,16 @@ end
 local Label = Prefabs.Label
 
 -- Blender-made props: ServerStorage.BuilderAssets.Props.<name> (see docs/BLENDER.md). nil if not imported.
+Prefabs.TemplateUse = { placed = 0, missing = {} }
 function Prefabs.FromTemplate(name, parent, cf)
 	local assets = ServerStorage:FindFirstChild("BuilderAssets")
 	local props = assets and assets:FindFirstChild("Props")
 	local tpl = props and props:FindFirstChild(name)
 	if not tpl then
+		Prefabs.TemplateUse.missing[name] = true
 		return nil
 	end
+	Prefabs.TemplateUse.placed = Prefabs.TemplateUse.placed + 1
 	local m = tpl:Clone()
 	for _, d in ipairs(m:GetDescendants()) do
 		if d:IsA("BasePart") then

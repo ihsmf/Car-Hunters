@@ -78,6 +78,11 @@ pcall(function()
 	require(ServerScriptService:WaitForChild("Services"):WaitForChild("ModelService")).LoadAll()
 end)
 
+local savedMap = Workspace:FindFirstChild("GeneratedMap")
+if savedMap and savedMap:GetAttribute("MapVersion") ~= MapConfig.Version then
+	warn("[CarHunters] saved map is outdated - rebuilding")
+	savedMap:Destroy()
+end
 if not Workspace:FindFirstChild("GeneratedMap") then
 	local ok, err = pcall(function()
 		local Build = require(ServerStorage:WaitForChild("Tools"):WaitForChild("BuildCityMap"))

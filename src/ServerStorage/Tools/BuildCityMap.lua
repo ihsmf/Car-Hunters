@@ -105,8 +105,21 @@ local function buildWorld(ctx)
 				local zm = (a + b) / 2
 				local zone = MapConfig.ZoneAt(zm)
 				local col = (zone == "plaza") and C(140, 146, 160) or MapConfig.Zones[zone].palette.curb
-				Part(f.Buildings, "PerimeterWall", Vector3.new(4, 26, len), CFrame.new(sx * (HW + 2), 13, zm), col, M.Concrete)
-				Part(f.Buildings, "WallCap", Vector3.new(4.6, 0.8, len), CFrame.new(sx * (HW + 2), 26.4, zm), C(120, 124, 132), M.Concrete, { collide = false })
+				-- brick wall with stone piers, a light cap, a district-coloured band and a hedge strip in front
+				local BRICK, STONE = C(158, 78, 60), C(214, 206, 192)
+				Part(f.Buildings, "PerimeterWall", Vector3.new(4, 24, len), CFrame.new(sx * (HW + 2), 12, zm), BRICK, M.Brick)
+				Part(f.Buildings, "WallCap", Vector3.new(4.8, 1, len), CFrame.new(sx * (HW + 2), 24.5, zm), STONE, M.Slate, { collide = false })
+				Part(f.Buildings, "WallBand", Vector3.new(4.4, 1.4, len), CFrame.new(sx * (HW + 2), 5, zm), col, M.SmoothPlastic, { collide = false })
+				Part(f.Buildings, "WallPlinth", Vector3.new(4.6, 1.6, len), CFrame.new(sx * (HW + 2), 0.8, zm), STONE, M.Slate, { collide = false })
+				local n = math.max(1, math.floor(len / 24))
+				for k = 0, n do
+					local pz = a + k * len / n
+					Part(f.Buildings, "WallPier", Vector3.new(6, 26, 6), CFrame.new(sx * (HW + 2), 13, pz), STONE, M.Slate)
+					Part(f.Buildings, "PierCap", Vector3.new(7, 1.2, 7), CFrame.new(sx * (HW + 2), 26.6, pz), C(232, 226, 214), M.Slate, { collide = false })
+				end
+				if len > 10 then
+					Part(f.Buildings, "Hedge", Vector3.new(3, 3.2, len - 8), CFrame.new(sx * (HW - 2.5), 1.6, zm), C(72, 140, 70), M.Grass)
+				end
 			end
 		end
 		for _, o in ipairs(openings) do
@@ -143,8 +156,14 @@ local function buildWorld(ctx)
 	for _ = 1, math.floor(44 * MapConfig.DecorationDensity + 10) do
 		Prefabs.Cloud(f.StreetProps, Vector3.new(rr(crng, -520, 520), rr(crng, 150, 230), rr(crng, zS - 200, zE + 200)), crng)
 	end
-	Part(f.Buildings, "EndWallStart", Vector3.new(2 * HW + 8, 26, 4), CFrame.new(0, 13, zS - 2), C(140, 146, 160), M.Concrete)
-	Part(f.Buildings, "EndWallEnd", Vector3.new(2 * HW + 8, 26, 4), CFrame.new(0, 13, zE + 2), C(30, 50, 70), M.Concrete)
+	for _, ez in ipairs({ zS - 2, zE + 2 }) do
+		Part(f.Buildings, "EndWall", Vector3.new(2 * HW + 8, 24, 4), CFrame.new(0, 12, ez), C(158, 78, 60), M.Brick)
+		Part(f.Buildings, "EndWallCap", Vector3.new(2 * HW + 8, 1, 4.8), CFrame.new(0, 24.5, ez), C(214, 206, 192), M.Slate, { collide = false })
+		for x = -HW, HW, 24 do
+			Part(f.Buildings, "WallPier", Vector3.new(6, 26, 6), CFrame.new(x, 13, ez), C(214, 206, 192), M.Slate)
+			Part(f.Buildings, "PierCap", Vector3.new(7, 1.2, 7), CFrame.new(x, 26.6, ez), C(232, 226, 214), M.Slate, { collide = false })
+		end
+	end
 	local fin = Part(f.Buildings, "EndSign", Vector3.new(120, 14, 1), CFrame.new(0, 19, zE - 0.5), C(26, 30, 38), M.SmoothPlastic)
 	Label(fin, Enum.NormalId.Front, "END OF THE CITY", C(255, 210, 60))
 end
@@ -1209,6 +1228,7 @@ function Build.Build(opts)
 	local root = getRoot()
 	local started = os.clock()
 	Prefabs.Count = 0
+	Prefabs.TemplateUse = { placed = 0, missing = {} }
 	local summary = {}
 	for idx, section in ipairs(sections) do
 		clearSection(root, section)
@@ -1229,6 +1249,13 @@ function Build.Build(opts)
 		end
 		summary[section] = Prefabs.Count - before
 	end
+	root:SetAttribute("MapVersion", MapConfig.Version)
+	local missing = {}
+	for n in pairs(Prefabs.TemplateUse.missing) do
+		table.insert(missing, n)
+	end
+	print(string.format("[Models] %d Blender models placed on the map%s", Prefabs.TemplateUse.placed,
+		#missing > 0 and (" - procedural fallback for: " .. table.concat(missing, ", ")) or ""))
 	if not opts.quiet then
 		local parts = {}
 		for _, s in ipairs(sections) do

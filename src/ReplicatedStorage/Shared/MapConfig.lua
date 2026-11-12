@@ -3,6 +3,7 @@ local C = Color3.fromRGB
 local MapConfig = {}
 
 MapConfig.Seed = 12345
+MapConfig.Version = 7 -- bump when the map changes: a saved older GeneratedMap is rebuilt at server start
 MapConfig.MapHalfWidth = 190
 MapConfig.StartZ = -330
 MapConfig.EndZ = 1056 -- recomputed below once every district is placed

@@ -27,6 +27,9 @@ local BossFx = require(Client:WaitForChild("BossFx"))
 local BatchReveal = require(Client:WaitForChild("BatchReveal"))
 
 local player = Players.LocalPlayer
+-- keep the camera close: no flying out over the map edge
+player.CameraMaxZoomDistance = 45
+player.CameraMinZoomDistance = 6
 Strings.SetLocale(player.LocaleId)
 
 local actions = {
