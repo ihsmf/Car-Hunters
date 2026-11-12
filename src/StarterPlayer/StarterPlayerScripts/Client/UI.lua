@@ -460,6 +460,7 @@ local function buildHud()
 	hud.garageBtn = toy(side, { Text = T("btn_garage"), Image = "garage", Icon = "🏁", Color = P.orange, Size = UDim2.fromOffset(122, 104), LayoutOrder = 2, OnClick = function() UI.TogglePanel("garage") end })
 	toy(side, { Text = T("btn_index"), Image = "index", Icon = "🚗", Color = P.green, Size = UDim2.fromOffset(122, 104), LayoutOrder = 3, OnClick = function() UI.TogglePanel("index") end })
 	-- on the TELEPORT button itself (as a child of the list it used to push every button down)
+	hud.teleportBtn = tpBtn
 	hud.newDot = new("Frame", { Size = UDim2.fromOffset(22, 22), Position = UDim2.new(1, -16, 0, -6), BackgroundColor3 = P.red, Visible = false, ZIndex = 5 }, tpBtn.holder)
 	corner(hud.newDot, 11)
 	stroke(hud.newDot, P.white, 3)
@@ -1317,24 +1318,8 @@ local function refreshHint()
 		goal = { "BANK YOUR LOOT", "Run home to the plaza, or reach the district CHECKPOINT to save it" }
 	elseif store.BankedTotal() > 0 and state.nearTrap then
 		goal = { "THROW YOUR PARTS", "Press THROW and pick how many of each part" }
-	elseif hud.canUnlock then
-		goal = { "NEW DISTRICT READY", "Open TELEPORT and unlock it" }
-	else
-		for i, zid in ipairs(MapConfig.ZoneOrder) do
-			local req = EconomyConfig.ZoneUnlock[zid]
-			if req and not st.zones[zid] and (i == 1 or st.zones[MapConfig.ZoneOrder[i - 1]]) then
-				if (req.rebirths or 0) > (st.rebirths or 0) then
-					local SkinConfig = require(ReplicatedStorage.Shared.SkinConfig)
-					local need, money = SkinConfig.RebirthNeeds(st.rebirths or 0)
-					goal = st.zones[need] and { "NEXT: REBIRTH", string.format("Garage > REBIRTH  ·  $%s  ·  you have $%s", Util.FormatNumber(money), Util.FormatNumber(store.Money)) }
-						or { "NEXT: REACH " .. string.upper(T("zone_" .. need)), "Then you can rebirth for +25% income forever" }
-				else
-					goal = { "NEXT: UNLOCK " .. string.upper(T("zone_" .. zid)), string.format("Open TELEPORT  ·  $%s  ·  you have $%s", Util.FormatNumber(req.cost), Util.FormatNumber(store.Money)) }
-				end
-				break
-			end
-		end
 	end
+	-- (v13: no "unlock the next district" card after the tutorial - the tutorial asks for the Highway once)
 	hud.nextGoal = goal
 	hud.hintFrame.Visible = false
 end

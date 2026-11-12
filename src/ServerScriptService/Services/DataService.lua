@@ -18,7 +18,7 @@ local DataService = {}
 local S
 
 local STORE_NAME = "CarHunters_Profiles_v1"
-local SCHEMA_VERSION = 4
+local SCHEMA_VERSION = 5 -- v5: tutorial has 8 steps (unlock the Highway)
 local LOCK_TIMEOUT = 120
 local SERVER_ID = (game.JobId ~= "" and game.JobId) or ("studio-" .. HttpService:GenerateGUID(false))
 
@@ -220,7 +220,10 @@ local function sanitize(raw)
 	end
 	p.saveCount = toCount(raw.saveCount, 1e12)
 	p.lastSeen = toCount(raw.lastSeen, 4e9)
-	p.tutorial = toCount(raw.tutorial, 8)
+	p.tutorial = toCount(raw.tutorial, 9)
+	if (tonumber(raw.schemaVersion) or 0) < 5 and p.tutorial >= 8 then
+		p.tutorial = 9 -- finished the old 7-step tutorial: no new step, no second reward
+	end
 	p.settings = DataService.SanitizeSettings(raw.settings)
 	if type(raw.play) == "table" then
 		-- dense array of booleans (a sparse table would not save in a DataStore)
@@ -236,7 +239,7 @@ local function sanitize(raw)
 		p.daily = { day = math.clamp(toCount(raw.daily.day, 7), 0, 7), last = toCount(raw.daily.last, 1e6) }
 	end
 	if raw.tutorial == nil and p.stats.throws > 0 then
-		p.tutorial = 8 -- players from before the tutorial existed
+		p.tutorial = 9 -- players from before the tutorial existed
 	end
 	return p
 end
@@ -560,7 +563,7 @@ function DataService.SaveSettings(player, t)
 end
 
 -- tutorial progress: only moves forward; finishing (not skipping) pays a small reward once
-DataService.TutorialSteps = 7
+DataService.TutorialSteps = 8
 function DataService.Tutorial(player, step)
 	local s = sessions[player]
 	if not s or not s.ready or not DataService.RateLimit(player, "tut", 0.3) then

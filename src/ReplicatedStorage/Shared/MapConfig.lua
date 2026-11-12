@@ -195,21 +195,31 @@ for _, z in pairs(MapConfig.Zones) do
 	z.style = z.style or z.id
 end
 
--- Gentle traffic (v12): every road runs slower, most of all at the start, and cars leave bigger gaps.
--- Trains and planes keep their timing. Server and clients read the same numbers (TrafficMath), so it stays in sync.
-MapConfig.TrafficEase = {
-	city = 0.55, highway = 0.62, industrial = 0.68, neon = 0.7, scrapyard = 0.72,
-	docks = 0.75, desert = 0.75, bridge = 0.78, airport = 0.78, canyon = 0.8,
-	circuit = 0.82, drift = 0.82, storm = 0.85, rush = 0.85, colosseum = 0.85,
-}
-MapConfig.TrafficGap = 1.2 -- spacing between cars x1.2
-for _, r in ipairs(MapConfig.Roads) do
-	local special = r.kinds and (r.kinds[1] == "train" or r.kinds[1] == "plane")
-	if not special then
-		local e = MapConfig.TrafficEase[r.zone] or 0.8
-		r.speed = { r.speed[1] * e, r.speed[2] * e }
-		if r.spacing then
-			r.spacing = { r.spacing[1] * MapConfig.TrafficGap, r.spacing[2] * MapConfig.TrafficGap }
+-- Traffic speed ramp (v13): one smooth curve over the whole route instead of per-road numbers.
+-- u = position along the route (0 = first city road, 1 = last road before the final arena);
+-- speed = 18 studs/s (= walking) at the start, rising to 92 at the end; +-12% spread between lanes; gaps x1.2.
+-- Trains and planes keep their own timing. Server and clients read the same numbers (TrafficMath).
+MapConfig.TrafficSpeed = { from = 18, to = 92, curve = 1.3, spread = 0.12, gap = 1.2 }
+do
+	local cfg = MapConfig.TrafficSpeed
+	local zoneIndex = {}
+	for i, id in ipairs(MapConfig.ZoneOrder) do
+		zoneIndex[id] = i
+	end
+	local perZone, seen = {}, {}
+	for _, r in ipairs(MapConfig.Roads) do
+		perZone[r.zone] = (perZone[r.zone] or 0) + 1
+	end
+	for _, r in ipairs(MapConfig.Roads) do
+		seen[r.zone] = (seen[r.zone] or 0) + 1
+		local special = r.kinds and (r.kinds[1] == "train" or r.kinds[1] == "plane")
+		if not special then
+			local u = ((zoneIndex[r.zone] or 1) - 1 + (seen[r.zone] - 0.5) / perZone[r.zone]) / #MapConfig.ZoneOrder
+			local mid = cfg.from + (cfg.to - cfg.from) * u ^ cfg.curve
+			r.speed = { mid * (1 - cfg.spread), mid * (1 + cfg.spread) }
+			if r.spacing then
+				r.spacing = { r.spacing[1] * cfg.gap, r.spacing[2] * cfg.gap }
+			end
 		end
 	end
 end

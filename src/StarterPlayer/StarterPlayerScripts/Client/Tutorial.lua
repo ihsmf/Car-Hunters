@@ -15,7 +15,7 @@ local K, UI, Cine, Guide
 local P
 local C = Color3.fromRGB
 local w = {}
-local DONE = 8
+local DONE = 9
 local localStep -- optimistic step while the server confirms
 local events = { banked = false, checkpoint = false }
 
@@ -79,6 +79,9 @@ local STEPS = {
 	{ "REACH A CHECKPOINT", "Carry parts to the yellow arch at the far end of the City, then SAVE or RISK", nil,
 		function() return Vector3.new(0, 2, MapConfig.Zones.city.zMax - 5) end,
 		function() return events.checkpoint end },
+	{ "UNLOCK THE HIGHWAY", "Open TELEPORT and unlock the Highway: better parts live there", nil,
+		function() return nil end,
+		function(st) return st.zones and st.zones.highway == true end, nil, "teleport" },
 }
 
 local function build()
@@ -92,7 +95,7 @@ local function build()
 	w.badge = K.new("Frame", { Size = UDim2.fromOffset(96, 96), BackgroundColor3 = P.yellow, BorderSizePixel = 0 }, card)
 	K.corner(w.badge, 20)
 	w.badgeFill = K.new("Frame", { Position = UDim2.fromOffset(48, 0), Size = UDim2.fromOffset(48, 96), BackgroundColor3 = P.yellow, BorderSizePixel = 0 }, w.badge)
-	w.badgeText = K.text(w.badge, { Text = "1/7", TextSize = 30, ZIndex = 2, Position = UDim2.fromOffset(0, 18), Size = UDim2.new(1, 0, 0, 36), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 })
+	w.badgeText = K.text(w.badge, { Text = "1/8", TextSize = 30, ZIndex = 2, Position = UDim2.fromOffset(0, 18), Size = UDim2.new(1, 0, 0, 36), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 })
 	w.badgeSub = K.text(w.badge, { Text = "STEP", Font = K.BODY, TextSize = 12, ZIndex = 2, Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Center })
 	w.title = K.text(card, { Text = "", TextSize = 24, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(112, 10), Size = UDim2.fromOffset(400, 28) })
 	w.body = K.text(card, { Text = "", Font = K.BODY, TextSize = 15, TextColor3 = P.muted, TextWrapped = true, Position = UDim2.fromOffset(112, 40), Size = UDim2.fromOffset(436, 34) })
@@ -184,7 +187,7 @@ local function tick()
 	if step == 3 and K.store.CarriedTotal() == 0 and not events.banked then
 		def = STEPS[2]
 	end
-	local color = ({ P.yellow, P.orange, P.green, P.yellow, P.blue, P.blue, P.red })[step]
+	local color = ({ P.yellow, P.orange, P.green, P.yellow, P.blue, P.blue, P.red, P.green })[step]
 	local body = def[2]
 	if step == 6 then
 		local up = cheapestUpgrade(st)
@@ -196,21 +199,22 @@ local function tick()
 	if def[6] then
 		prog, progText = def[6]()
 	end
-	show("step" .. step .. def[1], step .. "/7", "STEP", color, def[1], body, prog, progText, true)
+	show("step" .. step .. def[1], step .. "/" .. (DONE - 1), "STEP", color, def[1], body, prog, progText, true)
 	-- steps that happen inside a panel (garage, upgrade): the card goes on top of the panel's dim, at the very top
 	local inPanel = K.state.open ~= nil
 	w.card.ZIndex = inPanel and 30 or 1
 	K.hud.tutInPanel = inPanel
 	w.card.Position = UDim2.new(0.5, 0, 0, inPanel and 4 or 74)
 	Guide.Point(def[4](st, hrp))
-	pulse(def[8] == "throw" and K.hud.throw or (def[8] == "garage" and K.hud.garageBtn) or nil)
+	pulse(def[8] == "throw" and K.hud.throw or (def[8] == "garage" and K.hud.garageBtn) or (def[8] == "teleport" and K.hud.teleportBtn) or nil)
 	if def == STEPS[step] and def[5](st, hrp) then
 		localStep = step + 1
 		events.banked = step >= 3 and events.banked
 		Net.Get("TutorialStep"):FireServer(step + 1)
 		UI.Sfx("step")
 		if step + 1 == DONE then
-			Cine.Title("TUTORIAL COMPLETE!", P.yellow, 1.4, 90, 0.35)
+			Cine.Title("TUTORIAL COMPLETE!", P.yellow, 1.6, 90, 0.35)
+			Cine.Sub("Keep unlocking districts to get better parts", Color3.new(1, 1, 1), 3.2, 0.5)
 		else
 			-- quiet confirmation: green tick on the card
 			w.tickToken = (w.tickToken or 0) + 1
