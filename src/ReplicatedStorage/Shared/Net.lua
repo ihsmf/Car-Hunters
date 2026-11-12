@@ -44,6 +44,12 @@ Net.Names = {
 	"TutorialStep",
 	"ClaimDaily",
 	"ClaimChest",
+	"TradeRequest",
+	"TradeRespond",
+	"TradeUpdate",
+	"TradeReady",
+	"TradeCancel",
+	"TradeEvent",
 }
 
 function Net.Folder()

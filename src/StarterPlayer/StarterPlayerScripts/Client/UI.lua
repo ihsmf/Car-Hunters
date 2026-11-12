@@ -285,7 +285,8 @@ local function buildHud()
 	hud.hint = text(hint, { Text = "", Font = BODY, TextSize = 20, TextColor3 = P.ink, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1) })
 
 	-- side buttons (minimum: 3)
-	local side = new("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 120), Size = UDim2.fromOffset(122, 3 * 104 + 24), BackgroundTransparency = 1 }, root)
+	local side = new("Frame", { Name = "SideButtons", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 120), Size = UDim2.fromOffset(122, 4 * 104 + 36), BackgroundTransparency = 1 }, root)
+	hud.side = side
 	list(side, Enum.FillDirection.Vertical, 12)
 	toy(side, { Text = T("btn_teleport"), Icon = "🚀", Color = P.blue, Size = UDim2.fromOffset(122, 104), LayoutOrder = 1, OnClick = function() UI.TogglePanel("teleport") end })
 	hud.garageBtn = toy(side, { Text = T("btn_garage"), Icon = "🏁", Color = P.orange, Size = UDim2.fromOffset(122, 104), LayoutOrder = 2, OnClick = function() UI.TogglePanel("garage") end })

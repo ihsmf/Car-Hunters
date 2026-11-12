@@ -28,6 +28,7 @@ local BatchReveal = require(Client:WaitForChild("BatchReveal"))
 local Checkpoint = require(Client:WaitForChild("Checkpoint"))
 local Tutorial = require(Client:WaitForChild("Tutorial"))
 local Rewards = require(Client:WaitForChild("Rewards"))
+local Trade = require(Client:WaitForChild("Trade"))
 
 local player = Players.LocalPlayer
 -- keep the camera close: no flying out over the map edge
@@ -81,6 +82,7 @@ BatchReveal.Start(UI, CineFx, TrapFx)
 Checkpoint.Start(UI, CineFx)
 Tutorial.Start(UI, CineFx, Guidance)
 Rewards.Start(UI)
+Trade.Start(UI)
 ClientFx.Init(UI)
 Markers.Start(UI.Kit(), UIExtra)
 GaragePrompts.Start(UI.Kit(), CineFx)

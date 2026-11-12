@@ -98,7 +98,7 @@ local S = {}
 local names = { Data = "DataService", Inventory = "InventoryService", Base = "BaseService", PartSpawn = "PartSpawnService",
 	Traffic = "TrafficService", Capture = "CaptureService", Cars = "CarCollectionService", Income = "IncomeService",
 	Upgrade = "UpgradeService", Zone = "ZoneService", Warp = "WarpService", Shop = "ShopService", Donate = "DonateService",
-	HotDrop = "HotDropService", Contracts = "ContractService", Tuning = "TuningService", Mechanic = "MechanicService", Boss = "BossService", Rebirth = "RebirthService", Leaderboard = "LeaderboardService", Checkpoint = "CheckpointService", Rewards = "RewardsService" }
+	HotDrop = "HotDropService", Contracts = "ContractService", Tuning = "TuningService", Mechanic = "MechanicService", Boss = "BossService", Rebirth = "RebirthService", Leaderboard = "LeaderboardService", Checkpoint = "CheckpointService", Rewards = "RewardsService", Trade = "TradeService" }
 for key, moduleName in pairs(names) do
 	S[key] = require(Services:WaitForChild(moduleName))
 end
@@ -118,6 +118,11 @@ Net.Get("BuySlot").OnServerEvent:Connect(function(p, n) S.Upgrade.BuySlot(p, n) 
 Net.Get("BuyFloor").OnServerEvent:Connect(function(p, n) S.Upgrade.BuyFloor(p, n) end)
 Net.Get("UnlockZone").OnServerEvent:Connect(function(p, z) S.Zone.Unlock(p, z) end)
 Net.Get("SellCar").OnServerEvent:Connect(function(p, uid) S.Cars.Sell(p, uid) end)
+Net.Get("TradeRequest").OnServerEvent:Connect(function(p, id) S.Trade.Request(p, id) end)
+Net.Get("TradeRespond").OnServerEvent:Connect(function(p, id, ok) S.Trade.Respond(p, id, ok == true) end)
+Net.Get("TradeUpdate").OnServerEvent:Connect(function(p, offer) S.Trade.Update(p, offer) end)
+Net.Get("TradeReady").OnServerEvent:Connect(function(p, on) S.Trade.Ready(p, on) end)
+Net.Get("TradeCancel").OnServerEvent:Connect(function(p) S.Trade.Cancel(p) end)
 Net.Get("ClaimDaily").OnServerEvent:Connect(function(p) S.Rewards.ClaimDaily(p) end)
 Net.Get("ClaimChest").OnServerEvent:Connect(function(p, i) S.Rewards.ClaimChest(p, i) end)
 Net.Get("TutorialStep").OnServerEvent:Connect(function(p, step) S.Data.Tutorial(p, step) end)
