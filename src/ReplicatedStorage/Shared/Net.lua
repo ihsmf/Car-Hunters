@@ -34,6 +34,8 @@ Net.Names = {
 	"Rebirth",
 	"SetSkin",
 	"TokenPerk",
+	"ThrowBatch",
+	"ThrowBatchResult",
 }
 
 function Net.Folder()

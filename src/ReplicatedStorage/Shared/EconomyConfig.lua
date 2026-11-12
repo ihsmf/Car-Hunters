@@ -49,6 +49,8 @@ EconomyConfig.PityThreshold = 120
 EconomyConfig.MaxLuckShift = 0.15 -- all luck sources together
 
 EconomyConfig.ThrowCooldown = 0.8
+EconomyConfig.MaxBatch = 100 -- parts per batch throw
+EconomyConfig.MergeMaxLevel = 5 -- duplicates level a car up to this; beyond needs upgrades
 EconomyConfig.ThrowAnimTime = 5.2
 EconomyConfig.ThrowMaxDistance = 45
 EconomyConfig.BaseActionDistance = 100

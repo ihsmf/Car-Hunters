@@ -115,18 +115,8 @@ function Cars.Sell(player, uid)
 	finish(player)
 end
 
-function Cars.AutoPark(player)
-	local s = S.Data.Get(player)
-	if not s or not s.ready then
-		return
-	end
-	if not S.Data.RateLimit(player, "autopark", 1) then
-		return
-	end
-	if not S.Base.IsNearOwnBase(player) then
-		S.Data.Notify(player, "tooFar", nil, "warn")
-		return
-	end
+-- best-earning cars take the bays (cars mid-animation keep theirs); no checks, used after throws too
+function Cars.ParkBest(s)
 	local d = s.data
 	local list = {}
 	for _, c in ipairs(d.cars) do
@@ -157,6 +147,21 @@ function Cars.AutoPark(player)
 	for i, c in ipairs(list) do
 		c.parkedSlot = free[i]
 	end
+end
+
+function Cars.AutoPark(player)
+	local s = S.Data.Get(player)
+	if not s or not s.ready then
+		return
+	end
+	if not S.Data.RateLimit(player, "autopark", 1) then
+		return
+	end
+	if not S.Base.IsNearOwnBase(player) then
+		S.Data.Notify(player, "tooFar", nil, "warn")
+		return
+	end
+	Cars.ParkBest(s)
 	S.Data.Notify(player, "autoParked", nil, "good")
 	finish(player)
 end

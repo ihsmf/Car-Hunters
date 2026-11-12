@@ -105,6 +105,7 @@ for _, svc in pairs(S) do
 end
 
 Net.Get("ThrowPart").OnServerEvent:Connect(function(p, partId) S.Capture.Throw(p, partId) end)
+Net.Get("ThrowBatch").OnServerEvent:Connect(function(p, counts, merge) S.Capture.ThrowBatch(p, counts, merge == true) end)
 Net.Get("PlaceCar").OnServerEvent:Connect(function(p, uid, slot) S.Cars.Place(p, uid, slot) end)
 Net.Get("RemoveCar").OnServerEvent:Connect(function(p, uid) S.Cars.Remove(p, uid) end)
 Net.Get("UpgradeCar").OnServerEvent:Connect(function(p, uid, lvl) S.Upgrade.UpgradeCar(p, uid, lvl) end)

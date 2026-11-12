@@ -15,7 +15,7 @@ local en = {
 	wrecked_back = "Back in %d...", speed_lane = "SPEED LANE",
 	btn_place = "PARK", btn_remove = "UNPARK", btn_upgrade = "UPGRADE", btn_unlock = "UNLOCK", btn_max = "MAX",
 	btn_buyslot = "+ SLOT", btn_sell = "SELL", btn_sure = "SURE?", btn_autopark = "PARK BEST",
-	throw_title = "CHOOSE BAIT", throw_none = "No parts yet",
+	throw_title = "THROW PARTS", throw_none = "No parts yet",
 	throw_odds = "Drop chances", throw_pity = "Epic+ guaranteed in %d throws", throw_pity_now = "Next throw: Epic+ guaranteed!",
 	garage_title = "MY GARAGE", garage_slots = "Parking", garage_cars = "My Cars",
 	garage_empty = "No cars yet. Grab parts in the city and throw them on your trap!",

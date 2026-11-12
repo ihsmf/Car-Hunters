@@ -24,12 +24,14 @@ local ClientFx = require(Client:WaitForChild("ClientFx"))
 local GaragePrompts = require(Client:WaitForChild("GaragePrompts"))
 local ZoneFx = require(Client:WaitForChild("ZoneFx"))
 local BossFx = require(Client:WaitForChild("BossFx"))
+local BatchReveal = require(Client:WaitForChild("BatchReveal"))
 
 local player = Players.LocalPlayer
 Strings.SetLocale(player.LocaleId)
 
 local actions = {
 	Throw = function(partId) Net.Get("ThrowPart"):FireServer(partId) end,
+	ThrowBatch = function(counts, merge) Net.Get("ThrowBatch"):FireServer(counts, merge) end,
 	Place = function(uid, slot) Net.Get("PlaceCar"):FireServer(uid, slot) end,
 	Remove = function(uid) Net.Get("RemoveCar"):FireServer(uid) end,
 	Upgrade = function(uid, level) Net.Get("UpgradeCar"):FireServer(uid, level) end,
@@ -68,6 +70,7 @@ end)
 UIExtra.Init(UI)
 ZoneFx.Start()
 BossFx.Start(UI, CineFx)
+BatchReveal.Start(UI, CineFx, TrapFx)
 ClientFx.Init(UI)
 Markers.Start(UI.Kit(), UIExtra)
 GaragePrompts.Start(UI.Kit(), CineFx)

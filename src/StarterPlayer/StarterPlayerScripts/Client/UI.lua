@@ -320,42 +320,144 @@ local function scroller(parent, pos, size)
 	return s
 end
 
--- THROW / bait picker
-local function buildThrow()
-	local p = panelShell("throw", T("throw_title"), 900, 470, P.yellow)
-	local c = p.content
-	local cards = new("Frame", { Size = UDim2.new(1, 0, 0, 190), BackgroundTransparency = 1, ZIndex = 22 }, c)
-	list(cards, Enum.FillDirection.Horizontal, 14, Enum.HorizontalAlignment.Center)
-	panels.baitCards = {}
-	for i, id in ipairs(PartConfig.Order) do
-		local def = PartConfig.Parts[id]
-		local b = new("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(150, 180), BackgroundColor3 = P.white, LayoutOrder = i, ZIndex = 23 }, cards)
-		corner(b, 22)
-		local st = stroke(b, rarityColor(def.rarity), 6)
-		text(b, { Text = PART_ICON[id], Font = BODY, TextSize = 54, Position = UDim2.fromOffset(0, 12), Size = UDim2.new(1, 0, 0, 70), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
-		text(b, { Text = T("part_" .. id), TextSize = 22, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(0, 90), Size = UDim2.new(1, 0, 0, 30), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
-		local n = text(b, { Text = "x0", TextSize = 28, TextColor3 = rarityColor(def.rarity), Position = UDim2.fromOffset(0, 124), Size = UDim2.new(1, 0, 0, 34), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
-		b.Activated:Connect(function()
-			state.selectedPart = id
-			UI.Sfx("click")
-			UI.Refresh()
-		end)
-		panels.baitCards[id] = { btn = b, stroke = st, n = n }
+-- THROW menu (Figma "09 — Throw Menu"): pick how many of each part, see the expected cars, throw them all at once
+state.mix = {}
+state.merge = true
+local function mixTotal()
+	local n = 0
+	for _, id in ipairs(PartConfig.Order) do
+		n = n + math.min(state.mix[id] or 0, store.Banked(id))
 	end
-	local bar = new("Frame", { Position = UDim2.fromOffset(0, 204), Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = P.white, ZIndex = 22, ClipsDescendants = true }, c)
-	corner(bar, 15)
-	stroke(bar, P.ink, 3)
+	return n
+end
+local function setMix(id, n)
+	local total = mixTotal() - math.min(state.mix[id] or 0, store.Banked(id))
+	state.mix[id] = math.clamp(n, 0, math.min(store.Banked(id), EconomyConfig.MaxBatch - total))
+	UI.Refresh()
+end
+
+local function buildThrow()
+	local p = panelShell("throw", T("throw_title"), 940, 600, P.yellow)
+	local c = p.content
+	local rows = new("Frame", { Size = UDim2.fromOffset(560, 410), BackgroundTransparency = 1, ZIndex = 22 }, c)
+	list(rows, Enum.FillDirection.Vertical, 10)
+	panels.throwRows = {}
+	for i, id in ipairs(PartConfig.Order) do
+		local rc = rarityColor(PartConfig.Parts[id].rarity)
+		local r = new("Frame", { Size = UDim2.fromOffset(560, 74), BackgroundColor3 = P.white, LayoutOrder = i, ZIndex = 23 }, rows)
+		corner(r, 18)
+		local st = stroke(r, rc, 4)
+		local img = new("ImageLabel", { Position = UDim2.fromOffset(12, 9), Size = UDim2.fromOffset(56, 56), BackgroundTransparency = 1, Image = Icons.Get(id) or "", ZIndex = 24 }, r)
+		text(r, { Text = string.upper(T("part_" .. id)), TextSize = 22, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(80, 12), Size = UDim2.fromOffset(150, 26), ZIndex = 24 })
+		local owned = text(r, { Text = "", Font = BODY, TextSize = 14, TextColor3 = P.muted, Position = UDim2.fromOffset(80, 40), Size = UDim2.fromOffset(150, 20), ZIndex = 24 })
+		local function stepBtn(label, color, x, w, onClick)
+			return toy(r, { Text = label, Color = color, Size = UDim2.fromOffset(w, 48), Position = UDim2.fromOffset(x, 12), TextSize = label == "MAX" and 18 or 26, ZIndex = 25, OnClick = onClick })
+		end
+		local minus = stepBtn("-", P.red, 240, 46, function() setMix(id, (state.mix[id] or 0) - 1) end)
+		local cnt = new("Frame", { Position = UDim2.fromOffset(294, 15), Size = UDim2.fromOffset(72, 44), BackgroundColor3 = C(244, 240, 230), ZIndex = 24 }, r)
+		corner(cnt, 12)
+		local cntText = text(cnt, { Text = "0", TextSize = 26, TextColor3 = P.ink, Outline = false, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 25 })
+		local plus = stepBtn("+", P.green, 374, 46, function() setMix(id, (state.mix[id] or 0) + 1) end)
+		local max = stepBtn("MAX", P.blue, 428, 80, function() setMix(id, store.Banked(id)) end)
+		-- hold +/- to repeat
+		for _, pair in ipairs({ { plus, 1 }, { minus, -1 } }) do
+			local held = false
+			pair[1].face.MouseButton1Down:Connect(function()
+				held = true
+				task.delay(0.4, function()
+					while held do
+						setMix(id, (state.mix[id] or 0) + pair[2])
+						task.wait(0.06)
+					end
+				end)
+			end)
+			pair[1].face.MouseButton1Up:Connect(function() held = false end)
+			pair[1].face.MouseLeave:Connect(function() held = false end)
+		end
+		panels.throwRows[id] = { frame = r, stroke = st, img = img, owned = owned, cnt = cntText, minus = minus, plus = plus, max = max, rc = rc }
+	end
+	-- right column: quick picks, expected cars, merge toggle, throw
+	local right = new("Frame", { Position = UDim2.fromOffset(582, 0), Size = UDim2.fromOffset(312, 480), BackgroundTransparency = 1, ZIndex = 22 }, c)
+	toy(right, { Text = "ALL", Color = P.orange, Size = UDim2.fromOffset(98, 46), Position = UDim2.fromOffset(0, 0), TextSize = 20, ZIndex = 23, OnClick = function()
+		state.mix = {}
+		local left = EconomyConfig.MaxBatch
+		for _, id in ipairs(PartConfig.Order) do
+			local n = math.min(store.Banked(id), left)
+			state.mix[id] = n
+			left = left - n
+		end
+		UI.Refresh()
+	end })
+	toy(right, { Text = "x10", Color = P.blue, Size = UDim2.fromOffset(98, 46), Position = UDim2.fromOffset(107, 0), TextSize = 20, ZIndex = 23, OnClick = function()
+		-- ten of the cheapest parts you have
+		state.mix = {}
+		local left = 10
+		for _, id in ipairs(PartConfig.Order) do
+			local n = math.min(store.Banked(id), left)
+			state.mix[id] = n
+			left = left - n
+		end
+		UI.Refresh()
+	end })
+	toy(right, { Text = "CLEAR", Color = P.grey, Size = UDim2.fromOffset(98, 46), Position = UDim2.fromOffset(214, 0), TextSize = 18, ZIndex = 23, OnClick = function()
+		state.mix = {}
+		UI.Refresh()
+	end })
+	local odds = new("Frame", { Position = UDim2.fromOffset(0, 60), Size = UDim2.fromOffset(312, 212), BackgroundColor3 = P.white, ZIndex = 23 }, right)
+	corner(odds, 18)
+	stroke(odds, P.ink, 3)
+	text(odds, { Text = "YOU WILL GET ABOUT", TextSize = 18, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(14, 10), Size = UDim2.fromOffset(280, 22), ZIndex = 24 })
+	local bar = new("Frame", { Position = UDim2.fromOffset(14, 38), Size = UDim2.fromOffset(284, 16), BackgroundColor3 = C(230, 232, 236), ClipsDescendants = true, ZIndex = 24 }, odds)
+	corner(bar, 8)
 	list(bar, Enum.FillDirection.Horizontal, 0)
 	panels.oddsBar = bar
-	panels.oddsText = text(c, { Text = "", Font = BODY, TextSize = 17, TextColor3 = P.ink, Position = UDim2.fromOffset(0, 240), Size = UDim2.new(1, 0, 0, 24), RichText = true, ZIndex = 22 })
-	panels.throwGo = toy(c, { Text = T("btn_throw"), Color = P.green, Size = UDim2.fromOffset(300, 84), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, 4), ZIndex = 23,
+	panels.oddsLines = {}
+	for i, r in ipairs(CarConfig.RarityOrder) do
+		local dot = new("Frame", { Position = UDim2.fromOffset(14, 64 + (i - 1) * 22), Size = UDim2.fromOffset(12, 12), BackgroundColor3 = rarityColor(r), ZIndex = 24 }, odds)
+		corner(dot, 6)
+		panels.oddsLines[r] = text(odds, { Text = "", Font = BODY, TextSize = 15, TextColor3 = P.ink, RichText = true, Position = UDim2.fromOffset(34, 58 + (i - 1) * 22), Size = UDim2.fromOffset(260, 22), ZIndex = 24 })
+	end
+	panels.oddsText = text(odds, { Text = "", Font = BODY, TextSize = 14, TextColor3 = P.orange, Position = UDim2.fromOffset(14, 178), Size = UDim2.fromOffset(284, 22), ZIndex = 24 })
+	-- merge toggle
+	local tg = new("TextButton", { Text = "", AutoButtonColor = false, Position = UDim2.fromOffset(0, 286), Size = UDim2.fromOffset(312, 44), BackgroundTransparency = 1, ZIndex = 23 }, right)
+	local sw = new("Frame", { Position = UDim2.fromOffset(0, 7), Size = UDim2.fromOffset(52, 30), BackgroundColor3 = P.green, ZIndex = 24 }, tg)
+	corner(sw, 15)
+	stroke(sw, P.ink, 3)
+	local knob = new("Frame", { Position = UDim2.fromOffset(25, 4), Size = UDim2.fromOffset(22, 22), BackgroundColor3 = P.white, ZIndex = 25 }, sw)
+	corner(knob, 11)
+	text(tg, { Text = "MERGE DUPLICATES", TextSize = 16, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(62, 2), Size = UDim2.fromOffset(250, 20), ZIndex = 24 })
+	text(tg, { Text = string.format("Same car = +1 level (up to Lv%d)", EconomyConfig.MergeMaxLevel), Font = BODY, TextSize = 13, TextColor3 = P.muted, Position = UDim2.fromOffset(62, 22), Size = UDim2.fromOffset(250, 18), ZIndex = 24 })
+	tg.Activated:Connect(function()
+		state.merge = not state.merge
+		UI.Sfx("click")
+		UI.Refresh()
+	end)
+	panels.mergeSw, panels.mergeKnob = sw, knob
+	panels.throwGo = toy(right, { Text = T("btn_throw"), Color = P.green, Size = UDim2.fromOffset(312, 80), Position = UDim2.fromOffset(0, 344), TextSize = 30, ZIndex = 23,
 		OnClick = function()
-			if state.selectedPart and store.Banked(state.selectedPart) > 0 then
-				actions.Throw(state.selectedPart)
-				UI.TogglePanel(nil)
-			else
+			local total = mixTotal()
+			if total <= 0 then
 				UI.Toast(T("n_noPart"), "error")
+				return
 			end
+			if total == 1 then
+				for _, id in ipairs(PartConfig.Order) do
+					if math.min(state.mix[id] or 0, store.Banked(id)) > 0 then
+						actions.Throw(id)
+					end
+				end
+			else
+				local counts = {}
+				for _, id in ipairs(PartConfig.Order) do
+					local n = math.min(state.mix[id] or 0, store.Banked(id))
+					if n > 0 then
+						counts[id] = n
+					end
+				end
+				actions.ThrowBatch(counts, state.merge)
+			end
+			state.mix = {}
+			UI.TogglePanel(nil)
 		end })
 end
 
@@ -364,48 +466,62 @@ local function refreshThrow()
 	if not st then
 		return
 	end
-	if not state.selectedPart or store.Banked(state.selectedPart) <= 0 then
-		state.selectedPart = nil
+	local ready = store.BankedTotal()
+	-- first open: preselect one of the best part so a single tap still works
+	if mixTotal() == 0 and ready > 0 and not state.mixTouched then
 		for i = #PartConfig.Order, 1, -1 do
-			if store.Banked(PartConfig.Order[i]) > 0 then
-				state.selectedPart = PartConfig.Order[i]
+			local id = PartConfig.Order[i]
+			if store.Banked(id) > 0 then
+				state.mix[id] = 1
 				break
 			end
 		end
 	end
-	local sel = state.selectedPart
-	local n = sel and store.Banked(sel) or 0
-	hud.throw.SetText(T("btn_throw"), sel and string.format("%s %s x%d", PART_ICON[sel], T("part_" .. sel), n) or T("throw_none"))
-	hud.throw.SetColor(sel and P.yellow or P.grey)
-	if not panels.baitCards then
+	hud.throw.SetText(T("btn_throw"), ready > 0 and string.format("%d parts ready", ready) or T("throw_none"))
+	hud.throw.SetColor(ready > 0 and P.yellow or P.grey)
+	if not panels.throwRows or state.open ~= "throw" then
 		return
 	end
-	for id, cd in pairs(panels.baitCards) do
-		local cnt = store.Banked(id)
-		cd.n.Text = "x" .. cnt
-		cd.btn.BackgroundTransparency = cnt > 0 and 0 or 0.45
-		cd.stroke.Color = (id == sel) and P.ink or rarityColor(PartConfig.Parts[id].rarity)
-		cd.stroke.Thickness = (id == sel) and 8 or 5
+	state.mixTouched = true
+	local expected = {}
+	for _, r in ipairs(CarConfig.RarityOrder) do
+		expected[r] = 0
+	end
+	local total = 0
+	for id, row in pairs(panels.throwRows) do
+		local own = store.Banked(id)
+		local n = math.min(state.mix[id] or 0, own)
+		total = total + n
+		row.owned.Text = own > 0 and string.format("%d owned", own) or "none owned"
+		row.cnt.Text = tostring(n)
+		row.cnt.TextColor3 = n > 0 and P.ink or P.grey
+		row.stroke.Color = n > 0 and row.rc or C(220, 222, 226)
+		row.stroke.Thickness = n > 0 and 4 or 2
+		row.img.ImageTransparency = own > 0 and 0 or 0.55
+		row.minus.SetColor(n > 0 and P.red or P.grey)
+		row.plus.SetColor(n < own and P.green or P.grey)
+		row.max.SetColor(own > 0 and P.blue or P.grey)
+		local chances = CarConfig.DropChances[id]
+		for _, r in ipairs(CarConfig.RarityOrder) do
+			expected[r] = expected[r] + n * chances[r] / 100
+		end
 	end
 	clear(panels.oddsBar)
-	local row = CarConfig.DropChances[sel or "bolts"]
-	local pity = st.pity or 0
-	local pityNow = pity >= EconomyConfig.PityThreshold - 1
-	if pityNow then
-		row = CarConfig.PityRow(sel or "bolts")
-	end
-	local parts = {}
 	for i, r in ipairs(CarConfig.RarityOrder) do
-		local v = row[r]
-		if v > 0 then
-			new("Frame", { Size = UDim2.new(v / 100, 0, 1, 0), BackgroundColor3 = rarityColor(r), BorderSizePixel = 0, LayoutOrder = i, ZIndex = 23 }, panels.oddsBar)
+		local share = total > 0 and expected[r] / total or 0
+		if share > 0 then
+			new("Frame", { Size = UDim2.new(math.max(share, 0.012), 0, 1, 0), BackgroundColor3 = rarityColor(r), BorderSizePixel = 0, LayoutOrder = i, ZIndex = 25 }, panels.oddsBar)
 		end
-		local hexc = rarityColor(r):ToHex()
-		table.insert(parts, string.format('<font color="#%s">%s %s%%</font>', hexc, T("rarity_" .. r), (v % 1 == 0) and tostring(v) or string.format("%.1f", v)))
+		local v = expected[r]
+		panels.oddsLines[r].Text = string.format("<b>%s</b>  <font color=\"#606674\">%s cars</font>", T("rarity_" .. r), v >= 10 and string.format("%.0f", v) or string.format("%.1f", v))
 	end
-	local pityTxt = pityNow and T("throw_pity_now") or T("throw_pity", EconomyConfig.PityThreshold - pity)
-	panels.oddsText.Text = table.concat(parts, "  ") .. "   |   " .. pityTxt
-	panels.throwGo.SetColor((sel and n > 0) and P.green or P.grey)
+	local pity = st.pity or 0
+	local left = EconomyConfig.PityThreshold - pity
+	panels.oddsText.Text = left <= 1 and T("throw_pity_now") or T("throw_pity", left)
+	panels.mergeSw.BackgroundColor3 = state.merge and P.green or P.grey
+	panels.mergeKnob.Position = UDim2.fromOffset(state.merge and 25 or 3, 4)
+	panels.throwGo.SetText(total > 0 and ("THROW x" .. total) or T("btn_throw"), nil)
+	panels.throwGo.SetColor(total > 0 and P.green or P.grey)
 end
 
 -- TELEPORT (also unlocks districts)
