@@ -783,13 +783,15 @@ def triangles(root):
     return sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in root.children if o.type == "MESH")
 
 def export(roots, path):
+    # global_scale 0.01: 1 FBX unit = 1 stud. Before v10 the FBX was in cm, Roblox read cm as studs (x100) and clamped
+    # every part at 2048 studs, which squashed the big buildings.
     for o in bpy.context.selected_objects:
         o.select_set(False)
     for r in roots:
         r.select_set(True)
         for c in r.children:
             c.select_set(True)
-    bpy.ops.export_scene.fbx(filepath=path, use_selection=True, object_types={"EMPTY", "MESH"}, apply_unit_scale=True,
+    bpy.ops.export_scene.fbx(filepath=path, use_selection=True, object_types={"EMPTY", "MESH"}, apply_unit_scale=True, global_scale=0.01,
                              axis_forward="-Z", axis_up="Y", mesh_smooth_type="EDGE", add_leaf_bones=False, bake_space_transform=True)
 
 # ---------------------------------------------------------------- render

@@ -42,6 +42,12 @@ end
 -- pivot at the bottom centre, or (spawn models) back on the Blender origin; info = { size, c = bbox centre offset }
 local function normalize(model, info)
 	local bb, ext = model:GetBoundingBox()
+	-- safety: a kit model without a known size that arrives in centimetres (100x too big) is brought back to studs
+	if not (info and info.size) and math.max(ext.X, ext.Y, ext.Z) > 60 then
+		model.WorldPivot = bb
+		model:ScaleTo(model:GetScale() * 0.01)
+		bb, ext = model:GetBoundingBox()
+	end
 	if info and info.size then
 		local cur = math.max(ext.X, ext.Y, ext.Z)
 		if cur > 0.01 and math.abs(cur / info.size - 1) > 0.02 then
