@@ -73,6 +73,11 @@ for _, name in ipairs({ "RuntimeTraffic", "RuntimeDrops" }) do
 	end
 end
 
+-- Blender models (uploaded via Open Cloud) must be in place before the map is built
+pcall(function()
+	require(ServerScriptService:WaitForChild("Services"):WaitForChild("ModelService")).LoadAll()
+end)
+
 if not Workspace:FindFirstChild("GeneratedMap") then
 	local ok, err = pcall(function()
 		local Build = require(ServerStorage:WaitForChild("Tools"):WaitForChild("BuildCityMap"))

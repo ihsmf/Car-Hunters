@@ -3,6 +3,7 @@
 Usage:
   ROBLOX_API_KEY=... python3 tools/roblox_open_cloud.py sounds   --creator-user 123456      (or --creator-group 123)
   ROBLOX_API_KEY=... python3 tools/roblox_open_cloud.py products --universe 987654
+  ROBLOX_API_KEY=... python3 tools/roblox_open_cloud.py models   --creator-user 123456      (Blender FBX -> Model assets)
 The API key needs: Assets (read+write) for sounds; Developer Products + Game Passes (write) for products.
 In a Claude cloud session the key is injected by the network proxy, so ROBLOX_API_KEY may be any placeholder.
 Results are written into src/ReplicatedStorage/Shared/SoundIds.lua and ProductIds.lua; rebuild with tools/build_place.py.
@@ -82,6 +83,53 @@ def upload_sounds(args):
     print(f"uploaded {len(done)} sounds")
 
 
+def upload_models(args):
+    """every FBX in assets/spawn + assets/parts/parts.fbx + assets/props/props.fbx -> Model assets -> ModelIds.lua"""
+    creator = {"userId": str(args.creator_user)} if args.creator_user else {"groupId": str(args.creator_group)}
+    files = []
+    for folder in ("spawn",):
+        d = os.path.join(ROOT, "assets", folder)
+        files += [os.path.join(d, f) for f in sorted(os.listdir(d)) if f.endswith(".fbx")]
+    files += [os.path.join(ROOT, "assets", "parts", "parts.fbx"), os.path.join(ROOT, "assets", "props", "props.fbx")]
+    ids_path = os.path.join(SHARED, "ModelIds.lua")
+    done = {}
+    for path in files:
+        name = os.path.basename(path)[:-4]
+        name = {"parts": "PartsKit", "props": "PropsKit"}.get(name, name)
+        if args.only and name not in args.only.split(","):
+            continue
+        meta = {"assetType": "Model", "displayName": f"CarHunters {name}", "description": "CAR HUNTERS map model (Blender)",
+                "creationContext": {"creator": creator}}
+        body, hdr = multipart({"request": json.dumps(meta)}, {"fileContent": (os.path.basename(path), "model/fbx", open(path, "rb").read())})
+        st, res = request("POST", f"{API}/assets/v1/assets", body, hdr)
+        if st >= 300:
+            print(f"  ! {name}: {st} {res}")
+            continue
+        op = res.get("path") or res.get("operationId")
+        asset, r2 = None, {}
+        for _ in range(60):
+            st2, r2 = request("GET", f"{API}/assets/v1/{op}" if op and op.startswith("operations") else f"{API}/assets/v1/operations/{op}")
+            if r2.get("done"):
+                asset = (r2.get("response") or {}).get("assetId")
+                break
+            time.sleep(3)
+        if asset:
+            done[name] = int(asset)
+            print(f"  {name}: {asset}")
+        else:
+            print(f"  ! {name}: upload did not finish ({r2})")
+    old = {}
+    if os.path.exists(ids_path):
+        for m in re.finditer(r"(\w+) = (\d+)", open(ids_path, encoding="utf-8").read()):
+            old[m.group(1)] = int(m.group(2))
+    old.update(done)
+    lines = ["-- Blender models uploaded as Roblox Model assets (tools/roblox_open_cloud.py models). ModelService loads them.", "return {"]
+    lines += [f"\t{k} = {v}," for k, v in sorted(old.items())]
+    lines.append("}")
+    open(ids_path, "w", encoding="utf-8").write("\n".join(lines) + "\n")
+    print(f"uploaded {len(done)} models")
+
+
 def lua_list(path, var):
     """read id/name/desc/price entries of DonateConfig.<var>"""
     s = open(path, encoding="utf-8").read()
@@ -117,13 +165,17 @@ def create_products(args):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=["sounds", "products"])
+    ap.add_argument("what", choices=["sounds", "products", "models"])
     ap.add_argument("--creator-user", type=int)
     ap.add_argument("--creator-group", type=int)
     ap.add_argument("--universe", type=int)
     ap.add_argument("--only", help="comma-separated sound names to upload")
     a = ap.parse_args()
-    if a.what == "sounds":
+    if a.what == "models":
+        if not (a.creator_user or a.creator_group):
+            sys.exit("need --creator-user or --creator-group")
+        upload_models(a)
+    elif a.what == "sounds":
         if not (a.creator_user or a.creator_group):
             sys.exit("need --creator-user or --creator-group")
         upload_sounds(a)
