@@ -36,6 +36,7 @@ local ZONE_COLOR = { city = P.green, highway = P.blue, industrial = P.red, neon 
 local UI = {}
 local store, actions
 local gui, root
+local overlay -- v10: pop-ups (reveal, dialogs, checkpoint, trade request, notifications) on one layer scaled like the HUD
 local hud, panels = {}, {}
 local state = { selectedPart = nil, nearTrap = false, open = nil, sellArm = {} }
 local sounds = {}
@@ -142,6 +143,11 @@ local function toy(parent, o)
 	end
 	face.MouseButton1Up:Connect(up)
 	face.MouseLeave:Connect(up)
+	face.InputEnded:Connect(function(input) -- touch: the finger slid off the button
+		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+			up()
+		end
+	end)
 	face.Activated:Connect(function()
 		up()
 		if o.OnClick and api.enabled then
@@ -206,7 +212,9 @@ local notes = { items = {}, queue = {}, top = 172 }
 local NOTE_H, NOTE_GAP, NOTE_MAX, NOTE_LIFE = 44, 8, 3, 2.8
 
 local function noteY(i)
-	return notes.top + (i - 1) * (NOTE_H + NOTE_GAP)
+	-- with a panel open the lane sits above the panel card, so a message never covers the button just pressed
+	local top = state.open and 6 or notes.top
+	return top + (i - 1) * (NOTE_H + NOTE_GAP)
 end
 
 local function noteLayout()
@@ -240,6 +248,9 @@ local function noteRemove(it)
 	end)
 	noteLayout()
 	local nextOne = table.remove(notes.queue, 1)
+	while nextOne and os.clock() - (nextOne.at or 0) > 4 do
+		nextOne = table.remove(notes.queue, 1) -- stale ("Not enough money" 8 s later helps nobody)
+	end
 	if nextOne then
 		noteShow(nextOne.msg, nextOne.kind, nextOne.n)
 	end
@@ -257,7 +268,7 @@ noteShow = function(msg, kind, n)
 	st.Transparency = 1
 	new("UIPadding", { PaddingLeft = UDim.new(0, 18), PaddingRight = UDim.new(0, 18) }, f)
 	local l = text(f, { Text = msg, TextSize = 22, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), ZIndex = 51, TextTransparency = 1 })
-	local it = { f = f, l = l, stroke = st, msg = msg, kind = kind, n = n or 1, expire = os.clock() + NOTE_LIFE }
+	local it = { f = f, l = l, stroke = st, msg = msg, kind = kind, n = n or 1, expire = os.clock() + NOTE_LIFE, born = os.clock() }
 	l.Text = noteLabel(it)
 	table.insert(notes.items, it)
 	tween(f, 0.2, { BackgroundTransparency = 0 })
@@ -274,7 +285,8 @@ function UI.Toast(msg, kind)
 		if not it.dead and it.msg == msg then
 			it.n = it.n + 1
 			it.l.Text = noteLabel(it)
-			it.expire = os.clock() + NOTE_LIFE
+			-- refresh, but never longer than 6 s in total and not while others are waiting
+			it.expire = #notes.queue > 0 and it.expire or math.min(os.clock() + NOTE_LIFE, it.born + 6)
 			return
 		end
 	end
@@ -285,7 +297,10 @@ function UI.Toast(msg, kind)
 		end
 	end
 	if #notes.items >= NOTE_MAX then
-		table.insert(notes.queue, { msg = msg, kind = kind, n = 1 })
+		table.insert(notes.queue, { msg = msg, kind = kind, n = 1, at = os.clock() })
+		while #notes.queue > 5 do
+			table.remove(notes.queue, 1) -- a burst: drop the oldest waiting messages
+		end
 		-- make room soon: the oldest one leaves early
 		local oldest = notes.items[1]
 		oldest.expire = math.min(oldest.expire, os.clock() + 0.6)
@@ -305,12 +320,16 @@ end
 task.spawn(function()
 	while true do
 		task.wait(0.1)
-		local now = os.clock()
-		for _, it in ipairs(table.clone(notes.items)) do
-			if now >= it.expire then
-				noteRemove(it)
+		pcall(function()
+			local now = os.clock()
+			for _, it in ipairs(table.clone(notes.items)) do
+				if state.cine then
+					it.expire = math.max(it.expire, now + 0.5) -- hidden during cinematics: keep it for afterwards
+				elseif now >= it.expire then
+					noteRemove(it)
+				end
 			end
-		end
+		end)
 	end
 end)
 
@@ -383,13 +402,19 @@ local function buildHud()
 	hud.hint = text(hint, { Text = "", Font = BODY, TextSize = 20, TextColor3 = P.ink, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1) })
 
 	-- side buttons (minimum: 3)
-	local side = new("Frame", { Name = "SideButtons", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 120), Size = UDim2.fromOffset(122, 4 * 104 + 36), BackgroundTransparency = 1 }, root)
+	-- phones: start higher and a bit smaller so the column ends above the jump button
+	local touch = (UIS.TouchEnabled and not UIS.KeyboardEnabled)
+	local side = new("Frame", { Name = "SideButtons", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, touch and 74 or 120), Size = UDim2.fromOffset(122, 4 * 104 + 36), BackgroundTransparency = 1 }, root)
+	if touch then
+		new("UIScale", { Scale = 0.8 }, side)
+	end
 	hud.side = side
 	list(side, Enum.FillDirection.Vertical, 12)
-	toy(side, { Text = T("btn_teleport"), Icon = "🚀", Color = P.blue, Size = UDim2.fromOffset(122, 104), LayoutOrder = 1, OnClick = function() UI.TogglePanel("teleport") end })
+	local tpBtn = toy(side, { Text = T("btn_teleport"), Icon = "🚀", Color = P.blue, Size = UDim2.fromOffset(122, 104), LayoutOrder = 1, OnClick = function() UI.TogglePanel("teleport") end })
 	hud.garageBtn = toy(side, { Text = T("btn_garage"), Icon = "🏁", Color = P.orange, Size = UDim2.fromOffset(122, 104), LayoutOrder = 2, OnClick = function() UI.TogglePanel("garage") end })
 	toy(side, { Text = T("btn_index"), Icon = "🚗", Color = P.green, Size = UDim2.fromOffset(122, 104), LayoutOrder = 3, OnClick = function() UI.TogglePanel("index") end })
-	hud.newDot = new("Frame", { Size = UDim2.fromOffset(22, 22), Position = UDim2.new(1, -16, 0, -6), BackgroundColor3 = P.red, Visible = false, ZIndex = 5 }, side)
+	-- on the TELEPORT button itself (as a child of the list it used to push every button down)
+	hud.newDot = new("Frame", { Size = UDim2.fromOffset(22, 22), Position = UDim2.new(1, -16, 0, -6), BackgroundColor3 = P.red, Visible = false, ZIndex = 5 }, tpBtn.holder)
 	corner(hud.newDot, 11)
 	stroke(hud.newDot, P.white, 3)
 
@@ -398,7 +423,7 @@ local function buildHud()
 		AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -24), OnClick = function() UI.TogglePanel("throw") end })
 	hud.throw.holder.Visible = false
 
-	hud.toasts = new("Frame", { Name = "Notes", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 50 }, root) -- items position themselves (UI.Toast)
+	hud.toasts = new("Frame", { Name = "Notes", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 90 }, overlay) -- items position themselves (UI.Toast)
 	hud.flash = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = P.red, BackgroundTransparency = 1, ZIndex = 40, Active = false }, gui)
 end
 
@@ -497,6 +522,7 @@ local function buildThrow()
 			end)
 			pair[1].face.MouseButton1Up:Connect(function() held = false end)
 			pair[1].face.MouseLeave:Connect(function() held = false end)
+			pair[1].face.InputEnded:Connect(function() held = false end)
 		end
 		panels.throwRows[id] = { frame = r, stroke = st, img = img, owned = owned, cnt = cntText, minus = minus, plus = plus, max = max, rc = rc }
 	end
@@ -738,7 +764,7 @@ function UI.Confirm(title, body, okText, okColor, onOk, def)
 	if state.cine then
 		return
 	end
-	local dim = new("TextButton", { Name = "Confirm", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.45, ZIndex = 85 }, gui)
+	local dim = new("TextButton", { Name = "Confirm", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.45, ZIndex = 85 }, overlay)
 	local card = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(480, def and 400 or 260), BackgroundColor3 = P.cream, ZIndex = 86 }, dim)
 	corner(card, 26)
 	stroke(card, P.ink, 5)
@@ -1006,6 +1032,10 @@ function UI.TogglePanel(name)
 	if name then
 		UI.Sfx("open")
 	end
+	noteLayout()
+	pcall(function() -- world prompts (E/F at the garage, NPCs) only when no panel is open
+		game:GetService("ProximityPromptService").Enabled = name == nil and not state.cine
+	end)
 	UI.Refresh()
 end
 
@@ -1020,8 +1050,9 @@ function UI.SetCinematic(on)
 	end
 	state.cine = active
 	root.Visible = not active
+	hud.toasts.Visible = not active
 	pcall(function()
-		game:GetService("ProximityPromptService").Enabled = not active
+		game:GetService("ProximityPromptService").Enabled = not active and state.open == nil
 	end)
 	if active then
 		-- a failing hook must never leave the game half in cinematic mode
@@ -1057,7 +1088,7 @@ end
 ---------------------------------------------------------------- reveal
 local function buildReveal()
 	-- showcase: blurred world, rarity backdrop with turning rays + light streaks, car spinning on a glowing turntable
-	local r = new("TextButton", { Name = "Reveal", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(6, 7, 12), BackgroundTransparency = 0, Visible = false, ZIndex = 60 }, gui)
+	local r = new("TextButton", { Name = "Reveal", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(6, 7, 12), BackgroundTransparency = 0, Visible = false, ZIndex = 60 }, overlay)
 	local glow = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.48), Size = UDim2.fromScale(1.4, 1.4), BackgroundColor3 = P.yellow, BackgroundTransparency = 0, BorderSizePixel = 0, ZIndex = 60 }, r)
 	new("UIAspectRatioConstraint", {}, glow)
 	corner(glow, 2000)
@@ -1102,7 +1133,11 @@ local function buildReveal()
 		OnClick = function() UI.HideReveal() end })
 	panels.reveal = { root = r, rays = rays, box = box, sc = sc, top = top, badgeGrad = badgeGrad, rarity = rarity, vpHolder = vpHolder, name = name, info = info, ok = ok,
 		glow = glow, glowGrad = glowGrad, disc = disc, ringStroke = ringStroke, streaks = streaks, sparks = sparks, stamp = stamp }
-	r.Activated:Connect(function() UI.HideReveal() end)
+	r.Activated:Connect(function()
+		if os.clock() - (panels.reveal.shownAt or 0) > 0.8 then -- ignore the tap that was still meant for the throw
+			UI.HideReveal()
+		end
+	end)
 end
 
 function UI.HideReveal()
@@ -1164,6 +1199,7 @@ function UI.ShowReveal(res, onClosed)
 		tween(rv.blur, 0.35, { Size = 22 })
 	end
 	rv.root.Visible = true
+	rv.shownAt = os.clock()
 	rv.sc.Scale = 0.2
 	tween(rv.sc, 0.45, { Scale = 1 }, Enum.EasingStyle.Back)
 	UI.Sfx("fanfare")
@@ -1312,16 +1348,21 @@ function UI.Init(storeModule, actionTable)
 	end)
 	root = new("Frame", { Name = "Root", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1) }, gui)
 	local uiScale = new("UIScale", {}, root)
+	-- above the Cine layer (45), same scale as the HUD: nothing of a pop-up can fall off a phone screen
+	overlay = new("Frame", { Name = "Overlay", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 60 }, gui)
+	local ovScale = new("UIScale", {}, overlay)
 	local function rescale()
-		local vp = Workspace.CurrentCamera and Workspace.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
+		local vp = gui.AbsoluteSize.Magnitude > 0 and gui.AbsoluteSize or (Workspace.CurrentCamera and Workspace.CurrentCamera.ViewportSize) or Vector2.new(1280, 720)
 		local s = math.clamp(math.min(vp.Y / 760, vp.X / 1240), 0.5, 1.2)
-		uiScale.Scale = s
+		uiScale.Scale, ovScale.Scale = s, s
 		root.Size = UDim2.fromScale(1 / s, 1 / s)
+		overlay.Size = UDim2.fromScale(1 / s, 1 / s)
 	end
 	rescale()
 	if Workspace.CurrentCamera then
 		Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale)
 	end
+	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(rescale)
 	-- ElevenLabs SFX when uploaded (SoundIds), otherwise Roblox built-in sounds
 	local SoundIds = require(Shared:WaitForChild("SoundIds"))
 	local FALLBACK = {
@@ -1379,7 +1420,7 @@ function UI.Kit()
 	return {
 		new = new, toy = toy, text = text, corner = corner, stroke = stroke, gradient = gradient, list = list, clear = clear,
 		tween = tween, pill = pill, lift = lift, panelShell = panelShell, scroller = scroller, carViewport = carViewport,
-		P = P, HEAD = HEAD, BODY = BODY, root = root, gui = gui, hud = hud, panels = panels, state = state, store = store,
+		P = P, HEAD = HEAD, BODY = BODY, root = root, gui = gui, overlay = overlay, hud = hud, panels = panels, state = state, store = store,
 		actions = actions, PART_ICON = PART_ICON, confirm = UI.Confirm,
 	}
 end

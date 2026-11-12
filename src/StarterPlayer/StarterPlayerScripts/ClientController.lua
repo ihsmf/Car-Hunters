@@ -102,6 +102,7 @@ Net.Get("Notify").OnClientEvent:Connect(function(payload)
 	end
 	UI.Notify(payload)
 end)
+local deathHeld = false
 Net.Get("HitFx").OnClientEvent:Connect(function(dir, kind)
 	if kind == "airbag" then
 		ClientFx.Airbag(dir or Vector3.new(1, 0, 0))
@@ -113,6 +114,10 @@ Net.Get("HitFx").OnClientEvent:Connect(function(dir, kind)
 	UI.TogglePanel(nil)
 	UI.CloseOverlays()
 	UI.HideReveal()
+	if not deathHeld then -- the WRECKED screen hides the HUD like any cinematic; released on respawn
+		deathHeld = true
+		UI.SetCinematic(true)
+	end
 	DeathFx.Play(dir or Vector3.new(1, 0, 0), lost, UI.Sfx)
 end)
 Net.Get("ThrowResult").OnClientEvent:Connect(function(res)
@@ -121,6 +126,10 @@ Net.Get("ThrowResult").OnClientEvent:Connect(function(res)
 end)
 player.CharacterAdded:Connect(function()
 	DeathFx.Recover()
+	if deathHeld then
+		deathHeld = false
+		UI.SetCinematic(false)
+	end
 end)
 
 task.spawn(function()

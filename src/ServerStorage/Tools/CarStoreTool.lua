@@ -339,6 +339,7 @@ function Tool.InstallMissingEmbedded()
 					break
 				end
 			end
+			task.wait() -- big models: yield between cars so the server start never hits the script timeout
 		end
 	end
 	return done

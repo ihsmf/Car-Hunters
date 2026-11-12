@@ -336,7 +336,7 @@ end
 
 ---------------------------------------------------------------- Welcome back (offline earnings)
 local function showOffline(info)
-	local dim = K.new("TextButton", { Name = "WelcomeBack", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.45, ZIndex = 80 }, K.gui)
+	local dim = K.new("TextButton", { Name = "WelcomeBack", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.45, ZIndex = 80 }, K.overlay)
 	local card = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(520, 330), BackgroundColor3 = P.cream, ZIndex = 81 }, dim)
 	K.corner(card, 28)
 	K.stroke(card, P.ink, 5)
@@ -380,6 +380,7 @@ local function buildRebirth()
 			else
 				w.rbArmed = os.clock()
 				UI.Refresh()
+				task.delay(3.05, UI.Refresh) -- back from "SURE?" when the 3 s run out
 			end
 		end })
 	w.rbTokens = K.text(p.content, { Text = "", TextSize = 22, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(0, 240), Size = UDim2.new(1, 0, 0, 28), ZIndex = 23 })

@@ -164,6 +164,8 @@ local function tick()
 		Guide.Point(nil)
 		pulse(nil)
 		local goal = K.hud.nextGoal
+		w.card.ZIndex = 1
+		w.card.Position = UDim2.new(0.5, 0, 0, 68)
 		if goal and K.state.open == nil then
 			show("goal:" .. goal[1], "GOAL", "", P.blue, goal[1], goal[2], nil, nil, false)
 		else
@@ -189,6 +191,10 @@ local function tick()
 		prog, progText = def[6]()
 	end
 	show("step" .. step .. def[1], step .. "/7", "STEP", color, def[1], body, prog, progText, true)
+	-- steps that happen inside a panel (garage, upgrade): the card goes on top of the panel's dim, at the very top
+	local inPanel = K.state.open ~= nil
+	w.card.ZIndex = inPanel and 30 or 1
+	w.card.Position = UDim2.new(0.5, 0, 0, inPanel and 4 or 68)
 	Guide.Point(def[4](st, hrp))
 	pulse(def[8] == "throw" and K.hud.throw or (def[8] == "garage" and K.hud.garageBtn) or nil)
 	if def == STEPS[step] and def[5](st, hrp) then

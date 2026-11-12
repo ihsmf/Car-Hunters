@@ -59,6 +59,11 @@ rbxm = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets', 
 lune = shutil.which('lune') or os.path.expanduser('~/.cargo/bin/lune')
 if os.path.isdir(rbxm) and any(f.endswith('.rbxm') for f in os.listdir(rbxm)):
     if os.path.exists(lune):
-        subprocess.run([lune, 'run', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bake_models.luau'), out, rbxm], check=True)
+        # CarHunters.rbxlx stays code-only (small, diffable); CarHunters.rbxl = the full place with every model (open this one)
+        full = os.path.join(os.path.dirname(out), 'CarHunters.rbxl')
+        subprocess.run([lune, 'run', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bake_models.luau'), out, rbxm, full], check=True)
+        print('full place with embedded models:', full, '%.1f MB' % (os.path.getsize(full) / 1e6))
     else:
         print('! lune not found (cargo install lune --locked): 3D models were NOT embedded')
+else:
+    print('!!! assets/rbxm is empty: run tools/fetch_assets.py first - the place has NO embedded 3D models')

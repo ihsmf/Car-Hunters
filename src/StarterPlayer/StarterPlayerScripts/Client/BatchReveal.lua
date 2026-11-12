@@ -53,7 +53,13 @@ local function card(parent, r, order, big)
 end
 
 local function grid(res)
-	local scr = K.new("Frame", { Name = "Grid", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(940, 600), BackgroundColor3 = P.cream, ZIndex = 70 }, root)
+	local scr = K.new("Frame", { Name = "Grid", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(940, 600), BackgroundColor3 = P.cream, ZIndex = 70, Active = true }, root)
+	-- a tap outside the card closes the results (on small screens the buttons were the only way out)
+	task.delay(0.6, function()
+		if root then
+			root.Activated:Connect(close)
+		end
+	end)
 	K.corner(scr, 28)
 	K.stroke(scr, P.ink, 5)
 	local sc = K.new("UIScale", { Scale = 0.6 }, scr)
@@ -229,7 +235,7 @@ function BR.Play(res)
 	Cine.Darken(1, 0.25)
 	Cine.Shake(0.9, 0.35)
 	UI.Sfx("throw")
-	root = K.new("TextButton", { Name = "BatchReveal", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(6, 7, 12), BackgroundTransparency = 1, ZIndex = 69 }, K.gui)
+	root = K.new("TextButton", { Name = "BatchReveal", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(6, 7, 12), BackgroundTransparency = 1, ZIndex = 69 }, K.overlay)
 	K.tween(root, 0.25, { BackgroundTransparency = 0 })
 	blur = K.new("BlurEffect", { Size = 18 }, Lighting)
 	reel(res, function()

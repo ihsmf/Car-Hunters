@@ -155,12 +155,20 @@ function Markers.Start(kit, extraModule)
 		end
 		-- edge arrow
 		local obj = objective()
-		if obj then
+		local busy = K.state.open ~= nil or K.state.cine == true -- no arrow / world labels over panels or cinematics
+		for _, m in pairs(marks) do
+			if m.bb then
+				m.bb.Enabled = not busy
+			end
+		end
+		if obj and not busy then
 			local p, onScreen = cam:WorldToViewportPoint(obj.adornee.Position)
 			local vp = cam.ViewportSize
 			if onScreen and p.Z > 0 and p.X > 40 and p.X < vp.X - 40 and p.Y > 40 and p.Y < vp.Y - 40 then
 				arrow.Visible = false
 			else
+				local inset = game:GetService("GuiService"):GetGuiInset()
+				vp = vp - inset
 				local cx, cy = vp.X / 2, vp.Y / 2
 				local dx, dy = p.X - cx, p.Y - cy
 				if p.Z < 0 then

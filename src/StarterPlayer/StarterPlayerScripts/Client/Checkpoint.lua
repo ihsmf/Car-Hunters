@@ -31,7 +31,7 @@ end
 local function show(o)
 	close()
 	UI.Sfx("ping")
-	local dim = K.new("Frame", { Name = "Checkpoint", Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.55, ZIndex = 80 }, K.gui)
+	local dim = K.new("Frame", { Name = "Checkpoint", Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.55, ZIndex = 80 }, K.overlay)
 	open = dim
 	local card = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(760, 420), BackgroundColor3 = P.cream, ZIndex = 81 }, dim)
 	K.corner(card, 28)
@@ -85,6 +85,7 @@ function CP.Start(ui, cine)
 	K = UI.Kit()
 	P = K.P
 	Cine = cine
+	table.insert(UI.Overlays, close) -- wrecked while the card is up: the card goes away
 	Net.Get("CheckpointOffer").OnClientEvent:Connect(show)
 	Net.Get("CheckpointFx").OnClientEvent:Connect(function(fx)
 		if fx.choice == "risk" then

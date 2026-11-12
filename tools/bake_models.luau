@@ -1,12 +1,14 @@
 -- Embeds downloaded Roblox assets (assets/rbxm/<id>.rbxm, from tools/fetch_assets.py) into the place file as
 -- ServerStorage.Embedded.Assets.A<id>, so the game never has to download models at runtime.
---   lune run tools/bake_models.luau CarHunters.rbxlx assets/rbxm
+--   lune run tools/bake_models.luau CarHunters.rbxlx assets/rbxm CarHunters.rbxl
+-- The output is a binary .rbxl (the XML version with every model would be over 200 MB).
 local fs = require("@lune/fs")
 local process = require("@lune/process")
 local roblox = require("@lune/roblox")
 
 local placePath = process.args[1] or "CarHunters.rbxlx"
 local dir = process.args[2] or "assets/rbxm"
+local outPath = process.args[3] or placePath
 
 local game = roblox.deserializePlace(fs.readFile(placePath))
 local ss = game:GetService("ServerStorage")
@@ -31,6 +33,12 @@ for _, file in ipairs(fs.readDir(dir)) do
 			for _, inst in ipairs(res) do
 				inst.Parent = holder
 			end
+			-- free models often carry scripts (car chassis, sometimes worse): never ship them
+			for _, d in ipairs(holder:GetDescendants()) do
+				if d:IsA("LuaSourceContainer") then
+					d:Destroy()
+				end
+			end
 			holder.Parent = assets
 			n += 1
 		else
@@ -39,8 +47,9 @@ for _, file in ipairs(fs.readDir(dir)) do
 	end
 end
 embedded.Parent = ss
-fs.writeFile(placePath, roblox.serializePlace(game, true))
-print(string.format("[bake] embedded %d assets into %s", n, placePath))
+local xml = string.sub(outPath, -6) == ".rbxlx"
+fs.writeFile(outPath, roblox.serializePlace(game, xml))
+print(string.format("[bake] embedded %d assets into %s", n, outPath))
 for _, f in ipairs(failed) do
 	print("[bake] FAILED " .. f)
 end

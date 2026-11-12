@@ -65,7 +65,7 @@ local function requestCard(msg)
 		Net.Get("TradeRespond"):FireServer(msg.from, false) -- busy watching a car reveal
 		return
 	end
-	local f = K.new("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -150, 0, 120), Size = UDim2.fromOffset(330, 150), BackgroundColor3 = P.cream, ZIndex = 70 }, K.gui)
+	local f = K.new("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -150, 0, 120), Size = UDim2.fromOffset(330, 150), BackgroundColor3 = P.cream, ZIndex = 70 }, K.overlay)
 	w.request = f
 	K.corner(f, 20)
 	K.stroke(f, P.ink, 4)

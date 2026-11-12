@@ -11,7 +11,7 @@
   игрока просят перезайти (играть «вхолостую» с потерей прогресса нельзя). Если сейв открыт на другом сервере —
   этот сервер его не перезаписывает. Сундуки за время игры сохраняются на день (перезаход их не сбрасывает).
 - Глобальный лидерборд по всем серверам (вкладка WORLD на табло, OrderedDataStore).
-- **3D-модели встроены прямо в `CarHunters.rbxlx`** (`ServerStorage.Embedded`): Blender-модели карты и машины из
+- **3D-модели встроены прямо в плейс `CarHunters.rbxl`** (119 моделей в `ServerStorage.Embedded`, скрипты из бесплатных моделей вырезаны): Blender-модели карты и машины из
   Creator Store ставятся при старте сервера без скачивания. Ничего запускать в Studio не нужно.
 - Все покупки проверяются на сервере (`ProcessReceipt`, `UserOwnsGamePassAsync`).
 - Донат-товары, которых ещё нет на Roblox (id = 0), **скрыты** в опубликованной игре; в Studio покупка симулируется.
@@ -28,7 +28,7 @@
 
 ## 2. Открыть плейс (вы)
 
-Открыть свежий `CarHunters.rbxlx` в Roblox Studio. В Output при Play должно быть:
+Открыть свежий **`CarHunters.rbxl`** в Roblox Studio (не `.rbxlx` — в нём только код, без моделей). В Output при Play должно быть:
 `[Models] 43 Blender models installed (embedded 43 ...)` и `[CarHunters] N store car models installed from the place file`.
 Если вместо этого `MISSING` — напишите мне, что там в списке.
 
@@ -61,7 +61,7 @@
 `src/ReplicatedStorage/Shared/DonateConfig.lua` (имя, описание, цена) и вписать id в
 `src/ReplicatedStorage/Shared/ProductIds.lua`.
 
-После этого: открыть свежий `CarHunters.rbxlx` → **File → Publish to Roblox As → выбрать эту игру**.
+После этого: открыть свежий `CarHunters.rbxl` → **File → Publish to Roblox As → выбрать эту игру**.
 
 ## 5. Страница игры (вы)
 
@@ -104,7 +104,7 @@ Creator Dashboard → игра → Overview/Settings → **Privacy: Public**. Е
 
 ## Обновления после выхода
 
-1. Я меняю код → `python3 tools/build_place.py` → новый `CarHunters.rbxlx` в ветке.
+1. Я меняю код → `python3 tools/build_place.py` → новый `CarHunters.rbxl` в ветке (модели встраиваются автоматически).
 2. Вы: открыть его → **File → Publish to Roblox As → эта игра** (перезаписывает плейс).
 3. Если менялась карта, поднимается `MapConfig.Version` — сервер перестроит карту сам.
 4. Сохранения игроков не теряются: ключ DataStore не меняется, старые профили мигрируют при входе.

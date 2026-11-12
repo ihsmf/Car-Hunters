@@ -41,7 +41,7 @@ local function newProfile(isNew)
 		lastSeen = 0,
 		tutorial = 0,
 		daily = { day = 0, last = 0 },
-		play = { day = 0, sec = 0, chests = {} }, -- today's playtime + opened playtime chests (saved: rejoining does not reset them)
+		play = { day = 0, sec = 0, chests = { false, false, false, false, false } }, -- today's playtime + opened playtime chests (saved: rejoining does not reset them)
 		perks = {},
 		boosts = {},
 		receipts = {},
@@ -215,12 +215,11 @@ local function sanitize(raw)
 	p.lastSeen = toCount(raw.lastSeen, 4e9)
 	p.tutorial = toCount(raw.tutorial, 8)
 	if type(raw.play) == "table" then
-		local chests = {}
+		-- dense array of booleans (a sparse table would not save in a DataStore)
+		local chests = { false, false, false, false, false }
 		if type(raw.play.chests) == "table" then
-			for i = 1, 10 do
-				if raw.play.chests[i] == true then
-					chests[i] = true
-				end
+			for i = 1, 5 do
+				chests[i] = raw.play.chests[i] == true or raw.play.chests[tostring(i)] == true
 			end
 		end
 		p.play = { day = toCount(raw.play.day, 1e7), sec = toCount(raw.play.sec, 86400), chests = chests }
@@ -384,7 +383,7 @@ function DataService.PlayTime(s)
 	local today = math.floor(os.time() / 86400)
 	local now = os.clock()
 	if type(d.play) ~= "table" or d.play.day ~= today then
-		d.play = { day = today, sec = 0, chests = {} } -- time since the last mark still counts for the new day
+		d.play = { day = today, sec = 0, chests = { false, false, false, false, false } } -- time since the last mark still counts for the new day
 	end
 	d.play.sec = d.play.sec + (now - (s.playMark or now))
 	s.playMark = now
