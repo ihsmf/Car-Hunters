@@ -20,7 +20,6 @@ local DeathFx = require(Client:WaitForChild("DeathFx"))
 local SpeedLanes = require(Client:WaitForChild("SpeedLanes"))
 local UIExtra = require(Client:WaitForChild("UIExtra"))
 local Markers = require(Client:WaitForChild("Markers"))
-local Minimap = require(Client:WaitForChild("Minimap"))
 local ClientFx = require(Client:WaitForChild("ClientFx"))
 
 local player = Players.LocalPlayer
@@ -58,7 +57,6 @@ end)
 UIExtra.Init(UI)
 ClientFx.Init(UI)
 Markers.Start(UI.Kit(), UIExtra)
-Minimap.Start(UI.Kit(), UIExtra)
 UI.Refresh()
 
 Net.Get("HotDrop").OnClientEvent:Connect(function(info) UIExtra.OnHotDrop(info) end)

@@ -56,6 +56,8 @@ def upload_sounds(args):
         if not fn.endswith(".mp3"):
             continue
         name = fn[:-4]
+        if args.only and name not in args.only.split(","):
+            continue
         meta = {"assetType": "Audio", "displayName": f"CarHunters {name}", "description": "CAR HUNTERS sound effect (ElevenLabs)",
                 "creationContext": {"creator": creator}}
         body, hdr = multipart({"request": json.dumps(meta)}, {"fileContent": (fn, "audio/mpeg", open(os.path.join(folder, fn), "rb").read())})
@@ -119,6 +121,7 @@ if __name__ == "__main__":
     ap.add_argument("--creator-user", type=int)
     ap.add_argument("--creator-group", type=int)
     ap.add_argument("--universe", type=int)
+    ap.add_argument("--only", help="comma-separated sound names to upload")
     a = ap.parse_args()
     if a.what == "sounds":
         if not (a.creator_user or a.creator_group):

@@ -261,7 +261,7 @@ local function buildHud()
 	hud.hint = text(hint, { Text = "", Font = BODY, TextSize = 20, TextColor3 = P.ink, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1) })
 
 	-- side buttons (minimum: 3)
-	local side = new("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 226), Size = UDim2.fromOffset(122, 3 * 104 + 24), BackgroundTransparency = 1 }, root)
+	local side = new("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 120), Size = UDim2.fromOffset(122, 3 * 104 + 24), BackgroundTransparency = 1 }, root)
 	list(side, Enum.FillDirection.Vertical, 12)
 	toy(side, { Text = T("btn_teleport"), Icon = "🚀", Color = P.blue, Size = UDim2.fromOffset(122, 104), LayoutOrder = 1, OnClick = function() UI.TogglePanel("teleport") end })
 	toy(side, { Text = T("btn_garage"), Icon = "🏁", Color = P.orange, Size = UDim2.fromOffset(122, 104), LayoutOrder = 2, OnClick = function() UI.TogglePanel("garage") end })
@@ -838,7 +838,7 @@ function UI.Init(storeModule, actionTable)
 		drive = { "rbxasset://sounds/swoosh.wav", 0.4, 0.6 }, pickup = { "rbxasset://sounds/electronicpingshort.wav", 0.5, 1.5 },
 		pickupBig = { "rbxasset://sounds/electronicpingshort.wav", 0.6, 1.1 }, bank = { "rbxasset://sounds/victory.wav", 0.35, 1.3 },
 		bankCombo = { "rbxasset://sounds/victory.wav", 0.5 }, combo = { "rbxasset://sounds/electronicpingshort.wav", 0.5, 1.8 },
-		cash = { "rbxasset://sounds/victory.wav", 0.5, 1.2 }, siren = { "rbxasset://sounds/electronicpingshort.wav", 0.6, 0.7 },
+		cash = { "rbxasset://sounds/victory.wav", 0.5, 1.2 }, siren = { "rbxasset://sounds/electronicpingshort.wav", 0.2, 0.9 },
 		crash = { "rbxasset://sounds/collide.wav", 0.9, 0.8 }, wrecked = { "rbxasset://sounds/uuhhh.mp3", 0.5 },
 		airbag = { "rbxasset://sounds/Rocket shot.wav", 0.5, 1.6 }, whoosh = { "rbxasset://sounds/swoosh.wav", 0.6, 0.8 },
 		fanfare = { "rbxasset://sounds/victory.wav", 0.5 }, hit = { "rbxasset://sounds/collide.wav", 0.9, 0.8 },
