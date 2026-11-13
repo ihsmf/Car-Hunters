@@ -82,7 +82,7 @@ local en = {
 	hot_drop_called = "%s called a Hot Drop!", airbag = "AIRBAG SAVED YOU!", map_base = "MY GARAGE", map_shop = "PIT STOP",
 	map_donate = "MAGNATE", map_contracts = "TONY + CONTRACTS", btn_magnate = "SHOP",
 	c_bank_part = "Bring home %d %s from %s", c_combo = "Bank a run with combo x%s", c_speed = "Bank a run within %ds",
-	c_throw = "Throw %d parts into the trap", c_road = "Grab %d road crates", c_hotdrop = "Grab a Hot Drop",
+	c_throw = "Throw %d parts into the trap", c_bank_rarity = "Bring home %d %s parts", c_catch_rarity = "Catch a %s car or better", c_road = "Grab %d road crates", c_hotdrop = "Grab a Hot Drop",
 	lb_title = "TOP INCOME / SEC", free_garage = "FREE GARAGE", garage_of = "%s's Garage",
 	locked_sign = "LOCKED", income_sign = "INCOME",
 }

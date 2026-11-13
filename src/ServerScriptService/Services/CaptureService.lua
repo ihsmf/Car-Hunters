@@ -195,6 +195,11 @@ function Capture.ThrowBatch(player, counts, merge)
 	S.Base.RefreshAll(player)
 	S.Data.Push(player)
 	S.Contracts.Progress(player, "throw", total)
+	local caught = {}
+	for _, r in ipairs(results) do
+		table.insert(caught, r.rarity)
+	end
+	S.Contracts.Progress(player, "catch", #caught, caught)
 	task.delay(busyFor, function()
 		s.busy = false
 	end)

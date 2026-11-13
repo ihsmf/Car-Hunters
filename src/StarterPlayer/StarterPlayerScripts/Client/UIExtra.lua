@@ -516,7 +516,11 @@ local CONTRACT_PART = function(c)
 end
 
 contractText = function(c)
-	if c.kind == "bank_part" then
+	if c.kind == "bank_rarity" then
+		return T("c_bank_rarity", c.n, T("rarity_" .. tostring(c.rarity)))
+	elseif c.kind == "catch_rarity" then
+		return T("c_catch_rarity", T("rarity_" .. tostring(c.rarity)))
+	elseif c.kind == "bank_part" then
 		return T("c_bank_part", c.n, CONTRACT_PART(c), T("zone_" .. tostring(c.zone)))
 	elseif c.kind == "combo" then
 		return T("c_combo", tostring(c.mult))

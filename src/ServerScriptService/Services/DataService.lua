@@ -174,14 +174,16 @@ local function sanitize(raw)
 			end
 		end
 	end
-	local KINDS = { bank_part = true, combo = true, speed = true, throw = true, road = true, hotdrop = true }
+	local KINDS = { bank_part = true, combo = true, speed = true, throw = true, road = true, hotdrop = true, bank_rarity = true, catch_rarity = true }
 	if type(raw.contracts) == "table" then
 		for _, c in ipairs(raw.contracts) do
-			if #p.contracts < 3 and type(c) == "table" and KINDS[c.kind] and type(c.reward) == "table"
-				and PartConfig.Parts[c.reward.part] and Util.IsInt(c.n) and c.n >= 1 and c.n <= 20 then
+			if #p.contracts < 5 and type(c) == "table" and KINDS[c.kind] and type(c.reward) == "table"
+				and PartConfig.Parts[c.reward.part] and Util.IsInt(c.n) and c.n >= 1 and c.n <= 20
+				and (CarConfig.Rarities[c.rarity] or (c.kind ~= "bank_rarity" and c.kind ~= "catch_rarity")) then
 				table.insert(p.contracts, {
 					id = tostring(c.id), kind = c.kind, progress = math.min(toCount(c.progress, 20), c.n), n = c.n,
 					part = PartConfig.Parts[c.part] and c.part or nil, zone = type(c.zone) == "string" and c.zone or nil,
+					rarity = CarConfig.Rarities[c.rarity] and c.rarity or nil,
 					mult = tonumber(c.mult), seconds = tonumber(c.seconds), ready = c.ready == true or nil,
 					reward = { money = toCount(c.reward.money, 1e12), part = c.reward.part, n = math.clamp(toCount(c.reward.n, 4), 1, 4) },
 				})

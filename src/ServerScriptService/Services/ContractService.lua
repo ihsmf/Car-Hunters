@@ -1,4 +1,4 @@
--- Contracts board: three active jobs per player. Finished jobs wait as "ready" until claimed at Big Tony.
+-- Contracts board: five active jobs per player. Finished jobs wait as "ready" until claimed at Big Tony.
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Util = require(Shared:WaitForChild("Util"))
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
+local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 
@@ -13,7 +14,7 @@ local Contracts = {}
 local S
 local rng = Random.new()
 
-Contracts.Active = 3
+Contracts.Active = 5
 
 -- bank_part contracts ask for the two most common parts that really spawn in that district (safe + risky spots),
 -- so every job can be finished by farming the district
@@ -58,27 +59,60 @@ local function rewardFor(s, weight)
 	return { money = math.floor(base / 10 + 0.5) * 10, part = partPool[tier], n = (weight >= 2) and 2 or 1 }
 end
 
-function Contracts.New(s)
+-- rarities that drop in the player's unlocked districts (safe + risky + road spots)
+local function rarityPool(d)
+	local seen = {}
+	for _, z in ipairs(MapConfig.ZoneOrder) do
+		if d.unlockedZones[z] then
+			local t = PartConfig.SpawnTables[z]
+			for _, kind in ipairs({ "safe", "risky", "road" }) do
+				for _, e in ipairs(t and t[kind] or {}) do
+					seen[PartConfig.Parts[e[1]].rarity] = true
+				end
+			end
+		end
+	end
+	local out = {}
+	for _, r in ipairs(CarConfig.RarityOrder) do
+		if seen[r] then
+			table.insert(out, r)
+		end
+	end
+	return #out > 0 and out or { "Common" }
+end
+
+local BANK_N = { Common = { 8, 15 }, Uncommon = { 5, 10 }, Rare = { 3, 6 }, Epic = { 1, 3 }, Legendary = { 1, 2 } }
+local BANK_MULT = { Common = 1, Uncommon = 1.7, Rare = 2.8, Epic = 4.8, Legendary = 8 }
+local CATCH_MULT = { Uncommon = 1.5, Rare = 2.5, Epic = 4, Legendary = 7 }
+local KIND_WEIGHTS = { { "bank_rarity", 4 }, { "bank_part", 2 }, { "catch_rarity", 2 }, { "throw", 1 }, { "road", 1 }, { "combo", 1 },
+	{ "speed", 1 }, { "hotdrop", 1 } }
+
+local function keyOf(c)
+	return c.kind .. ":" .. tostring(c.rarity or c.part or "")
+end
+
+local function build(s)
 	local d = s.data
 	local zi = bestZoneIndex(d)
 	local zone = MapConfig.ZoneOrder[rng:NextInteger(1, zi)]
-	local kinds = { "bank_part", "bank_part", "combo", "speed", "throw", "road", "hotdrop" }
-	local kind = kinds[rng:NextInteger(1, #kinds)]
-	-- avoid duplicate kinds on the board
-	for _ = 1, 6 do
-		local dup = false
-		for _, c in ipairs(d.contracts) do
-			if c.kind == kind then
-				dup = true
-			end
-		end
-		if not dup then
-			break
-		end
-		kind = kinds[rng:NextInteger(1, #kinds)]
-	end
+	local kind = Util.WeightedPick(KIND_WEIGHTS, rng:NextNumber())
 	local c = { id = HttpService:GenerateGUID(false), kind = kind, progress = 0 }
-	if kind == "bank_part" then
+	if kind == "bank_rarity" then
+		-- lower rarities more often: weight 1 / position^0.8 in the pool
+		local pool = rarityPool(d)
+		local weighted = {}
+		for i, r in ipairs(pool) do
+			table.insert(weighted, { r, 1 / i ^ 0.8 })
+		end
+		c.rarity = Util.WeightedPick(weighted, rng:NextNumber())
+		c.n = rng:NextInteger(BANK_N[c.rarity][1], BANK_N[c.rarity][2])
+		c.reward = rewardFor(s, BANK_MULT[c.rarity] * (1 + 0.08 * c.n))
+	elseif kind == "catch_rarity" then
+		local top = zi <= 2 and 3 or (zi <= 5 and 4 or 5) -- Rare / Epic / Legendary at most
+		c.rarity = CarConfig.RarityOrder[rng:NextInteger(2, top)]
+		c.n = 1
+		c.reward = rewardFor(s, CATCH_MULT[c.rarity])
+	elseif kind == "bank_part" then
 		local pool = ZONE_PARTS[zone]
 		c.part = pool[rng:NextInteger(1, #pool)]
 		c.zone = zone
@@ -102,6 +136,22 @@ function Contracts.New(s)
 	else
 		c.n = 1
 		c.reward = rewardFor(s, 2.5)
+	end
+	return c
+end
+
+-- a new job that is not already on the board (same kind + rarity/part)
+function Contracts.New(s)
+	local taken = {}
+	for _, c in ipairs(s.data.contracts) do
+		taken[keyOf(c)] = true
+	end
+	local c
+	for _ = 1, 12 do
+		c = build(s)
+		if not taken[keyOf(c)] then
+			break
+		end
 	end
 	return c
 end
@@ -155,7 +205,24 @@ function Contracts.Progress(player, event, amount, extra)
 	for i = #d.contracts, 1, -1 do
 		local c = d.contracts[i]
 		local add = 0
-		if c.kind == event then
+		if c.kind == "bank_rarity" and event == "bank_part" then
+			-- every banked part of the job's rarity, from any district
+			for id, byZone in pairs(extra or {}) do
+				if PartConfig.Parts[id] and PartConfig.Parts[id].rarity == c.rarity then
+					for _, n in pairs(byZone) do
+						add = add + n
+					end
+				end
+			end
+		elseif c.kind == "catch_rarity" and event == "catch" then
+			-- extra = list of caught rarities
+			local need = CarConfig.Rarities[c.rarity] and CarConfig.Rarities[c.rarity].index or 99
+			for _, r in ipairs(extra or {}) do
+				if CarConfig.Rarities[r] and CarConfig.Rarities[r].index >= need then
+					add = add + 1
+				end
+			end
+		elseif c.kind == event then
 			if event == "bank_part" then
 				-- extra = { [partId] = { [zone] = n } }
 				local byZone = extra and extra[c.part]
@@ -185,16 +252,8 @@ function Contracts.Progress(player, event, amount, extra)
 	end
 end
 
+-- new sessions are filled by ServerBootstrap the moment the profile is ready; this covers players already in game
 function Contracts.Start()
-	Players.PlayerAdded:Connect(function(p)
-		task.delay(2, function()
-			local s = S.Data.Get(p)
-			if s and s.data then
-				Contracts.Fill(s)
-				S.Data.Push(p)
-			end
-		end)
-	end)
 	for _, p in ipairs(Players:GetPlayers()) do
 		local s = S.Data.Get(p)
 		if s and s.data then

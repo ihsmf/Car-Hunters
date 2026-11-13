@@ -211,6 +211,7 @@ local function onPlayerAdded(player)
 	S.Income.Recalc(player)
 	S.Base.RefreshAll(player)
 	s.ready = true
+	S.Contracts.Fill(s) -- Big Tony's board is full from the first second
 	S.Income.PayOffline(player)
 	S.Data.Push(player)
 	player:LoadCharacter()
