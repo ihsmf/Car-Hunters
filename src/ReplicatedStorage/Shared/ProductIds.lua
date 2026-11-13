@@ -1,12 +1,12 @@
 -- Filled by tools/roblox_open_cloud.py (Open Cloud). 0 = not created yet: in Studio the purchase is simulated.
 return {
 	products = {
-		cash_s = 0, cash_m = 0, cash_l = 0, cash_xl = 0,
-		boost_income = 0, boost_luck = 0,
-		crate_engine = 0, crate_turbo = 0, crate_core = 0,
-		hotdrop = 0, pity = 0, revive = 0, slots = 0, offline_x2 = 0,
+		cash_s = 3731003169, cash_m = 3731003170, cash_l = 3731003172, cash_xl = 3731003176,
+		boost_income = 3731003157, boost_luck = 3731003159,
+		crate_engine = 3731003178, crate_turbo = 3731003180, crate_core = 3731003183,
+		hotdrop = 3731003164, pity = 3731003162, revive = 3731003167, slots = 3731003186, offline_x2 = 3731003185,
 	},
 	passes = {
-		vip = 0, big_backpack = 0, auto_collect = 0, golden_car = 0, double_contracts = 0, fast_trap = 0, golden_garage = 0,
+		vip = 2089064614, big_backpack = 2089850642, auto_collect = 2088122659, golden_car = 2088584671, double_contracts = 2089856627, fast_trap = 2089196630, golden_garage = 2089238683,
 	},
 }

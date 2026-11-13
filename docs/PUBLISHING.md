@@ -45,6 +45,11 @@
 > ⭐ 80 cars, 5 rarities · 🏁 12 districts and 3 boss arenas · 🔧 upgrades and tuning · 🔁 rebirths ·
 > 🎁 daily streak and playtime gifts · 🤝 trade cars, cash and parts with friends
 
+## Текущая игра
+
+Universe ID **10776447912**, Place ID **79393379062358**. Товары и геймпассы созданы (`ProductIds.lua`).
+Публикация обновления: `python3 tools/build_place.py && python3 tools/roblox_open_cloud.py publish --universe 10776447912 --place 79393379062358`.
+
 ## Обновления
 
 Я меняю код → `tools/build_place.py` → `roblox_open_cloud.py publish --universe U --place P` — игра обновляется
