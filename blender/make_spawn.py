@@ -75,6 +75,70 @@ def cone(loc, r1, r2, h, rot=(0, 0, 0), verts=32):
     return bpy.context.active_object
 
 
+def ring(loc, r_in, r_out, h, verts=64):
+    """hollow tube (annulus extruded along z), centred on loc"""
+    import bmesh
+    me = bpy.data.meshes.new("ring")
+    bm = bmesh.new()
+    x, y, z = loc
+    L = []
+    for zz in (z - h / 2, z + h / 2):
+        for r in (r_in, r_out):
+            L.append([bm.verts.new((x + math.cos(k / verts * 2 * math.pi) * r, y + math.sin(k / verts * 2 * math.pi) * r, zz)) for k in range(verts)])
+    bi, bo, ti, to = L
+    for k in range(verts):
+        j = (k + 1) % verts
+        bm.faces.new((bo[k], bo[j], to[j], to[k]))  # outside
+        bm.faces.new((bi[j], bi[k], ti[k], ti[j]))  # inside
+        bm.faces.new((ti[k], to[k], to[j], ti[j]))  # top
+        bm.faces.new((bi[j], bo[j], bo[k], bi[k]))  # bottom
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(me)
+    bm.free()
+    ob = bpy.data.objects.new("ring", me)
+    bpy.context.collection.objects.link(ob)
+    return ob
+
+
+def band(path, half, x0, x1):
+    """closed band along a (y, z) polyline: path = [(y, z, ny, nz)], cross-section +-half along (ny, nz), x0..x1 thick"""
+    import bmesh
+    me = bpy.data.meshes.new("band")
+    bm = bmesh.new()
+    V = [[bm.verts.new((x, y + s * half * ny, z + s * half * nz)) for x, s in ((x0, -1), (x0, 1), (x1, 1), (x1, -1))] for y, z, ny, nz in path]
+    for a, b in zip(V, V[1:]):
+        for k in range(4):
+            bm.faces.new((a[k], a[(k + 1) % 4], b[(k + 1) % 4], b[k]))
+    bm.faces.new(V[0])
+    bm.faces.new(list(reversed(V[-1])))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(me)
+    bm.free()
+    ob = bpy.data.objects.new("band", me)
+    bpy.context.collection.objects.link(ob)
+    return ob
+
+
+def slab(pts_xy, z0, z1):
+    """convex polygon (x, y) extruded from z0 to z1"""
+    import bmesh
+    me = bpy.data.meshes.new("slab")
+    bm = bmesh.new()
+    a = [bm.verts.new((x, y, z0)) for x, y in pts_xy]
+    b = [bm.verts.new((x, y, z1)) for x, y in pts_xy]
+    bm.faces.new(a)
+    bm.faces.new(list(reversed(b)))
+    for i in range(len(a)):
+        j = (i + 1) % len(a)
+        bm.faces.new((a[j], a[i], b[i], b[j]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(me)
+    bm.free()
+    ob = bpy.data.objects.new("slab", me)
+    bpy.context.collection.objects.link(ob)
+    return ob
+
+
 def beam(g, look, a, b, r=0.18, verts=8):
     """cylinder from point a to point b"""
     ax, ay, az = a
@@ -131,12 +195,13 @@ for i in range(n):
     for r in range(2):
         look = "White" if (i + r) % 2 == 0 else "Dark"
         g[look].append(box((-X + 2 + (i + 0.5) * (2 * X - 4) / n, -1.45, H - 4.4 + r * 1.1), ((2 * X - 4) / n, 0.15, 1.1)))
-# start light gantry: 5 pods with 2 lamps each
-g["Dark"].append(box((0, -1.6, H + 2.2), (14, 1.2, 2.4), bev=0.2))
+# start light gantry: sits on the bridge truss (its bottom 0.2 below the front top chord at z H - 0.2, y -1.3)
+GZ = H - 0.2 - 0.2 + 1.2
+g["Dark"].append(box((0, -1.6, GZ), (14, 1.2, 2.4), bev=0.2))
 for k in range(5):
     x = -5.2 + k * 2.6
-    g["Dark"].append(cyl((x, -2.25, H + 2.2), 0.95, 0.4, rot=(math.pi / 2, 0, 0)))
-    g["Glow"].append(cyl((x, -2.5, H + 2.2), 0.7, 0.12, rot=(math.pi / 2, 0, 0)))
+    g["Dark"].append(cyl((x, -2.25, GZ), 0.95, 0.4, rot=(math.pi / 2, 0, 0)))
+    g["Glow"].append(cyl((x, -2.5, GZ), 0.7, 0.12, rot=(math.pi / 2, 0, 0)))
 # hazard sleeves at the tower feet
 for s in (-1, 1):
     for k in range(4):
@@ -152,18 +217,26 @@ for s in (-1, 1):
     for k in range(5):  # chevron lights up the posts
         g["Glow"].append(box((1.15, s * W2, 2 + k * 2), (0.12, 1.0, 0.5)))
 # arch: segments of a half circle on top
-seg = 18
+# (one swept band from post top to post top, so no overlapping segment faces), stripe pieces butt end to end
+seg, sub = 18, 4
+
+
+def arc(i0, i1):
+    pts = []
+    for k in range(i0 * sub, i1 * sub + 1):
+        a = math.pi * k / (seg * sub)
+        ty, tz = -math.sin(a) * W2, math.cos(a) * 4.2  # tangent
+        tl = math.hypot(ty, tz)
+        pts.append((math.cos(a) * W2, H2 + math.sin(a) * 4.2, tz / tl, -ty / tl))
+    return pts
+
+
+g["Dark"].append(band(arc(0, seg), 0.9, -1.1, 1.1))
 for i in range(seg):
-    a0, a1 = math.pi * i / seg, math.pi * (i + 1) / seg
-    y0, z0 = math.cos(a0) * W2, H2 + math.sin(a0) * 4.2
-    y1, z1 = math.cos(a1) * W2, H2 + math.sin(a1) * 4.2
-    b = box((0, (y0 + y1) / 2, (z0 + z1) / 2), (2.2, math.dist((y0, z0), (y1, z1)) + 0.3, 1.8), rot=(math.atan2(z1 - z0, y1 - y0), 0, 0))
-    g["Dark"].append(b)
-    g["Yellow" if i % 2 == 0 else "Dark"].append(box((1.15, (y0 + y1) / 2, (z0 + z1) / 2), (0.1, math.dist((y0, z0), (y1, z1)) + 0.1, 0.5), rot=(math.atan2(z1 - z0, y1 - y0), 0, 0)))
-# big arrow on the ground in front (pointing in, -X)
-g["Yellow"].append(box((4, 0, 0.05), (4.0, 1.2, 0.1)))
-for s in (-1, 1):
-    g["Yellow"].append(box((1.8, s * 0.9, 0.05), (2.6, 0.9, 0.1), rot=(0, 0, s * math.radians(40))))
+    g["Yellow" if i % 2 == 0 else "Dark"].append(band(arc(i, i + 1), 0.25, 1.1, 1.2))
+# big arrow on the ground in front (pointing in, -X): shaft + head, butting, not overlapping
+g["Yellow"].append(box((4.2, 0, 0.05), (3.6, 1.2, 0.1)))
+g["Yellow"].append(slab([(0.6, 0), (2.4, -1.9), (2.4, 1.9)], 0, 0.1))
 roots.append(finish("PortalGate", g))
 
 # ---------------------------------------------------------------- CarStand: glossy turntable podium with light ring + plinth
@@ -172,19 +245,22 @@ g["Marble"].append(cyl((0, 0, 0.35), 11, 0.7, verts=64))
 g["Dark"].append(cyl((0, 0, 0.95), 10, 0.5, verts=64))
 g["Glow"].append(torus((0, 0, 1.2), 10.05, 0.12, seg=96, minor=6))
 g["Chrome"].append(cyl((0, 0, 1.25), 9.6, 0.12, verts=64))
-for k in range(12):  # turntable seams
+# turntable seams: tops 0.08 above the disc (1.31), running out from a hub (top 1.45) so they never overlap each other
+g["Dark"].append(cyl((0, 0, 1.275), 0.9, 0.35, verts=24))
+for k in range(12):
     a = k / 12 * 2 * math.pi
-    g["Dark"].append(box((math.cos(a) * 4.8, math.sin(a) * 4.8, 1.33), (9.2, 0.06, 0.04), rot=(0, 0, a)))
+    g["Dark"].append(box((math.cos(a) * 5.1, math.sin(a) * 5.1, 1.32), (8.6, 0.08, 0.14), rot=(0, 0, a)))
 g["Dark"].append(box((0, -12.2, 1.6), (4.2, 1.4, 3.2), bev=0.2))  # info plinth (screen added in Luau)
 g["Gold"].append(box((0, -12.2, 3.3), (4.4, 1.6, 0.2), bev=0.05))
 roots.append(finish("CarStand", g))
 
 # ---------------------------------------------------------------- TrophyFountain: round basin, water, gold trophy on a pedestal
 g = G("Marble", "Water", "Gold", "Dark", "Glow")
-g["Marble"].append(cyl((0, 0, 0.6), 9, 1.2, verts=64))
-g["Water"].append(cyl((0, 0, 1.05), 8.2, 0.3, verts=64))
+g["Marble"].append(ring((0, 0, 0.6), 8.2, 9, 1.2))  # basin wall, top 1.2
+g["Marble"].append(cyl((0, 0, 0.3), 8.6, 0.6, verts=64))  # basin floor, top 0.6
+g["Water"].append(cyl((0, 0, 0.84), 8.25, 0.48, verts=64))  # water surface 1.08 = 0.12 below the rim top
 g["Marble"].append(torus((0, 0, 1.25), 8.6, 0.45, seg=96, minor=10))
-g["Marble"].append(cyl((0, 0, 2.6), 2.2, 3.0, verts=32))
+g["Marble"].append(cyl((0, 0, 2.35), 2.2, 3.5, verts=32))  # pedestal stands on the basin floor
 g["Marble"].append(cyl((0, 0, 4.25), 2.8, 0.3, verts=32))
 # trophy: foot, stem, cup, handles
 g["Gold"].append(cyl((0, 0, 4.7), 1.6, 0.6, verts=32))
@@ -195,10 +271,10 @@ g["Gold"].append(cup)
 g["Gold"].append(torus((0, 0, 10.3), 2.6, 0.2, seg=48))
 for s in (-1, 1):
     g["Gold"].append(torus((s * 2.5, 0, 8.8), 1.0, 0.18, rot=(math.pi / 2, 0, 0), seg=32))
-g["Dark"].append(box((0, -2.9, 2.6), (2.2, 0.1, 1.2)))  # plaque
+g["Dark"].append(box((0, -2.25, 2.6), (1.8, 0.3, 1.2)))  # plaque, back 0.1 into the pedestal
 for k in range(8):  # water jets (glowing spouts)
     a = k / 8 * 2 * math.pi
-    g["Glow"].append(cyl((math.cos(a) * 6.5, math.sin(a) * 6.5, 1.25), 0.25, 0.2, verts=12))
+    g["Glow"].append(cyl((math.cos(a) * 6.5, math.sin(a) * 6.5, 1.1), 0.25, 0.4, verts=12))
 roots.append(finish("TrophyFountain", g))
 
 # ---------------------------------------------------------------- Grandstand: 4 seat rows, roof on posts, flags (front = -Y)
@@ -230,7 +306,7 @@ g["Dark"].append(box((0, -0.2, SZ + SH + 2.2), (10, 1.0, 3.0), bev=0.3))  # crow
 g["Gold"].append(cone((0, -0.8, SZ + SH + 2.2), 1.0, 0.0, 0.3, rot=(math.pi / 2, 0, 0), verts=5))
 for s in (-1, 1):
     g["Metal"].append(box((s * (SW / 2 - 2), 0.4, SZ / 2), (1.2, 1.2, SZ), bev=0.15))
-    g["Glow"].append(box((s * (SW / 2 + 0.85), -0.3, SZ + SH / 2), (0.15, 0.6, SH)))
+    g["Glow"].append(box((s * (SW / 2 + 0.85), -0.4, SZ + SH / 2), (0.15, 0.6, SH)))  # front 0.1 before the frame
 # podium: 2nd (left), 1st (centre), 3rd (right), y = in front of the screen
 for x, h, look in ((-6, 3, "White"), (0, 4.5, "Gold"), (6, 2, "Marble")):
     g[look].append(box((x, -6, h / 2), (5.6, 5, h), bev=0.15))
@@ -249,7 +325,7 @@ for k in range(8):
     a = k / 8 * 2 * math.pi
     for j in range(4):
         d = 1.0 + j * 1.2
-        g["Leaf"].append(box((top[0] + math.cos(a) * d, math.sin(a) * d, top[2] - j * j * 0.25), (1.6, 0.9 - j * 0.12, 0.12), rot=(0, math.radians(15 + j * 10), a)))
+        g["Leaf"].append(box((top[0] + math.cos(a) * d, math.sin(a) * d, top[2] - (0, 0.25, 1.0, 2.0)[j]), (1.6, 0.9 - j * 0.12, 0.12), rot=(0, math.radians(15 + j * 10), a)))
 roots.append(finish("Planter", g))
 
 # ---------------------------------------------------------------- StreetLamp: double-arm lamp
@@ -269,10 +345,10 @@ g = G("Yellow", "White", "Dark", "Glass", "Rubber", "Chrome", "Accent")
 g["Yellow"].append(box((-1.2, 0, 4.2), (10, 6.2, 6.0), bev=0.5))
 g["Yellow"].append(box((5.3, 0, 3.0), (3.2, 6.0, 3.6), bev=0.6))
 g["Glass"].append(box((6.8, 0, 3.9), (0.2, 5.2, 1.6), rot=(0, math.radians(-15), 0)))
-g["Dark"].append(box((-1.2, -3.12, 4.6), (6.0, 0.1, 2.4)))  # serving window
+g["Dark"].append(box((-1.2, -3.12, 4.6), (6.0, 0.2, 2.4)))  # serving window, 0.12 proud
 g["White"].append(box((-1.2, -3.4, 3.35), (6.2, 0.7, 0.2)))  # counter
 for k in range(8):  # striped awning
-    g["Accent" if k % 2 == 0 else "White"].append(box((-4.0 + k * 0.8, -4.2, 6.2), (0.8, 2.2, 0.1), rot=(math.radians(-18), 0, 0)))
+    g["Accent" if k % 2 == 0 else "White"].append(box((-4.0 + k * 0.8, -4.05, 6.2), (0.8, 2.2, 0.1), rot=(math.radians(-18), 0, 0)))
 for x in (-4.5, 4.8):
     for s in (-1, 1):
         g["Rubber"].append(cyl((x, s * 2.9, 1.1), 1.1, 0.8, rot=(math.pi / 2, 0, 0), verts=24))
@@ -289,7 +365,7 @@ for k in range(2):
     g["Wood"].append(box((0, 0.75, 2.2 + k * 0.5), (6, 0.12, 0.35), bev=0.03))
 for s in (-1, 1):
     g["Dark"].append(box((s * 2.6, 0, 0.8), (0.25, 1.6, 1.6)))
-    g["Dark"].append(box((s * 2.6, 0.75, 2.2), (0.25, 0.15, 1.6)))
+    g["Dark"].append(box((s * 2.6, 0.75, 2.2), (0.12, 0.3, 1.6)))
 roots.append(finish("Bench", g))
 
 # ---------------------------------------------------------------- StringLightPole: pole with a crossbar of bulbs
@@ -299,7 +375,8 @@ g["Dark"].append(cyl((0, 0, 0.3), 0.6, 0.6, verts=12))
 for k in range(9):
     x = -4 + k
     sag = 11.4 - 0.5 * (1 - (x / 4) ** 2)
-    g["Glow"].append(sphere((x, 0, sag), 0.22, 10))
+    if x != 0:  # the centre bulb would wrap around the pole
+        g["Glow"].append(sphere((x, 0, sag), 0.22, 10))
     beam(g, "Dark", (x - 0.5, 0, 11.4 - 0.5 * (1 - ((x - 0.5) / 4) ** 2)), (x + 0.5, 0, 11.4 - 0.5 * (1 - ((x + 0.5) / 4) ** 2)), 0.03, 4)
 roots.append(finish("StringLightPole", g))
 
@@ -312,17 +389,23 @@ for r in roots:
 print("spawn ok", tris)
 # real sizes (studs) so ModelService can undo any unit conversion of the FBX importer
 from mathutils import Vector
-lines = ["-- generated by blender/make_spawn.py: longest side (studs) and bounding-box centre relative to the model origin",
-         "-- in Roblox axes (x, up, z) so ModelService can put the pivot back on the Blender origin", "return {"]
+import re
+sizes_path = os.path.join(mc.ROOT, "src", "ReplicatedStorage", "Shared", "ModelSizes.lua")
+existing = open(sizes_path).read() if os.path.exists(sizes_path) else ""
+entries = dict(re.findall(r"\n\t(\w+) = (\{ size = .*? \} \}),", existing))
 for r in roots:
     pts = [c.matrix_world @ Vector(v) for c in r.children for v in c.bound_box]
     lo = [min(p[i] for p in pts) for i in range(3)]
     hi = [max(p[i] for p in pts) for i in range(3)]
     ext = max(hi[i] - lo[i] for i in range(3))
     cx, cy, cz = [(lo[i] + hi[i]) / 2 for i in range(3)]
-    lines.append(f"\t{r.name} = {{ size = {ext:.2f}, c = {{ {cx:.2f}, {cz:.2f}, {-cy:.2f} }} }},")
+    entries[r.name] = f"{{ size = {ext:.2f}, c = {{ {cx:.2f}, {cz:.2f}, {-cy:.2f} }} }}"
+lines = ["-- generated by blender/make_spawn.py + make_city.py: longest side (studs), bounding-box centre relative to the",
+         "-- model origin in Roblox axes (x, up, z), footprint w/d. ModelService puts the pivot back on the Blender origin.", "return {"]
+for k in sorted(entries):
+    lines.append(f"\t{k} = {entries[k]},")
 lines.append("}")
-open(os.path.join(mc.ROOT, "src", "ReplicatedStorage", "Shared", "ModelSizes.lua"), "w").write("\n".join(lines) + "\n")
+open(sizes_path, "w").write("\n".join(lines) + "\n")
 
 if "--render" in sys.argv:
     from mathutils import Vector
