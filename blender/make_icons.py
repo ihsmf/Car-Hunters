@@ -1,5 +1,7 @@
 """HUD icons rendered from real 3D models (transparent PNG, 256x256) -> assets/icons/<name>.png.
 Parts come from make_parts.py; coin, shop bag, clipboard and backpack are modelled here.
+Every icon is fitted to its real silhouette (object fills ~88% of the canvas, 6% margin, never cropped) and lit bright
+with lighter "icon" versions of the dark looks so the small HUD buttons stay readable.
 Render only some icons:  python3 blender/make_icons.py --only teleport,garage   (or ICONS_ONLY=teleport,garage)."""
 import math, os, runpy, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -89,7 +91,7 @@ for s_, look in ((1, "Blue"), (-1, "Gold")):
     g[look].append(cone((s_ * 1.35, 0, 1.4 + s_ * 0.55), 0.55, 0.0, 0.8, rot=(0, s_ * math.pi / 2, 0), verts=4))
 roots["trade"] = finish("trade", g)
 
-# ---------------------------------------------------------------- menu icons (fitted framing, see FIT)
+# ---------------------------------------------------------------- menu icons
 def sphere(loc, r, scale=(1, 1, 1), rot=(0, 0, 0)):
     bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=r, location=loc, rotation=rot)
     o = bpy.context.active_object
@@ -140,7 +142,6 @@ def face_camera(root, f):
     root.rotation_euler = Quaternion().slerp(q, f).to_euler()
 
 
-FIT = set()
 HW = math.atan2(HVIEW.x, -HVIEW.y)  # z rotation that turns the -Y axis towards the camera
 
 # teleport: toy rocket leaning up-right, flame underneath
@@ -167,7 +168,6 @@ for o in g["Accent"][-3:]:
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
 roots["teleport"] = finish("teleport", g)
 roots["teleport"].rotation_euler = Quaternion(-HVIEW, 0.55).to_euler()  # lean the nose to the upper right of the image
-FIT.add("teleport")
 
 # garage: building with a roller door and a checkered flag on the roof
 g = {"Cream": [], "Accent": [], "Metal": [], "Dark": [], "White": [], "Chrome": []}
@@ -185,7 +185,6 @@ for i in range(4):
         look = "White" if (i + j) % 2 == 0 else "Dark"
         g[look].append(box((0.9 - 0.2 - i * 0.3, 0.3, 3.45 - j * 0.3), (0.3, 0.08, 0.3)))
 roots["garage"] = finish("garage", g)
-FIT.add("garage")
 
 # index: car collection album (cover facing the camera, pages on the side, gold car on the cover)
 g = {"Blue": [], "White": [], "Gold": [], "Dark": []}
@@ -202,7 +201,6 @@ for x in (-0.48, 0.48):
     g["Gold"].append(cyl((x, -0.2, 1.05), 0.1, 0.12, rot=Y90, verts=16))
 roots["index"] = finish("index", g)
 face_camera(roots["index"], 0.35)
-FIT.add("index")
 
 # rebirth: two chunky arrows chasing each other around a circle (gold + teal)
 g = {"Gold": [], "Teal": []}
@@ -217,7 +215,6 @@ for look, a0 in (("Gold", math.radians(25)), ("Teal", math.radians(205))):
     g[look].append(head)
 roots["rebirth"] = finish("rebirth", g)
 face_camera(roots["rebirth"], 0.8)
-FIT.add("rebirth")
 
 # settings: metal cog with a gold hub
 g = {"Metal": [], "Gold": [], "Dark": []}
@@ -233,7 +230,6 @@ g["Gold"].append(hub)
 g["Dark"].append(cyl((0, -0.2, 0), 0.24, 0.5, rot=(math.pi / 2, 0, 0), verts=32))
 roots["settings"] = finish("settings", g)
 face_camera(roots["settings"], 0.75)
-FIT.add("settings")
 
 # home: house with a red roof, door and windows
 g = {"Cream": [], "Accent": [], "Wood": [], "Gold": [], "Blue": [], "White": []}
@@ -256,7 +252,6 @@ g["Blue"].append(box((-0.5, -1.03, 0.95), (0.48, 0.08, 0.48)))
 g["White"].append(box((1.1, 0.0, 0.95), (0.08, 0.62, 0.62)))
 g["Blue"].append(box((1.13, 0.0, 0.95), (0.08, 0.48, 0.48)))
 roots["home"] = finish("home", g)
-FIT.add("home")
 
 # music: two beamed eighth notes
 g = {"Blue": [], "Gold": []}
@@ -268,7 +263,6 @@ g["Gold"].append(beam)
 g["Gold"].append(slab([(-0.68, 1.75), (0.92, 2.15), (0.92, 2.42), (-0.68, 2.02)], -0.14, 0.28))
 roots["music"] = finish("music", g)
 face_camera(roots["music"], 0.7)
-FIT.add("music")
 
 # scene: transparent background, key + rim + fill
 sc = bpy.context.scene
@@ -281,11 +275,29 @@ sc.render.resolution_x = sc.render.resolution_y = 256
 sc.render.image_settings.file_format = "PNG"
 sc.render.image_settings.color_mode = "RGBA"
 sc.view_settings.view_transform = "Standard"
+sc.view_settings.look = "Medium High Contrast"  # a touch of contrast = darker edges / soft rim around the bright faces
+sc.view_settings.exposure = 0.0
 world = bpy.data.worlds.new("w")
 world.use_nodes = True
-world.node_tree.nodes["Background"].inputs[0].default_value = (0.75, 0.8, 0.9, 1)
-world.node_tree.nodes["Background"].inputs[1].default_value = 0.7
+world.node_tree.nodes["Background"].inputs[0].default_value = (0.85, 0.88, 0.95, 1)
+world.node_tree.nodes["Background"].inputs[1].default_value = 0.8
 sc.world = world
+
+# icon-only material tweaks (nothing is exported from here): lift the near-black looks, saturate the colours
+ICON_LOOK = {
+    "Rubber": ((0.2, 0.2, 0.22, 1), 0.0, 0.32), "Dark": ((0.16, 0.17, 0.2, 1), 0.5, 0.35), "Carbon": ((0.16, 0.16, 0.18, 1), 0.3, 0.3),
+    "Metal": ((0.75, 0.77, 0.8, 1), 0.85, 0.3), "Chrome": ((0.95, 0.96, 0.98, 1), 1.0, 0.12),
+    "Accent": ((0.95, 0.07, 0.05, 1), 0.1, 0.3), "Blue": ((0.05, 0.35, 1.0, 1), 0.2, 0.25), "Green": ((0.05, 0.6, 0.2, 1), 0.0, 0.4),
+    "Gold": ((1.0, 0.75, 0.15, 1), 1.0, 0.22), "Copper": ((0.9, 0.45, 0.2, 1), 1.0, 0.28),
+}
+for m in bpy.data.materials:
+    look = m.name.split(".")[0]
+    if look in ICON_LOOK and m.use_nodes:
+        col, metal, rough = ICON_LOOK[look]
+        bsdf = m.node_tree.nodes.get("Principled BSDF")
+        bsdf.inputs["Base Color"].default_value = col
+        bsdf.inputs["Metallic"].default_value = metal
+        bsdf.inputs["Roughness"].default_value = rough
 
 
 def light(name, kind, energy, loc, size=4):
@@ -299,9 +311,10 @@ def light(name, kind, energy, loc, size=4):
     sc.collection.objects.link(o)
 
 
-light("key", "AREA", 900, (6, -8, 9), 6)
-light("rim", "AREA", 700, (-7, 6, 6), 4)
-light("fill", "AREA", 250, (-6, -8, 2), 8)
+light("key", "AREA", 1200, (6, -8, 9), 6)
+light("rim", "AREA", 900, (-7, 6, 6), 4)
+light("fill", "AREA", 400, (-6, -8, 2), 8)
+light("top", "AREA", 250, (0, 0, 12), 10)
 cam = bpy.data.cameras.new("cam")
 cam.type = "ORTHO"
 co = bpy.data.objects.new("cam", cam)
@@ -329,15 +342,14 @@ for name, r in roots.items():
     view = Vector((1.0, -1.25, 0.8)).normalized() if name not in ("coin",) else Vector((-1.0, -0.3, 0.2)).normalized()
     co.location = centre + view * (ext * 4)
     co.rotation_euler = (centre - co.location).to_track_quat("-Z", "Y").to_euler()
-    cam.ortho_scale = ext * (1.5 if name in ("gift", "trade") else 1.18)
-    if name in FIT:  # fit the real silhouette with ~10% margin on every side
-        rot = co.rotation_euler.to_matrix()
-        right, up = rot.col[0], rot.col[1]
-        vs = [c.matrix_world @ v.co for c in r.children for v in c.data.vertices]
-        xs, ys = [v.dot(right) for v in vs], [v.dot(up) for v in vs]
-        cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
-        co.location = co.location + right * (cx - co.location.dot(right)) + up * (cy - co.location.dot(up))
-        cam.ortho_scale = max(max(xs) - min(xs), max(ys) - min(ys)) / 0.8
+    # fit the real silhouette: long side = 88% of the frame (6% margin on each side), centred
+    rot = co.rotation_euler.to_matrix()
+    right, up = rot.col[0], rot.col[1]
+    vs = [c.matrix_world @ v.co for c in r.children for v in c.data.vertices]
+    xs, ys = [v.dot(right) for v in vs], [v.dot(up) for v in vs]
+    cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+    co.location = co.location + right * (cx - co.location.dot(right)) + up * (cy - co.location.dot(up))
+    cam.ortho_scale = max(max(xs) - min(xs), max(ys) - min(ys)) / 0.88
     sc.render.filepath = os.path.join(OUT, key + ".png")
     bpy.ops.render.render(write_still=True)
 print("icons ok", sorted(ONLY) if ONLY else sorted(os.listdir(OUT)))

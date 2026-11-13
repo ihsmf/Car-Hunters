@@ -17,7 +17,7 @@ GarageKit.Style = {
 GarageKit.Paint = {
 	Floor = "floor", Inlay = "inlay", DriveLine = "line", BayLine = "line", BackWall = "wall", SideFin = "wall",
 	Roof = "deck", OwnerSign = "frame", FloorSign = "frame", Column = "frame", ElevatorPad = "frame", ElevatorPost = "frame",
-	ElevatorStripe = "accent", TrapEdge = "accent", LiftPost = "accent2", LiftBeam = "accent2", Rail = "frame", RailPost = "frame",
+	LiftBridge = "frame", TrapEdge = "accent", LiftPost = "accent2", LiftBeam = "accent2", Rail = "frame", RailPost = "frame",
 	PortalPost = "frame", PortalHeader = "frame", PortalDoor = "door", Terminal = "frame", WheelStop = "accent",
 }
 
@@ -85,24 +85,24 @@ function GarageKit.Lift(mk, y0, H, frame, accent)
 		mk("LiftGlass", Vector3.new(8, H - 1.2, 0.2), Vector3.new(el.X, y0 + H / 2 - 0.3, el.Z + sz * 4.3), GLASS, M.Glass, { t = 0.55 })
 	end
 	mk("LiftCanopy", Vector3.new(9.4, 0.5, 9.4), Vector3.new(el.X, y0 + H - 0.55, el.Z), frame, M.Metal)
-	local sign = mk("LiftSign", Vector3.new(0.3, 1.2, 4), Vector3.new(el.X - 4.75, y0 + H - 1.6, el.Z), C(20, 24, 34), M.SmoothPlastic, { collide = false })
+	local sign = mk("LiftSign", Vector3.new(0.3, 1.4, 4), Vector3.new(el.X - 4.75, y0 + H - 1.42, el.Z), C(20, 24, 34), M.SmoothPlastic, { collide = false })
 	GarageKit.Label(sign, Enum.NormalId.Left, "LIFT", accent)
 	-- call panel on the front post: a small plate with two lit buttons
-	mk("LiftPanel", Vector3.new(0.25, 1.6, 0.8), Vector3.new(el.X - 4.75, y0 + 4, el.Z - 3.2), C(40, 44, 52), M.Metal, { collide = false })
+	mk("LiftPanel", Vector3.new(0.35, 1.6, 0.8), Vector3.new(el.X - 4.7, y0 + 4, el.Z - 4.3), C(40, 44, 52), M.Metal, { collide = false })
 	for i, dy in ipairs({ 0.35, -0.35 }) do
-		mk("LiftButton" .. i, Vector3.new(0.12, 0.35, 0.35), Vector3.new(el.X - 4.94, y0 + 4 + dy, el.Z - 3.2), accent, M.Neon, { collide = false, cast = false })
+		mk("LiftButton" .. i, Vector3.new(0.2, 0.35, 0.35), Vector3.new(el.X - 4.9, y0 + 4 + dy, el.Z - 4.3), accent, M.Neon, { collide = false, cast = false })
 	end
 end
 
 function GarageKit.Bay(slotsFolder, model, bcf, slot, topY, style)
 	style = style or GarageKit.Style
 	local p = BaseLayout.SlotLocal(slot)
-	local pad = part(slotsFolder, "Slot" .. slot, Vector3.new(22, 0.06, 12.4), bcf * CFrame.new(p.X, topY + 0.03, p.Z), style.bay, M.SmoothPlastic, { collide = false, cast = false })
+	local pad = part(slotsFolder, "Slot" .. slot, Vector3.new(22, 0.1, 12.4), bcf * CFrame.new(p.X, topY + 0.05, p.Z), style.bay, M.SmoothPlastic, { collide = false, cast = false })
 	local num = GarageKit.Label(pad, Enum.NormalId.Top, tostring(slot), style.line)
 	num.TextTransparency = 0.45
 	num.Rotation = 90
 	for _, s in ipairs({ -1, 1 }) do
-		part(model, "BayLine", Vector3.new(22, 0.06, 0.3), bcf * CFrame.new(p.X, topY + 0.03, p.Z + s * 6.4), style.line, M.SmoothPlastic, { collide = false, cast = false })
+		part(model, "BayLine", Vector3.new(22, 0.1, 0.3), bcf * CFrame.new(p.X, topY + 0.05, p.Z + s * 6.4), style.line, M.SmoothPlastic, { collide = false, cast = false })
 	end
 	part(model, "WheelStop", Vector3.new(0.6, 0.4, 5), bcf * CFrame.new(p.X - 10.6, topY + 0.2, p.Z), style.accent, M.SmoothPlastic)
 	return pad
@@ -137,14 +137,14 @@ function GarageKit.BuildFloor(parent, bcf, f, style)
 	for _, seg in ipairs({ { -PZ + 1, gapA }, { gapB, PZ - 1 } }) do
 		local len = seg[2] - seg[1]
 		if len > 1 then
-			mk("Rail", Vector3.new(0.3, 0.3, len), Vector3.new(EDGE - 0.3, y0 + 3.4, (seg[1] + seg[2]) / 2), style.frame, M.Metal)
+			mk("Rail", Vector3.new(0.3, 0.3, len), Vector3.new(EDGE - 1, y0 + 3.4, (seg[1] + seg[2]) / 2), style.frame, M.Metal)
 			for z = seg[1], seg[2], 6 do
-				mk("RailPost", Vector3.new(0.3, 3.4, 0.3), Vector3.new(EDGE - 0.3, y0 + 1.7, z), style.frame, M.Metal)
+				mk("RailPost", Vector3.new(0.3, 3.4, 0.3), Vector3.new(EDGE - 1, y0 + 1.7, z), style.frame, M.Metal)
 			end
 		end
 	end
 	for _, z in ipairs({ -30, 0, 30 }) do
-		local lamp = mk("CeilingLight", Vector3.new(12, 0.12, 1.6), Vector3.new(-31, f * H - 0.6, z), C(255, 244, 222), M.Neon, { collide = false, cast = false })
+		local lamp = mk("CeilingLight", Vector3.new(12, 0.24, 1.6), Vector3.new(-31, f * H - 0.56, z), C(255, 244, 222), M.Neon, { collide = false, cast = false })
 		local sl = Instance.new("SurfaceLight")
 		sl.Face = Enum.NormalId.Bottom
 		sl.Range = 18
@@ -154,6 +154,8 @@ function GarageKit.BuildFloor(parent, bcf, f, style)
 		sl.Parent = lamp
 	end
 	GarageKit.Lift(mk, y0, H, style.frame, style.accent)
+	mk("ElevatorPad", Vector3.new(8, 0.4, 8), Vector3.new(el.X, y0 + 0.2, el.Z), style.frame, M.Metal)
+	mk("LiftBridge", Vector3.new(2.2, 0.3, 8), Vector3.new(EDGE + 1.9, y0 + 0.15, el.Z), style.frame, M.Metal)
 	local slots = Instance.new("Folder")
 	slots.Name = "Slots"
 	slots.Parent = m

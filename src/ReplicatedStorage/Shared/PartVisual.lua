@@ -130,7 +130,7 @@ function PartVisual.Build(partId)
 	end
 
 	add("Halo", Vector3.new(0.15, 5.5, 5.5), CFrame.new(0, -2.55, 0) * upright, col, Enum.Material.SmoothPlastic, 0.25, CYL)
-	add("HaloCore", Vector3.new(0.17, 4.3, 4.3), CFrame.new(0, -2.55, 0) * upright, Color3.fromRGB(30, 32, 38), Enum.Material.SmoothPlastic, 0.25, CYL)
+	add("HaloCore", Vector3.new(0.15, 4.3, 4.3), CFrame.new(0, -2.45, 0) * upright, Color3.fromRGB(30, 32, 38), Enum.Material.SmoothPlastic, 0.25, CYL)
 
 	if def.rarity == "Epic" or def.rarity == "Legendary" then
 		local pe = Instance.new("ParticleEmitter")

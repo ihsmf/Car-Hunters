@@ -45,7 +45,7 @@ local function spawnAt(pt)
 	end
 	local partId = Util.WeightedPick(entries, rng:NextNumber())
 	local model = PartVisual.Build(partId)
-	model:PivotTo(CFrame.new(pt.pos + Vector3.new(0, 3, 0)))
+	model:PivotTo(CFrame.new(pt.pos + Vector3.new(0, 3.6, 0))) -- glow ring stays >= 0.3 above the ground at the bob minimum
 	model:SetAttribute("PointId", pt.id)
 	model:SetAttribute("Risk", pt.risk)
 	model:SetAttribute("Amount", PartSpawn.Amount(pt))

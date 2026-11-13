@@ -382,10 +382,10 @@ function Prefabs.Gantry(parent, x, z0, width, text, accent)
 		Part(parent, "GantryPost", Vector3.new(1.4, 20, 1.4), CFrame.new(x, 10.8, z0 + s * (width / 2 + 3)), C(150, 154, 162), M.Metal)
 	end
 	Part(parent, "GantryBeam", Vector3.new(1.6, 1.6, width + 8), CFrame.new(x, 20.4, z0), C(150, 154, 162), M.Metal)
-	local b = Part(parent, "GantrySign", Vector3.new(0.6, 5, width * 0.6), CFrame.new(x, 17, z0), C(30, 120, 70), M.SmoothPlastic)
+	local b = Part(parent, "GantrySign", Vector3.new(0.6, 5.2, width * 0.6), CFrame.new(x, 17.1, z0), C(30, 120, 70), M.SmoothPlastic)
 	Label(b, Enum.NormalId.Left, text, C(255, 255, 255))
-	Label(b, Enum.NormalId.Right, text, C(255, 255, 255))
-	Part(parent, "GantryTrim", Vector3.new(0.7, 0.3, width * 0.6), CFrame.new(x, 14.4, z0), accent, M.Neon, { collide = false })
+	Label(b, Enum.NormalId.Right, (text:gsub("%s*[<>]+%s*", "  ")), C(255, 255, 255)) -- arrows only on the side they point right
+	Part(parent, "GantryTrim", Vector3.new(0.7, 0.3, width * 0.6 + 0.2), CFrame.new(x, 14.4, z0), accent, M.Neon, { collide = false })
 end
 
 -- concrete barrier / barrel: Blender model or a block
@@ -536,8 +536,8 @@ end
 
 function B.billboard(parent, cf, w, d, h, pal, rng)
 	local mk = mkb(parent, cf)
-	mk("PostL", Vector3.new(1.4, 20, 1.4), Vector3.new(-w / 3, 10, 0), DARK, M.Metal)
-	mk("PostR", Vector3.new(1.4, 20, 1.4), Vector3.new(w / 3, 10, 0), DARK, M.Metal)
+	mk("PostL", Vector3.new(1.4, 29, 1.4), Vector3.new(-w / 3, 14.5, 1.1), DARK, M.Metal)
+	mk("PostR", Vector3.new(1.4, 29, 1.4), Vector3.new(w / 3, 14.5, 1.1), DARK, M.Metal)
 	local b = mk("Board", Vector3.new(w, 12, 1), Vector3.new(0, 24, 0), C(20, 22, 30))
 	local msgs = { "TURBO FUEL", "FAST LANE", "HUNT THE CARS", "NITRO DRINK", "ROAD KING" }
 	local t = pick(rng, msgs)
@@ -670,9 +670,10 @@ function B.holosign(parent, cf, w, d, h, pal, rng)
 	local mk = mkb(parent, cf)
 	mk("Pole", Vector3.new(1.2, 12, 1.2), Vector3.new(0, 6, 0), DARK, M.Metal)
 	local s = mk("Holo", Vector3.new(w, 10, 0.5), Vector3.new(0, 17, 0), pal.accent2, M.Neon, { t = 0.55, collide = false })
-	Label(s, Enum.NormalId.Front, pick(rng, { "HUNT", "SPEED", "NEON", "WIN" }), C(255, 255, 255))
-	Label(s, Enum.NormalId.Back, "HUNT", C(255, 255, 255))
-	mk("Frame", Vector3.new(w + 1, 0.6, 0.8), Vector3.new(0, 22.2, 0), pal.accent, M.Neon)
+	local word = pick(rng, { "HUNT", "SPEED", "NEON", "WIN" })
+	Label(s, Enum.NormalId.Front, word, C(255, 255, 255))
+	Label(s, Enum.NormalId.Back, word, C(255, 255, 255))
+	mk("Frame", Vector3.new(w + 1, 0.6, 0.8), Vector3.new(0, 22, 0), pal.accent, M.Neon)
 	mk("FrameB", Vector3.new(w + 1, 0.6, 0.8), Vector3.new(0, 11.8, 0), pal.accent, M.Neon)
 end
 

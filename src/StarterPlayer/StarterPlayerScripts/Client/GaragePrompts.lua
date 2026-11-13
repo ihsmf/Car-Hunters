@@ -75,7 +75,10 @@ local function rebuild()
 		end
 	end
 	table.sort(carKey)
-	local key = table.concat({ st.baseIndex, st.slots, floors, table.concat(carKey, ",") }, ":")
+	-- affordability is part of the key: the price tags turn green the moment the money is there
+	local canBay = store.Money >= (EconomyConfig.SlotCosts[st.slots + 1] or math.huge)
+	local canFloor = store.Money >= (EconomyConfig.FloorCosts[floors + 1] or math.huge)
+	local key = table.concat({ st.baseIndex, st.slots, floors, tostring(canBay), tostring(canFloor), table.concat(carKey, ",") }, ":")
 	if key == sig then
 		return
 	end

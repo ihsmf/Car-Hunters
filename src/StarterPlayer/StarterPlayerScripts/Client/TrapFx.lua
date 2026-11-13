@@ -174,7 +174,7 @@ local function body(res, baseIndex, ctx)
 		local lvl = CarConfig.Rarities[res.rarity].index
 		local rc = CarConfig.Rarities[res.rarity].color
 		local bcf = BaseLayout.GetBaseCFrame(baseIndex)
-		local padPos = bcf:PointToWorldSpace(BaseLayout.TrapLocal) + Vector3.new(0, 1.3, 0)
+		local padPos = bcf:PointToWorldSpace(BaseLayout.TrapLocal) + Vector3.new(0, 1.6, 0)
 		local base = findBase(baseIndex)
 		local magnet = base and base:FindFirstChild("TrapMagnet")
 		local magnetCF = magnet and magnet.CFrame

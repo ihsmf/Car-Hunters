@@ -164,7 +164,7 @@ local function buildWorld(ctx)
 			Part(f.Buildings, "PierCap", Vector3.new(7, 1.2, 7), CFrame.new(x, 26.6, ez), C(232, 226, 214), M.Slate, { collide = false })
 		end
 	end
-	local fin = Part(f.Buildings, "EndSign", Vector3.new(120, 14, 1), CFrame.new(0, 19, zE - 0.5), C(26, 30, 38), M.SmoothPlastic)
+	local fin = Part(f.Buildings, "EndSign", Vector3.new(120, 14, 1.2), CFrame.new(0, 19, zE - 1.5), C(26, 30, 38), M.SmoothPlastic)
 	Label(fin, Enum.NormalId.Front, "END OF THE CITY", C(255, 210, 60))
 end
 
@@ -189,7 +189,7 @@ local function buildBase(ctx, i)
 	-- floor: polished slab + darker showroom inlay under the deck
 	mk("Floor", Vector3.new(PX * 2, 1, PZ * 2), Vector3.new(0, 0, 0), G.floor, M.SmoothPlastic, { refl = 0.04 })
 	mk("Inlay", Vector3.new(deckW, 0.1, PZ * 2), Vector3.new(deckCX, 0.55, 0), G.inlay, M.SmoothPlastic)
-	mk("DriveLine", Vector3.new(0.4, 0.06, PZ * 2 - 6), Vector3.new(BaseLayout.LaneX, 0.53, 0), G.line, M.SmoothPlastic, { collide = false, cast = false })
+	mk("DriveLine", Vector3.new(0.4, 0.1, PZ * 2 - 6), Vector3.new(BaseLayout.LaneX, 0.55, 0), G.line, M.SmoothPlastic, { collide = false, cast = false })
 
 	local slots = Instance.new("Folder")
 	slots.Name = "Slots"
@@ -207,13 +207,13 @@ local function buildBase(ctx, i)
 	mk("Roof", Vector3.new(deckW, 1, PZ * 2), Vector3.new(deckCX, H, 0), G.deck, M.SmoothPlastic)
 	local fascia = mk("OwnerSign", Vector3.new(1.2, 2.4, PZ * 2 + 0.4), Vector3.new(EDGE + 0.4, H + 0.2, 0), G.frame, M.SmoothPlastic)
 	Label(fascia, Enum.NormalId.Right, "FREE GARAGE", C(255, 255, 255))
-	local screen = mk("IncomeScreen", Vector3.new(0.4, 2, 24), Vector3.new(EDGE + 1.2, H - 2.3, 0), G.frame, M.SmoothPlastic)
+	local screen = mk("IncomeScreen", Vector3.new(0.4, 2.4, 24), Vector3.new(EDGE + 1.2, H - 2.1, 0), G.frame, M.SmoothPlastic)
 	Label(screen, Enum.NormalId.Right, "", C(110, 230, 140))
 	for _, z in ipairs({ -PZ + 1, -15.5, 15.5, PZ - 1 }) do
 		mk("Column", Vector3.new(1.2, H - 1, 1.2), Vector3.new(EDGE - 0.8, H / 2, z), G.frame, M.Metal)
 	end
 	for _, z in ipairs({ -30, 0, 30 }) do
-		local lamp = mk("CeilingLight", Vector3.new(12, 0.12, 1.6), Vector3.new(-31, H - 0.6, z), C(255, 244, 222), M.Neon, { collide = false, cast = false, light = true })
+		local lamp = mk("CeilingLight", Vector3.new(12, 0.24, 1.6), Vector3.new(-31, H - 0.56, z), C(255, 244, 222), M.Neon, { collide = false, cast = false, light = true })
 		local sl = Instance.new("SurfaceLight")
 		sl.Face = Enum.NormalId.Bottom
 		sl.Range = 18
@@ -226,18 +226,25 @@ local function buildBase(ctx, i)
 	-- lift shaft (ground stage) to the upper floors
 	local el = BaseLayout.ElevatorLocal
 	mk("ElevatorPad", Vector3.new(8, 0.4, 8), Vector3.new(el.X, 0.7, el.Z), G.frame, M.Metal)
-	mk("ElevatorStripe", Vector3.new(7, 0.06, 0.4), Vector3.new(el.X, 0.95, el.Z - 3.4), G.accent, M.SmoothPlastic, { collide = false, cast = false })
 	GarageKit.Lift(mk, 0.5, H, G.frame, G.accent)
 
 	-- the trap: a clean steel car lift with a magnetic crane
 	local t = BaseLayout.TrapLocal
-	mk("TrapPad", Vector3.new(18, 0.8, 18), Vector3.new(t.X, 0.9, t.Z), C(74, 78, 86), M.Metal)
+	-- v13 look: a stepped stage (dark plinth + steel deck), hazard bands on the deck's SIDE faces (never laid on a top
+	-- face, so nothing can shimmer), a lamp on every post
+	mk("TrapBase", Vector3.new(21, 0.5, 21), Vector3.new(t.X, 0.75, t.Z), C(40, 42, 48), M.Metal)
+	mk("TrapPad", Vector3.new(18, 0.8, 18), Vector3.new(t.X, 1.2, t.Z), C(96, 100, 108), M.DiamondPlate)
 	for _, s in ipairs({ -1, 1 }) do
-		mk("TrapEdge", Vector3.new(17, 0.06, 0.5), Vector3.new(t.X, 1.36, t.Z + s * 8.4), G.accent, M.SmoothPlastic, { collide = false, cast = false })
+		mk("TrapEdge", Vector3.new(18.2, 0.5, 0.3), Vector3.new(t.X, 1.3, t.Z + s * 9.05), G.accent, M.SmoothPlastic, { collide = false, cast = false })
+		mk("TrapEdge", Vector3.new(0.3, 0.5, 17.8), Vector3.new(t.X + s * 9.05, 1.3, t.Z), G.accent, M.SmoothPlastic, { collide = false, cast = false })
 	end
 	for _, sx in ipairs({ -1, 1 }) do
 		for _, sz in ipairs({ -1, 1 }) do
 			mk("LiftPost", Vector3.new(1.2, 13, 1.2), Vector3.new(t.X + sx * 9.6, 7, t.Z + sz * 9.6), G.accent2, M.Metal)
+			local lamp = mk("TrapLamp", Vector3.new(0.8, 0.5, 0.8), Vector3.new(t.X + sx * 9.6, 14.7, t.Z + sz * 9.6), C(255, 236, 190), M.Neon, { collide = false, cast = false })
+			local pl = Instance.new("PointLight")
+			pl.Range, pl.Brightness, pl.Color = 12, 0.8, C(255, 236, 190)
+			pl.Parent = lamp
 		end
 		mk("LiftBeam", Vector3.new(1, 1, 20.4), Vector3.new(t.X + sx * 9.6, 14, t.Z), G.accent2, M.Metal)
 	end
@@ -245,7 +252,7 @@ local function buildBase(ctx, i)
 	mk("CraneCable", Vector3.new(0.2, 3.4, 0.2), Vector3.new(t.X, 12, t.Z), G.frame, M.Metal, { collide = false })
 	local magnet = mk("TrapMagnet", Vector3.new(1.2, 6, 6), Vector3.new(t.X, 9.8, t.Z), C(64, 68, 76), M.Metal, { shape = CYL, collide = false })
 	magnet.CFrame = bcf * CFrame.new(t.X, 9.8, t.Z) * UPRIGHT
-	local trapSign = mk("TrapSign", Vector3.new(0.4, 2, 12), Vector3.new(t.X + 10.4, 12, t.Z), G.frame, M.SmoothPlastic)
+	local trapSign = mk("TrapSign", Vector3.new(0.4, 2.4, 12), Vector3.new(t.X + 10.2, 13.2, t.Z), G.frame, M.SmoothPlastic)
 	Label(trapSign, Enum.NormalId.Right, "THROW PARTS HERE", G.accent)
 
 	-- (v11: no drive-in arch / "new cars" sign at the garage entrance; new cars still drive in through the opening)
@@ -374,14 +381,14 @@ local function buildDonateStall(ctx)
 	mk("CounterTop", Vector3.new(14.6, 0.5, 4), Vector3.new(0, 4.4, -4), GOLD, M.Metal, { refl = 0.25 })
 	mk("BackPanel", Vector3.new(14, 11, 1), Vector3.new(0, 5.7, 4), DEEP, M.SmoothPlastic)
 	for _, s in ipairs({ -1, 1 }) do
-		mk("Pillar", Vector3.new(1.2, 13, 1.2), Vector3.new(s * 7.4, 6.5, 4), GOLD, M.Metal, { refl = 0.2 })
+		mk("Pillar", Vector3.new(1.2, 13.5, 1.2), Vector3.new(s * 7.4, 6.75, 4), GOLD, M.Metal, { refl = 0.2 })
 		mk("PillarFront", Vector3.new(1, 11, 1), Vector3.new(s * 7.4, 5.5, -5.6), GOLD, M.Metal, { refl = 0.2 })
 	end
 	for k = 0, 6 do
 		local c = (k % 2 == 0) and GOLD or CREAM
 		Part(m, "Canopy", Vector3.new(16 / 7, 0.4, 11), cf * CFrame.new(-8 + (k + 0.5) * 16 / 7, 12.2, -0.8) * CFrame.Angles(math.rad(-10), 0, 0), c, M.SmoothPlastic, { collide = false })
 	end
-	local sign = mk("StallSign", Vector3.new(13, 3, 0.5), Vector3.new(0, 14.4, 4), DEEP, M.SmoothPlastic)
+	local sign = mk("StallSign", Vector3.new(16.4, 3, 0.8), Vector3.new(0, 14.9, 4), DEEP, M.SmoothPlastic)
 	Label(sign, Enum.NormalId.Front, "GOLDEN MAGNATE", GOLD)
 	-- treasure: coin piles and gold bars
 	for k = 0, 4 do
@@ -659,7 +666,10 @@ local function buildPlaza(ctx)
 		spot.Color = C(255, 220, 140)
 		spot.Parent = lamp
 		-- plate towards the promenade, clear of the stand (0.3 gap)
-		local plate = Part(f.StreetProps, "MagnatPlate", Vector3.new(9, 2.4, 0.3), CFrame.new(x - 13.4, 2.2, z) * CFrame.Angles(0, math.pi / 2, 0), C(26, 22, 16), M.SmoothPlastic, { collide = false })
+		local plate = Part(f.StreetProps, "MagnatPlate", Vector3.new(12, 3.2, 0.3), CFrame.new(x - 13.4, 3.4, z) * CFrame.Angles(0, math.pi / 2, 0), C(26, 22, 16), M.SmoothPlastic, { collide = false })
+		for _, sz in ipairs({ -1, 1 }) do
+			Part(f.StreetProps, "MagnatPlatePost", Vector3.new(0.6, 6, 0.6), CFrame.new(x - 13.4, 3, z + sz * 6.2), C(255, 200, 80), M.Metal)
+		end
 		Label(plate, Enum.NormalId.Front, "GOLDEN MAGNAT GT", C(255, 210, 90))
 		-- walk-up prompt (client: UIExtra opens the game-pass purchase)
 		local pp = Part(f.StreetProps, "MagnatPrompt", Vector3.new(2, 2, 2), CFrame.new(x - 12, 3, z), C(0, 0, 0), M.SmoothPlastic, { collide = false, t = 1 })
@@ -686,7 +696,7 @@ local function buildPlaza(ctx)
 	table.insert(ctx.foot, { x1 = 30, x2 = 50, z1 = pz - 17, z2 = pz + 17 })
 	for _, sx in ipairs({ -1, 1 }) do
 		for z = MapConfig.BaseCenters[7].z + 12, zE - 12, 6 do
-			Prefabs.TireStack(f.StreetProps, Vector3.new(sx * (PW - 3), 0.2, z), ctx.rng)
+			Prefabs.TireStack(f.StreetProps, Vector3.new(sx * (PW - 2), 0.2, z), ctx.rng) -- outside the lamp line (PW - 5)
 		end
 	end
 	bench(-20, pz + 16, math.pi)
@@ -701,14 +711,14 @@ local function buildSpeedLanes(ctx)
 		local w, l = r[2] - r[1], r[4] - r[3]
 		local cx, cz = (r[1] + r[2]) / 2, (r[3] + r[4]) / 2
 		local alongZ = r[5] == 0
-		local y = (cz < MapConfig.EntryZ and math.abs(cx) < MapConfig.PromenadeHalfWidth) and 0.26 or 0.1
+		local y = (cz < MapConfig.EntryZ and math.abs(cx) < MapConfig.PromenadeHalfWidth) and 0.26 or 0.14
 		local lane = Part(f.StreetProps, "RunLane", Vector3.new(w, 0.12, l), CFrame.new(cx, y, cz), LANE, M.SmoothPlastic, { collide = false, cast = false })
 		CollectionService:AddTag(lane, "RunLane")
 		-- white edge lines
 		for _, s in ipairs({ -1, 1 }) do
-			local size = alongZ and Vector3.new(0.3, 0.04, l) or Vector3.new(w, 0.04, 0.3)
+			local size = alongZ and Vector3.new(0.3, 0.1, l) or Vector3.new(w, 0.1, 0.3)
 			local off = alongZ and Vector3.new(s * (w / 2 - 0.25), 0, 0) or Vector3.new(0, 0, s * (l / 2 - 0.25))
-			Part(f.StreetProps, "LaneLine", size, CFrame.new(cx, y + 0.08, cz) + off, WHITE, M.SmoothPlastic, { collide = false, cast = false })
+			Part(f.StreetProps, "LaneLine", size, CFrame.new(cx, y + 0.1, cz) + off, WHITE, M.SmoothPlastic, { collide = false, cast = false })
 		end
 		-- arrows: shaft + two head strokes, every 14 studs
 		local dir = Vector3.new(r[5], 0, r[6])
@@ -717,11 +727,11 @@ local function buildSpeedLanes(ctx)
 		local n = math.max(1, math.floor(span / 14))
 		for k = 0, n - 1 do
 			local t = (k + 0.5) / n
-			local p = alongZ and Vector3.new(cx, y + 0.08, r[3] + t * l) or Vector3.new(r[1] + t * w, y + 0.08, cz)
+			local p = alongZ and Vector3.new(cx, y + 0.1, r[3] + t * l) or Vector3.new(r[1] + t * w, y + 0.1, cz)
 			local acf = CFrame.new(p) * CFrame.Angles(0, yaw, 0) -- local -Z = arrow direction
-			Part(f.StreetProps, "Arrow", Vector3.new(0.7, 0.04, 4), acf * CFrame.new(0, 0, 0.6), WHITE, M.SmoothPlastic, { collide = false, cast = false })
+			Part(f.StreetProps, "Arrow", Vector3.new(0.7, 0.1, 4), acf * CFrame.new(0, 0, 0.6), WHITE, M.SmoothPlastic, { collide = false, cast = false })
 			for _, s in ipairs({ -1, 1 }) do
-				Part(f.StreetProps, "ArrowHead", Vector3.new(0.7, 0.04, 2.4), acf * CFrame.new(s * 0.75, 0, -1.6) * CFrame.Angles(0, s * math.rad(40), 0), WHITE, M.SmoothPlastic, { collide = false, cast = false })
+				Part(f.StreetProps, "ArrowHead", Vector3.new(0.7, 0.1, 2.4), acf * CFrame.new(s * 0.75, 0, -1.6) * CFrame.Angles(0, s * math.rad(40), 0), WHITE, M.SmoothPlastic, { collide = false, cast = false })
 			end
 		end
 	end
@@ -732,10 +742,10 @@ local function buildGate(ctx, gate, zone)
 	local pal = zone.palette
 	local gz = gate.z
 	local gw = MapConfig.GateHalfWidth
-	local len = HW - gw
+	local len = HW - gw - 2
 	for _, s in ipairs({ -1, 1 }) do
-		Part(f.ZoneGates, "Fence", Vector3.new(len, 10, 4), CFrame.new(s * (gw + len / 2), 5, gz), pal.curb, M.Metal)
-		Part(f.ZoneGates, "FenceCap", Vector3.new(len, 0.6, 4.4), CFrame.new(s * (gw + len / 2), 10.3, gz), C(52, 56, 64), M.Metal, { collide = false })
+		Part(f.ZoneGates, "Fence", Vector3.new(len, 10, 4), CFrame.new(s * (gw + 2 + len / 2), 5, gz), pal.curb, M.Metal)
+		Part(f.ZoneGates, "FenceCap", Vector3.new(len, 0.6, 4.4), CFrame.new(s * (gw + 2 + len / 2), 10.3, gz), C(52, 56, 64), M.Metal, { collide = false })
 		Part(f.ZoneGates, "GatePillar", Vector3.new(4, 20, 5), CFrame.new(s * (gw + 2), 10, gz), C(30, 34, 46), M.Metal)
 	end
 	local beam = Part(f.ZoneGates, "GateBeam", Vector3.new(2 * gw + 8, 4, 5), CFrame.new(0, 22, gz), C(20, 22, 32), M.Metal)
@@ -772,13 +782,13 @@ local function buildRoad(ctx, road, pal, zid)
 	local rid = road.id
 	Part(f.Roads, "Road" .. rid, Vector3.new(len, 0.4, W), CFrame.new(0, 0, z0), pal.road, M.Asphalt)
 	for _, s in ipairs({ -1, 1 }) do
-		Part(f.Roads, "EdgeLine", Vector3.new(len, 0.05, 0.5), CFrame.new(0, 0.22, z0 + s * (W / 2 - 0.8)), WHITE, M.SmoothPlastic, { collide = false, cast = false })
-		Part(f.Roads, "MedianLine", Vector3.new(len, 0.05, 0.35), CFrame.new(0, 0.22, z0 + s * (M_ / 2 + 0.5)), YELLOW, M.SmoothPlastic, { collide = false, cast = false })
+		Part(f.Roads, "EdgeLine", Vector3.new(len, 0.1, 0.5), CFrame.new(0, 0.24, z0 + s * (W / 2 - 0.8)), WHITE, M.SmoothPlastic, { collide = false, cast = false })
+		Part(f.Roads, "MedianLine", Vector3.new(len, 0.1, 0.35), CFrame.new(0, 0.24, z0 + s * (M_ / 2 + 0.5)), YELLOW, M.SmoothPlastic, { collide = false, cast = false })
 		Part(f.Sidewalks, "Sidewalk", Vector3.new(2 * HW, 1.6, MapConfig.SidewalkWidth), CFrame.new(0, 0, z0 + s * (W / 2 + MapConfig.SidewalkWidth / 2)), pal.sidewalk, M.Concrete)
 		if road.lanesPerSide >= 2 then
 			local zl = z0 + s * (M_ / 2 + road.laneWidth)
 			for x = -HW + 6, HW - 6, 14 do
-				Part(f.Roads, "Dash", Vector3.new(6, 0.05, 0.4), CFrame.new(x, 0.22, zl), WHITE, M.SmoothPlastic, { collide = false, cast = false })
+				Part(f.Roads, "Dash", Vector3.new(6, 0.1, 0.4), CFrame.new(x, 0.24, zl), WHITE, M.SmoothPlastic, { collide = false, cast = false })
 			end
 		end
 	end
@@ -789,7 +799,7 @@ local function buildRoad(ctx, road, pal, zid)
 	for ri, lane in ipairs(TrafficMath.RoadLanes[rid]) do
 		for _, x in ipairs({ -HW + 25, -75, 75, HW - 25 }) do
 			for _, s in ipairs({ -1, 1 }) do
-				Part(f.Roads, "Arrow", Vector3.new(3.5, 0.05, 0.5), CFrame.new(x, 0.23, lane.z + s * 0.9) * CFrame.Angles(0, math.atan2(-s * 1.8, -3 * lane.dir), 0), WHITE, M.SmoothPlastic, { collide = false, cast = false })
+				Part(f.Roads, "Arrow", Vector3.new(3.5, 0.1, 0.5), CFrame.new(x, 0.24, lane.z + s * 0.9) * CFrame.Angles(0, math.atan2(-s * 1.8, -3 * lane.dir), 0), WHITE, M.SmoothPlastic, { collide = false, cast = false })
 			end
 		end
 		local sx = TrafficMath.MinX * lane.dir
@@ -805,7 +815,7 @@ local function buildRoad(ctx, road, pal, zid)
 		for _, s in ipairs({ -1, 1 }) do
 			local zs = z0 + s * (M_ / 2 + 1.6)
 			while math.abs(zs - z0) < W / 2 - 1 do
-				Part(f.Roads, "Zebra", Vector3.new(7, 0.06, 1.6), CFrame.new(x, 0.24, zs), WHITE, M.SmoothPlastic, { collide = false, cast = false })
+				Part(f.Roads, "Zebra", Vector3.new(7, 0.12, 1.6), CFrame.new(x, 0.25, zs), WHITE, M.SmoothPlastic, { collide = false, cast = false })
 				zs = zs + s * 3.2
 			end
 		end
@@ -910,7 +920,7 @@ local function placeBlock(ctx, blk, pal, zid)
 				local a = pick(rng, arche)
 				local w = rr(rng, a[2], a[3])
 				if cursor - w < 94 then break end
-				local d = math.max(12, rd - rr(rng, 0, 3))
+				local d = a[1] == "billboard" and 8 or math.max(12, rd - rr(rng, 0, 3))
 				local h = rr(rng, a[4], a[5])
 				local cx = side * (cursor - w / 2)
 				local zc, yaw
@@ -924,8 +934,7 @@ local function placeBlock(ctx, blk, pal, zid)
 					zc = row.edge - d / 2
 					yaw = math.pi
 				end
-				if a[1] == "billboard" then d = 8 end
-				local cf = CFrame.new(cx, 0.4, zc) * CFrame.Angles(0, yaw, 0)
+				local cf = CFrame.new(cx, 0, zc) * CFrame.Angles(0, yaw, 0)
 				local model = Instance.new("Model")
 				model.Name = a[1]
 				Prefabs.Building(a[1], model, cf, w, d, h, pal, rng)
@@ -991,17 +1000,17 @@ local function placeBlock(ctx, blk, pal, zid)
 		end
 	end
 	for _ = 1, math.floor(depth / 45) do
-		Prefabs.Bench(f.StreetProps, Vector3.new(rr(rng, 16, 70) * (rng() < 0.5 and -1 or 1), 0.4, rr(rng, zA + 10, zB - 10)), rr(rng, 0, math.pi * 2))
+		Prefabs.Bench(f.StreetProps, Vector3.new(rr(rng, 16, 70) * (rng() < 0.5 and -1 or 1), 0, rr(rng, zA + 10, zB - 10)), rr(rng, 0, math.pi * 2))
 	end
 	if zid == "city" and depth > 60 then
-		Prefabs.Kiosk(f.StreetProps, Vector3.new(rr(rng, 18, 40) * (rng() < 0.5 and -1 or 1), 0.4, (zA + zB) / 2), 0, pick(rng, pal.buildings), "SNACKS")
+		Prefabs.Kiosk(f.StreetProps, Vector3.new(rr(rng, 18, 40) * (rng() < 0.5 and -1 or 1), 0, (zA + zB) / 2), 0, pick(rng, pal.buildings), "SNACKS")
 	end
 	if zid == "neon" then
 		local zc = (zA + zB) / 2
 		for _, sx in ipairs({ -1, 1 }) do
 			Part(f.StreetProps, "BannerPost", Vector3.new(1.2, 18, 1.2), CFrame.new(sx * 22, 9, zc), C(52, 56, 64), M.Metal)
 		end
-		local ban = Part(f.StreetProps, "Banner", Vector3.new(40, 4, 0.5), CFrame.new(0, 16, zc), C(30, 34, 44), M.SmoothPlastic)
+		local ban = Part(f.StreetProps, "Banner", Vector3.new(43.2, 4, 0.5), CFrame.new(0, 15.8, zc), C(30, 34, 44), M.SmoothPlastic)
 		Label(ban, Enum.NormalId.Front, "NIGHT RACERS ONLY", C(255, 170, 60))
 		Label(ban, Enum.NormalId.Back, "DRIVE SAFE", C(255, 255, 255))
 	end
@@ -1191,6 +1200,9 @@ buildArena = function(ctx, zid)
 		end
 	end
 	local banner = Part(f.StreetProps, "ArenaBanner", Vector3.new(60, 6, 1), CFrame.new(0, 26, zone.zMin + 4), C(28, 30, 38), M.SmoothPlastic, { collide = false })
+	for _, s in ipairs({ -1, 1 }) do
+		Part(f.StreetProps, "BannerPost", Vector3.new(1.4, 29.6, 1.4), CFrame.new(s * 30.5, 14.8, zone.zMin + 4), C(52, 56, 64), M.Metal)
+	end
 	Label(banner, Enum.NormalId.Front, zone.name .. " - BOSS", pal.accent)
 	Label(banner, Enum.NormalId.Back, "SURVIVE THE BOSS", pal.accent)
 	-- loot: many safe-ish points + a rich centre
@@ -1259,7 +1271,7 @@ local function buildZone(ctx, zid)
 		CollectionService:AddTag(trig, "Checkpoint")
 		for k = 0, 39 do
 			local x = -HW + 6 + (k + 0.5) * (2 * HW - 12) / 40
-			Part(f.StreetProps, "CheckpointStripe", Vector3.new((2 * HW - 12) / 40, 0.06, 2), CFrame.new(x, 0.27, cz), (k % 2 == 0) and C(255, 200, 40) or C(28, 28, 32), M.SmoothPlastic, { collide = false, cast = false })
+			Part(f.StreetProps, "CheckpointStripe", Vector3.new((2 * HW - 12) / 40, 0.12, 2), CFrame.new(x, 0.3, cz), (k % 2 == 0) and C(255, 200, 40) or C(28, 28, 32), M.SmoothPlastic, { collide = false, cast = false })
 		end
 		for _, sx in ipairs({ -1, 1 }) do
 			Part(f.StreetProps, "CheckpointPost", Vector3.new(1.6, 13, 1.6), CFrame.new(sx * 16, 6.5, cz), C(40, 44, 52), M.Metal)
