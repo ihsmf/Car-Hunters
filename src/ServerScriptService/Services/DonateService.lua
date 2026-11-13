@@ -55,7 +55,11 @@ local function grantGoldenCar(player, s)
 	end
 	table.insert(d.cars, { uid = HttpService:GenerateGUID(false), typeId = "golden_magnat_gt", level = 1, parkedSlot = nil })
 	d.discovered.golden_magnat_gt = true
-	S.Cars.AutoPark(player)
+	-- park it right away wherever the player is (AutoPark would demand being next to the garage)
+	S.Cars.ParkBest(s)
+	S.Base.RefreshAll(player)
+	S.Income.Recalc(player)
+	S.Data.Push(player)
 end
 
 -- applies one product; returns true when granted

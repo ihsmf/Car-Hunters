@@ -9,6 +9,7 @@ local Net = require(Shared:WaitForChild("Net"))
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
 local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local Util = require(Shared:WaitForChild("Util"))
+local PartConfig = require(Shared:WaitForChild("PartConfig"))
 
 local Tut = {}
 local K, UI, Cine, Guide
@@ -18,6 +19,7 @@ local w = {}
 local DONE = 9
 local localStep -- optimistic step while the server confirms
 local events = { banked = false, checkpoint = false }
+local stepSince = {} -- step -> os.clock() when it was first shown
 
 local function trapPad(st)
 	local map = Workspace:FindFirstChild("GeneratedMap")
@@ -40,6 +42,7 @@ local function nearestDrop(hrp)
 	return target
 end
 
+-- cheapest upgrade; .ok = the player can pay for it right now
 local function cheapestUpgrade(st)
 	local best
 	for _, c in ipairs(st.cars) do
@@ -48,7 +51,7 @@ local function cheapestUpgrade(st)
 			local cost = CarConfig.UpgradeCost(def, c.level)
 			if not best or cost < best.cost then
 				local part, n = CarConfig.UpgradeParts(def, c.level)
-				best = { cost = cost, part = part, n = n }
+				best = { cost = cost, part = part, n = n, ok = K.store.Money >= cost and K.store.Banked(part) >= n }
 			end
 		end
 	end
@@ -64,7 +67,7 @@ local STEPS = {
 		function(_, hrp) return nearestDrop(hrp) end,
 		function() return K.store.CarriedTotal() >= 3 end,
 		function() return math.min(K.store.CarriedTotal(), 3) / 3, string.format("%d / 3", math.min(K.store.CarriedTotal(), 3)) end },
-	{ "RUN HOME TO BANK THEM", "Back through the arch - the dark lanes in the middle make you faster", nil,
+	{ "RUN HOME TO BANK THEM", "Back through the arch to the plaza - the dark lanes in the middle make you faster", nil,
 		function() return Vector3.new(0, 2, MapConfig.EntryZ - 30) end,
 		function() return events.banked end },
 	{ "THROW PARTS INTO YOUR TRAP", "Go to the lift in your garage, press THROW, then ALL", nil,
@@ -75,7 +78,11 @@ local STEPS = {
 		function() return K.state.open == "garage" end, nil, "garage" },
 	{ "UPGRADE A CAR", "Press UPGRADE on a car: more levels = more money", nil,
 		function() return nil end,
-		function(st) return (st.stats and st.stats.upgrades or 0) > 0 end, nil, "garage" },
+		-- also passes when nothing is affordable yet (after a short look), so a broke player never gets stuck here
+		function(st)
+			local up = cheapestUpgrade(st)
+			return (st.stats and st.stats.upgrades or 0) > 0 or ((not up or not up.ok) and os.clock() - (stepSince[6] or os.clock()) > 6)
+		end, nil, "garage" },
 	{ "REACH A CHECKPOINT", "Carry parts to the yellow arch at the far end of the City, then SAVE or RISK", nil,
 		function() return Vector3.new(0, 2, MapConfig.Zones.city.zMax - 5) end,
 		function() return events.checkpoint end },
@@ -85,32 +92,39 @@ local STEPS = {
 }
 
 local function build()
-	local card = K.new("Frame", { Name = "Objective", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 74), Size = UDim2.fromOffset(560, 96), BackgroundColor3 = P.white,
+	local card = K.new("Frame", { Name = "Objective", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 74), Size = UDim2.fromOffset(600, 108), BackgroundColor3 = P.white,
 		ClipsDescendants = true, Visible = false }, K.root)
 	K.corner(card, 20)
 	K.stroke(card, P.ink, 4)
 	w.card = card
 	-- the colour badge follows the card's rounded left corners (ClipsDescendants ignores UICorner, so a square badge
 	-- used to stick out of the outline): rounded badge + a square filler on its right half
-	w.badge = K.new("Frame", { Size = UDim2.fromOffset(96, 96), BackgroundColor3 = P.yellow, BorderSizePixel = 0 }, card)
+	w.badge = K.new("Frame", { Size = UDim2.fromOffset(108, 108), BackgroundColor3 = P.yellow, BorderSizePixel = 0 }, card)
 	K.corner(w.badge, 20)
-	w.badgeFill = K.new("Frame", { Position = UDim2.fromOffset(48, 0), Size = UDim2.fromOffset(48, 96), BackgroundColor3 = P.yellow, BorderSizePixel = 0 }, w.badge)
-	w.badgeText = K.text(w.badge, { Text = "1/8", TextSize = 30, ZIndex = 2, Position = UDim2.fromOffset(0, 18), Size = UDim2.new(1, 0, 0, 36), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 })
-	w.badgeSub = K.text(w.badge, { Text = "STEP", Font = K.BODY, TextSize = 12, ZIndex = 2, Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Center })
-	w.title = K.text(card, { Text = "", TextSize = 24, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(112, 10), Size = UDim2.fromOffset(400, 28) })
-	w.body = K.text(card, { Text = "", Font = K.BODY, TextSize = 15, TextColor3 = P.muted, TextWrapped = true, Position = UDim2.fromOffset(112, 40), Size = UDim2.fromOffset(436, 34) })
-	local bar = K.new("Frame", { Position = UDim2.fromOffset(112, 76), Size = UDim2.fromOffset(300, 8), BackgroundColor3 = C(230, 232, 236), Visible = false }, card)
+	w.badgeFill = K.new("Frame", { Position = UDim2.fromOffset(54, 0), Size = UDim2.fromOffset(54, 108), BackgroundColor3 = P.yellow, BorderSizePixel = 0 }, w.badge)
+	w.badgeText = K.text(w.badge, { Text = "1/8", TextSize = 32, ZIndex = 2, Position = UDim2.fromOffset(0, 16), Size = UDim2.new(1, 0, 0, 38), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 })
+	w.badgeSub = K.text(w.badge, { Text = "STEP", Font = K.BODY, TextSize = 13, ZIndex = 2, Position = UDim2.fromOffset(0, 56), Size = UDim2.new(1, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Center })
+	-- one dot per step: done = white, current = big, to do = faded
+	local dots = K.new("Frame", { Position = UDim2.fromOffset(10, 82), Size = UDim2.new(1, -20, 0, 12), BackgroundTransparency = 1, ZIndex = 2 }, w.badge)
+	K.list(dots, Enum.FillDirection.Horizontal, 3, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center)
+	w.dots = {}
+	for i = 1, DONE - 1 do
+		local d = K.new("Frame", { Size = UDim2.fromOffset(8, 8), BackgroundColor3 = P.white, LayoutOrder = i, ZIndex = 3 }, dots)
+		K.corner(d, 4)
+		w.dots[i] = d
+	end
+	w.title = K.text(card, { Text = "", TextSize = 26, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(124, 10), Size = UDim2.fromOffset(380, 30) })
+	w.body = K.text(card, { Text = "", Font = K.BODY, TextSize = 16, TextColor3 = P.muted, TextWrapped = true, Position = UDim2.fromOffset(124, 42), Size = UDim2.fromOffset(460, 40) })
+	local bar = K.new("Frame", { Position = UDim2.fromOffset(124, 88), Size = UDim2.fromOffset(300, 8), BackgroundColor3 = C(230, 232, 236), Visible = false }, card)
 	K.corner(bar, 4)
 	w.bar = bar
 	w.fill = K.new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = P.yellow }, bar)
 	K.corner(w.fill, 4)
-	w.progText = K.text(card, { Text = "", Font = K.BODY, TextSize = 13, TextColor3 = P.orange, Position = UDim2.fromOffset(420, 70), Size = UDim2.fromOffset(80, 18), Visible = false })
-	w.skip = K.new("TextButton", { Text = "SKIP", Font = K.BODY, TextSize = 13, TextColor3 = P.grey, BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 6),
-		Size = UDim2.fromOffset(50, 20) }, card)
-	w.skip.Activated:Connect(function()
-		localStep = DONE
-		Net.Get("TutorialStep"):FireServer("skip")
-	end)
+	w.progText = K.text(card, { Text = "", Font = K.BODY, TextSize = 14, TextColor3 = P.orange, Position = UDim2.fromOffset(434, 82), Size = UDim2.fromOffset(80, 20), Visible = false })
+	w.skip = K.toy(card, { Text = "SKIP", Color = P.grey, Size = UDim2.fromOffset(74, 34), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 8), TextSize = 16, Depth = 3,
+		Radius = 10, OnClick = function()
+			K.confirm("SKIP THE TUTORIAL?", "You can still find every feature on your own.", "SKIP", P.red, Tut.Skip)
+		end })
 	w.scale = K.new("UIScale", {}, card)
 	w.tick = K.text(w.badge, { Text = "OK!", TextSize = 30, TextColor3 = C(120, 255, 150), Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, Visible = false, ZIndex = 5 })
 end
@@ -152,7 +166,7 @@ local function show(key, badge, sub, color, title, body, prog, progText, canSkip
 		w.progText.Text = progText or ""
 		w.progText.TextColor3 = color
 	end
-	w.skip.Visible = canSkip
+	w.skip.holder.Visible = canSkip
 	if shownKey ~= key then
 		shownKey = key
 		w.scale.Scale = 0.7
@@ -184,20 +198,28 @@ local function tick()
 	end
 	local def = STEPS[step]
 	-- lost the loot on the way home: point back at the parts
-	if step == 3 and K.store.CarriedTotal() == 0 and not events.banked then
+	local lostLoot = step == 3 and K.store.CarriedTotal() == 0 and not events.banked
+	if lostLoot then
 		def = STEPS[2]
 	end
 	local color = ({ P.yellow, P.orange, P.green, P.yellow, P.blue, P.blue, P.red, P.green })[step]
-	local body = def[2]
+	local body = lostLoot and "You lost your parts - grab 3 more, then run home" or def[2]
 	if step == 6 then
 		local up = cheapestUpgrade(st)
-		if up then
-			body = string.format("Press UPGRADE on a car  ·  needs $%s + %d %s", Util.FormatNumber(up.cost), up.n, up.part)
+		if up and up.ok then
+			body = string.format("Press UPGRADE on a car  ·  needs $%s + %d %s", Util.FormatNumber(up.cost), up.n, PartConfig.Parts[up.part].name)
+		elseif up then
+			body = string.format("Upgrades need $%s + %d %s - you'll do it later, moving on...", Util.FormatNumber(up.cost), up.n, PartConfig.Parts[up.part].name)
 		end
 	end
 	local prog, progText
 	if def[6] then
 		prog, progText = def[6]()
+	end
+	stepSince[step] = stepSince[step] or os.clock()
+	for i, d in ipairs(w.dots) do
+		d.BackgroundTransparency = i <= step and 0 or 0.6
+		d.Size = UDim2.fromOffset(i == step and 11 or 7, i == step and 11 or 7)
 	end
 	show("step" .. step .. def[1], step .. "/" .. (DONE - 1), "STEP", color, def[1], body, prog, progText, true)
 	-- steps that happen inside a panel (garage, upgrade): the card goes on top of the panel's dim, at the very top
@@ -229,6 +251,12 @@ local function tick()
 			end)
 		end
 	end
+end
+
+-- skip the whole tutorial (SKIP button, or SKIP on the join question)
+function Tut.Skip()
+	localStep = DONE
+	Net.Get("TutorialStep"):FireServer("skip")
 end
 
 function Tut.Start(ui, cine, guide)

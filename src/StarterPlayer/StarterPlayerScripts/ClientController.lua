@@ -30,6 +30,7 @@ local Backpack = require(Client:WaitForChild("Backpack"))
 local IntroFx = require(Client:WaitForChild("IntroFx"))
 local Checkpoint = require(Client:WaitForChild("Checkpoint"))
 local Tutorial = require(Client:WaitForChild("Tutorial"))
+local JoinFlow = require(Client:WaitForChild("JoinFlow"))
 local Rewards = require(Client:WaitForChild("Rewards"))
 local Trade = require(Client:WaitForChild("Trade"))
 
@@ -59,11 +60,14 @@ local actions = {
 	SetSkin = function(id) Net.Get("SetSkin"):FireServer(id) end,
 	TokenPerk = function(id) Net.Get("TokenPerk"):FireServer(id) end,
 	Teleport = function(dest)
+		Net.Get("Teleport"):FireServer(dest)
+		if dest == "home" and Store.CarriedTotal() > 0 then
+			return -- the server refuses (loot goes home on foot) and says why: no whoosh
+		end
 		UI.Sfx("whoosh")
 		CineFx.Flash(Color3.fromRGB(46, 168, 255), 0.2, 0.5)
 		CineFx.Zoom(95, 0.12)
 		task.delay(0.15, function() CineFx.Zoom(70, 0.4) end)
-		Net.Get("Teleport"):FireServer(dest)
 	end,
 }
 
@@ -89,6 +93,7 @@ Settings.Start(UI)
 Trade.Start(UI)
 Backpack.Start(UI)
 IntroFx.Start(UI, CineFx)
+JoinFlow.Start(UI, CineFx, IntroFx, Tutorial)
 ClientFx.Init(UI)
 Markers.Start(UI.Kit(), UIExtra)
 GaragePrompts.Start(UI.Kit(), CineFx)

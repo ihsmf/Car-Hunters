@@ -1,7 +1,7 @@
 -- Intro cinematic for new players (before the step-by-step tutorial), with SKIP.
 -- A copy of the player's avatar acts it out on the real map: crosses a city road and grabs a part, throws it into the
 -- garage trap and a car drives in, walks up to Big Tony, then a fly-over of the districts and a boss monster truck.
--- Plays once: when it ends (or is skipped) the tutorial moves to step 1.
+-- Played by JoinFlow when a new player answers YES: when it ends (or is skipped) the tutorial moves to step 1.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -285,21 +285,10 @@ function Intro.Play(st)
 	Net.Get("TutorialStep"):FireServer(1) -- the intro is done: the tutorial starts at step 1
 end
 
+-- JoinFlow asks "NEED A TUTORIAL?" and calls Intro.Play on YES
 function Intro.Start(ui, cine)
 	UI, Cine = ui, cine
 	K = UI.Kit()
-	task.spawn(function()
-		-- new players only (tutorial 0), once their avatar is in the world
-		local st
-		repeat
-			task.wait(0.5)
-			st = K.store.State
-		until st and Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-		if (st.tutorial or 0) == 0 then
-			task.wait(1)
-			Intro.Play(st)
-		end
-	end)
 end
 
 return Intro

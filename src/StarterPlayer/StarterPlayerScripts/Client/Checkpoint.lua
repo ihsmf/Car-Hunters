@@ -1,4 +1,5 @@
 -- Checkpoint choice card: SAVE & GO HOME (bank now, teleport to the garage) or RISK IT (next district, bigger multiplier).
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
@@ -35,6 +36,20 @@ local function show(o)
 	local dim = K.new("Frame", { Name = "Checkpoint", Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.55, ZIndex = 80 }, K.overlay)
 	open = dim
 	UI.SetDialog(true)
+	-- the server only accepts the choice near the checkpoint and within 60 s: the card goes away before that
+	local char = Players.LocalPlayer.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	local from, t0 = hrp and hrp.Position, os.clock()
+	task.spawn(function()
+		while open == dim do
+			task.wait(0.5)
+			local h = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			if open == dim and (os.clock() - t0 > 55 or not h or (from and (h.Position - from).Magnitude > 50)) then
+				close()
+				UI.Toast("Checkpoint closed - come back to choose again", "warn")
+			end
+		end
+	end)
 	local card = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(760, 420), BackgroundColor3 = P.cream, ZIndex = 81 }, dim)
 	K.corner(card, 28)
 	K.stroke(card, P.ink, 5)

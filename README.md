@@ -72,25 +72,9 @@ Roblox-игра: бегай по опасным дорогам, собирай �
 
 Модели строит `blender/make_cars.py`: кузов по реальным пропорциям и силуэту каждого типа машины, остекление со стойками, линии дверей, арки, литые диски с суппортами, узнаваемые «лица» — формы решёток, фар и фонарей. 40 коллекционных (~10k треугольников) и 11 машин трафика в облегчённом LOD (~6.5k), построенных на тех же кузовах.
 
-**Про права.** Машины *вдохновлены* настоящими: узнаются по силуэту и общим чертам, но на них нет логотипов, эмблем и настоящих названий. Названия пародийные и лежат в одном месте — таблица `list` в `src/ReplicatedStorage/Shared/CarConfig.lua`, поле `name`.
-
-| Редкость | Машины |
-|---|---|
-| Common | Furd Fiasta · Dodje Caravon · Furd F-One-Fifty · Awdi A-Four |
-| Uncommon | BMV M-Tree · Mursides E-Klass · Tezla Model Tree · Jagwar XE |
-| Rare | Furd Mustank · Dodje Chalenjer · Ranje Rover · BMV M-Fore |
-| Epic | Mursides G-Vagon · Awdi R-Ate · Jagwar F-Tipe · Mazeratti GranTurizmo |
-| Legendary | Lamborgini Hurakan · Tezla Cybertrak · Mazeratti MC-Twenty · Lamborgini Aventadoor |
-
-Вторая волна (ещё 20, итого 40 машин — по 8 на редкость):
-
-| Редкость | Машины |
-|---|---|
-| Common | Fiyat Five-Hundo · Mini Kooper · Volksvagen Gulf GTI · Hunda Civik Type-Arr |
-| Uncommon | Jeap Rangler · Mazta Miyata · Subaroo WRX · Chevy Kamaro |
-| Rare | Toyoda Supera · Chevy Korvette · Nisan GT-Arr · Porshe Nine-Eleven |
-| Epic | Bentli Kontinental · Rolz-Roice Fantom · MakLaren P-One · Ferarri Four-Ate-Ate |
-| Legendary | Ferarri LaFerarri · Pagany Wyra · Konigseg Agera · Bugati Shiron |
+**Про права.** Машины *вдохновлены* настоящими только по силуэту: на них нет логотипов и эмблем, а названия полностью
+вымышленные (v15: Zippa Pebble, Stallion Fury, Taurio Tempest, Cavallo LaGrande…). Все 80 названий лежат в одном месте —
+таблица `list` в `src/ReplicatedStorage/Shared/CarConfig.lua`, поле `name` (id машин не менялись, сохранения целы).
 
 ![collection](docs/renders/collection.jpg)
 ![rear](docs/renders/collection_rear.jpg)

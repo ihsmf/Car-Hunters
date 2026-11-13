@@ -59,6 +59,9 @@ function DeathFx.Play(dir, lost, sfx)
 
 	-- crane shot rising above the crash site
 	task.delay(0.25, function()
+		if not running then
+			return -- already respawned (fast Quick Start respawn)
+		end
 		local cam = Cine.Take()
 		local focus = hrp and hrp.Position or cam.CFrame.Position
 		local from = cam.CFrame
@@ -70,12 +73,15 @@ function DeathFx.Play(dir, lost, sfx)
 			local e = 1 - (1 - a) ^ 3
 			local target = CFrame.lookAt(focus + Vector3.new(math.cos(e * 1.2) * 18, 8 + e * 38, math.sin(e * 1.2) * 18), focus)
 			cam.CFrame = from:Lerp(target, math.min(1, a * 3)) * CFrame.Angles(0, 0, math.rad(8 * (1 - e)))
-			if a >= 1 then
+			if a >= 1 or not running then
 				conn:Disconnect()
 			end
 		end)
 		for n = 3, 1, -1 do
 			task.wait(0.8)
+			if not running then
+				return -- back in the game: no countdown over the live HUD
+			end
 			Cine.Sub(Strings.T("wrecked_back", n), Color3.fromRGB(255, 255, 255), 0.6, 0.7)
 		end
 	end)

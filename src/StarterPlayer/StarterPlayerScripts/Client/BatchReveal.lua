@@ -148,7 +148,7 @@ local function grid(res)
 		local st = K.store.State
 		-- start the showcase first so the HUD does not flash back between the grid and the cinematic
 		task.defer(close)
-		TrapFx.Play({ partId = best.partId, typeId = best.typeId, rarity = best.rarity, slot = best.slot, isNew = best.isNew, bonus = best.bonus, speed = 1.6, animTime = 0 }, st and st.baseIndex)
+		TrapFx.Play({ partId = best.partId, typeId = best.typeId, rarity = best.rarity, slot = best.slot, merged = best.merged, sold = best.sold, isNew = best.isNew, bonus = best.bonus, speed = 1.6, animTime = 0 }, st and st.baseIndex)
 	end })
 	K.toy(btns, { Text = "DONE", Color = P.green, Size = UDim2.fromOffset(220, 70), TextSize = 28, LayoutOrder = 2, ZIndex = 72, OnClick = close })
 end

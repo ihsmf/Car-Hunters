@@ -782,7 +782,8 @@ local function refreshTeleport()
 			local sub = needReb and string.format(T("n_needRebirth"), req.rebirths)
 				or string.format("🔒 $%s  ·  %s $%s", Util.FormatNumber(req.cost), T("zones_value"), Util.FormatNumber(req.minValue))
 			local t = tile(i, can and (T("btn_unlock") .. "!") or title, "🔒", can and P.green or P.grey, sub, function()
-				if can then
+				-- checked again at the click: income may have paid for it since the panel was drawn
+				if prevOpen and req and not needReb and store.Money >= req.cost and store.CollectionValue >= req.minValue then
 					actions.Unlock(zid)
 				elseif needReb then
 					UI.Toast(string.format(T("n_needRebirth"), req.rebirths), "warn")
@@ -1231,7 +1232,9 @@ function UI.ShowReveal(res, onClosed)
 	rv.name.Text = string.upper(def.name)
 	rv.name.TextColor3 = rc
 	local lines = { string.format('<font color="#34D058">+%s/s</font>', Util.FormatNumber(CarConfig.IncomeAt(def, 1))) }
-	table.insert(lines, res.slot and T("reveal_placed", res.slot) or T("reveal_stored"))
+	table.insert(lines, (res.merged and string.format("Merged into your copy - now Lv %d", res.merged))
+		or (res.sold and string.format("Garage full - sold for $%s", Util.FormatNumber(res.sold)))
+		or (res.slot and T("reveal_placed", res.slot)) or T("reveal_stored"))
 	if res.isNew and res.bonus and res.bonus > 0 then
 		table.insert(lines, T("reveal_first", Util.FormatNumber(res.bonus)))
 	end

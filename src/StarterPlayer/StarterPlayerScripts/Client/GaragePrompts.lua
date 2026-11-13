@@ -116,6 +116,9 @@ local function rebuild()
 				end, def)
 			end)
 			sp.KeyboardKeyCode = Enum.KeyCode.F
+			sp.GamepadKeyCode = Enum.KeyCode.ButtonB -- Remove keeps X: both show on a gamepad
+			rm.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
+			sp.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
 			sp.MaxActivationDistance = 9
 			sp.UIOffset = Vector2.new(0, 70)
 		end
@@ -174,6 +177,7 @@ function GP.Start(kit, cine)
 	folder = Instance.new("Folder")
 	folder.Name = "GaragePrompts"
 	folder.Parent = Workspace
+	store.MoneyChanged.Event:Connect(rebuild) -- price tags turn green as soon as income pays for them (cheap: signature check)
 	store.Changed.Event:Connect(function()
 		rebuild()
 		if store.State and store.State.baseIndex then

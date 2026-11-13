@@ -4,7 +4,9 @@ Usage:
   ROBLOX_API_KEY=... python3 tools/roblox_open_cloud.py sounds   --creator-user 123456      (or --creator-group 123)
   ROBLOX_API_KEY=... python3 tools/roblox_open_cloud.py products --universe 987654
   ROBLOX_API_KEY=... python3 tools/roblox_open_cloud.py models   --creator-user 123456      (Blender FBX -> Model assets)
-The API key needs: Assets (read+write) for sounds; Developer Products + Game Passes (write) for products.
+  ROBLOX_API_KEY=... python3 tools/roblox_open_cloud.py publish  --universe 987654 --place 123456 [--version-type Saved]
+The API key needs: Assets (read+write) for sounds/models/icons; Developer Products + Game Passes (write) for products;
+universe-places (write) for publish, with the experience in the key's Access list.
 In a Claude cloud session the key is injected by the network proxy, so ROBLOX_API_KEY may be any placeholder.
 Results are written into src/ReplicatedStorage/Shared/SoundIds.lua and ProductIds.lua; rebuild with tools/build_place.py.
 """
@@ -16,12 +18,12 @@ API = "https://apis.roblox.com"
 KEY = os.environ.get("ROBLOX_API_KEY", "proxy-injected")
 
 
-def request(method, url, body=None, headers=None):
+def request(method, url, body=None, headers=None, timeout=60):
     h = {"x-api-key": KEY}
     h.update(headers or {})
     req = urllib.request.Request(url, data=body, method=method, headers=h)
     try:
-        with urllib.request.urlopen(req, timeout=60) as r:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
             raw = r.read()
             return r.status, (json.loads(raw) if raw else {})
     except urllib.error.HTTPError as e:
@@ -213,12 +215,34 @@ def create_products(args):
     print(f"created {len(prods)} products, {len(passes)} passes")
 
 
+def publish_place(args):
+    """Upload CarHunters.rbxl as a new version of an existing place (Open Cloud Place Publishing)."""
+    path = os.path.join(ROOT, "CarHunters.rbxl")
+    if not os.path.exists(path):
+        sys.exit("CarHunters.rbxl not found - run python3 tools/build_place.py first")
+    newest_src = max(os.path.getmtime(os.path.join(d, f)) for d, _, fs in os.walk(os.path.join(ROOT, "src")) for f in fs)
+    if os.path.getmtime(path) < newest_src:
+        sys.exit("CarHunters.rbxl is older than src/ - run python3 tools/build_place.py first")
+    data = open(path, "rb").read()
+    url = f"{API}/universes/v1/{args.universe}/places/{args.place}/versions?versionType={args.version_type}"
+    print(f"uploading {len(data) / 1e6:.1f} MB to universe {args.universe}, place {args.place} ({args.version_type}) ...")
+    st, res = request("POST", url, data, {"Content-Type": "application/octet-stream"}, timeout=600)
+    if st == 200:
+        print("published: version", res.get("versionNumber"))
+    elif st in (401, 403):
+        sys.exit(f"{st}: the API key lacks universe-places:write or this experience is not in its Access list\n{res}")
+    else:
+        sys.exit(f"publish failed ({st}): {res}")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=["sounds", "products", "models", "icons"])
+    ap.add_argument("what", choices=["sounds", "products", "models", "icons", "publish"])
     ap.add_argument("--creator-user", type=int)
     ap.add_argument("--creator-group", type=int)
     ap.add_argument("--universe", type=int)
+    ap.add_argument("--place", type=int)
+    ap.add_argument("--version-type", default="Published", choices=["Published", "Saved"])
     ap.add_argument("--only", help="comma-separated sound names to upload")
     a = ap.parse_args()
     if a.what == "icons":
@@ -233,6 +257,10 @@ if __name__ == "__main__":
         if not (a.creator_user or a.creator_group):
             sys.exit("need --creator-user or --creator-group")
         upload_sounds(a)
+    elif a.what == "publish":
+        if not (a.universe and a.place):
+            sys.exit("need --universe and --place")
+        publish_place(a)
     else:
         if not a.universe:
             sys.exit("need --universe")

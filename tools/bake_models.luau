@@ -40,10 +40,19 @@ local function strip(d)
 	return false
 end
 
+-- only the ids the game uses (assets/rbxm/used.txt, written by fetch_assets.py); without the list, everything
+local used
+if fs.isFile(dir .. "/used.txt") then
+	used = {}
+	for id in string.gmatch(fs.readFile(dir .. "/used.txt"), "%d+") do
+		used[id] = true
+	end
+end
+
 local n, failed = 0, {}
 for _, file in ipairs(fs.readDir(dir)) do
 	local id = string.match(file, "^(%d+)%.rbxm$")
-	if id then
+	if id and (not used or used[id]) then
 		local ok, res = pcall(roblox.deserializeModel, fs.readFile(dir .. "/" .. file))
 		if ok then
 			local holder = roblox.Instance.new("Model")

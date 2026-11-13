@@ -50,15 +50,35 @@ if __name__ == "__main__":
     a = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
     models, cars = ids()
-    todo = models + [i for c in cars for i in c[: a.cars]]
     ok = bad = 0
-    for i in todo:
+    used = []
+
+    def try_fetch(i):
+        got = True
         try:
             print(f"  {i}: {fetch(i)}")
-            ok += 1
         except Exception as e:  # noqa: BLE001 - report and continue
             print(f"  ! {i}: {e}")
-            bad += 1
+            got = False
         time.sleep(0.2)
+        return got
+
+    for i in models:
+        if try_fetch(i):
+            ok += 1
+            used.append(i)
+        else:
+            bad += 1
+    # each car: the first candidate that downloads (up to --cars tries); the game uses the first embedded one
+    for c in cars:
+        for i in c[: a.cars]:
+            if try_fetch(i):
+                ok += 1
+                used.append(i)
+                break
+            bad += 1
+    # the baker embeds only these ids (old versions left in assets/rbxm would only make the place bigger)
+    with open(os.path.join(OUT, "used.txt"), "w") as f:
+        f.write("\n".join(str(i) for i in used) + "\n")
     print(f"downloaded/cached {ok}, failed {bad}  ({len(models)} Blender models, {len(cars)} cars)")
     sys.exit(0 if ok else 1)

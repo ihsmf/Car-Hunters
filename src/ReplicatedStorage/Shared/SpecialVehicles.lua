@@ -107,7 +107,7 @@ SV.BossLooks = {
 	titan = { body = C(200, 30, 40), accent = C(240, 190, 60), L = 30 },
 }
 
--- Blender model (server only: ServerStorage.BuilderAssets.Props.MonsterTruck, loaded by ModelService), nose on +X.
+-- Blender model (server only: ServerStorage.BuilderAssets.Props.MonsterTruck, loaded by ModelService), turned so the nose is on +X.
 -- Scaled to the look's length, "Body"/"Accent" pieces recoloured, every piece welded to an anchored ground Root.
 local function fromBlender(lk)
 	local ss = game:GetService("ServerStorage")
@@ -118,6 +118,8 @@ local function fromBlender(lk)
 		return nil
 	end
 	local src = tpl:Clone()
+	-- the imported mesh has its nose on -X (checked on the embedded rbxm: headlights at x -10.4); bosses drive +X
+	src:PivotTo(src:GetPivot() * CFrame.Angles(0, math.pi, 0))
 	local _, size = src:GetBoundingBox()
 	if size.X > 0.1 then
 		src:ScaleTo(src:GetScale() * lk.L / size.X)

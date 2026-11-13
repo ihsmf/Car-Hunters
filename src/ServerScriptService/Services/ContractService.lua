@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Util = require(Shared:WaitForChild("Util"))
+local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 
@@ -14,12 +15,25 @@ local rng = Random.new()
 
 Contracts.Active = 3
 
--- part types each district is known for (bank_part contracts ask for these)
-local ZONE_PARTS = {
-	city = { "bolts", "tire" }, highway = { "tire", "engine" }, industrial = { "engine", "turbo" }, neon = { "turbo", "core" },
-}
+-- bank_part contracts ask for the two most common parts that really spawn in that district (safe + risky spots),
+-- so every job can be finished by farming the district
+local ZONE_PARTS = {}
 for _, z in ipairs(MapConfig.ZoneOrder) do
-	ZONE_PARTS[z] = ZONE_PARTS[z] or { "turbo", "core" }
+	local tables = PartConfig.SpawnTables[z]
+	local w = {}
+	for _, kind in ipairs({ "safe", "risky" }) do
+		for _, e in ipairs(tables and tables[kind] or {}) do
+			w[e[1]] = (w[e[1]] or 0) + e[2]
+		end
+	end
+	local list = {}
+	for id in pairs(w) do
+		table.insert(list, id)
+	end
+	table.sort(list, function(a, b)
+		return w[a] > w[b]
+	end)
+	ZONE_PARTS[z] = { list[1] or "bolts", list[2] or list[1] or "bolts" }
 end
 
 function Contracts.Init(hub)
@@ -68,7 +82,8 @@ function Contracts.New(s)
 		local pool = ZONE_PARTS[zone]
 		c.part = pool[rng:NextInteger(1, #pool)]
 		c.zone = zone
-		c.n = (c.part == "core") and 1 or rng:NextInteger(2, 4)
+		local rarity = PartConfig.Parts[c.part].rarity
+		c.n = (rarity == "Legendary" or rarity == "Epic") and 1 or rng:NextInteger(2, 4)
 		c.reward = rewardFor(s, 1 + c.n * 0.3)
 	elseif kind == "combo" then
 		c.n = 1
@@ -93,6 +108,14 @@ end
 
 function Contracts.Fill(s)
 	local d = s.data
+	-- old saves: drop jobs that ask for a part the district never drops (they could never be finished)
+	for i = #d.contracts, 1, -1 do
+		local c = d.contracts[i]
+		local pool = c.kind == "bank_part" and ZONE_PARTS[c.zone]
+		if pool and c.part ~= pool[1] and c.part ~= pool[2] and not c.ready then
+			table.remove(d.contracts, i)
+		end
+	end
 	while #d.contracts < Contracts.Active do
 		table.insert(d.contracts, Contracts.New(s))
 	end

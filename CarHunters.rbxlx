@@ -71,88 +71,88 @@ CarConfig.UpgradeCostGrowth = 1.35
 
 -- Fictional parody cars: inspired by familiar body styles, no real names, logos or badges.
 local list = {
-	{ id = "furd_fiasta", name = "Furd Fiasta", rarity = "Common", style = "compact", income = 2, body = C(40, 110, 220), accent = C(30, 30, 36), tag = "Small car, big dreams." },
-	{ id = "dodje_caravon", name = "Dodje Caravon", rarity = "Common", style = "van", income = 3, body = C(150, 30, 40), accent = C(30, 30, 36), tag = "Seats the whole crew." },
-	{ id = "furd_f150", name = "Furd F-One-Fifty", rarity = "Common", style = "pickup", income = 4, body = C(190, 196, 204), accent = C(30, 30, 36), tag = "Hauls anything, anywhere." },
-	{ id = "awdi_a4", name = "Awdi A-Four", rarity = "Common", style = "sedan", income = 5, body = C(196, 200, 206), accent = C(30, 30, 36), tag = "Four doors of pure order." },
-	{ id = "bmv_m3", name = "BMV M-Tree", rarity = "Uncommon", style = "sedan", income = 8, body = C(30, 90, 190), accent = C(20, 20, 24), tag = "Blinkers sold separately." },
-	{ id = "mursides_e", name = "Mursides E-Klass", rarity = "Uncommon", style = "sedan", income = 10, body = C(20, 20, 24), accent = C(200, 200, 210), tag = "The boss has arrived." },
-	{ id = "tezla_model3", name = "Tezla Model Tree", rarity = "Uncommon", style = "sedan", income = 12, body = C(236, 238, 242), accent = C(20, 20, 24), tag = "Silent, smooth, electric." },
-	{ id = "jagwar_xe", name = "Jagwar XE", rarity = "Uncommon", style = "sedan", income = 15, body = C(16, 70, 50), accent = C(200, 200, 210), tag = "Purrs on every corner." },
-	{ id = "furd_mustank", name = "Furd Mustank", rarity = "Rare", style = "muscle", income = 25, body = C(210, 40, 36), accent = C(240, 240, 240), spoiler = true, tag = "Wild horse on wheels." },
-	{ id = "dodje_chalenjer", name = "Dodje Chalenjer", rarity = "Rare", style = "muscle", income = 32, body = C(255, 120, 20), accent = C(20, 20, 24), tag = "Burnouts before breakfast." },
-	{ id = "ranje_rover", name = "Ranje Rover", rarity = "Rare", style = "suv", income = 40, body = C(232, 232, 228), accent = C(20, 20, 24), tag = "Royalty rides high." },
-	{ id = "bmv_m4", name = "BMV M-Fore", rarity = "Rare", style = "sport", income = 50, body = C(120, 190, 60), accent = C(20, 20, 24), spoiler = true, tag = "Lives at the rev limiter." },
-	{ id = "mursides_g", name = "Mursides G-Vagon", rarity = "Epic", style = "suv", income = 100, body = C(24, 26, 28), accent = C(200, 200, 210), tag = "A brick that outruns you." },
-	{ id = "awdi_r8", name = "Awdi R-Ate", rarity = "Epic", style = "supercar", income = 125, body = C(200, 204, 210), accent = C(20, 20, 24), chrome = true, tag = "Engine behind, world ahead." },
-	{ id = "jagwar_ftype", name = "Jagwar F-Tipe", rarity = "Epic", style = "sport", income = 150, body = C(150, 20, 30), accent = C(20, 20, 24), tag = "Long hood, loud roar." },
-	{ id = "mazeratti_gt", name = "Mazeratti GranTurizmo", rarity = "Epic", style = "sport", income = 200, body = C(20, 40, 90), accent = C(200, 200, 210), tag = "Opera on four wheels." },
-	{ id = "lamborgini_hurakan", name = "Lamborgini Hurakan", rarity = "Legendary", style = "supercar", income = 500, body = C(120, 220, 40), accent = C(20, 20, 24), neon = C(120, 255, 60), tag = "A storm with number plates." },
-	{ id = "tezla_cybertrak", name = "Tezla Cybertrak", rarity = "Legendary", style = "pickup", income = 650, body = C(176, 180, 186), accent = C(20, 20, 24), chrome = true, tag = "Low-poly from the future." },
-	{ id = "mazeratti_mc20", name = "Mazeratti MC-Twenty", rarity = "Legendary", style = "supercar", income = 800, body = C(240, 240, 236), accent = C(30, 60, 160), neon = C(110, 150, 255), tag = "Carbon, thunder, style." },
-	{ id = "lamborgini_aventadoor", name = "Lamborgini Aventadoor", rarity = "Legendary", style = "proto", income = 1000, body = C(255, 150, 10), accent = C(20, 20, 24), neon = C(255, 190, 40), spoiler = true, tag = "The final hunt." },
+	{ id = "furd_fiasta", name = "Zippa Pebble", rarity = "Common", style = "compact", income = 2, body = C(40, 110, 220), accent = C(30, 30, 36), tag = "Small car, big dreams." },
+	{ id = "dodje_caravon", name = "Roomster Van", rarity = "Common", style = "van", income = 3, body = C(150, 30, 40), accent = C(30, 30, 36), tag = "Seats the whole crew." },
+	{ id = "furd_f150", name = "Haulmax Ranger", rarity = "Common", style = "pickup", income = 4, body = C(190, 196, 204), accent = C(30, 30, 36), tag = "Hauls anything, anywhere." },
+	{ id = "awdi_a4", name = "Orbis Quad", rarity = "Common", style = "sedan", income = 5, body = C(196, 200, 206), accent = C(30, 30, 36), tag = "Four doors of pure order." },
+	{ id = "bmv_m3", name = "Kestrel K3", rarity = "Uncommon", style = "sedan", income = 8, body = C(30, 90, 190), accent = C(20, 20, 24), tag = "Blinkers sold separately." },
+	{ id = "mursides_e", name = "Stellar Executive", rarity = "Uncommon", style = "sedan", income = 10, body = C(20, 20, 24), accent = C(200, 200, 210), tag = "The boss has arrived." },
+	{ id = "tezla_model3", name = "Voltara Three", rarity = "Uncommon", style = "sedan", income = 12, body = C(236, 238, 242), accent = C(20, 20, 24), tag = "Silent, smooth, electric." },
+	{ id = "jagwar_xe", name = "Panthera XE", rarity = "Uncommon", style = "sedan", income = 15, body = C(16, 70, 50), accent = C(200, 200, 210), tag = "Purrs on every corner." },
+	{ id = "furd_mustank", name = "Stallion Fury", rarity = "Rare", style = "muscle", income = 25, body = C(210, 40, 36), accent = C(240, 240, 240), spoiler = true, tag = "Wild horse on wheels." },
+	{ id = "dodje_chalenjer", name = "Brawler Duel", rarity = "Rare", style = "muscle", income = 32, body = C(255, 120, 20), accent = C(20, 20, 24), tag = "Burnouts before breakfast." },
+	{ id = "ranje_rover", name = "Summit Rover", rarity = "Rare", style = "suv", income = 40, body = C(232, 232, 228), accent = C(20, 20, 24), tag = "Royalty rides high." },
+	{ id = "bmv_m4", name = "Kestrel K4", rarity = "Rare", style = "sport", income = 50, body = C(120, 190, 60), accent = C(20, 20, 24), spoiler = true, tag = "Lives at the rev limiter." },
+	{ id = "mursides_g", name = "Stellar G-Brick", rarity = "Epic", style = "suv", income = 100, body = C(24, 26, 28), accent = C(200, 200, 210), tag = "A brick that outruns you." },
+	{ id = "awdi_r8", name = "Orbis R-Blade", rarity = "Epic", style = "supercar", income = 125, body = C(200, 204, 210), accent = C(20, 20, 24), chrome = true, tag = "Engine behind, world ahead." },
+	{ id = "jagwar_ftype", name = "Panthera F-Prowl", rarity = "Epic", style = "sport", income = 150, body = C(150, 20, 30), accent = C(20, 20, 24), tag = "Long hood, loud roar." },
+	{ id = "mazeratti_gt", name = "Tridente GranVia", rarity = "Epic", style = "sport", income = 200, body = C(20, 40, 90), accent = C(200, 200, 210), tag = "Opera on four wheels." },
+	{ id = "lamborgini_hurakan", name = "Taurio Tempest", rarity = "Legendary", style = "supercar", income = 500, body = C(120, 220, 40), accent = C(20, 20, 24), neon = C(120, 255, 60), tag = "A storm with number plates." },
+	{ id = "tezla_cybertrak", name = "Voltara Wedge", rarity = "Legendary", style = "pickup", income = 650, body = C(176, 180, 186), accent = C(20, 20, 24), chrome = true, tag = "Low-poly from the future." },
+	{ id = "mazeratti_mc20", name = "Tridente MC-Twenty", rarity = "Legendary", style = "supercar", income = 800, body = C(240, 240, 236), accent = C(30, 60, 160), neon = C(110, 150, 255), tag = "Carbon, thunder, style." },
+	{ id = "lamborgini_aventadoor", name = "Taurio Scissor", rarity = "Legendary", style = "proto", income = 1000, body = C(255, 150, 10), accent = C(20, 20, 24), neon = C(255, 190, 40), spoiler = true, tag = "The final hunt." },
 	-- ---- wave 2
-	{ id = "fiat_500", name = "Fiyat Five-Hundo", rarity = "Common", style = "compact", income = 2, body = C(150, 220, 190), accent = C(240, 240, 240), tag = "Espresso-sized." },
-	{ id = "mini_kooper", name = "Mini Kooper", rarity = "Common", style = "compact", income = 3, body = C(200, 30, 40), accent = C(240, 240, 240), tag = "Go-kart with a roof." },
-	{ id = "volksvagen_gulf", name = "Volksvagen Gulf GTI", rarity = "Common", style = "compact", income = 4, body = C(236, 236, 236), accent = C(200, 30, 30), tag = "The hot hatch original." },
-	{ id = "hunda_civik", name = "Hunda Civik Type-Arr", rarity = "Common", style = "sedan", income = 5, body = C(250, 250, 250), accent = C(200, 30, 30), spoiler = true, tag = "VTEC just kicked in." },
-	{ id = "jeap_rangler", name = "Jeap Rangler", rarity = "Uncommon", style = "suv", income = 9, body = C(250, 190, 20), accent = C(20, 20, 24), tag = "Roads are optional." },
-	{ id = "mazta_miyata", name = "Mazta Miyata", rarity = "Uncommon", style = "sport", income = 11, body = C(220, 30, 30), accent = C(20, 20, 24), tag = "The answer is always Miyata." },
-	{ id = "subaroo_wrx", name = "Subaroo WRX", rarity = "Uncommon", style = "sedan", income = 13, body = C(20, 70, 180), accent = C(220, 180, 60), spoiler = true, tag = "Born on gravel." },
-	{ id = "chevy_kamaro", name = "Chevy Kamaro", rarity = "Uncommon", style = "muscle", income = 14, body = C(255, 200, 0), accent = C(20, 20, 24), tag = "More than meets the eye." },
-	{ id = "toyoda_supera", name = "Toyoda Supera", rarity = "Rare", style = "sport", income = 28, body = C(255, 110, 20), accent = C(20, 20, 24), spoiler = true, tag = "Ten-second legend." },
-	{ id = "chevy_korvette", name = "Chevy Korvette", rarity = "Rare", style = "sport", income = 36, body = C(210, 20, 30), accent = C(20, 20, 24), tag = "American thunder." },
-	{ id = "nisan_gtr", name = "Nisan GT-Arr", rarity = "Rare", style = "sport", income = 45, body = C(236, 236, 240), accent = C(20, 20, 24), spoiler = true, tag = "They call it the monster." },
-	{ id = "porshe_911", name = "Porshe Nine-Eleven", rarity = "Rare", style = "sport", income = 48, body = C(255, 200, 0), accent = C(20, 20, 24), tag = "Engine in the trunk. On purpose." },
-	{ id = "bentli_kontinental", name = "Bentli Kontinental", rarity = "Epic", style = "sport", income = 110, body = C(110, 16, 30), accent = C(200, 200, 210), tag = "A mansion that does 200." },
-	{ id = "rolz_fantom", name = "Rolz-Roice Fantom", rarity = "Epic", style = "sedan", income = 140, body = C(240, 236, 222), accent = C(200, 200, 210), chrome = false, tag = "Quiet money." },
-	{ id = "maklaren_p1", name = "MakLaren P-One", rarity = "Epic", style = "supercar", income = 170, body = C(0, 150, 200), accent = C(20, 20, 24), spoiler = true, tag = "Built in a wind tunnel." },
-	{ id = "ferarri_488", name = "Ferarri Four-Ate-Ate", rarity = "Epic", style = "supercar", income = 190, body = C(220, 16, 20), accent = C(20, 20, 24), tag = "Red goes faster." },
-	{ id = "ferarri_laferarri", name = "Ferarri LaFerarri", rarity = "Legendary", style = "proto", income = 600, body = C(190, 0, 16), accent = C(20, 20, 24), neon = C(255, 60, 40), tag = "The The-Car." },
-	{ id = "pagany_wyra", name = "Pagany Wyra", rarity = "Legendary", style = "proto", income = 750, body = C(120, 140, 165), accent = C(20, 20, 24), chrome = true, tag = "Art that breaks the wind." },
-	{ id = "konigseg_agera", name = "Konigseg Agera", rarity = "Legendary", style = "proto", income = 900, body = C(244, 244, 244), accent = C(20, 20, 24), neon = C(60, 160, 255), spoiler = true, tag = "The ghost of speed." },
-	{ id = "bugati_shiron", name = "Bugati Shiron", rarity = "Legendary", style = "proto", income = 1200, body = C(20, 70, 180), accent = C(20, 20, 24), neon = C(60, 140, 255), tag = "The king of top speed." },
+	{ id = "fiat_500", name = "Bambino Cinque", rarity = "Common", style = "compact", income = 2, body = C(150, 220, 190), accent = C(240, 240, 240), tag = "Espresso-sized." },
+	{ id = "mini_kooper", name = "Pocket Rocket", rarity = "Common", style = "compact", income = 3, body = C(200, 30, 40), accent = C(240, 240, 240), tag = "Go-kart with a roof." },
+	{ id = "volksvagen_gulf", name = "Peoples Hatch GT", rarity = "Common", style = "compact", income = 4, body = C(236, 236, 236), accent = C(200, 30, 30), tag = "The hot hatch original." },
+	{ id = "hunda_civik", name = "Kazemo Civic-R", rarity = "Common", style = "sedan", income = 5, body = C(250, 250, 250), accent = C(200, 30, 30), spoiler = true, tag = "VTEC just kicked in." },
+	{ id = "jeap_rangler", name = "Trailhound Wrangle", rarity = "Uncommon", style = "suv", income = 9, body = C(250, 190, 20), accent = C(20, 20, 24), tag = "Roads are optional." },
+	{ id = "mazta_miyata", name = "Breezer Miyo", rarity = "Uncommon", style = "sport", income = 11, body = C(220, 30, 30), accent = C(20, 20, 24), tag = "The answer is always Miyata." },
+	{ id = "subaroo_wrx", name = "Pleiad Rally-X", rarity = "Uncommon", style = "sedan", income = 13, body = C(20, 70, 180), accent = C(220, 180, 60), spoiler = true, tag = "Born on gravel." },
+	{ id = "chevy_kamaro", name = "Thunder Kamo", rarity = "Uncommon", style = "muscle", income = 14, body = C(255, 200, 0), accent = C(20, 20, 24), tag = "Loud, proud and yellow." },
+	{ id = "toyoda_supera", name = "Sakura Supreme", rarity = "Rare", style = "sport", income = 28, body = C(255, 110, 20), accent = C(20, 20, 24), spoiler = true, tag = "Ten-second legend." },
+	{ id = "chevy_korvette", name = "Thunder Corsair", rarity = "Rare", style = "sport", income = 36, body = C(210, 20, 30), accent = C(20, 20, 24), tag = "American thunder." },
+	{ id = "nisan_gtr", name = "Raijin GT-Arr", rarity = "Rare", style = "sport", income = 45, body = C(236, 236, 240), accent = C(20, 20, 24), spoiler = true, tag = "They call it the monster." },
+	{ id = "porshe_911", name = "Swabia Nine", rarity = "Rare", style = "sport", income = 48, body = C(255, 200, 0), accent = C(20, 20, 24), tag = "Engine in the trunk. On purpose." },
+	{ id = "bentli_kontinental", name = "Regent Continental", rarity = "Epic", style = "sport", income = 110, body = C(110, 16, 30), accent = C(200, 200, 210), tag = "A mansion that does 200." },
+	{ id = "rolz_fantom", name = "Royal Phantasm", rarity = "Epic", style = "sedan", income = 140, body = C(240, 236, 222), accent = C(200, 200, 210), chrome = false, tag = "Quiet money." },
+	{ id = "maklaren_p1", name = "Orbital P-One", rarity = "Epic", style = "supercar", income = 170, body = C(0, 150, 200), accent = C(20, 20, 24), spoiler = true, tag = "Built in a wind tunnel." },
+	{ id = "ferarri_488", name = "Cavallo 488", rarity = "Epic", style = "supercar", income = 190, body = C(220, 16, 20), accent = C(20, 20, 24), tag = "Red goes faster." },
+	{ id = "ferarri_laferarri", name = "Cavallo LaGrande", rarity = "Legendary", style = "proto", income = 600, body = C(190, 0, 16), accent = C(20, 20, 24), neon = C(255, 60, 40), tag = "The The-Car." },
+	{ id = "pagany_wyra", name = "Zephyr Wind", rarity = "Legendary", style = "proto", income = 750, body = C(120, 140, 165), accent = C(20, 20, 24), chrome = true, tag = "Art that breaks the wind." },
+	{ id = "konigseg_agera", name = "Nordik Ager", rarity = "Legendary", style = "proto", income = 900, body = C(244, 244, 244), accent = C(20, 20, 24), neon = C(60, 160, 255), spoiler = true, tag = "The ghost of speed." },
+	{ id = "bugati_shiron", name = "Etoile Shiro", rarity = "Legendary", style = "proto", income = 1200, body = C(20, 70, 180), accent = C(20, 20, 24), neon = C(60, 140, 255), tag = "The king of top speed." },
 	-- ---- wave 3 (v8): 8 more per rarity
-	{ id = "hunda_jazzy", name = "Hunda Jazzy", rarity = "Common", style = "compact", income = 2, body = C(240, 120, 40), accent = C(30, 30, 36), tag = "Fits a fridge, somehow." },
-	{ id = "toyoda_korolla", name = "Toyoda Korolla", rarity = "Common", style = "sedan", income = 3, body = C(170, 176, 186), accent = C(30, 30, 36), tag = "Runs forever, never complains." },
-	{ id = "nisan_mikra", name = "Nisan Mikra", rarity = "Common", style = "compact", income = 2, body = C(250, 200, 210), accent = C(30, 30, 36), tag = "Parks in a shoebox." },
-	{ id = "kia_soal", name = "Kia Soal", rarity = "Common", style = "compact", income = 3, body = C(110, 200, 80), accent = C(30, 30, 36), tag = "A toaster with attitude." },
-	{ id = "hyunday_elantro", name = "Hyunday Elantro", rarity = "Common", style = "sedan", income = 4, body = C(30, 60, 120), accent = C(200, 200, 210), tag = "Sensible shoes on wheels." },
-	{ id = "skodda_oktavia", name = "Skodda Oktavia", rarity = "Common", style = "sedan", income = 4, body = C(40, 120, 90), accent = C(200, 200, 210), tag = "Room for everything." },
-	{ id = "shevy_spork", name = "Shevy Spork", rarity = "Common", style = "compact", income = 2, body = C(80, 200, 220), accent = C(30, 30, 36), tag = "Tiny, cheerful, loud horn." },
-	{ id = "volvoo_240", name = "Volvoo Two-Forty", rarity = "Common", style = "sedan", income = 5, body = C(120, 30, 40), accent = C(200, 200, 210), tag = "A brick of pure safety." },
-	{ id = "toyoda_takoma", name = "Toyoda Takoma", rarity = "Uncommon", style = "pickup", income = 9, body = C(200, 170, 110), accent = C(30, 30, 36), tag = "Mud is a lifestyle." },
-	{ id = "furd_brongo", name = "Furd Brongo", rarity = "Uncommon", style = "suv", income = 11, body = C(60, 140, 200), accent = C(20, 20, 24), tag = "Doors off, fun on." },
-	{ id = "hunda_akkord", name = "Hunda Akkord", rarity = "Uncommon", style = "sedan", income = 10, body = C(236, 236, 240), accent = C(20, 20, 24), tag = "Quietly perfect." },
-	{ id = "volksvagen_bitle", name = "Volksvagen Bitle", rarity = "Uncommon", style = "compact", income = 8, body = C(250, 220, 60), accent = C(240, 240, 240), tag = "Round, happy, unstoppable." },
-	{ id = "awdi_tt", name = "Awdi Tee-Tee", rarity = "Uncommon", style = "sport", income = 13, body = C(200, 204, 210), accent = C(20, 20, 24), tag = "Bauhaus on four wheels." },
-	{ id = "lexxus_is", name = "Lexxus I-Ess", rarity = "Uncommon", style = "sedan", income = 12, body = C(20, 20, 24), accent = C(200, 200, 210), tag = "Silk gloves, sharp claws." },
-	{ id = "dodje_ramm", name = "Dodje Ramm", rarity = "Uncommon", style = "pickup", income = 14, body = C(150, 20, 30), accent = C(200, 200, 210), tag = "Built like a battering ram." },
-	{ id = "mitsubishy_evo", name = "Mitsubishy Evo", rarity = "Uncommon", style = "sedan", income = 15, body = C(30, 30, 36), accent = C(220, 180, 60), spoiler = true, tag = "Rally stage in a suit." },
-	{ id = "nisan_350z", name = "Nisan Three-Fifty Zed", rarity = "Rare", style = "sport", income = 26, body = C(255, 170, 30), accent = C(20, 20, 24), tag = "Sideways is the right way." },
-	{ id = "bmv_x5", name = "BMV X-Five", rarity = "Rare", style = "suv", income = 30, body = C(30, 40, 60), accent = C(200, 200, 210), tag = "School run, autobahn speed." },
-	{ id = "kadillak_eskalade", name = "Kadillak Eskalade", rarity = "Rare", style = "suv", income = 38, body = C(20, 20, 24), accent = C(200, 200, 210), tag = "Arrives before it arrives." },
-	{ id = "toyoda_landkruiser", name = "Toyoda Landkruiser", rarity = "Rare", style = "suv", income = 34, body = C(230, 226, 216), accent = C(20, 20, 24), tag = "Crosses deserts for fun." },
-	{ id = "shelbi_kobra", name = "Shelbi Kobra", rarity = "Rare", style = "muscle", income = 44, body = C(30, 60, 160), accent = C(240, 240, 240), tag = "Two stripes, zero chill." },
-	{ id = "pontiak_firebyrd", name = "Pontiak Firebyrd", rarity = "Rare", style = "muscle", income = 40, body = C(20, 20, 24), accent = C(220, 180, 60), tag = "Eagle on the hood, fire in the heart." },
-	{ id = "porshe_kayen", name = "Porshe Kayen", rarity = "Rare", style = "suv", income = 46, body = C(150, 156, 166), accent = C(20, 20, 24), tag = "The sports car that does groceries." },
-	{ id = "mursides_amg", name = "Mursides Ay-Em-Gee GT", rarity = "Rare", style = "sport", income = 50, body = C(110, 200, 60), accent = C(20, 20, 24), tag = "Green hell certified." },
-	{ id = "astin_db11", name = "Astin Martyn Dee-Bee Eleven", rarity = "Epic", style = "sport", income = 120, body = C(30, 80, 60), accent = C(200, 200, 210), tag = "Licence to cruise." },
-	{ id = "lamborgini_uroos", name = "Lamborgini Uroos", rarity = "Epic", style = "suv", income = 160, body = C(255, 200, 0), accent = C(20, 20, 24), tag = "A bull that seats five." },
-	{ id = "ferarri_romma", name = "Ferarri Romma", rarity = "Epic", style = "sport", income = 150, body = C(220, 30, 30), accent = C(20, 20, 24), tag = "La dolce vita, 600 hp." },
-	{ id = "porshe_taykun", name = "Porshe Taykun", rarity = "Epic", style = "sport", income = 130, body = C(40, 120, 200), accent = C(20, 20, 24), tag = "Silent rocket." },
-	{ id = "maklaren_720", name = "MakLaren Seven-Twenty", rarity = "Epic", style = "supercar", income = 185, body = C(255, 120, 20), accent = C(20, 20, 24), tag = "Eyes like a predator." },
-	{ id = "awdi_rs6", name = "Awdi Arr-Ess Six", rarity = "Epic", style = "sedan", income = 115, body = C(110, 116, 124), accent = C(20, 20, 24), tag = "The fastest estate in town." },
-	{ id = "bentli_bentaiga", name = "Bentli Bentaiga", rarity = "Epic", style = "suv", income = 145, body = C(60, 20, 30), accent = C(200, 200, 210), tag = "A lounge on stilts." },
-	{ id = "mursides_maibah", name = "Mursides Maibah", rarity = "Epic", style = "sedan", income = 175, body = C(20, 20, 24), accent = C(240, 240, 240), chrome = true, tag = "Champagne in the back." },
-	{ id = "bugati_veiron", name = "Bugati Veiron", rarity = "Legendary", style = "proto", income = 700, body = C(30, 30, 90), accent = C(200, 200, 210), neon = C(80, 120, 255), tag = "The original hyper." },
-	{ id = "konigseg_jesko", name = "Konigseg Yesko", rarity = "Legendary", style = "proto", income = 1100, body = C(240, 240, 240), accent = C(20, 20, 24), neon = C(255, 80, 60), spoiler = true, tag = "Wing bigger than your ego." },
-	{ id = "ferarri_sf90", name = "Ferarri Ess-Eff Ninety", rarity = "Legendary", style = "supercar", income = 850, body = C(220, 16, 20), accent = C(20, 20, 24), neon = C(255, 60, 40), tag = "Hybrid fury." },
-	{ id = "lamborgini_sian", name = "Lamborgini Sian", rarity = "Legendary", style = "proto", income = 950, body = C(200, 190, 60), accent = C(20, 20, 24), neon = C(255, 220, 60), tag = "Lightning in a bottle." },
-	{ id = "maklaren_senna", name = "MakLaren Senna", rarity = "Legendary", style = "proto", income = 1000, body = C(255, 240, 240), accent = C(220, 30, 30), neon = C(255, 80, 80), spoiler = true, tag = "Track first, road maybe." },
-	{ id = "astin_valkyry", name = "Astin Valkyry", rarity = "Legendary", style = "proto", income = 1300, body = C(30, 90, 70), accent = C(20, 20, 24), neon = C(90, 255, 180), tag = "A fighter jet with plates." },
-	{ id = "pagany_huayrar", name = "Pagany Wyra Arr", rarity = "Legendary", style = "proto", income = 1150, body = C(40, 40, 44), accent = C(220, 180, 60), chrome = true, neon = C(255, 200, 80), tag = "Carbon art at 850 hp." },
-	{ id = "rimak_nevara", name = "Rimak Nevara", rarity = "Legendary", style = "supercar", income = 1250, body = C(80, 90, 110), accent = C(20, 20, 24), neon = C(80, 220, 255), tag = "Electric thunder." },
+	{ id = "hunda_jazzy", name = "Kazemo Jazzy", rarity = "Common", style = "compact", income = 2, body = C(240, 120, 40), accent = C(30, 30, 36), tag = "Fits a fridge, somehow." },
+	{ id = "toyoda_korolla", name = "Sakura Corolline", rarity = "Common", style = "sedan", income = 3, body = C(170, 176, 186), accent = C(30, 30, 36), tag = "Runs forever, never complains." },
+	{ id = "nisan_mikra", name = "Raijin Micro", rarity = "Common", style = "compact", income = 2, body = C(250, 200, 210), accent = C(30, 30, 36), tag = "Parks in a shoebox." },
+	{ id = "kia_soal", name = "Boxy Soul", rarity = "Common", style = "compact", income = 3, body = C(110, 200, 80), accent = C(30, 30, 36), tag = "A toaster with attitude." },
+	{ id = "hyunday_elantro", name = "Hanaro Elanza", rarity = "Common", style = "sedan", income = 4, body = C(30, 60, 120), accent = C(200, 200, 210), tag = "Sensible shoes on wheels." },
+	{ id = "skodda_oktavia", name = "Vlasta Octavo", rarity = "Common", style = "sedan", income = 4, body = C(40, 120, 90), accent = C(200, 200, 210), tag = "Room for everything." },
+	{ id = "shevy_spork", name = "Thunder Spork", rarity = "Common", style = "compact", income = 2, body = C(80, 200, 220), accent = C(30, 30, 36), tag = "Tiny, cheerful, loud horn." },
+	{ id = "volvoo_240", name = "Viking Two-Forty", rarity = "Common", style = "sedan", income = 5, body = C(120, 30, 40), accent = C(200, 200, 210), tag = "A brick of pure safety." },
+	{ id = "toyoda_takoma", name = "Sakura Trailhauler", rarity = "Uncommon", style = "pickup", income = 9, body = C(200, 170, 110), accent = C(30, 30, 36), tag = "Mud is a lifestyle." },
+	{ id = "furd_brongo", name = "Stallion Bronc", rarity = "Uncommon", style = "suv", income = 11, body = C(60, 140, 200), accent = C(20, 20, 24), tag = "Doors off, fun on." },
+	{ id = "hunda_akkord", name = "Kazemo Accordo", rarity = "Uncommon", style = "sedan", income = 10, body = C(236, 236, 240), accent = C(20, 20, 24), tag = "Quietly perfect." },
+	{ id = "volksvagen_bitle", name = "Peoples Bug", rarity = "Uncommon", style = "compact", income = 8, body = C(250, 220, 60), accent = C(240, 240, 240), tag = "Round, happy, unstoppable." },
+	{ id = "awdi_tt", name = "Orbis Tee-Two", rarity = "Uncommon", style = "sport", income = 13, body = C(200, 204, 210), accent = C(20, 20, 24), tag = "Bauhaus on four wheels." },
+	{ id = "lexxus_is", name = "Luxor I-Ess", rarity = "Uncommon", style = "sedan", income = 12, body = C(20, 20, 24), accent = C(200, 200, 210), tag = "Silk gloves, sharp claws." },
+	{ id = "dodje_ramm", name = "Brawler Ram", rarity = "Uncommon", style = "pickup", income = 14, body = C(150, 20, 30), accent = C(200, 200, 210), tag = "Built like a battering ram." },
+	{ id = "mitsubishy_evo", name = "Tristar Evo", rarity = "Uncommon", style = "sedan", income = 15, body = C(30, 30, 36), accent = C(220, 180, 60), spoiler = true, tag = "Rally stage in a suit." },
+	{ id = "nisan_350z", name = "Raijin Three-Fifty", rarity = "Rare", style = "sport", income = 26, body = C(255, 170, 30), accent = C(20, 20, 24), tag = "Sideways is the right way." },
+	{ id = "bmv_x5", name = "Kestrel X5", rarity = "Rare", style = "suv", income = 30, body = C(30, 40, 60), accent = C(200, 200, 210), tag = "School run, autobahn speed." },
+	{ id = "kadillak_eskalade", name = "Monarch Escalator", rarity = "Rare", style = "suv", income = 38, body = C(20, 20, 24), accent = C(200, 200, 210), tag = "Arrives before it arrives." },
+	{ id = "toyoda_landkruiser", name = "Sakura Landroamer", rarity = "Rare", style = "suv", income = 34, body = C(230, 226, 216), accent = C(20, 20, 24), tag = "Crosses deserts for fun." },
+	{ id = "shelbi_kobra", name = "Serpent Striker", rarity = "Rare", style = "muscle", income = 44, body = C(30, 60, 160), accent = C(240, 240, 240), tag = "Two stripes, zero chill." },
+	{ id = "pontiak_firebyrd", name = "Phoenix Blazebird", rarity = "Rare", style = "muscle", income = 40, body = C(20, 20, 24), accent = C(220, 180, 60), tag = "Eagle on the hood, fire in the heart." },
+	{ id = "porshe_kayen", name = "Swabia Kayo", rarity = "Rare", style = "suv", income = 46, body = C(150, 156, 166), accent = C(20, 20, 24), tag = "The sports car that does groceries." },
+	{ id = "mursides_amg", name = "Stellar Apex GT", rarity = "Rare", style = "sport", income = 50, body = C(110, 200, 60), accent = C(20, 20, 24), tag = "Green hell certified." },
+	{ id = "astin_db11", name = "Albion DB-Eleven", rarity = "Epic", style = "sport", income = 120, body = C(30, 80, 60), accent = C(200, 200, 210), tag = "Licence to cruise." },
+	{ id = "lamborgini_uroos", name = "Taurio Bull-X", rarity = "Epic", style = "suv", income = 160, body = C(255, 200, 0), accent = C(20, 20, 24), tag = "A bull that seats five." },
+	{ id = "ferarri_romma", name = "Cavallo Romana", rarity = "Epic", style = "sport", income = 150, body = C(220, 30, 30), accent = C(20, 20, 24), tag = "La dolce vita, 600 hp." },
+	{ id = "porshe_taykun", name = "Swabia Taikon", rarity = "Epic", style = "sport", income = 130, body = C(40, 120, 200), accent = C(20, 20, 24), tag = "Silent rocket." },
+	{ id = "maklaren_720", name = "Orbital Seven-Twenty", rarity = "Epic", style = "supercar", income = 185, body = C(255, 120, 20), accent = C(20, 20, 24), tag = "Eyes like a predator." },
+	{ id = "awdi_rs6", name = "Orbis Rocket Wagon", rarity = "Epic", style = "sedan", income = 115, body = C(110, 116, 124), accent = C(20, 20, 24), tag = "The fastest estate in town." },
+	{ id = "bentli_bentaiga", name = "Regent Bentora", rarity = "Epic", style = "suv", income = 145, body = C(60, 20, 30), accent = C(200, 200, 210), tag = "A lounge on stilts." },
+	{ id = "mursides_maibah", name = "Stellar Majesty", rarity = "Epic", style = "sedan", income = 175, body = C(20, 20, 24), accent = C(240, 240, 240), chrome = true, tag = "Champagne in the back." },
+	{ id = "bugati_veiron", name = "Etoile Vayron", rarity = "Legendary", style = "proto", income = 700, body = C(30, 30, 90), accent = C(200, 200, 210), neon = C(80, 120, 255), tag = "The original hyper." },
+	{ id = "konigseg_jesko", name = "Nordik Yesko", rarity = "Legendary", style = "proto", income = 1100, body = C(240, 240, 240), accent = C(20, 20, 24), neon = C(255, 80, 60), spoiler = true, tag = "Wing bigger than your ego." },
+	{ id = "ferarri_sf90", name = "Cavallo SF-Ninety", rarity = "Legendary", style = "supercar", income = 850, body = C(220, 16, 20), accent = C(20, 20, 24), neon = C(255, 60, 40), tag = "Hybrid fury." },
+	{ id = "lamborgini_sian", name = "Taurio Sianne", rarity = "Legendary", style = "proto", income = 950, body = C(200, 190, 60), accent = C(20, 20, 24), neon = C(255, 220, 60), tag = "Lightning in a bottle." },
+	{ id = "maklaren_senna", name = "Orbital Sennara", rarity = "Legendary", style = "proto", income = 1000, body = C(255, 240, 240), accent = C(220, 30, 30), neon = C(255, 80, 80), spoiler = true, tag = "Track first, road maybe." },
+	{ id = "astin_valkyry", name = "Albion Valkyra", rarity = "Legendary", style = "proto", income = 1300, body = C(30, 90, 70), accent = C(20, 20, 24), neon = C(90, 255, 180), tag = "A fighter jet with plates." },
+	{ id = "pagany_huayrar", name = "Zephyr Storm", rarity = "Legendary", style = "proto", income = 1150, body = C(40, 40, 44), accent = C(220, 180, 60), chrome = true, neon = C(255, 200, 80), tag = "Carbon art at 850 hp." },
+	{ id = "rimak_nevara", name = "Volta Nevra", rarity = "Legendary", style = "supercar", income = 1250, body = C(80, 90, 110), accent = C(20, 20, 24), neon = C(80, 220, 255), tag = "Electric thunder." },
 }
 do -- show order: rarity, then income
 	local idx = { Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5 }
@@ -1796,7 +1796,7 @@ local Kinds = {
 }
 
 return Kinds
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX9CC6F3A8DDA94D42BC21E6CE9430DE48"><Properties><string name="Name">DonateConfig</string><ProtectedString name="Source">-- Golden Magnate stall. Prices in Robux. Grants are performed on the server (DonateService).
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX8750CD9D36BF4D1BBC714CF033E7527D"><Properties><string name="Name">DonateConfig</string><ProtectedString name="Source">-- Golden Magnate stall. Prices in Robux. Grants are performed on the server (DonateService).
 local DonateConfig = {}
 
 DonateConfig.Products = {
@@ -1846,7 +1846,7 @@ function DonateConfig.Available(it, productIds, isStudio, randomRestricted)
 end
 
 return DonateConfig
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX41653588727E4ECA8B65689316CAB94A"><Properties><string name="Name">ExhaustFx</string><ProtectedString name="Source">-- Rarity-based exhaust for cars parked in a garage. Rarer = denser, brighter, flashier.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX9BF1F1C7E7554EE5BA861090115FC68C"><Properties><string name="Name">ExhaustFx</string><ProtectedString name="Source">-- Rarity-based exhaust for cars parked in a garage. Rarer = denser, brighter, flashier.
 local CollectionService = game:GetService("CollectionService")
 local Kinds = require(script.Parent:WaitForChild("VehicleKinds"))
 
@@ -1932,7 +1932,7 @@ function ExhaustFx.Attach(model, def, rarityIndex)
 end
 
 return ExhaustFx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX72FB02082278413D84648AA02067C5D6"><Properties><string name="Name">GarageKit</string><ProtectedString name="Source">-- Shared garage pieces: colour style, parking bay, upper floors. Used by BuildCityMap (ground floor)
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7A53AF1C40934E488668DB93A5D97870"><Properties><string name="Name">GarageKit</string><ProtectedString name="Source">-- Shared garage pieces: colour style, parking bay, upper floors. Used by BuildCityMap (ground floor)
 -- and BaseService (floors 2-4 are built per owner). No two visible faces share a plane.
 local BaseLayout = require(script.Parent:WaitForChild("BaseLayout"))
 local MapConfig = require(script.Parent:WaitForChild("MapConfig"))
@@ -2114,7 +2114,7 @@ function GarageKit.ApplyStyle(root, style)
 end
 
 return GarageKit
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX98B77339813C48BEB65371B33C178960"><Properties><string name="Name">IconIds</string><ProtectedString name="Source">-- HUD icons rendered in Blender (blender/make_icons.py), uploaded as Decals (tools/roblox_open_cloud.py icons).
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXBD58C9796F234706BF9FF70E61A712A1"><Properties><string name="Name">IconIds</string><ProtectedString name="Source">-- HUD icons rendered in Blender (blender/make_icons.py), uploaded as Decals (tools/roblox_open_cloud.py icons).
 return {
 	backpack = 116978042268087,
 	bolts = 99278537617756,
@@ -2140,7 +2140,7 @@ return {
 	trade = 127229551083354,
 	turbo = 119895197443050,
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX69A8E7E84EC943BBBD840C4E9B82DFA9"><Properties><string name="Name">Icons</string><ProtectedString name="Source">-- HUD icons rendered from the Blender models (assets/icons), uploaded as Decals; shown through rbxthumb.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX11638889D7A54241A18669E29928467D"><Properties><string name="Name">Icons</string><ProtectedString name="Source">-- HUD icons rendered from the Blender models (assets/icons), uploaded as Decals; shown through rbxthumb.
 local ok, ids = pcall(require, script.Parent:WaitForChild("IconIds"))
 ids = ok and ids or {}
 
@@ -2155,7 +2155,7 @@ function Icons.Get(name)
 end
 
 return Icons
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXDD5A7F413B6C4DBA854295E7BE40A5BF"><Properties><string name="Name">ModelIds</string><ProtectedString name="Source">-- Blender models uploaded as Roblox Model assets (tools/roblox_open_cloud.py models). ModelService loads them.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX5059D873A7AE402A92ECB21D8E713B6D"><Properties><string name="Name">ModelIds</string><ProtectedString name="Source">-- Blender models uploaded as Roblox Model assets (tools/roblox_open_cloud.py models). ModelService loads them.
 return {
 	B_apartment = 128945150146148,
 	B_cafe = 81914827915425,
@@ -2202,7 +2202,7 @@ return {
 	Tree = 91149725586423,
 	TrophyFountain = 100227510823439,
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX6CD4752012E442D482A7EA2E3DF02AB4"><Properties><string name="Name">ModelLooks</string><ProtectedString name="Source">-- Material + colour for Blender meshes, by mesh name (the look name). Shared by ModelService and CarModelTool.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX560E7277D89A4A7E9102030BCB7B3D5C"><Properties><string name="Name">ModelLooks</string><ProtectedString name="Source">-- Material + colour for Blender meshes, by mesh name (the look name). Shared by ModelService and CarModelTool.
 local C = Color3.fromRGB
 local M = Enum.Material
 return {
@@ -2222,7 +2222,7 @@ return {
 	Wall = { M.SmoothPlastic, C(230, 200, 160), 0, 0 }, Trim = { M.SmoothPlastic, C(240, 150, 50), 0, 0 },
 	Roof = { M.SmoothPlastic, C(170, 80, 64), 0, 0 }, Brick = { M.Brick, C(160, 76, 56), 0, 0 },
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX50BAADAAB91041DE8A9B0F0F6A44EF88"><Properties><string name="Name">ModelSizes</string><ProtectedString name="Source">-- generated by blender/make_spawn.py + make_city.py: longest side (studs), bounding-box centre relative to the
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7D36CB99C21240F0BA56923502CC5625"><Properties><string name="Name">ModelSizes</string><ProtectedString name="Source">-- generated by blender/make_spawn.py + make_city.py: longest side (studs), bounding-box centre relative to the
 -- model origin in Roblox axes (x, up, z), footprint w/d. ModelService puts the pivot back on the Blender origin.
 return {
 	B_apartment = { size = 30.80, c = { 0.00, 14.20, -0.80 }, w = 30.80, d = 26.40 },
@@ -2268,7 +2268,7 @@ return {
 	Tree = { size = 10.50, c = { 0.05, 5.25, 0.15 }, w = 7.66, d = 6.70 },
 	TrophyFountain = { size = 18.10, c = { 0.00, 5.25, -0.00 } },
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX235F9F7BD6C5445CABF7F3A24B5E84CE"><Properties><string name="Name">ProductIds</string><ProtectedString name="Source">-- Filled by tools/roblox_open_cloud.py (Open Cloud). 0 = not created yet: in Studio the purchase is simulated.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX8D5A40A054F2486BBB05E2082DBB4C09"><Properties><string name="Name">ProductIds</string><ProtectedString name="Source">-- Filled by tools/roblox_open_cloud.py (Open Cloud). 0 = not created yet: in Studio the purchase is simulated.
 return {
 	products = {
 		cash_s = 0, cash_m = 0, cash_l = 0, cash_xl = 0,
@@ -2280,7 +2280,7 @@ return {
 		vip = 0, big_backpack = 0, auto_collect = 0, golden_car = 0, double_contracts = 0, fast_trap = 0, golden_garage = 0,
 	},
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4C3C0072F5C24DFBB989DD3542CE66EF"><Properties><string name="Name">RewardConfig</string><ProtectedString name="Source">-- Daily login streak (7 days, missing a day resets) and playtime chests per session.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX86E047C0A6624A58807607F2BCC2554B"><Properties><string name="Name">RewardConfig</string><ProtectedString name="Source">-- Daily login streak (7 days, missing a day resets) and playtime chests per session.
 local R = {}
 
 -- money = max(min, income * seconds); parts added on top
@@ -2319,7 +2319,7 @@ function R.NextDay(daily, today)
 end
 
 return R
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4020120CDF684280A1A8BD7F4AFB5EAB"><Properties><string name="Name">ShopConfig</string><ProtectedString name="Source">-- Pit Stop upgrades (in-game money). Effects are read on the server through ShopService.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX8E0DFED8373B43D5807E706D2BA07C16"><Properties><string name="Name">ShopConfig</string><ProtectedString name="Source">-- Pit Stop upgrades (in-game money). Effects are read on the server through ShopService.
 local ShopConfig = {}
 
 local function curve(base, growth, max)
@@ -2354,7 +2354,7 @@ function ShopConfig.NextCost(id, level)
 end
 
 return ShopConfig
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX1424FB61567B4E74B3AC22D92D02D02A"><Properties><string name="Name">SkinConfig</string><ProtectedString name="Source">-- Garage skins: one active at a time, each recolours the whole garage and adds an income bonus.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX959FE2B80F2B469EA5C07BADB4DF860B"><Properties><string name="Name">SkinConfig</string><ProtectedString name="Source">-- Garage skins: one active at a time, each recolours the whole garage and adds an income bonus.
 local C = Color3.fromRGB
 local SkinConfig = {}
 
@@ -2414,13 +2414,13 @@ function SkinConfig.RebirthNeeds(n)
 end
 
 return SkinConfig
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX356ABCEC422B47138D2B28227C21412B"><Properties><string name="Name">SoundIds</string><ProtectedString name="Source">-- Sound asset ids (ElevenLabs SFX uploaded by tools/roblox_open_cloud.py). 0 = not uploaded: built-in fallback is used.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX316ACB4BF0B443558766C8F5207AC9F2"><Properties><string name="Name">SoundIds</string><ProtectedString name="Source">-- Sound asset ids (ElevenLabs SFX uploaded by tools/roblox_open_cloud.py). 0 = not uploaded: built-in fallback is used.
 return {
 	click = 129701225439846, open = 137919267005389, err = 93818499880209, ping = 88613645625966, throw = 119327249998497, clank = 81236574431044, charge = 119801036998398, reveal = 104359112527062, revealBig = 89971480285601, land = 105360367997502, drive = 135356508628598,
 	pickup = 115648143432870, pickupBig = 88679381563835, bank = 106536817236294, bankCombo = 118911778326066, combo = 117977986909264, cash = 94389113268355, siren = 91817872654141, crash = 95389621886750, wrecked = 139719815735975, airbag = 86864075035630,
 	whoosh = 106593268383104, fanfare = 132390340647866, ambience = 0, step = 107581095754096, music = 93319827841893,
 }
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4AC2D5F60D674F65A7DEDA108127E9AE"><Properties><string name="Name">SpecialVehicles</string><ProtectedString name="Source">-- Hand-built shapes that are not cars: freight train, taxiing airliner, monster trucks (bosses).
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7BCD418AEA2B46808B21F5A133A02DAA"><Properties><string name="Name">SpecialVehicles</string><ProtectedString name="Source">-- Hand-built shapes that are not cars: freight train, taxiing airliner, monster trucks (bosses).
 -- Same contract as VehicleFactory: Model with an anchored, invisible PrimaryPart "Root" at ground level,
 -- everything else welded to it, length along local +X.
 local SV = {}
@@ -2529,7 +2529,7 @@ SV.BossLooks = {
 	titan = { body = C(200, 30, 40), accent = C(240, 190, 60), L = 30 },
 }
 
--- Blender model (server only: ServerStorage.BuilderAssets.Props.MonsterTruck, loaded by ModelService), nose on +X.
+-- Blender model (server only: ServerStorage.BuilderAssets.Props.MonsterTruck, loaded by ModelService), turned so the nose is on +X.
 -- Scaled to the look's length, "Body"/"Accent" pieces recoloured, every piece welded to an anchored ground Root.
 local function fromBlender(lk)
 	local ss = game:GetService("ServerStorage")
@@ -2540,6 +2540,8 @@ local function fromBlender(lk)
 		return nil
 	end
 	local src = tpl:Clone()
+	-- the imported mesh has its nose on -X (checked on the embedded rbxm: headlights at x -10.4); bosses drive +X
+	src:PivotTo(src:GetPivot() * CFrame.Angles(0, math.pi, 0))
 	local _, size = src:GetBoundingBox()
 	if size.X &gt; 0.1 then
 		src:ScaleTo(src:GetScale() * lk.L / size.X)
@@ -2624,7 +2626,7 @@ function SV.Build(kindName, color)
 end
 
 return SV
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX1623D7497A2B4AF1A57AE5F0B0704BAD"><Properties><string name="Name">TuningConfig</string><ProtectedString name="Source">-- Tuning parts: each car has one slot per category; parts add a % to that car's income.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXDB8A9FDB60A8493B90D54BD7A205C854"><Properties><string name="Name">TuningConfig</string><ProtectedString name="Source">-- Tuning parts: each car has one slot per category; parts add a % to that car's income.
 -- Stage 1-2 are traded at Big Tony (contracts board), Stage 3 only drops in the last districts/arenas.
 local TuningConfig = {}
 
@@ -2707,7 +2709,7 @@ function TuningConfig.CarMult(tune)
 end
 
 return TuningConfig
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX6E19CEF69A154716983B15EFBFD6A097"><Properties><string name="Name">WheelKit</string><ProtectedString name="Source">-- Wheel detection / repair shared by CarStoreTool (install time) and VehicleFactory (every spawn).
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX8B91DEB0BE204A47A45FABFB1B8B0145"><Properties><string name="Name">WheelKit</string><ProtectedString name="Source">-- Wheel detection / repair shared by CarStoreTool (install time) and VehicleFactory (every spawn).
 -- Store cars often lose their wheels (transparent collider parts, chassis scripts); this puts real-looking
 -- wheels back wherever a wheel should be and nothing visible is there.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -5276,7 +5278,7 @@ function Zone.Start()
 end
 
 return Zone
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX6611B123C68844399EA0B3F2536983D9"><Properties><string name="Name">BossService</string><ProtectedString name="Source">-- Arena bosses: a monster truck per arena hunts the nearest player. Touch = WRECKED.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX55FCA0675FEC45C881923C44B48364E9"><Properties><string name="Name">BossService</string><ProtectedString name="Source">-- Arena bosses: a monster truck per arena hunts the nearest player. Touch = WRECKED.
 -- Players scare it by throwing their cheapest part: 1st hit stuns it, 2nd hit makes it flee for a while.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -5536,7 +5538,7 @@ function Boss.Start()
 end
 
 return Boss
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX2DD1D0844E1F4BB39E5BDD0268EA8503"><Properties><string name="Name">CheckpointService</string><ProtectedString name="Source">-- District checkpoints: at the far end of every district a player carrying loot chooses
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXCF7AE69B134B4DDE8C3B217A5100F2DA"><Properties><string name="Name">CheckpointService</string><ProtectedString name="Source">-- District checkpoints: at the far end of every district a player carrying loot chooses
 --   SAVE &amp; GO HOME  -&gt; loot is banked right here and the player is teleported to the garage
 --   RISK IT         -&gt; teleported to the start of the next district (must be unlocked); loot stays at risk,
 --                      the run's risk multiplier grows by +0.5 (applied when the loot is finally banked).
@@ -5652,13 +5654,14 @@ function CP.Start()
 end
 
 return CP
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXF0FD10F7183940D4BFF150EDBB5816DA"><Properties><string name="Name">ContractService</string><ProtectedString name="Source">-- Contracts board: three active jobs per player. Finished jobs wait as "ready" until claimed at Big Tony.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX5163CAEBD6364BC1ACC87B5F301AD639"><Properties><string name="Name">ContractService</string><ProtectedString name="Source">-- Contracts board: three active jobs per player. Finished jobs wait as "ready" until claimed at Big Tony.
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Util = require(Shared:WaitForChild("Util"))
+local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 
@@ -5668,12 +5671,25 @@ local rng = Random.new()
 
 Contracts.Active = 3
 
--- part types each district is known for (bank_part contracts ask for these)
-local ZONE_PARTS = {
-	city = { "bolts", "tire" }, highway = { "tire", "engine" }, industrial = { "engine", "turbo" }, neon = { "turbo", "core" },
-}
+-- bank_part contracts ask for the two most common parts that really spawn in that district (safe + risky spots),
+-- so every job can be finished by farming the district
+local ZONE_PARTS = {}
 for _, z in ipairs(MapConfig.ZoneOrder) do
-	ZONE_PARTS[z] = ZONE_PARTS[z] or { "turbo", "core" }
+	local tables = PartConfig.SpawnTables[z]
+	local w = {}
+	for _, kind in ipairs({ "safe", "risky" }) do
+		for _, e in ipairs(tables and tables[kind] or {}) do
+			w[e[1]] = (w[e[1]] or 0) + e[2]
+		end
+	end
+	local list = {}
+	for id in pairs(w) do
+		table.insert(list, id)
+	end
+	table.sort(list, function(a, b)
+		return w[a] &gt; w[b]
+	end)
+	ZONE_PARTS[z] = { list[1] or "bolts", list[2] or list[1] or "bolts" }
 end
 
 function Contracts.Init(hub)
@@ -5722,7 +5738,8 @@ function Contracts.New(s)
 		local pool = ZONE_PARTS[zone]
 		c.part = pool[rng:NextInteger(1, #pool)]
 		c.zone = zone
-		c.n = (c.part == "core") and 1 or rng:NextInteger(2, 4)
+		local rarity = PartConfig.Parts[c.part].rarity
+		c.n = (rarity == "Legendary" or rarity == "Epic") and 1 or rng:NextInteger(2, 4)
 		c.reward = rewardFor(s, 1 + c.n * 0.3)
 	elseif kind == "combo" then
 		c.n = 1
@@ -5747,6 +5764,14 @@ end
 
 function Contracts.Fill(s)
 	local d = s.data
+	-- old saves: drop jobs that ask for a part the district never drops (they could never be finished)
+	for i = #d.contracts, 1, -1 do
+		local c = d.contracts[i]
+		local pool = c.kind == "bank_part" and ZONE_PARTS[c.zone]
+		if pool and c.part ~= pool[1] and c.part ~= pool[2] and not c.ready then
+			table.remove(d.contracts, i)
+		end
+	end
 	while #d.contracts &lt; Contracts.Active do
 		table.insert(d.contracts, Contracts.New(s))
 	end
@@ -5835,7 +5860,7 @@ function Contracts.Start()
 end
 
 return Contracts
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX32A2950DB5404FF5BF34E40BCE333C39"><Properties><string name="Name">DonateService</string><ProtectedString name="Source">-- Golden Magnate stall: developer products + game passes, with idempotent receipt processing.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXFCDC79AB4CC8454FBE042789E8C42BB6"><Properties><string name="Name">DonateService</string><ProtectedString name="Source">-- Golden Magnate stall: developer products + game passes, with idempotent receipt processing.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -5892,7 +5917,11 @@ local function grantGoldenCar(player, s)
 	end
 	table.insert(d.cars, { uid = HttpService:GenerateGUID(false), typeId = "golden_magnat_gt", level = 1, parkedSlot = nil })
 	d.discovered.golden_magnat_gt = true
-	S.Cars.AutoPark(player)
+	-- park it right away wherever the player is (AutoPark would demand being next to the garage)
+	S.Cars.ParkBest(s)
+	S.Base.RefreshAll(player)
+	S.Income.Recalc(player)
+	S.Data.Push(player)
 end
 
 -- applies one product; returns true when granted
@@ -6136,7 +6165,7 @@ function Donate.Start()
 end
 
 return Donate
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXF5902BABA8D841AAB68D7061973A356F"><Properties><string name="Name">HotDropService</string><ProtectedString name="Source">-- Hot Drop: every ~80 s a rare crate parachutes onto a dangerous spot. First player to grab it wins.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXBA27205B41964E9691E49C5E49D2D5A9"><Properties><string name="Name">HotDropService</string><ProtectedString name="Source">-- Hot Drop: every ~80 s a rare crate parachutes onto a dangerous spot. First player to grab it wins.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -6346,7 +6375,7 @@ function HotDrop.Start()
 end
 
 return HotDrop
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX727E3185EE954AA8B135D4DF4B865D68"><Properties><string name="Name">LeaderboardService</string><ProtectedString name="Source">-- Plaza leaderboard: big screen with tabs (Income / Collection / Rebirths) that cycle every 8 s,
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX07F9D66E4ADD4E1094FB241AD64CED83"><Properties><string name="Name">LeaderboardService</string><ProtectedString name="Source">-- Plaza leaderboard: big screen with tabs (Income / Collection / Rebirths) that cycle every 8 s,
 -- rank badges, avatar headshots, and the top 3 players standing as statues on the podium.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -6639,7 +6668,7 @@ function LB.Start()
 end
 
 return LB
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXAD16092EFD6C43B68558CCFE532FBB68"><Properties><string name="Name">MechanicService</string><ProtectedString name="Source">-- Big Tony, the rich mechanic next to the contracts board: hands out finished contract rewards
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX09B30DCDBD2A4AC78E719AC1DA2B5281"><Properties><string name="Name">MechanicService</string><ProtectedString name="Source">-- Big Tony, the rich mechanic next to the contracts board: hands out finished contract rewards
 -- and trades banked parts for tuning parts.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -6820,7 +6849,7 @@ function Mechanic.Start()
 end
 
 return Mechanic
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX2CE452D1F8A547CC9F32CCD6DAC9B87F"><Properties><string name="Name">ModelService</string><ProtectedString name="Source">-- Loads the Blender models that tools/roblox_open_cloud.py uploaded (ids in Shared/ModelIds.lua), styles their meshes
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX3718E361603F4D82A63E0E6DD9512176"><Properties><string name="Name">ModelService</string><ProtectedString name="Source">-- Loads the Blender models that tools/roblox_open_cloud.py uploaded (ids in Shared/ModelIds.lua), styles their meshes
 -- by look name and installs them where the game looks for them:
 --   spawn models + street props -&gt; ServerStorage.BuilderAssets.Props   (map builder, Prefabs.FromTemplate)
 --   pickup / tuning parts       -&gt; ReplicatedStorage.PartModels        (PartVisual, WheelKit)
@@ -6980,7 +7009,7 @@ function ModelService.LoadAll()
 end
 
 return ModelService
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX458C3792CEF84AA4A118DF4FF1BF4A97"><Properties><string name="Name">RebirthService</string><ProtectedString name="Source">-- Rebirth (classic reset for a permanent income bonus + tokens) and garage skins.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXF548C27FC63541588BFAD65A152FFB99"><Properties><string name="Name">RebirthService</string><ProtectedString name="Source">-- Rebirth (classic reset for a permanent income bonus + tokens) and garage skins.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local SkinConfig = require(Shared:WaitForChild("SkinConfig"))
@@ -7117,7 +7146,7 @@ function Rebirth.TokenPerk(player, id)
 end
 
 return Rebirth
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX6F1C814554A4489A91BB370135BF46B9"><Properties><string name="Name">RewardsService</string><ProtectedString name="Source">-- Daily streak + playtime chests. Everything is decided on the server.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7459259ABF2E4105AF6F6C69C92EFAC2"><Properties><string name="Name">RewardsService</string><ProtectedString name="Source">-- Daily streak + playtime chests. Everything is decided on the server.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local R = require(Shared:WaitForChild("RewardConfig"))
@@ -7185,7 +7214,7 @@ function Rewards.ClaimChest(player, i)
 end
 
 return Rewards
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX6554502BC2B14E46ADC6AF2A4E2D136F"><Properties><string name="Name">ShopService</string><ProtectedString name="Source">-- Pit Stop: perks bought with in-game money + the mechanic NPC. All perk effects are read through this module.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX1BC7024EC06B4F5EA797F2554AE2F9CD"><Properties><string name="Name">ShopService</string><ProtectedString name="Source">-- Pit Stop: perks bought with in-game money + the mechanic NPC. All perk effects are read through this module.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -7470,7 +7499,7 @@ function Shop.Start()
 end
 
 return Shop
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX9C325D7DF8D84C198CF91BD5B8F946F2"><Properties><string name="Name">TradeService</string><ProtectedString name="Source">-- Player trading: request -&gt; accept -&gt; both sides offer cars / money / parts -&gt; both READY -&gt; 3 s countdown -&gt;
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX6A16235E13D645538F08F28CD1932F42"><Properties><string name="Name">TradeService</string><ProtectedString name="Source">-- Player trading: request -&gt; accept -&gt; both sides offer cars / money / parts -&gt; both READY -&gt; 3 s countdown -&gt;
 -- the server re-checks everything and swaps atomically. Any change resets READY.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -7731,7 +7760,7 @@ end
 Trade._active = active
 Trade._execute = execute
 return Trade
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX6887B9E352AD42D485ED5D705E330A37"><Properties><string name="Name">TuningService</string><ProtectedString name="Source">-- Install / remove tuning parts on owned cars. Removing returns the part to the inventory.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4B629FC7C5234322B90AB17786B1F769"><Properties><string name="Name">TuningService</string><ProtectedString name="Source">-- Install / remove tuning parts on owned cars. Removing returns the part to the inventory.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
@@ -7806,7 +7835,7 @@ function Tuning.Give(player, itemId, n)
 end
 
 return Tuning
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXE4071F31CB8C42758A5872FC67BFE6D6"><Properties><string name="Name">WarpService</string><ProtectedString name="Source">-- Teleport buttons: home garage or any unlocked district. Server-validated.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7C787DBE13C545F6B2C1EC382E147627"><Properties><string name="Name">WarpService</string><ProtectedString name="Source">-- Teleport buttons: home garage or any unlocked district. Server-validated.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
@@ -7832,10 +7861,6 @@ function Warp.Go(player, dest)
 	if not hrp then
 		return
 	end
-	if not S.Data.RateLimit(player, "warp", EconomyConfig.TeleportCooldown) then
-		S.Data.Notify(player, "tpWait", nil, "warn")
-		return
-	end
 	local target
 	if dest == "home" then
 		if not s.baseIndex then
@@ -7854,6 +7879,11 @@ function Warp.Go(player, dest)
 		end
 		target = MapConfig.ZoneSpawn(dest) + Vector3.new(math.random(-8, 8), 0, 0)
 	else
+		return
+	end
+	-- the cooldown starts only for a teleport that really happens (a refused one does not block the next)
+	if not S.Data.RateLimit(player, "warp", EconomyConfig.TeleportCooldown) then
+		S.Data.Notify(player, "tpWait", nil, "warn")
 		return
 	end
 	hrp.AssemblyLinearVelocity = Vector3.zero
@@ -10238,7 +10268,7 @@ function Prefabs.Building(kind, parent, cf, w, d, h, pal, rng)
 end
 
 return Prefabs
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX92BC693409424DA6817D995A503D7EAB"><Properties><string name="Name">CarStoreTool</string><ProtectedString name="Source">-- Installs real car models from the Roblox Creator Store (free models) into ReplicatedStorage.CarModels.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX425A6C5552F84B5E804647D802E11162"><Properties><string name="Name">CarStoreTool</string><ProtectedString name="Source">-- Installs real car models from the Roblox Creator Store (free models) into ReplicatedStorage.CarModels.
 -- Run in Studio (edit mode), View &gt; Command Bar:
 --   require(game.ServerStorage.Tools.CarStoreTool).InstallAll()
 --   require(game.ServerStorage.Tools.CarStoreTool).Install("bmv_m3", 2629351758)   -- any other asset id
@@ -10719,7 +10749,7 @@ function Tool.Flip(carId)
 end
 
 return Tool
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXC05A088D19284032AF6B475C24768358"><Properties><string name="Name">ModelPreview</string><ProtectedString name="Source">-- Studio edit-mode preview: load the uploaded Blender models and build the whole map, to look around without Play.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXF131119B3A7B40E2B7858B326570B97B"><Properties><string name="Name">ModelPreview</string><ProtectedString name="Source">-- Studio edit-mode preview: load the uploaded Blender models and build the whole map, to look around without Play.
 --   require(game.ServerStorage.Tools.ModelPreview).Run()
 -- Do NOT save the place afterwards if you want the server to rebuild the map itself (it rebuilds anyway when the
 -- saved map is older than MapConfig.Version). Clear(): removes the preview map.
@@ -10776,6 +10806,7 @@ local Backpack = require(Client:WaitForChild("Backpack"))
 local IntroFx = require(Client:WaitForChild("IntroFx"))
 local Checkpoint = require(Client:WaitForChild("Checkpoint"))
 local Tutorial = require(Client:WaitForChild("Tutorial"))
+local JoinFlow = require(Client:WaitForChild("JoinFlow"))
 local Rewards = require(Client:WaitForChild("Rewards"))
 local Trade = require(Client:WaitForChild("Trade"))
 
@@ -10805,11 +10836,14 @@ local actions = {
 	SetSkin = function(id) Net.Get("SetSkin"):FireServer(id) end,
 	TokenPerk = function(id) Net.Get("TokenPerk"):FireServer(id) end,
 	Teleport = function(dest)
+		Net.Get("Teleport"):FireServer(dest)
+		if dest == "home" and Store.CarriedTotal() &gt; 0 then
+			return -- the server refuses (loot goes home on foot) and says why: no whoosh
+		end
 		UI.Sfx("whoosh")
 		CineFx.Flash(Color3.fromRGB(46, 168, 255), 0.2, 0.5)
 		CineFx.Zoom(95, 0.12)
 		task.delay(0.15, function() CineFx.Zoom(70, 0.4) end)
-		Net.Get("Teleport"):FireServer(dest)
 	end,
 }
 
@@ -10835,6 +10869,7 @@ Settings.Start(UI)
 Trade.Start(UI)
 Backpack.Start(UI)
 IntroFx.Start(UI, CineFx)
+JoinFlow.Start(UI, CineFx, IntroFx, Tutorial)
 ClientFx.Init(UI)
 Markers.Start(UI.Kit(), UIExtra)
 GaragePrompts.Start(UI.Kit(), CineFx)
@@ -12427,7 +12462,8 @@ local function refreshTeleport()
 			local sub = needReb and string.format(T("n_needRebirth"), req.rebirths)
 				or string.format("🔒 $%s  ·  %s $%s", Util.FormatNumber(req.cost), T("zones_value"), Util.FormatNumber(req.minValue))
 			local t = tile(i, can and (T("btn_unlock") .. "!") or title, "🔒", can and P.green or P.grey, sub, function()
-				if can then
+				-- checked again at the click: income may have paid for it since the panel was drawn
+				if prevOpen and req and not needReb and store.Money &gt;= req.cost and store.CollectionValue &gt;= req.minValue then
 					actions.Unlock(zid)
 				elseif needReb then
 					UI.Toast(string.format(T("n_needRebirth"), req.rebirths), "warn")
@@ -12876,7 +12912,9 @@ function UI.ShowReveal(res, onClosed)
 	rv.name.Text = string.upper(def.name)
 	rv.name.TextColor3 = rc
 	local lines = { string.format('&lt;font color="#34D058"&gt;+%s/s&lt;/font&gt;', Util.FormatNumber(CarConfig.IncomeAt(def, 1))) }
-	table.insert(lines, res.slot and T("reveal_placed", res.slot) or T("reveal_stored"))
+	table.insert(lines, (res.merged and string.format("Merged into your copy - now Lv %d", res.merged))
+		or (res.sold and string.format("Garage full - sold for $%s", Util.FormatNumber(res.sold)))
+		or (res.slot and T("reveal_placed", res.slot)) or T("reveal_stored"))
 	if res.isNew and res.bonus and res.bonus &gt; 0 then
 		table.insert(lines, T("reveal_first", Util.FormatNumber(res.bonus)))
 	end
@@ -13258,7 +13296,7 @@ function Fx.Hit(dir, flashFrame)
 end
 
 return Fx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXD40FDF42A8494DA09ED0614F8325EA5D"><Properties><string name="Name">Backpack</string><ProtectedString name="Source">-- BACKPACK: right-column button -&gt; panel with every part type: 3D icon, name, rarity and how many you have.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX449FFCFC1ED446E69CC78F51D9242CAC"><Properties><string name="Name">Backpack</string><ProtectedString name="Source">-- BACKPACK: right-column button -&gt; panel with every part type: 3D icon, name, rarity and how many you have.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
@@ -13313,7 +13351,7 @@ function Backpack.Start(ui)
 end
 
 return Backpack
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX6EE2351B90F04C75B841BE29209D8D18"><Properties><string name="Name">BatchReveal</string><ProtectedString name="Source">-- Batch throw reveal: parts rain onto the lift, a fast reel of every car (slowing down on the best one),
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX5B93F786E16A453D89F30AE6967AC0CE"><Properties><string name="Name">BatchReveal</string><ProtectedString name="Source">-- Batch throw reveal: parts rain onto the lift, a fast reel of every car (slowing down on the best one),
 -- then a results grid. "SEE BEST CAR" plays the full showcase + drive-in for the best car.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -13463,7 +13501,7 @@ local function grid(res)
 		local st = K.store.State
 		-- start the showcase first so the HUD does not flash back between the grid and the cinematic
 		task.defer(close)
-		TrapFx.Play({ partId = best.partId, typeId = best.typeId, rarity = best.rarity, slot = best.slot, isNew = best.isNew, bonus = best.bonus, speed = 1.6, animTime = 0 }, st and st.baseIndex)
+		TrapFx.Play({ partId = best.partId, typeId = best.typeId, rarity = best.rarity, slot = best.slot, merged = best.merged, sold = best.sold, isNew = best.isNew, bonus = best.bonus, speed = 1.6, animTime = 0 }, st and st.baseIndex)
 	end })
 	K.toy(btns, { Text = "DONE", Color = P.green, Size = UDim2.fromOffset(220, 70), TextSize = 28, LayoutOrder = 2, ZIndex = 72, OnClick = close })
 end
@@ -13574,7 +13612,7 @@ function BR.Start(ui, cine, trap)
 end
 
 return BR
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX77194E523BAA4109BFAC92E18B7874C4"><Properties><string name="Name">BossFx</string><ProtectedString name="Source">-- Boss HUD + effects: big "THROW!" button appears when a monster truck is close, the cheapest part flies at it,
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX87BCDE9DA17340A4BADD497EE6818907"><Properties><string name="Name">BossFx</string><ProtectedString name="Source">-- Boss HUD + effects: big "THROW!" button appears when a monster truck is close, the cheapest part flies at it,
 -- stars when it is stunned, dust when it flees.
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -13744,7 +13782,8 @@ function BossFx.Start(ui, cine)
 end
 
 return BossFx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX272F3DCB776642B7AEF2BEB24D59A234"><Properties><string name="Name">Checkpoint</string><ProtectedString name="Source">-- Checkpoint choice card: SAVE &amp; GO HOME (bank now, teleport to the garage) or RISK IT (next district, bigger multiplier).
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX600401E553A5490F93769B98CB9275FD"><Properties><string name="Name">Checkpoint</string><ProtectedString name="Source">-- Checkpoint choice card: SAVE &amp; GO HOME (bank now, teleport to the garage) or RISK IT (next district, bigger multiplier).
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
@@ -13781,6 +13820,20 @@ local function show(o)
 	local dim = K.new("Frame", { Name = "Checkpoint", Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.55, ZIndex = 80 }, K.overlay)
 	open = dim
 	UI.SetDialog(true)
+	-- the server only accepts the choice near the checkpoint and within 60 s: the card goes away before that
+	local char = Players.LocalPlayer.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	local from, t0 = hrp and hrp.Position, os.clock()
+	task.spawn(function()
+		while open == dim do
+			task.wait(0.5)
+			local h = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			if open == dim and (os.clock() - t0 &gt; 55 or not h or (from and (h.Position - from).Magnitude &gt; 50)) then
+				close()
+				UI.Toast("Checkpoint closed - come back to choose again", "warn")
+			end
+		end
+	end)
 	local card = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(760, 420), BackgroundColor3 = P.cream, ZIndex = 81 }, dim)
 	K.corner(card, 28)
 	K.stroke(card, P.ink, 5)
@@ -13848,7 +13901,7 @@ function CP.Start(ui, cine)
 end
 
 return CP
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4F66EE2AFD0646F7B9299F4D650497ED"><Properties><string name="Name">CineFx</string><ProtectedString name="Source">-- Cinematic toolkit: camera shake / zoom / takeover, letterbox, darken, flash, glitch, big titles.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXA89EB04D48B74F2E9ED854E8B8472277"><Properties><string name="Name">CineFx</string><ProtectedString name="Source">-- Cinematic toolkit: camera shake / zoom / takeover, letterbox, darken, flash, glitch, big titles.
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
@@ -14083,7 +14136,7 @@ function Cine.Reset(t)
 end
 
 return Cine
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXB5BEB665B40648D4A89A1AB8FE8465CC"><Properties><string name="Name">ClientFx</string><ProtectedString name="Source">-- Small feedback effects: pickups, banking, donations, airbag, the Golden Magnate's coin toss.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX20E821E5E94041E6940207AFB9C0D845"><Properties><string name="Name">ClientFx</string><ProtectedString name="Source">-- Small feedback effects: pickups, banking, donations, airbag, the Golden Magnate's coin toss.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
@@ -14319,7 +14372,7 @@ function Fx.Init(ui)
 end
 
 return Fx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX9B14B2D41CD4405CB554039529200F95"><Properties><string name="Name">DeathFx</string><ProtectedString name="Source">-- WRECKED! sequence: impact flash, heavy shake, glitch, grayscale-red grade, crane-up camera, countdown.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX08C54606C068416880A7E38AB2863EC6"><Properties><string name="Name">DeathFx</string><ProtectedString name="Source">-- WRECKED! sequence: impact flash, heavy shake, glitch, grayscale-red grade, crane-up camera, countdown.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -14380,6 +14433,9 @@ function DeathFx.Play(dir, lost, sfx)
 
 	-- crane shot rising above the crash site
 	task.delay(0.25, function()
+		if not running then
+			return -- already respawned (fast Quick Start respawn)
+		end
 		local cam = Cine.Take()
 		local focus = hrp and hrp.Position or cam.CFrame.Position
 		local from = cam.CFrame
@@ -14391,12 +14447,15 @@ function DeathFx.Play(dir, lost, sfx)
 			local e = 1 - (1 - a) ^ 3
 			local target = CFrame.lookAt(focus + Vector3.new(math.cos(e * 1.2) * 18, 8 + e * 38, math.sin(e * 1.2) * 18), focus)
 			cam.CFrame = from:Lerp(target, math.min(1, a * 3)) * CFrame.Angles(0, 0, math.rad(8 * (1 - e)))
-			if a &gt;= 1 then
+			if a &gt;= 1 or not running then
 				conn:Disconnect()
 			end
 		end)
 		for n = 3, 1, -1 do
 			task.wait(0.8)
+			if not running then
+				return -- back in the game: no countdown over the live HUD
+			end
 			Cine.Sub(Strings.T("wrecked_back", n), Color3.fromRGB(255, 255, 255), 0.6, 0.7)
 		end
 	end)
@@ -14478,7 +14537,7 @@ function DeathFx.Recover()
 end
 
 return DeathFx
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXE4060EECD1324BD08548B204C3CBBBC0"><Properties><string name="Name">GaragePrompts</string><ProtectedString name="Source">-- Own-garage interactions created on this client only: buy the next bay right at the bay,
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXE884A1216AC14273B6EB979DB21735D7"><Properties><string name="Name">GaragePrompts</string><ProtectedString name="Source">-- Own-garage interactions created on this client only: buy the next bay right at the bay,
 -- build the next floor at the lift, ride the lift between floors.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -14596,6 +14655,9 @@ local function rebuild()
 				end, def)
 			end)
 			sp.KeyboardKeyCode = Enum.KeyCode.F
+			sp.GamepadKeyCode = Enum.KeyCode.ButtonB -- Remove keeps X: both show on a gamepad
+			rm.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
+			sp.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
 			sp.MaxActivationDistance = 9
 			sp.UIOffset = Vector2.new(0, 70)
 		end
@@ -14654,6 +14716,7 @@ function GP.Start(kit, cine)
 	folder = Instance.new("Folder")
 	folder.Name = "GaragePrompts"
 	folder.Parent = Workspace
+	store.MoneyChanged.Event:Connect(rebuild) -- price tags turn green as soon as income pays for them (cheap: signature check)
 	store.Changed.Event:Connect(function()
 		rebuild()
 		if store.State and store.State.baseIndex then
@@ -14665,10 +14728,10 @@ function GP.Start(kit, cine)
 end
 
 return GP
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7AB7B0499FBB4FF3954AF60EF645D1A6"><Properties><string name="Name">IntroFx</string><ProtectedString name="Source">-- Intro cinematic for new players (before the step-by-step tutorial), with SKIP.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXE9C6786846EA4625BB752F4F1CAF95CD"><Properties><string name="Name">IntroFx</string><ProtectedString name="Source">-- Intro cinematic for new players (before the step-by-step tutorial), with SKIP.
 -- A copy of the player's avatar acts it out on the real map: crosses a city road and grabs a part, throws it into the
 -- garage trap and a car drives in, walks up to Big Tony, then a fly-over of the districts and a boss monster truck.
--- Plays once: when it ends (or is skipped) the tutorial moves to step 1.
+-- Played by JoinFlow when a new player answers YES: when it ends (or is skipped) the tutorial moves to step 1.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -14952,25 +15015,138 @@ function Intro.Play(st)
 	Net.Get("TutorialStep"):FireServer(1) -- the intro is done: the tutorial starts at step 1
 end
 
+-- JoinFlow asks "NEED A TUTORIAL?" and calls Intro.Play on YES
 function Intro.Start(ui, cine)
 	UI, Cine = ui, cine
 	K = UI.Kit()
-	task.spawn(function()
-		-- new players only (tutorial 0), once their avatar is in the world
-		local st
-		repeat
-			task.wait(0.5)
-			st = K.store.State
-		until st and Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-		if (st.tutorial or 0) == 0 then
-			task.wait(1)
-			Intro.Play(st)
-		end
-	end)
 end
 
 return Intro
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXE0E790B37E354F7BB8E5A6ED4B8BF652"><Properties><string name="Name">Markers</string><ProtectedString name="Source">-- World markers (always on top) + an edge arrow pointing to the current objective.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXD729E659912B4D8DB317D05DB3E13F08"><Properties><string name="Name">JoinFlow</string><ProtectedString name="Source">-- Join flow: a short camera preview of the plaza as soon as the player is in, then
+--  * new players (tutorial 0): a centred "NEED A TUTORIAL?" card over the preview - YES plays the intro cinematic and
+--    starts the step tutorial, SKIP marks the tutorial done;
+--  * everyone else: the preview just ends.
+-- It always finishes with a smooth glide to the normal camera behind the character (never looking at the floor).
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local MapConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("MapConfig"))
+
+local Join = {}
+local UI, Cine, K, Intro, Tutorial
+
+-- camera orbit around the plaza centre while waiting; returns a stop function
+local function orbit(cam)
+	local centre = Vector3.new(0, 4, (MapConfig.StartZ + MapConfig.EntryZ) / 2)
+	local t0 = os.clock()
+	local conn = RunService.RenderStepped:Connect(function()
+		local a = (os.clock() - t0) * 0.12 + 0.6
+		cam.CFrame = CFrame.lookAt(centre + Vector3.new(math.cos(a) * 120, 58, math.sin(a) * 120), centre)
+	end)
+	return function()
+		conn:Disconnect()
+	end
+end
+
+local function rootPart()
+	local char = Players.LocalPlayer.Character
+	return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+-- ease the camera down to "behind the character, looking ahead", then hand it back to the player
+local function glideHome(cam, t)
+	local hrp = rootPart()
+	if hrp then
+		local look = hrp.CFrame.LookVector
+		local flat = Vector3.new(look.X, 0, look.Z)
+		flat = flat.Magnitude &gt; 0.1 and flat.Unit or Vector3.new(0, 0, -1)
+		local eye = hrp.Position - flat * 14 + Vector3.new(0, 5, 0)
+		local goal = CFrame.lookAt(eye, hrp.Position + flat * 10 + Vector3.new(0, 1.5, 0))
+		Cine.Move(goal, t, Enum.EasingStyle.Quad)
+		task.wait(t)
+		Cine.Release(0.2)
+		cam.CFrame = goal -- the default camera continues from here
+	else
+		Cine.Release(0.2)
+	end
+end
+
+-- the centred question card; resolves to true (YES) or false (SKIP)
+local function ask()
+	local P = K.P
+	local choice
+	local dim = K.new("Frame", { Name = "TutorialAsk", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 80 }, K.overlay)
+	local card = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.55), Size = UDim2.fromOffset(560, 290), BackgroundColor3 = P.cream,
+		ZIndex = 81 }, dim)
+	K.corner(card, 26)
+	K.stroke(card, P.ink, 5)
+	K.text(card, { Text = "WELCOME TO CAR HUNTERS!", TextSize = 22, TextColor3 = P.orange, Outline = false, Position = UDim2.fromOffset(0, 22), Size = UDim2.new(1, 0, 0, 26),
+		TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 82 })
+	K.text(card, { Text = "NEED A TUTORIAL?", TextSize = 46, Position = UDim2.fromOffset(0, 54), Size = UDim2.new(1, 0, 0, 54), TextXAlignment = Enum.TextXAlignment.Center,
+		ZIndex = 82, Outline = 3 })
+	K.text(card, { Text = "A short video shows how to grab parts, catch cars and earn money.", Font = K.BODY, TextSize = 17, TextColor3 = P.muted, TextWrapped = true,
+		Position = UDim2.fromOffset(40, 116), Size = UDim2.new(1, -80, 0, 44), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 82 })
+	K.toy(card, { Text = "YES", Color = P.green, Size = UDim2.fromOffset(220, 74), AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(0.5, -12, 1, -22), TextSize = 32,
+		ZIndex = 83, OnClick = function() choice = true end })
+	K.toy(card, { Text = "SKIP", Color = P.grey, Size = UDim2.fromOffset(220, 74), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0.5, 12, 1, -22), TextSize = 32,
+		ZIndex = 83, OnClick = function() choice = false end })
+	local sc = K.new("UIScale", { Scale = 0.6 }, card)
+	K.tween(sc, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
+	while choice == nil and dim.Parent do
+		task.wait()
+	end
+	dim:Destroy()
+	return choice == true
+end
+
+local function run(st)
+	local cam = Cine.Take()
+	local stop = orbit(cam)
+	local newPlayer = (st.tutorial or 0) == 0
+	local ok, err = pcall(function()
+		if newPlayer then
+			UI.SetCinematic(true) -- HUD away while the question is on screen
+			Cine.Title("CAR HUNTERS", Color3.fromRGB(255, 210, 63), 2.2, 110, 0.22)
+			task.wait(1.2)
+			local yes = ask()
+			stop()
+			UI.SetCinematic(false)
+			if yes then
+				Intro.Play(st) -- the shown steps; ends by starting the step tutorial
+				cam = Cine.Take()
+			else
+				Tutorial.Skip()
+			end
+		else
+			Cine.Title("CAR HUNTERS", Color3.fromRGB(255, 210, 63), 1.8, 110, 0.22)
+			task.wait(2.4)
+			stop()
+		end
+	end)
+	stop()
+	if not ok then
+		warn("[JoinFlow] " .. tostring(err))
+		UI.SetCinematic(false)
+	end
+	glideHome(cam, 1.2)
+end
+
+function Join.Start(ui, cine, intro, tutorial)
+	UI, Cine, Intro, Tutorial = ui, cine, intro, tutorial
+	K = UI.Kit()
+	task.spawn(function()
+		local st
+		repeat
+			task.wait(0.3)
+			st = K.store.State
+		until st and rootPart() and Workspace:FindFirstChild("GeneratedMap")
+		run(st)
+	end)
+end
+
+return Join
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXB128D5624D2A48F3B3575A81E2FD2C26"><Properties><string name="Name">Markers</string><ProtectedString name="Source">-- World markers (always on top) + an edge arrow pointing to the current objective.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -15172,7 +15348,7 @@ function Markers.Start(kit, extraModule)
 end
 
 return Markers
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX09D28E19B55E48A8992526A6A0413E44"><Properties><string name="Name">Rewards</string><ProtectedString name="Source">-- GIFTS: 7-day login streak + playtime chests. Button in the left column, red dot when something can be claimed.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4FE45C6D4E4942BBA5B181E25B9455BC"><Properties><string name="Name">Rewards</string><ProtectedString name="Source">-- GIFTS: 7-day login streak + playtime chests. Button in the left column, red dot when something can be claimed.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
@@ -15336,7 +15512,7 @@ function RW.Start(ui)
 end
 
 return RW
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX09789A287C9C428C9BCA313828EA6EAA"><Properties><string name="Name">Settings</string><ProtectedString name="Source">-- SETTINGS: music + sound-effect volume sliders and on/off switches. Saved in the player's profile
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX290B31F3C2944E80856C31E193140D48"><Properties><string name="Name">Settings</string><ProtectedString name="Source">-- SETTINGS: music + sound-effect volume sliders and on/off switches. Saved in the player's profile
 -- (DataService.SanitizeSettings), applied on join. Switches are read by other modules as LocalPlayer attributes
 -- "Opt_&lt;name&gt;" (false = off): markers (Markers), guide (Guidance), shake (CineFx), fov (SpeedLanes);
 -- notifications go through UI.SetNotificationsEnabled.
@@ -15485,7 +15661,7 @@ function Settings.Start(ui)
 end
 
 return Settings
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXB42C371E8DA845A8897D1D6B7557A700"><Properties><string name="Name">SpeedLanes</string><ProtectedString name="Source">-- Running lanes: dark strips with white arrows. Boost only while running the way the arrows point.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX4B3A98A2233144399797E42290F8D093"><Properties><string name="Name">SpeedLanes</string><ProtectedString name="Source">-- Running lanes: dark strips with white arrows. Boost only while running the way the arrows point.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -15526,7 +15702,7 @@ function SpeedLanes.Start(getBaseSpeed)
 end
 
 return SpeedLanes
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXC6A99097A9FF4D3EBBBD4FEF77F31D0F"><Properties><string name="Name">Trade</string><ProtectedString name="Source">-- Trading UI: TRADE button (right side) -&gt; pick a player -&gt; request; incoming request card; two-sided trade window.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX35452F01018042AA9749D4B718EAB120"><Properties><string name="Name">Trade</string><ProtectedString name="Source">-- Trading UI: TRADE button (right side) -&gt; pick a player -&gt; request; incoming request card; two-sided trade window.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -15776,7 +15952,7 @@ function TR.Start(ui)
 	P = K.P
 	-- right-side button under CARS
 	local holder = K.new("Frame", { Size = UDim2.fromOffset(122, 104), BackgroundTransparency = 1, LayoutOrder = 4 }, K.hud.side)
-	K.toy(holder, { Text = "TRADE", Image = "trade", Icon = "🤝", Color = P.blue, Size = UDim2.fromOffset(122, 104), OnClick = function() UI.TogglePanel("tradeList") end })
+	K.toy(holder, { Text = "TRADE", Image = "trade", Icon = "🤝", Color = P.blue, Size = UDim2.fromOffset(122, 104), OnClick = function() UI.TogglePanel(last and "trade" or "tradeList") end }) -- a live trade reopens its window
 	local lp = K.panelShell("tradeList", "TRADE WITH", 640, 520, P.blue)
 	w.list = K.scroller(lp.content, UDim2.new(), UDim2.fromScale(1, 1))
 	buildWindow()
@@ -15786,6 +15962,11 @@ function TR.Start(ui)
 		if open == "tradeList" and wasOpen ~= "tradeList" then
 			wasOpen = open
 			task.spawn(refreshList)
+		end
+		-- closing the live trade window (X / background / another panel) cancels the trade for both players;
+		-- a cinematic closing it sets pendingOpen first and keeps the trade
+		if wasOpen == "trade" and open ~= "trade" and last ~= nil and not w.pendingOpen and not UI.IsCinematic() then
+			Net.Get("TradeCancel"):FireServer()
 		end
 		wasOpen = open
 		-- a trade that started during a cinematic opens its window afterwards
@@ -15824,7 +16005,7 @@ function TR.Start(ui)
 end
 
 return TR
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX71B521358CA647D1987829F374C93B49"><Properties><string name="Name">Tutorial</string><ProtectedString name="Source">-- First-time tutorial (7 steps) and, afterwards, the "next goal" card. One objective card at the top,
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXCF1A0876B00C486890FDE424D5270EE6"><Properties><string name="Name">Tutorial</string><ProtectedString name="Source">-- First-time tutorial (7 steps) and, afterwards, the "next goal" card. One objective card at the top,
 -- a guide beam + marker in the world, and a pulse on the button you need. Progress is saved on the server.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -15835,6 +16016,7 @@ local Net = require(Shared:WaitForChild("Net"))
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
 local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local Util = require(Shared:WaitForChild("Util"))
+local PartConfig = require(Shared:WaitForChild("PartConfig"))
 
 local Tut = {}
 local K, UI, Cine, Guide
@@ -15844,6 +16026,7 @@ local w = {}
 local DONE = 9
 local localStep -- optimistic step while the server confirms
 local events = { banked = false, checkpoint = false }
+local stepSince = {} -- step -&gt; os.clock() when it was first shown
 
 local function trapPad(st)
 	local map = Workspace:FindFirstChild("GeneratedMap")
@@ -15866,6 +16049,7 @@ local function nearestDrop(hrp)
 	return target
 end
 
+-- cheapest upgrade; .ok = the player can pay for it right now
 local function cheapestUpgrade(st)
 	local best
 	for _, c in ipairs(st.cars) do
@@ -15874,7 +16058,7 @@ local function cheapestUpgrade(st)
 			local cost = CarConfig.UpgradeCost(def, c.level)
 			if not best or cost &lt; best.cost then
 				local part, n = CarConfig.UpgradeParts(def, c.level)
-				best = { cost = cost, part = part, n = n }
+				best = { cost = cost, part = part, n = n, ok = K.store.Money &gt;= cost and K.store.Banked(part) &gt;= n }
 			end
 		end
 	end
@@ -15890,7 +16074,7 @@ local STEPS = {
 		function(_, hrp) return nearestDrop(hrp) end,
 		function() return K.store.CarriedTotal() &gt;= 3 end,
 		function() return math.min(K.store.CarriedTotal(), 3) / 3, string.format("%d / 3", math.min(K.store.CarriedTotal(), 3)) end },
-	{ "RUN HOME TO BANK THEM", "Back through the arch - the dark lanes in the middle make you faster", nil,
+	{ "RUN HOME TO BANK THEM", "Back through the arch to the plaza - the dark lanes in the middle make you faster", nil,
 		function() return Vector3.new(0, 2, MapConfig.EntryZ - 30) end,
 		function() return events.banked end },
 	{ "THROW PARTS INTO YOUR TRAP", "Go to the lift in your garage, press THROW, then ALL", nil,
@@ -15901,7 +16085,11 @@ local STEPS = {
 		function() return K.state.open == "garage" end, nil, "garage" },
 	{ "UPGRADE A CAR", "Press UPGRADE on a car: more levels = more money", nil,
 		function() return nil end,
-		function(st) return (st.stats and st.stats.upgrades or 0) &gt; 0 end, nil, "garage" },
+		-- also passes when nothing is affordable yet (after a short look), so a broke player never gets stuck here
+		function(st)
+			local up = cheapestUpgrade(st)
+			return (st.stats and st.stats.upgrades or 0) &gt; 0 or ((not up or not up.ok) and os.clock() - (stepSince[6] or os.clock()) &gt; 6)
+		end, nil, "garage" },
 	{ "REACH A CHECKPOINT", "Carry parts to the yellow arch at the far end of the City, then SAVE or RISK", nil,
 		function() return Vector3.new(0, 2, MapConfig.Zones.city.zMax - 5) end,
 		function() return events.checkpoint end },
@@ -15911,32 +16099,39 @@ local STEPS = {
 }
 
 local function build()
-	local card = K.new("Frame", { Name = "Objective", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 74), Size = UDim2.fromOffset(560, 96), BackgroundColor3 = P.white,
+	local card = K.new("Frame", { Name = "Objective", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 74), Size = UDim2.fromOffset(600, 108), BackgroundColor3 = P.white,
 		ClipsDescendants = true, Visible = false }, K.root)
 	K.corner(card, 20)
 	K.stroke(card, P.ink, 4)
 	w.card = card
 	-- the colour badge follows the card's rounded left corners (ClipsDescendants ignores UICorner, so a square badge
 	-- used to stick out of the outline): rounded badge + a square filler on its right half
-	w.badge = K.new("Frame", { Size = UDim2.fromOffset(96, 96), BackgroundColor3 = P.yellow, BorderSizePixel = 0 }, card)
+	w.badge = K.new("Frame", { Size = UDim2.fromOffset(108, 108), BackgroundColor3 = P.yellow, BorderSizePixel = 0 }, card)
 	K.corner(w.badge, 20)
-	w.badgeFill = K.new("Frame", { Position = UDim2.fromOffset(48, 0), Size = UDim2.fromOffset(48, 96), BackgroundColor3 = P.yellow, BorderSizePixel = 0 }, w.badge)
-	w.badgeText = K.text(w.badge, { Text = "1/8", TextSize = 30, ZIndex = 2, Position = UDim2.fromOffset(0, 18), Size = UDim2.new(1, 0, 0, 36), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 })
-	w.badgeSub = K.text(w.badge, { Text = "STEP", Font = K.BODY, TextSize = 12, ZIndex = 2, Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Center })
-	w.title = K.text(card, { Text = "", TextSize = 24, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(112, 10), Size = UDim2.fromOffset(400, 28) })
-	w.body = K.text(card, { Text = "", Font = K.BODY, TextSize = 15, TextColor3 = P.muted, TextWrapped = true, Position = UDim2.fromOffset(112, 40), Size = UDim2.fromOffset(436, 34) })
-	local bar = K.new("Frame", { Position = UDim2.fromOffset(112, 76), Size = UDim2.fromOffset(300, 8), BackgroundColor3 = C(230, 232, 236), Visible = false }, card)
+	w.badgeFill = K.new("Frame", { Position = UDim2.fromOffset(54, 0), Size = UDim2.fromOffset(54, 108), BackgroundColor3 = P.yellow, BorderSizePixel = 0 }, w.badge)
+	w.badgeText = K.text(w.badge, { Text = "1/8", TextSize = 32, ZIndex = 2, Position = UDim2.fromOffset(0, 16), Size = UDim2.new(1, 0, 0, 38), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 })
+	w.badgeSub = K.text(w.badge, { Text = "STEP", Font = K.BODY, TextSize = 13, ZIndex = 2, Position = UDim2.fromOffset(0, 56), Size = UDim2.new(1, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Center })
+	-- one dot per step: done = white, current = big, to do = faded
+	local dots = K.new("Frame", { Position = UDim2.fromOffset(10, 82), Size = UDim2.new(1, -20, 0, 12), BackgroundTransparency = 1, ZIndex = 2 }, w.badge)
+	K.list(dots, Enum.FillDirection.Horizontal, 3, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center)
+	w.dots = {}
+	for i = 1, DONE - 1 do
+		local d = K.new("Frame", { Size = UDim2.fromOffset(8, 8), BackgroundColor3 = P.white, LayoutOrder = i, ZIndex = 3 }, dots)
+		K.corner(d, 4)
+		w.dots[i] = d
+	end
+	w.title = K.text(card, { Text = "", TextSize = 26, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(124, 10), Size = UDim2.fromOffset(380, 30) })
+	w.body = K.text(card, { Text = "", Font = K.BODY, TextSize = 16, TextColor3 = P.muted, TextWrapped = true, Position = UDim2.fromOffset(124, 42), Size = UDim2.fromOffset(460, 40) })
+	local bar = K.new("Frame", { Position = UDim2.fromOffset(124, 88), Size = UDim2.fromOffset(300, 8), BackgroundColor3 = C(230, 232, 236), Visible = false }, card)
 	K.corner(bar, 4)
 	w.bar = bar
 	w.fill = K.new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = P.yellow }, bar)
 	K.corner(w.fill, 4)
-	w.progText = K.text(card, { Text = "", Font = K.BODY, TextSize = 13, TextColor3 = P.orange, Position = UDim2.fromOffset(420, 70), Size = UDim2.fromOffset(80, 18), Visible = false })
-	w.skip = K.new("TextButton", { Text = "SKIP", Font = K.BODY, TextSize = 13, TextColor3 = P.grey, BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 6),
-		Size = UDim2.fromOffset(50, 20) }, card)
-	w.skip.Activated:Connect(function()
-		localStep = DONE
-		Net.Get("TutorialStep"):FireServer("skip")
-	end)
+	w.progText = K.text(card, { Text = "", Font = K.BODY, TextSize = 14, TextColor3 = P.orange, Position = UDim2.fromOffset(434, 82), Size = UDim2.fromOffset(80, 20), Visible = false })
+	w.skip = K.toy(card, { Text = "SKIP", Color = P.grey, Size = UDim2.fromOffset(74, 34), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 8), TextSize = 16, Depth = 3,
+		Radius = 10, OnClick = function()
+			K.confirm("SKIP THE TUTORIAL?", "You can still find every feature on your own.", "SKIP", P.red, Tut.Skip)
+		end })
 	w.scale = K.new("UIScale", {}, card)
 	w.tick = K.text(w.badge, { Text = "OK!", TextSize = 30, TextColor3 = C(120, 255, 150), Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, Visible = false, ZIndex = 5 })
 end
@@ -15978,7 +16173,7 @@ local function show(key, badge, sub, color, title, body, prog, progText, canSkip
 		w.progText.Text = progText or ""
 		w.progText.TextColor3 = color
 	end
-	w.skip.Visible = canSkip
+	w.skip.holder.Visible = canSkip
 	if shownKey ~= key then
 		shownKey = key
 		w.scale.Scale = 0.7
@@ -16010,20 +16205,28 @@ local function tick()
 	end
 	local def = STEPS[step]
 	-- lost the loot on the way home: point back at the parts
-	if step == 3 and K.store.CarriedTotal() == 0 and not events.banked then
+	local lostLoot = step == 3 and K.store.CarriedTotal() == 0 and not events.banked
+	if lostLoot then
 		def = STEPS[2]
 	end
 	local color = ({ P.yellow, P.orange, P.green, P.yellow, P.blue, P.blue, P.red, P.green })[step]
-	local body = def[2]
+	local body = lostLoot and "You lost your parts - grab 3 more, then run home" or def[2]
 	if step == 6 then
 		local up = cheapestUpgrade(st)
-		if up then
-			body = string.format("Press UPGRADE on a car  ·  needs $%s + %d %s", Util.FormatNumber(up.cost), up.n, up.part)
+		if up and up.ok then
+			body = string.format("Press UPGRADE on a car  ·  needs $%s + %d %s", Util.FormatNumber(up.cost), up.n, PartConfig.Parts[up.part].name)
+		elseif up then
+			body = string.format("Upgrades need $%s + %d %s - you'll do it later, moving on...", Util.FormatNumber(up.cost), up.n, PartConfig.Parts[up.part].name)
 		end
 	end
 	local prog, progText
 	if def[6] then
 		prog, progText = def[6]()
+	end
+	stepSince[step] = stepSince[step] or os.clock()
+	for i, d in ipairs(w.dots) do
+		d.BackgroundTransparency = i &lt;= step and 0 or 0.6
+		d.Size = UDim2.fromOffset(i == step and 11 or 7, i == step and 11 or 7)
 	end
 	show("step" .. step .. def[1], step .. "/" .. (DONE - 1), "STEP", color, def[1], body, prog, progText, true)
 	-- steps that happen inside a panel (garage, upgrade): the card goes on top of the panel's dim, at the very top
@@ -16057,6 +16260,12 @@ local function tick()
 	end
 end
 
+-- skip the whole tutorial (SKIP button, or SKIP on the join question)
+function Tut.Skip()
+	localStep = DONE
+	Net.Get("TutorialStep"):FireServer("skip")
+end
+
 function Tut.Start(ui, cine, guide)
 	UI = ui
 	K = UI.Kit()
@@ -16079,7 +16288,7 @@ function Tut.Start(ui, cine, guide)
 end
 
 return Tut
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX7D382CE58EA148AAADB89B55D87CB707"><Properties><string name="Name">UIExtra</string><ProtectedString name="Source">-- Extra HUD + panels: Pit Stop perks, Golden Magnate donations, combo meter, contracts, hot drop banner, boosts.
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX3FA1B2F42E99437387B4C8E616C0D502"><Properties><string name="Name">UIExtra</string><ProtectedString name="Source">-- Extra HUD + panels: Pit Stop perks, Golden Magnate donations, combo meter, contracts, hot drop banner, boosts.
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -16330,7 +16539,9 @@ local function refreshTony(st, open)
 	end
 	K.clear(w.tonyList)
 	if tonyTab == "rewards" then
-		K.text(w.tonyList, { Text = T("tony_hint"), Font = K.BODY, TextSize = 16, TextColor3 = P.muted, Size = UDim2.new(1, 0, 0, 24), LayoutOrder = 0, ZIndex = 23, TextXAlignment = Enum.TextXAlignment.Center })
+		local none = #(st.contracts or {}) == 0
+		K.text(w.tonyList, { Text = none and "No jobs right now - new ones arrive soon. Finish jobs, then claim them here." or T("tony_hint"), Font = K.BODY, TextSize = 16,
+			TextColor3 = P.muted, Size = UDim2.new(1, 0, 0, 24), LayoutOrder = 0, ZIndex = 23, TextXAlignment = Enum.TextXAlignment.Center })
 		for i, c in ipairs(st.contracts or {}) do
 			local r = row(w.tonyList, i, 84, c.ready and P.green or P.ink)
 			K.text(r, { Text = contractText(c), TextSize = 20, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(18, 10), Size = UDim2.new(1, -260, 0, 30), ZIndex = 24 })
@@ -16559,10 +16770,10 @@ local function buildHud()
 	w.shopBtn = iconButton("shop", T("btn_magnate"), GOLD, 1, function()
 		UI.TogglePanel("donate")
 	end)
-	w.jobsOpen = true
+	-- JOBS opens the jobs list (Big Tony's rewards tab) from anywhere
 	w.jobsBtn, w.jobsLabel = iconButton("jobs", "JOBS", P.orange, 2, function()
-		w.jobsOpen = not w.jobsOpen
-		UI.Refresh()
+		tonyTab = "rewards"
+		UI.TogglePanel("tony")
 	end)
 	-- active boosts strip to the right of the wallet card
 	w.boosts = K.new("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 310, 1, -24 - (K.hud.leftLift or 0)), Size = UDim2.fromOffset(240, 40), BackgroundTransparency = 1 }, root)
@@ -16635,7 +16846,7 @@ local function refreshHud(st)
 		K.new("Frame", { Size = UDim2.fromScale(c.progress / c.n, 1), BackgroundColor3 = c.ready and P.yellow or C(70, 220, 100), BorderSizePixel = 0 }, bar)
 		table.insert(w.contractRows, row)
 	end
-	w.contracts.Visible = w.jobsOpen and #(st.contracts or {}) &gt; 0 and K.state.open == nil
+	w.contracts.Visible = #(st.contracts or {}) &gt; 0 and K.state.open == nil
 	K.hud.leftCol.Visible = K.state.open == nil
 	local ready = 0
 	for _, c in ipairs(st.contracts or {}) do
@@ -16798,7 +17009,7 @@ function X.Init(ui)
 end
 
 return X
-</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX8788E81EABB6414680302CE0DBCA6CD2"><Properties><string name="Name">ZoneFx</string><ProtectedString name="Source">-- Per-district hazards on the client: level-crossing lights/arms (docks), sandstorm (desert),
+</ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBXA82441DAAAAB4167B82DF06111D6CA74"><Properties><string name="Name">ZoneFx</string><ProtectedString name="Source">-- Per-district hazards on the client: level-crossing lights/arms (docks), sandstorm (desert),
 -- jet blast behind taxiing planes (airport), rain + lightning (storm).
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")

@@ -249,7 +249,9 @@ local function refreshTony(st, open)
 	end
 	K.clear(w.tonyList)
 	if tonyTab == "rewards" then
-		K.text(w.tonyList, { Text = T("tony_hint"), Font = K.BODY, TextSize = 16, TextColor3 = P.muted, Size = UDim2.new(1, 0, 0, 24), LayoutOrder = 0, ZIndex = 23, TextXAlignment = Enum.TextXAlignment.Center })
+		local none = #(st.contracts or {}) == 0
+		K.text(w.tonyList, { Text = none and "No jobs right now - new ones arrive soon. Finish jobs, then claim them here." or T("tony_hint"), Font = K.BODY, TextSize = 16,
+			TextColor3 = P.muted, Size = UDim2.new(1, 0, 0, 24), LayoutOrder = 0, ZIndex = 23, TextXAlignment = Enum.TextXAlignment.Center })
 		for i, c in ipairs(st.contracts or {}) do
 			local r = row(w.tonyList, i, 84, c.ready and P.green or P.ink)
 			K.text(r, { Text = contractText(c), TextSize = 20, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(18, 10), Size = UDim2.new(1, -260, 0, 30), ZIndex = 24 })
@@ -478,10 +480,10 @@ local function buildHud()
 	w.shopBtn = iconButton("shop", T("btn_magnate"), GOLD, 1, function()
 		UI.TogglePanel("donate")
 	end)
-	w.jobsOpen = true
+	-- JOBS opens the jobs list (Big Tony's rewards tab) from anywhere
 	w.jobsBtn, w.jobsLabel = iconButton("jobs", "JOBS", P.orange, 2, function()
-		w.jobsOpen = not w.jobsOpen
-		UI.Refresh()
+		tonyTab = "rewards"
+		UI.TogglePanel("tony")
 	end)
 	-- active boosts strip to the right of the wallet card
 	w.boosts = K.new("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 310, 1, -24 - (K.hud.leftLift or 0)), Size = UDim2.fromOffset(240, 40), BackgroundTransparency = 1 }, root)
@@ -554,7 +556,7 @@ local function refreshHud(st)
 		K.new("Frame", { Size = UDim2.fromScale(c.progress / c.n, 1), BackgroundColor3 = c.ready and P.yellow or C(70, 220, 100), BorderSizePixel = 0 }, bar)
 		table.insert(w.contractRows, row)
 	end
-	w.contracts.Visible = w.jobsOpen and #(st.contracts or {}) > 0 and K.state.open == nil
+	w.contracts.Visible = #(st.contracts or {}) > 0 and K.state.open == nil
 	K.hud.leftCol.Visible = K.state.open == nil
 	local ready = 0
 	for _, c in ipairs(st.contracts or {}) do

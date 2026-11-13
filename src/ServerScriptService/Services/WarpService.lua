@@ -24,10 +24,6 @@ function Warp.Go(player, dest)
 	if not hrp then
 		return
 	end
-	if not S.Data.RateLimit(player, "warp", EconomyConfig.TeleportCooldown) then
-		S.Data.Notify(player, "tpWait", nil, "warn")
-		return
-	end
 	local target
 	if dest == "home" then
 		if not s.baseIndex then
@@ -46,6 +42,11 @@ function Warp.Go(player, dest)
 		end
 		target = MapConfig.ZoneSpawn(dest) + Vector3.new(math.random(-8, 8), 0, 0)
 	else
+		return
+	end
+	-- the cooldown starts only for a teleport that really happens (a refused one does not block the next)
+	if not S.Data.RateLimit(player, "warp", EconomyConfig.TeleportCooldown) then
+		S.Data.Notify(player, "tpWait", nil, "warn")
 		return
 	end
 	hrp.AssemblyLinearVelocity = Vector3.zero

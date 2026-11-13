@@ -248,7 +248,7 @@ function TR.Start(ui)
 	P = K.P
 	-- right-side button under CARS
 	local holder = K.new("Frame", { Size = UDim2.fromOffset(122, 104), BackgroundTransparency = 1, LayoutOrder = 4 }, K.hud.side)
-	K.toy(holder, { Text = "TRADE", Image = "trade", Icon = "🤝", Color = P.blue, Size = UDim2.fromOffset(122, 104), OnClick = function() UI.TogglePanel("tradeList") end })
+	K.toy(holder, { Text = "TRADE", Image = "trade", Icon = "🤝", Color = P.blue, Size = UDim2.fromOffset(122, 104), OnClick = function() UI.TogglePanel(last and "trade" or "tradeList") end }) -- a live trade reopens its window
 	local lp = K.panelShell("tradeList", "TRADE WITH", 640, 520, P.blue)
 	w.list = K.scroller(lp.content, UDim2.new(), UDim2.fromScale(1, 1))
 	buildWindow()
@@ -258,6 +258,11 @@ function TR.Start(ui)
 		if open == "tradeList" and wasOpen ~= "tradeList" then
 			wasOpen = open
 			task.spawn(refreshList)
+		end
+		-- closing the live trade window (X / background / another panel) cancels the trade for both players;
+		-- a cinematic closing it sets pendingOpen first and keeps the trade
+		if wasOpen == "trade" and open ~= "trade" and last ~= nil and not w.pendingOpen and not UI.IsCinematic() then
+			Net.Get("TradeCancel"):FireServer()
 		end
 		wasOpen = open
 		-- a trade that started during a cinematic opens its window afterwards
