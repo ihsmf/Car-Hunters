@@ -236,7 +236,12 @@ local function placeStatue(rank, player)
 				return animator:LoadAnimation(anim)
 			end)
 			if ok2 and track then
-				track.Looped = true
+				-- Looped does not replicate and cheer/wave are one-shot assets: restart from the server instead
+				track.Stopped:Connect(function()
+					if model.Parent then
+						track:Play(0.3)
+					end
+				end)
 				track:Play(0.3)
 			end
 		end

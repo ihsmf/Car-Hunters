@@ -74,7 +74,7 @@ end
 -- Blender template (server only): ServerStorage.BuilderAssets.Props.<name>, anchored, pivoted to cf. Pieces named
 -- Frame / Accent / Wall get a Deco* name so garage skins recolour them (car parts are never touched).
 local DECO = { Frame = "DecoFrame", Accent = "DecoAccent", Wall = "DecoWall" }
-function GarageKit.Template(name, parent, cf)
+function GarageKit.Template(name, parent, cf, style)
 	local ok, tpl = pcall(function()
 		return game:GetService("ServerStorage").BuilderAssets.Props:FindFirstChild(name)
 	end)
@@ -90,6 +90,9 @@ function GarageKit.Template(name, parent, cf)
 		end
 	end
 	m:PivotTo(cf)
+	if style then
+		GarageKit.ApplyStyle(m, style) -- painted like the rest of the garage right away
+	end
 	m.Parent = parent
 	return m
 end
@@ -104,7 +107,7 @@ function GarageKit.Dress(parent, bcf, y0, style)
 	for col = 0, BaseLayout.SlotsPerFloor - 1 do
 		local z = -37.5 + col * 15
 		local cf = bcf * CFrame.new(EDGE - 0.9, y0, z)
-		if not GarageKit.Template("G_RollerDoor", parent, cf) then
+		if not GarageKit.Template("G_RollerDoor", parent, cf, style) then
 			-- simple raised door: two rails, a hood box and a hazard strip
 			for _, s in ipairs({ -1, 1 }) do
 				part(parent, "DoorRail", Vector3.new(0.6, 13.2, 0.5), cf * CFrame.new(0, 6.6, s * 7), style.frame, M.Metal)
@@ -115,7 +118,7 @@ function GarageKit.Dress(parent, bcf, y0, style)
 	end
 	-- back wall (behind the wheel stops at x -41.6): z slots chosen between nothing else, every storey alike
 	local function at(name, x, z, dy)
-		GarageKit.Template(name, parent, bcf * CFrame.new(back + x, y0 + (dy or 0), z))
+		GarageKit.Template(name, parent, bcf * CFrame.new(back + x, y0 + (dy or 0), z), style)
 	end
 	at("G_TireRack", 1.4, -40)
 	at("G_Workbench", 1.5, -27)
@@ -128,7 +131,7 @@ function GarageKit.Dress(parent, bcf, y0, style)
 	at("G_ToolCabinet", 1.1, 29)
 	at("G_OilDrum", 1.2, 34)
 	for _, z in ipairs({ -33, -4, 25 }) do
-		local lamp = GarageKit.Template("G_WallLamp", parent, bcf * CFrame.new(back, y0 + 9, z))
+		local lamp = GarageKit.Template("G_WallLamp", parent, bcf * CFrame.new(back, y0 + 9, z), style)
 		local bulb = lamp and lamp:FindFirstChildWhichIsA("BasePart", true)
 		if bulb then
 			local pl = Instance.new("PointLight")
@@ -152,7 +155,7 @@ function GarageKit.Lift(mk, y0, H, frame, accent, parent, bcf)
 	local el = BaseLayout.ElevatorLocal
 	-- the Blender cab (posts, glass with mullions, open sliding doors, header light, floor display, call buttons,
 	-- counterweight rails) replaces the block version below; its doorway faces the deck (-X)
-	if parent and bcf and GarageKit.Template("G_LiftCab", parent, bcf * CFrame.new(el.X, y0, el.Z)) then
+	if parent and bcf and GarageKit.Template("G_LiftCab", parent, bcf * CFrame.new(el.X, y0, el.Z), { frame = frame, accent = accent }) then
 		return
 	end
 	local GLASS = C(150, 190, 215)

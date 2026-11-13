@@ -235,7 +235,9 @@ local NOTE_H, NOTE_GAP, NOTE_MAX, NOTE_LIFE = 28, 6, 2, 2.8
 local function noteY(i)
 	-- with a panel open the lane sits above the panel card, so a message never covers the button just pressed
 	-- dialogs (confirm, checkpoint) also push the lane to the very top so it never covers their buttons
-	local top = hud.tutInPanel and 116 or notes.top -- below the tutorial card on garage steps
+	-- below the tutorial card on garage steps; with a panel up the banner is hidden and the lane sits at the very top,
+	-- above the panel's title
+	local top = hud.tutInPanel and 116 or (state.open and 6 or notes.top)
 	return top + (i - 1) * (NOTE_H + NOTE_GAP)
 end
 

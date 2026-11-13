@@ -113,6 +113,7 @@ function Base.SetFree(b)
 		GarageKit.ApplyStyle(b.model, GarageKit.Style)
 	end
 	b.skin = "classic"
+	b.skinFloors = nil -- the next owner's floors are painted again
 	for _, pad in pairs(b.pads) do
 		setPad(pad, "locked")
 	end
