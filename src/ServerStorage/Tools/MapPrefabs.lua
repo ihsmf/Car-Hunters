@@ -203,7 +203,7 @@ end
 function Prefabs.Kiosk(parent, pos, yaw, color, text)
 	local cf = CFrame.new(pos) * CFrame.Angles(0, yaw or 0, 0)
 	if Prefabs.FromTemplate("Kiosk", parent, cf, { colors = { Wall = color } }) then
-		local sign = Part(parent, "KioskSign", Vector3.new(5, 1.3, 0.3), cf * CFrame.new(0, 8.3, -2.6), DARK)
+		local sign = Part(parent, "KioskSign", Vector3.new(5, 1.3, 0.3), cf * CFrame.new(0, 8.2, -2.6), DARK) -- sits 0.05 into the roof trim
 		Label(sign, Enum.NormalId.Front, text or "SHOP", C(255, 220, 90))
 		return
 	end

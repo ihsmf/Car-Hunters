@@ -207,7 +207,7 @@ local function buildBase(ctx, i)
 	mk("Roof", Vector3.new(deckW, 1, PZ * 2), Vector3.new(deckCX, H, 0), G.deck, M.SmoothPlastic)
 	local fascia = mk("OwnerSign", Vector3.new(1.2, 2.4, PZ * 2 + 0.4), Vector3.new(EDGE + 0.4, H + 0.2, 0), G.frame, M.SmoothPlastic)
 	Label(fascia, Enum.NormalId.Right, "FREE GARAGE", C(255, 255, 255))
-	local screen = mk("IncomeScreen", Vector3.new(0.4, 2.4, 24), Vector3.new(EDGE + 1.2, H - 2.1, 0), G.frame, M.SmoothPlastic)
+	local screen = mk("IncomeScreen", Vector3.new(0.4, 2.4, 24), Vector3.new(EDGE + 1.2, H - 2.25, 0), G.frame, M.SmoothPlastic)
 	Label(screen, Enum.NormalId.Right, "", C(110, 230, 140))
 	for _, z in ipairs({ -PZ + 1, -15, 15, PZ - 1 }) do
 		mk("Column", Vector3.new(1.2, H - 1, 1.2), Vector3.new(EDGE - 0.8, H / 2, z), G.frame, M.Metal)
@@ -227,7 +227,7 @@ local function buildBase(ctx, i)
 	local el = BaseLayout.ElevatorLocal
 	mk("ElevatorPad", Vector3.new(8, 0.4, 8), Vector3.new(el.X, 0.7, el.Z), G.frame, M.Metal)
 	GarageKit.Lift(mk, 0.5, H, G.frame, G.accent, model, bcf)
-	GarageKit.Dress(model, bcf, 0.5, G)
+	GarageKit.Dress(model, bcf, 0.5, G, 0.6)
 
 	-- the trap: a clean steel car lift with a magnetic crane
 	local t = BaseLayout.TrapLocal
@@ -292,8 +292,10 @@ local function buildBase(ctx, i)
 	local floors = Instance.new("Folder")
 	floors.Name = "Floors"
 	floors.Parent = model
-	Prefabs.Lamp(model, bcf:PointToWorldSpace(Vector3.new(PX - 1.5, 0.5, PZ - 3)), 1, C(255, 230, 180), math.pi)
-	Prefabs.Lamp(model, bcf:PointToWorldSpace(Vector3.new(PX - 1.5, 0.5, -PZ + 3)), 1, C(255, 230, 180), math.pi)
+	-- forecourt lamps on the floor (top 0.5), arms pointing into the plot whichever way the garage is turned
+	local lampYaw = (MapConfig.BaseCenters[i].x < 0 and 0 or math.pi) + math.pi
+	Prefabs.Lamp(model, bcf:PointToWorldSpace(Vector3.new(PX - 1.5, 0.7, PZ - 3)), 1, C(255, 230, 180), lampYaw)
+	Prefabs.Lamp(model, bcf:PointToWorldSpace(Vector3.new(PX - 1.5, 0.7, -PZ + 3)), 1, C(255, 230, 180), lampYaw)
 	model.Parent = f.Bases
 end
 
@@ -615,8 +617,8 @@ local function buildPlaza(ctx)
 		Prefabs.Tree(f.StreetProps, Vector3.new(x + s * 6, 0.2, z + 7), ctx.rng, (z % 2 == 0) and "palm" or "tree")
 		Prefabs.Bush(f.StreetProps, Vector3.new(x - s * 4, 0.2, z - 7), ctx.rng)
 		Prefabs.Bush(f.StreetProps, Vector3.new(x - s * 4, 0.2, z + 7), ctx.rng)
-		bench(x - s * 9, z, s > 0 and math.pi / 2 or -math.pi / 2) -- benches face the promenade
-		Prefabs.Lamp(f.StreetProps, Vector3.new(x - s * 10, 0.2, z + 8), 1, nil, s > 0 and math.pi or 0)
+		bench(x - s * 9, z, s > 0 and -math.pi / 2 or math.pi / 2) -- benches face the promenade
+		Prefabs.Lamp(f.StreetProps, Vector3.new(x - s * 10, 0.4, z + 8), 1, nil, s > 0 and math.pi or 0)
 		table.insert(ctx.foot, { x1 = x - 12, x2 = x + 12, z1 = z - 12, z2 = z + 12 })
 	end
 	for i, z in ipairs(rows) do
@@ -671,7 +673,7 @@ local function buildPlaza(ctx)
 		spot.Color = C(255, 220, 140)
 		spot.Parent = lamp
 		-- plate towards the promenade, clear of the stand (0.3 gap)
-		local plate = Part(f.StreetProps, "MagnatPlate", Vector3.new(12, 3.2, 0.3), CFrame.new(x - 13.4, 3.4, z) * CFrame.Angles(0, math.pi / 2, 0), C(26, 22, 16), M.SmoothPlastic, { collide = false })
+		local plate = Part(f.StreetProps, "MagnatPlate", Vector3.new(11.8, 3.2, 0.3), CFrame.new(x - 13.4, 3.4, z) * CFrame.Angles(0, math.pi / 2, 0), C(26, 22, 16), M.SmoothPlastic, { collide = false })
 		for _, sz in ipairs({ -1, 1 }) do
 			Part(f.StreetProps, "MagnatPlatePost", Vector3.new(0.6, 6, 0.6), CFrame.new(x - 13.4, 3, z + sz * 6.2), C(255, 200, 80), M.Metal)
 		end

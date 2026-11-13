@@ -100,13 +100,15 @@ end
 -- dresses one storey (y0 = deck top) so it reads as a real garage: a raised roller door over every bay opening,
 -- tools along the back wall (pegboards, benches, cabinets, tyre racks, drums) and caged wall lamps.
 -- Positions are garage-local (deck edge at DeckEdgeX facing +X, back wall face at -PX + 2).
-function GarageKit.Dress(parent, bcf, y0, style)
+-- floorTop: where props stand (the ground floor's inlay is 0.1 above its deck line)
+function GarageKit.Dress(parent, bcf, y0, style, floorTop)
 	style = style or GarageKit.Style
+	floorTop = floorTop or y0
 	local EDGE = BaseLayout.DeckEdgeX
 	local back = -MapConfig.BasePlot.x / 2 + 2 -- front face of the back wall
 	for col = 0, BaseLayout.SlotsPerFloor - 1 do
 		local z = -37.5 + col * 15
-		local cf = bcf * CFrame.new(EDGE - 0.9, y0, z)
+		local cf = bcf * CFrame.new(EDGE - 0.9, y0 - 0.9, z) -- hood + hazard band just under the fascia, feet in the slab
 		if not GarageKit.Template("G_RollerDoor", parent, cf, style) then
 			-- simple raised door: two rails, a hood box and a hazard strip
 			for _, s in ipairs({ -1, 1 }) do
@@ -118,7 +120,7 @@ function GarageKit.Dress(parent, bcf, y0, style)
 	end
 	-- back wall (behind the wheel stops at x -41.6): z slots chosen between nothing else, every storey alike
 	local function at(name, x, z, dy)
-		GarageKit.Template(name, parent, bcf * CFrame.new(back + x, y0 + (dy or 0), z), style)
+		GarageKit.Template(name, parent, bcf * CFrame.new(back + x, floorTop + (dy or 0), z), style)
 	end
 	at("G_TireRack", 1.4, -40)
 	at("G_Workbench", 1.5, -27)
@@ -131,7 +133,7 @@ function GarageKit.Dress(parent, bcf, y0, style)
 	at("G_ToolCabinet", 1.1, 29)
 	at("G_OilDrum", 1.2, 34)
 	for _, z in ipairs({ -33, -4, 25 }) do
-		local lamp = GarageKit.Template("G_WallLamp", parent, bcf * CFrame.new(back, y0 + 9, z), style)
+		local lamp = GarageKit.Template("G_WallLamp", parent, bcf * CFrame.new(back, floorTop + 9, z), style)
 		local bulb = lamp and lamp:FindFirstChildWhichIsA("BasePart", true)
 		if bulb then
 			local pl = Instance.new("PointLight")

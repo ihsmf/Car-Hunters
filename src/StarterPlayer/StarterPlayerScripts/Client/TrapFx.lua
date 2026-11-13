@@ -329,10 +329,17 @@ local function body(res, baseIndex, ctx)
 				return bcf:PointToWorldSpace(Vector3.new(x, yy, z))
 			end
 			local pts = { L(pl.X + 30, y, pl.Z), L(pl.X - 6, y, pl.Z), L(BaseLayout.LaneX, y, pl.Z) }
+			local el = BaseLayout.ElevatorLocal
+			local hiddenSeg -- the car is hidden on this segment (it "rides the lift" instead of driving through the cab)
 			if sl.Y > 0 then
-				local el = BaseLayout.ElevatorLocal
 				local yUp = y + sl.Y
-				for _, p in ipairs({ { BaseLayout.LaneX, y, el.Z }, { el.X, y, el.Z }, { el.X, yUp, el.Z }, { -15, yUp, el.Z }, { -15, yUp, sl.Z }, { sl.X, yUp, sl.Z } }) do
+				for _, p in ipairs({ { BaseLayout.LaneX, y, el.Z }, { el.X + 7, y, el.Z }, { -15, yUp, el.Z }, { -15, yUp, sl.Z }, { sl.X, yUp, sl.Z } }) do
+					table.insert(pts, L(p[1], p[2], p[3]))
+				end
+				hiddenSeg = #pts - 2 -- from in front of the lift to the upper deck
+			elseif math.abs(sl.Z - el.Z) < 8 then
+				-- the bay behind the lift cab: go round it through the next door opening
+				for _, p in ipairs({ { BaseLayout.LaneX, y, el.Z - 15.5 }, { -15, y, el.Z - 15.5 }, { -15, y, sl.Z }, { sl.X + 4, y, sl.Z } }) do
 					table.insert(pts, L(p[1], p[2], p[3]))
 				end
 			else
@@ -378,6 +385,15 @@ local function body(res, baseIndex, ctx)
 							lastDir = lastDir:Lerp(dir.Unit, 0.18)
 						end
 						local fwd = lastDir.Magnitude > 0.01 and lastDir.Unit or Vector3.new(1, 0, 0)
+						local hide = hiddenSeg ~= nil and i == hiddenSeg
+						if ghost:GetAttribute("Hidden") ~= hide then
+							ghost:SetAttribute("Hidden", hide)
+							for _, d in ipairs(ghost:GetDescendants()) do
+								if d:IsA("BasePart") then
+									d.LocalTransparencyModifier = hide and 1 or 0
+								end
+							end
+						end
 						ghost.PrimaryPart.CFrame = faceCF(pos, fwd) * CFrame.new(0, math.sin(os.clock() * 18) * 0.04, 0)
 						-- chase camera: behind and a bit above the car, looking ahead of it
 						local want = pos - fwd * 12 + Vector3.new(0, 4.5, 0)
