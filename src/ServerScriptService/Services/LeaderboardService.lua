@@ -181,17 +181,24 @@ local function placeStatue(rank, player)
 		end
 		model.Name = "Statue_" .. rank
 		local hum = model:FindFirstChildOfClass("Humanoid")
-		if hum then
-			hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+		local hrp = model:FindFirstChild("HumanoidRootPart")
+		if not hum or not hrp then
+			model:Destroy()
+			return
 		end
+		hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+		hum.BreakJointsOnDeath = false
+		-- a live rig: only the root is anchored, the joints stay so the avatar can animate (no frozen T-pose)
 		for _, d in ipairs(model:GetDescendants()) do
 			if d:IsA("BasePart") then
-				d.Anchored = true
+				d.Anchored = d == hrp
 				d.CanCollide = false
+				d.CanQuery = false
+				d.CanTouch = false
 			end
 		end
-		-- real step height: ray down onto the podium model (the spot heights are only a guess for the Blender frame)
-		local top = spot.Position.Y + spot.Size.Y / 2
+		-- step top under the spot (the spot itself is not queryable)
+		local top = spot.Position.Y - spot.Size.Y / 2
 		local rp = RaycastParams.new()
 		rp.FilterType = Enum.RaycastFilterType.Include
 		rp.FilterDescendantsInstances = { spot.Parent }
@@ -199,15 +206,40 @@ local function placeStatue(rank, player)
 		if hit and hit.Instance ~= spot then
 			top = hit.Position.Y
 		end
-		model:PivotTo(CFrame.new(spot.Position + Vector3.new(0, 4, 0)) * CFrame.Angles(0, spot:GetAttribute("Yaw") or 0, 0))
-		local bcf, size = model:GetBoundingBox()
-		model:PivotTo(model:GetPivot() - Vector3.new(0, (bcf.Position.Y - size.Y / 2) - top, 0))
-		local hl = Instance.new("Highlight")
-		hl.FillColor = RANK_COLOR[rank]
-		hl.FillTransparency = 0.75
-		hl.OutlineColor = RANK_COLOR[rank]
-		hl.Parent = model
+		local r15 = hum.RigType == Enum.HumanoidRigType.R15
+		local rootY = top + (r15 and (hum.HipHeight + hrp.Size.Y / 2) or 3)
+		model:PivotTo(CFrame.new(spot.Position.X, rootY, spot.Position.Z) * CFrame.Angles(0, spot:GetAttribute("Yaw") or 0, 0))
+		-- rank + name above the head
+		local bb = Instance.new("BillboardGui")
+		bb.Size = UDim2.fromOffset(200, 34)
+		bb.StudsOffset = Vector3.new(0, 3.6, 0)
+		bb.MaxDistance = 90
+		bb.LightInfluence = 0
+		bb.Adornee = hrp
+		local tl = Instance.new("TextLabel")
+		tl.Size = UDim2.fromScale(1, 1)
+		tl.BackgroundTransparency = 1
+		tl.Font = Enum.Font.LuckiestGuy
+		tl.TextScaled = true
+		tl.TextColor3 = RANK_COLOR[rank]
+		tl.TextStrokeTransparency = 0.2
+		tl.Text = "#" .. rank .. "  " .. player.DisplayName
+		tl.Parent = bb
+		bb.Parent = model
 		model.Parent = Workspace
+		-- looping celebration (Roblox default R15 emotes): #1 dance, #2 cheer, #3 wave; R6 avatars stay idle
+		if r15 then
+			local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
+			local anim = Instance.new("Animation")
+			anim.AnimationId = ({ "rbxassetid://507771019", "rbxassetid://507770677", "rbxassetid://507770239" })[rank]
+			local ok2, track = pcall(function()
+				return animator:LoadAnimation(anim)
+			end)
+			if ok2 and track then
+				track.Looped = true
+				track:Play(0.3)
+			end
+		end
 		if statues[rank] then
 			statues[rank].model:Destroy()
 		end

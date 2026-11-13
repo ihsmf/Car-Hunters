@@ -202,14 +202,14 @@ local function buildBase(ctx, i)
 	-- walls stop under the roof slab so no faces are shared with it
 	mk("BackWall", Vector3.new(2, H - 1, PZ * 2), Vector3.new(-PX + 1, H / 2, 0), G.wall, M.SmoothPlastic)
 	for _, s in ipairs({ -1, 1 }) do
-		mk("SideFin", Vector3.new(deckW - 2, H - 1, 0.8), Vector3.new(deckCX + 1, H / 2, s * (PZ - 0.6)), G.wall, M.SmoothPlastic)
+		GarageKit.SideWall(mk, deckCX + 1, deckW - 2, 0.5, H, s * (PZ - 0.6), G)
 	end
 	mk("Roof", Vector3.new(deckW, 1, PZ * 2), Vector3.new(deckCX, H, 0), G.deck, M.SmoothPlastic)
 	local fascia = mk("OwnerSign", Vector3.new(1.2, 2.4, PZ * 2 + 0.4), Vector3.new(EDGE + 0.4, H + 0.2, 0), G.frame, M.SmoothPlastic)
 	Label(fascia, Enum.NormalId.Right, "FREE GARAGE", C(255, 255, 255))
 	local screen = mk("IncomeScreen", Vector3.new(0.4, 2.4, 24), Vector3.new(EDGE + 1.2, H - 2.1, 0), G.frame, M.SmoothPlastic)
 	Label(screen, Enum.NormalId.Right, "", C(110, 230, 140))
-	for _, z in ipairs({ -PZ + 1, -15.5, 15.5, PZ - 1 }) do
+	for _, z in ipairs({ -PZ + 1, -15, 15, PZ - 1 }) do
 		mk("Column", Vector3.new(1.2, H - 1, 1.2), Vector3.new(EDGE - 0.8, H / 2, z), G.frame, M.Metal)
 	end
 	for _, z in ipairs({ -30, 0, 30 }) do
@@ -226,7 +226,8 @@ local function buildBase(ctx, i)
 	-- lift shaft (ground stage) to the upper floors
 	local el = BaseLayout.ElevatorLocal
 	mk("ElevatorPad", Vector3.new(8, 0.4, 8), Vector3.new(el.X, 0.7, el.Z), G.frame, M.Metal)
-	GarageKit.Lift(mk, 0.5, H, G.frame, G.accent)
+	GarageKit.Lift(mk, 0.5, H, G.frame, G.accent, model, bcf)
+	GarageKit.Dress(model, bcf, 0.5, G)
 
 	-- the trap: a clean steel car lift with a magnetic crane
 	local t = BaseLayout.TrapLocal
@@ -497,7 +498,7 @@ local function buildPlaza(ctx)
 		Label(step, Enum.NormalId.Back, tostring(i), C(255, 255, 255))
 		local spot = lp("StatueSpot" .. i, Vector3.new(2, 0.2, 2), Vector3.new(st[1], 0.7 + st[2], 14), C(255, 255, 255), M.SmoothPlastic, { t = 1, collide = false })
 		spot:SetAttribute("Rank", i)
-		spot:SetAttribute("Yaw", math.pi)
+		spot:SetAttribute("Yaw", 0) -- statues face the players (the screen side is world -Z)
 	end
 	lbModel.Parent = f.StreetProps
 	table.insert(ctx.foot, { x1 = lb.x - 16, x2 = lb.x + 16, z1 = lb.z - 19, z2 = lb.z + 2 })

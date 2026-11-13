@@ -228,14 +228,14 @@ local KIND_COLOR = { good = P.green, error = P.red, warn = P.orange, info = P.bl
 -- Notifications (v10): one queue for every top message. Max 3 on screen, the same text within its lifetime merges
 -- into "x2" instead of stacking, items move with their own position tweens (no list-layout snapping), and the
 -- whole pill (background, text AND outline) fades before it is destroyed.
--- v13: small pills at the very top centre (the zone banner moved to the top-left), max 2 at once
-local notes = { items = {}, queue = {}, top = 8 }
+-- v16: small pills at the top centre, under the zone banner, max 2 at once
+local notes = { items = {}, queue = {}, top = 50 }
 local NOTE_H, NOTE_GAP, NOTE_MAX, NOTE_LIFE = 28, 6, 2, 2.8
 
 local function noteY(i)
 	-- with a panel open the lane sits above the panel card, so a message never covers the button just pressed
 	-- dialogs (confirm, checkpoint) also push the lane to the very top so it never covers their buttons
-	local top = (state.open or state.dialog) and (hud.tutInPanel and 108 or 6) or (hud.tutInPanel and 108 or notes.top) -- below the tutorial card on garage steps
+	local top = hud.tutInPanel and 116 or notes.top -- below the tutorial card on garage steps
 	return top + (i - 1) * (NOTE_H + NOTE_GAP)
 end
 
@@ -434,12 +434,13 @@ local function buildHud()
 	hud.icon = icon
 
 	-- zone banner + hint
-	-- zone banner: top-left corner (the top centre belongs to the notifications)
-	local banner = new("Frame", { AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 16, 0, 12), Size = UDim2.fromOffset(250, 42), BackgroundColor3 = P.white, BorderSizePixel = 0 }, root)
+	-- zone banner: top centre (the top-left corner belongs to the Roblox chat); notifications start under it
+	local banner = new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.fromOffset(240, 38), BackgroundColor3 = P.white, BorderSizePixel = 0 }, root)
+	hud.banner = banner
 	corner(banner, 14)
 	stroke(banner, P.ink, 3.5)
 	hud.bannerGrad = gradient(banner, P.orange)
-	hud.zone = text(banner, { Text = "", TextSize = 28, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, Outline = 3 })
+	hud.zone = text(banner, { Text = "", TextSize = 26, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, Outline = 3 })
 	local hint = new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 70), AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 40), BackgroundColor3 = P.white, BorderSizePixel = 0, Visible = false }, root)
 	corner(hint, 20)
 	stroke(hint, P.ink, 3)
@@ -1089,6 +1090,7 @@ function UI.TogglePanel(name)
 	if name then
 		UI.Sfx("open")
 	end
+	hud.banner.Visible = name == nil -- a panel shows its own title; the top lane stays free for the tutorial card
 	noteLayout()
 	pcall(function() -- world prompts (E/F at the garage, NPCs) only when no panel is open
 		game:GetService("ProximityPromptService").Enabled = name == nil and not state.cine

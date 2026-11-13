@@ -19,6 +19,9 @@ GarageKit.Paint = {
 	Roof = "deck", OwnerSign = "frame", FloorSign = "frame", Column = "frame", ElevatorPad = "frame", ElevatorPost = "frame",
 	LiftBridge = "frame", TrapEdge = "accent", LiftPost = "accent2", LiftBeam = "accent2", Rail = "frame", RailPost = "frame",
 	PortalPost = "frame", PortalHeader = "frame", PortalDoor = "door", Terminal = "frame", WheelStop = "accent",
+	-- Blender garage kit pieces (renamed on placement, see GarageKit.Dress) + window strips
+	DecoFrame = "frame", DecoAccent = "accent", DecoWall = "door", WindowFrame = "frame", DoorRail = "frame", DoorHood = "frame",
+	DoorStripe = "accent",
 }
 
 local function part(parent, name, size, cf, color, mat, o)
@@ -66,6 +69,80 @@ function GarageKit.Label(p, face, text, color)
 	l.Text = text
 	l.Parent = gui
 	return l
+end
+
+-- Blender template (server only): ServerStorage.BuilderAssets.Props.<name>, anchored, pivoted to cf. Pieces named
+-- Frame / Accent / Wall get a Deco* name so garage skins recolour them (car parts are never touched).
+local DECO = { Frame = "DecoFrame", Accent = "DecoAccent", Wall = "DecoWall" }
+function GarageKit.Template(name, parent, cf)
+	local ok, tpl = pcall(function()
+		return game:GetService("ServerStorage").BuilderAssets.Props:FindFirstChild(name)
+	end)
+	if not ok or not tpl then
+		return nil
+	end
+	local m = tpl:Clone()
+	for _, d in ipairs(m:GetDescendants()) do
+		if d:IsA("BasePart") then
+			d.Anchored = true
+			d.CanQuery = false
+			d.Name = DECO[string.match(d.Name, "^(%a+)") or ""] or d.Name
+		end
+	end
+	m:PivotTo(cf)
+	m.Parent = parent
+	return m
+end
+
+-- dresses one storey (y0 = deck top) so it reads as a real garage: a raised roller door over every bay opening,
+-- tools along the back wall (pegboards, benches, cabinets, tyre racks, drums) and caged wall lamps.
+-- Positions are garage-local (deck edge at DeckEdgeX facing +X, back wall face at -PX + 2).
+function GarageKit.Dress(parent, bcf, y0, style)
+	style = style or GarageKit.Style
+	local EDGE = BaseLayout.DeckEdgeX
+	local back = -MapConfig.BasePlot.x / 2 + 2 -- front face of the back wall
+	for col = 0, BaseLayout.SlotsPerFloor - 1 do
+		local z = -37.5 + col * 15
+		local cf = bcf * CFrame.new(EDGE - 0.9, y0, z)
+		if not GarageKit.Template("G_RollerDoor", parent, cf) then
+			-- simple raised door: two rails, a hood box and a hazard strip
+			for _, s in ipairs({ -1, 1 }) do
+				part(parent, "DoorRail", Vector3.new(0.6, 13.2, 0.5), cf * CFrame.new(0, 6.6, s * 7), style.frame, M.Metal)
+			end
+			part(parent, "DoorHood", Vector3.new(1.6, 1.6, 14.4), cf * CFrame.new(0, 12.4, 0), style.frame, M.Metal)
+			part(parent, "DoorStripe", Vector3.new(0.2, 0.5, 14.2), cf * CFrame.new(0.85, 12.1, 0), style.accent, M.SmoothPlastic, { collide = false, cast = false })
+		end
+	end
+	-- back wall (behind the wheel stops at x -41.6): z slots chosen between nothing else, every storey alike
+	local function at(name, x, z, yaw)
+		GarageKit.Template(name, parent, bcf * CFrame.new(back + x, y0, z) * CFrame.Angles(0, yaw or 0, 0))
+	end
+	at("G_TireRack", 1.4, -40)
+	at("G_Workbench", 1.5, -27)
+	at("G_Pegboard", 0, -27)
+	at("G_ToolCabinet", 1.1, -19)
+	at("G_OilDrum", 1.2, -12)
+	at("G_Workbench", 1.5, 4)
+	at("G_Pegboard", 0, 4)
+	at("G_TireRack", 1.4, 19)
+	at("G_ToolCabinet", 1.1, 29)
+	at("G_OilDrum", 1.2, 34)
+	for _, z in ipairs({ -33, -4, 25 }) do
+		local lamp = GarageKit.Template("G_WallLamp", parent, bcf * CFrame.new(back, y0 + 9, z))
+		local bulb = lamp and lamp:FindFirstChildWhichIsA("BasePart", true)
+		if bulb then
+			local pl = Instance.new("PointLight")
+			pl.Range, pl.Brightness, pl.Color = 14, 0.7, C(255, 226, 180)
+			pl.Parent = bulb
+		end
+	end
+end
+
+-- brick side wall with a strip of high windows (the window frame is thicker than the wall: no shared faces)
+function GarageKit.SideWall(mk, x, len, y0, H, z, style)
+	mk("SideFin", Vector3.new(len, H - 1, 0.8), Vector3.new(x, y0 + (H - 1) / 2, z), style.wall, M.Brick)
+	mk("WindowFrame", Vector3.new(len - 6, 2.6, 1.0), Vector3.new(x, y0 + 9.3, z), style.frame, M.Metal)
+	mk("WindowGlass", Vector3.new(len - 6.6, 2.0, 1.2), Vector3.new(x, y0 + 9.3, z), C(120, 170, 205), M.Glass, { t = 0.35 })
 end
 
 -- one parking bay; topY = height of the surface it lies on. Returns the pad.
@@ -124,11 +201,11 @@ function GarageKit.BuildFloor(parent, bcf, f, style)
 	end
 	mk("BackWall", Vector3.new(2, H - 1, PZ * 2), Vector3.new(-PX + 1, y0 + (H - 1) / 2, 0), style.wall)
 	for _, s in ipairs({ -1, 1 }) do
-		mk("SideFin", Vector3.new(deckW - 2, H - 1, 0.8), Vector3.new(deckCX + 1, y0 + (H - 1) / 2, s * (PZ - 0.6)), style.wall)
+		GarageKit.SideWall(mk, deckCX + 1, deckW - 2, y0, H, s * (PZ - 0.6), style)
 	end
 	mk("Roof", Vector3.new(deckW, 1, PZ * 2), Vector3.new(deckCX, f * H, 0), style.deck)
 	mk("FloorSign", Vector3.new(1.2, 2.4, PZ * 2 + 0.4), Vector3.new(EDGE + 0.4, f * H + 0.2, 0), style.frame)
-	for _, z in ipairs({ -PZ + 1, -15.5, 15.5, PZ - 1 }) do
+	for _, z in ipairs({ -PZ + 1, -15, 15, PZ - 1 }) do
 		mk("Column", Vector3.new(1.2, H - 1, 1.2), Vector3.new(EDGE - 0.8, y0 + (H - 1) / 2, z), style.frame, M.Metal)
 	end
 	-- safety rail along the open edge, with a gap at the lift
@@ -153,7 +230,8 @@ function GarageKit.BuildFloor(parent, bcf, f, style)
 		sl.Color = C(255, 238, 210)
 		sl.Parent = lamp
 	end
-	GarageKit.Lift(mk, y0, H, style.frame, style.accent)
+	GarageKit.Lift(mk, y0, H, style.frame, style.accent, m, bcf)
+	GarageKit.Dress(m, bcf, y0, style)
 	mk("ElevatorPad", Vector3.new(8, 0.4, 8), Vector3.new(el.X, y0 + 0.2, el.Z), style.frame, M.Metal)
 	mk("LiftBridge", Vector3.new(2.2, 0.3, 8), Vector3.new(EDGE + 1.9, y0 + 0.15, el.Z), style.frame, M.Metal)
 	local slots = Instance.new("Folder")
