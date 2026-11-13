@@ -53,6 +53,12 @@ local function makeActor()
 	end
 	char.Archivable = true
 	local a = char:Clone()
+	if not a or not a:FindFirstChild("HumanoidRootPart") then
+		if a then
+			a:Destroy()
+		end
+		return nil
+	end
 	for _, d in ipairs(a:GetDescendants()) do
 		if d:IsA("LuaSourceContainer") then
 			d:Destroy()
@@ -226,12 +232,16 @@ function Intro.Play(st)
 		cam.CFrame = cam.CFrame:Lerp(camTarget, 1 - math.exp(-dt * 6))
 	end)
 	Cine.Letterbox(true, 0.4)
-	local skip = K.toy(K.overlay, { Text = "SKIP  >", Color = K.P.grey, Size = UDim2.fromOffset(150, 56), AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -24, 1, -24),
-		TextSize = 22, ZIndex = 95, OnClick = function() skipped = true end })
-	local actor, track = makeActor()
-	if actor then
-		pcall(scenes, st, actor, track)
-	end
+	-- everything that can fail runs protected, so the cleanup below always gives the player back the controls
+	local skip
+	pcall(function()
+		skip = K.toy(K.overlay, { Text = "SKIP  >", Color = K.P.grey, Size = UDim2.fromOffset(150, 56), AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -24, 1, -24),
+			TextSize = 22, ZIndex = 95, OnClick = function() skipped = true end })
+		local actor, track = makeActor()
+		if actor then
+			scenes(st, actor, track)
+		end
+	end)
 	Cine.Darken(1, 0.3)
 	task.wait(0.35)
 	for _, x in ipairs(trash) do
@@ -240,7 +250,9 @@ function Intro.Play(st)
 		end)
 	end
 	trash = {}
-	skip.holder:Destroy()
+	if skip then
+		skip.holder:Destroy()
+	end
 	if camConn then
 		camConn:Disconnect()
 		camConn = nil

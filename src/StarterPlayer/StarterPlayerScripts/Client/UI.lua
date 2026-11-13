@@ -518,7 +518,7 @@ local function catchLimit()
 end
 local function setMix(id, n)
 	local total = mixTotal() - math.min(state.mix[id] or 0, store.Banked(id))
-	state.mix[id] = math.clamp(n, 0, math.min(store.Banked(id), EconomyConfig.MaxBatch - total))
+	state.mix[id] = math.clamp(n, 0, math.max(0, math.min(store.Banked(id), EconomyConfig.MaxBatch - total)))
 	UI.Refresh()
 end
 
@@ -596,10 +596,14 @@ local function buildThrow()
 	toy(right, { Text = "RARE", Color = P.blue, Size = UDim2.fromOffset(98, 46), Position = UDim2.fromOffset(107, 0), TextSize = 20, ZIndex = 23, OnClick = function()
 		-- only Rare, Epic and Legendary parts
 		state.mix = {}
-		for _, id in ipairs(PartConfig.Order) do
+		local left = EconomyConfig.MaxBatch
+		for i = #PartConfig.Order, 1, -1 do
+			local id = PartConfig.Order[i]
 			local rar = PartConfig.Parts[id].rarity
 			if rar == "Rare" or rar == "Epic" or rar == "Legendary" then
-				state.mix[id] = store.Banked(id)
+				local n = math.min(store.Banked(id), left)
+				state.mix[id] = n
+				left = left - n
 			end
 		end
 		UI.Refresh()

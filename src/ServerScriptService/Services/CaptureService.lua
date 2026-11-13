@@ -108,7 +108,11 @@ function Capture.ThrowBatch(player, counts, merge)
 			end
 		end
 	end
-	if total == 0 or total > EconomyConfig.MaxBatch then
+	if total == 0 then
+		return
+	end
+	if total > EconomyConfig.MaxBatch then
+		S.Data.Notify(player, "noPart", nil, "error")
 		return
 	end
 	-- every part adds its rarity points; the throw catches `cars` cars (Multi Catch), each rolled on those points
@@ -166,9 +170,10 @@ function Capture.ThrowBatch(player, counts, merge)
 	end
 	S.Income.Recalc(player)
 	local animTime = S.Shop.ThrowCooldown(s)
-	local busyFor = #results == 1 and animTime + 0.15 or (2.5 + 0.3 * #results) * (animTime / EconomyConfig.ThrowAnimTime)
-	if #results == 1 then
-		-- one car: the full cinematic (part flies in, blackout reveal, drive-in); the real car stays hidden meanwhile
+	local single = #results == 1 and results[1].uid ~= nil
+	local busyFor = single and animTime + 0.15 or (2.5 + 0.3 * #results) * (animTime / EconomyConfig.ThrowAnimTime)
+	if single then
+		-- one new car: the full cinematic (merged / sold results go to the batch reveal, which shows them) (part flies in, blackout reveal, drive-in); the real car stays hidden meanwhile
 		local r = results[1]
 		if r.uid then
 			s.hidden[r.uid] = os.clock() + animTime + 0.1

@@ -133,6 +133,7 @@ local function rebuild()
 					ride((g - 1) * BaseLayout.FloorHeight + BaseLayout.FloorY, bcf)
 				end)
 				pp.KeyboardKeyCode = ({ Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four })[g]
+				pp.GamepadKeyCode = ({ Enum.KeyCode.DPadDown, Enum.KeyCode.DPadLeft, Enum.KeyCode.DPadUp, Enum.KeyCode.DPadRight })[g]
 				pp.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
 			end
 		end
@@ -146,6 +147,7 @@ local function rebuild()
 		local pp = prompt(buy, full and ("Buy level " .. (floors + 1)) or "Fill this floor first", "$" .. Util.FormatNumber(cost), function()
 			K.actions.BuyFloor(floors)
 		end)
+		pp.GamepadKeyCode = Enum.KeyCode.ButtonY -- the lift rides use the D-pad, so one press never does both
 		pp.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
 	end
 end
