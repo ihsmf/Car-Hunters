@@ -20,7 +20,7 @@ LOOK = {
     "Leaf": ((0.2, 0.55, 0.2, 1), 0.0, 0.6), "Wood": ((0.55, 0.36, 0.2, 1), 0.0, 0.6),
     "Rubber": ((0.03, 0.03, 0.035, 1), 0.0, 0.85), "Yellow": ((1.0, 0.78, 0.15, 1), 0.1, 0.4),
     "Blue": ((0.1, 0.45, 0.9, 1), 0.1, 0.35), "Concrete": ((0.62, 0.61, 0.58, 1), 0.0, 0.8),
-    "Green": ((0.15, 0.75, 0.3, 1), 0.0, 0.3),
+    "Green": ((0.15, 0.75, 0.3, 1), 0.0, 0.3), "Body": ((0.95, 0.42, 0.08, 1), 0.2, 0.3),
 }
 
 
@@ -380,10 +380,243 @@ for k in range(9):
     beam(g, "Dark", (x - 0.5, 0, 11.4 - 0.5 * (1 - ((x - 0.5) / 4) ** 2)), (x + 0.5, 0, 11.4 - 0.5 * (1 - ((x + 0.5) / 4) ** 2)), 0.03, 4)
 roots.append(finish("StringLightPole", g))
 
+# ---------------------------------------------------------------- MonsterTruck (boss): front = +X, origin on the ground at the wheelbase centre.
+# Body = main paint and Accent = stripes/trim (both recoloured per boss in Luau); 8.4-stud tyres, lifted ladder frame.
+
+
+def rot_apply(o, rot):
+    o.rotation_euler = rot
+    bpy.context.view_layer.objects.active = o
+    for s in bpy.context.selected_objects:
+        s.select_set(False)
+    o.select_set(True)
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+    return o
+
+
+def mesh_ob(name, build):
+    import bmesh
+    me = bpy.data.meshes.new(name)
+    bm = bmesh.new()
+    build(bm)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(me)
+    bm.free()
+    ob = bpy.data.objects.new(name, me)
+    bpy.context.collection.objects.link(ob)
+    return ob
+
+
+def prism_xz(pts, y0, y1):
+    """convex polygon (x, z) extruded along y from y0 to y1"""
+    def b(bm):
+        a = [bm.verts.new((x, y0, z)) for x, z in pts]
+        c = [bm.verts.new((x, y1, z)) for x, z in pts]
+        bm.faces.new(a)
+        bm.faces.new(list(reversed(c)))
+        for i in range(len(a)):
+            j = (i + 1) % len(a)
+            bm.faces.new((a[j], a[i], c[i], c[j]))
+    return mesh_ob("prism", b)
+
+
+def arch(cx, cz, r0, r1, a0, a1, y0, y1, n=20):
+    """annulus sector around (cx, cz) in the xz plane (angles a0..a1 from +x, radians), extruded along y"""
+    def b(bm):
+        R = []
+        for k in range(n + 1):
+            a = a0 + (a1 - a0) * k / n
+            ca, sa = math.cos(a), math.sin(a)
+            R.append([bm.verts.new((cx + ca * r, y, cz + sa * r)) for r, y in ((r0, y0), (r1, y0), (r1, y1), (r0, y1))])
+        for p, q in zip(R, R[1:]):
+            for k in range(4):
+                bm.faces.new((p[k], p[(k + 1) % 4], q[(k + 1) % 4], q[k]))
+        bm.faces.new(R[0])
+        bm.faces.new(list(reversed(R[-1])))
+    return mesh_ob("arch", b)
+
+
+def tube_y(cx, cz, r_in, r_out, y0, y1, verts=48):
+    """hollow tube along y (a ring rotated onto the y axis)"""
+    o = ring((0, 0, 0), r_in, r_out, abs(y1 - y0), verts)
+    rot_apply(o, (math.pi / 2, 0, 0))
+    o.location = (cx, (y0 + y1) / 2, cz)
+    return o
+
+
+def spring(x, y, z0, z1, R=0.42, wire=0.09, turns=5, segs=10, minor=6):
+    """coil spring (swept tube along a vertical helix)"""
+    from mathutils import Vector
+
+    def b(bm):
+        n = turns * segs
+        rings = []
+        for i in range(n + 1):
+            t = i / n
+            th = t * turns * 2 * math.pi
+            p = Vector((x + R * math.cos(th), y + R * math.sin(th), z0 + wire + (z1 - z0 - 2 * wire) * t))
+            T = Vector((-R * math.sin(th) * turns * 2 * math.pi, R * math.cos(th) * turns * 2 * math.pi, z1 - z0 - 2 * wire)).normalized()
+            N = Vector((math.cos(th), math.sin(th), 0))
+            N = (N - T * N.dot(T)).normalized()
+            B = T.cross(N)
+            rings.append([bm.verts.new(p + wire * (math.cos(f / minor * 2 * math.pi) * N + math.sin(f / minor * 2 * math.pi) * B)) for f in range(minor)])
+        for p, q in zip(rings, rings[1:]):
+            for k in range(minor):
+                bm.faces.new((p[k], p[(k + 1) % minor], q[(k + 1) % minor], q[k]))
+        bm.faces.new(rings[0])
+        bm.faces.new(list(reversed(rings[-1])))
+    return mesh_ob("spring", b)
+
+
+def rbox(loc, size, bev, seg=3):
+    b = mc.prim("box", "b", loc, size)
+    mc.bevel(b, bev, seg)
+    return b
+
+
+g = G("Body", "Accent", "Rubber", "Chrome", "Dark", "Metal", "Yellow", "Glass", "Glow")
+WX, WY, WR = 6.4, 5.6, 4.2  # wheel centres x / y, tyre radius (8.4 diameter)
+for xw in (-WX, WX):
+    sx = 1 if xw > 0 else -1
+    for s in (-1, 1):
+        yc = s * WY
+        Y = lambda d: yc + s * d  # d = offset outward from the tyre centre plane
+        # tyre: hollow carcass with rounded shoulders + two staggered rows of chunky tread lugs
+        t = tube_y(xw, WR, 2.5, 3.8, Y(-1.7), Y(1.7), 48)
+        mc.bevel(t, 0.45, 3)
+        g["Rubber"].append(t)
+        n = 18
+        for k in range(n):
+            for row, (d0, d1) in enumerate(((-1.6, 0.15), (-0.15, 1.6))):
+                a = (k + 0.5 * row) / n * 2 * math.pi
+                rr = (3.55 + WR) / 2
+                lug = box((xw + math.cos(a) * rr, Y((d0 + d1) / 2), WR + math.sin(a) * rr), (WR - 3.55, abs(d1 - d0), 0.95), rot=(0, -a, 0))
+                g["Rubber"].append(lug)
+        # deep rim: dark dish set 1.85 into the tyre, chrome barrel lip lining the bore, 6 spokes, hub, cap, lug nuts
+        g["Dark"].append(cyl((xw, Y(-0.62), WR), 2.6, 0.85, rot=(math.pi / 2, 0, 0), verts=48))  # dish face at d = -0.2
+        g["Chrome"].append(tube_y(xw, WR, 2.25, 2.85, Y(-0.3), Y(1.9), 48))  # lip 0.2 proud of the tyre face
+        for k in range(6):
+            a = k / 6 * 2 * math.pi
+            sp = box((xw + math.cos(a) * 1.45, Y(0.0), WR + math.sin(a) * 1.45), (1.75, 0.4, 0.5), bev=0.08, rot=(0, -a, 0))
+            g["Chrome"].append(sp)
+        g["Chrome"].append(cyl((xw, Y(0.17), WR), 0.85, 0.75, rot=(math.pi / 2, 0, 0), verts=24))  # hub d -0.2..0.55
+        g["Chrome"].append(rot_apply(cone((0, 0, 0), 0.5, 0.25, 0.5, verts=24), (-s * math.pi / 2, 0, 0)))
+        g["Chrome"][-1].location = (xw, Y(0.8), WR)
+        for k in range(5):
+            a = k / 5 * 2 * math.pi + 0.3
+            g["Dark"].append(cyl((xw + math.cos(a) * 0.68, Y(0.6), WR + math.sin(a) * 0.68), 0.1, 0.2, rot=(math.pi / 2, 0, 0), verts=6))
+        # suspension: axle bracket, two yellow coilovers (fore/aft of the axle) up into the body
+        ys = s * 3.15
+        g["Metal"].append(box((xw, ys, WR), (3.0, 0.6, 0.5), bev=0.08))
+        for dx in (-1.15, 1.15):
+            g["Chrome"].append(cyl((xw + dx, ys, 6.0), 0.2, 3.3, verts=12))  # shock shaft 4.35..7.65
+            g["Dark"].append(cyl((xw + dx, ys, 4.675), 0.32, 0.65, verts=12))  # shock body
+            g["Yellow"].append(spring(xw + dx, ys, 5.2, 7.25))
+            for zz in (5.12, 7.33):
+                g["Dark"].append(cyl((xw + dx, ys, zz), 0.55, 0.16, verts=16))  # spring seats
+        # links: lower trailing arm from the axle bracket to the frame rail
+        beam(g, "Metal", (xw - sx * 0.6, s * 2.6, WR - 0.1), (xw - sx * 4.2, s * 2.3, 6.4), 0.18)
+    # axle tube, diff, upper A-arm (two bars from the diff to the frame)
+    g["Metal"].append(cyl((xw, 0, WR), 0.42, 9.6, rot=(math.pi / 2, 0, 0), verts=16))
+    g["Metal"].append(sphere((xw, -0.3, WR), 1.05, 16))
+    g["Dark"].append(cyl((xw + sx * 0.75, -0.3, WR), 0.75, 0.3, rot=(0, math.pi / 2, 0), verts=16))  # diff cover
+    for s in (-1, 1):
+        beam(g, "Metal", (xw, -0.3, WR + 0.95), (xw - sx * 3.6, s * 2.3, 6.6), 0.16)
+    g["Metal"].append(sphere((xw, -0.3, WR + 0.95), 0.28, 10))  # ball joint
+# driveshafts + transmission, ladder frame (rails + crossmembers)
+g["Dark"].append(box((0, 0, 5.65), (4.0, 1.7, 1.9), bev=0.2))
+for xw in (-WX, WX):
+    beam(g, "Metal", (xw - (1 if xw > 0 else -1) * 0.9, -0.3, WR + 0.2), ((1 if xw > 0 else -1) * 1.9, 0, 5.2), 0.17)
+for s in (-1, 1):
+    g["Dark"].append(box((0, s * 2.3, 6.9), (19.6, 0.6, 1.2), bev=0.06))
+for x in (-8.6, -4.0, 0.0, 4.0, 8.6):
+    g["Dark"].append(box((x, 0, 6.85), (0.5, 4.2, 0.7)))
+
+# body: rounded tub with a real bed (boolean), hood bulge, scoop, cab, flared fenders
+tub = rbox((0, 0, 8.9), (20.2, 7.6, 3.0), 0.45)
+cut = mc.prim("box", "cut", (-6.8, 0, 10.4), (5.8, 6.8, 2.0))
+m = tub.modifiers.new("bed", "BOOLEAN")
+m.object, m.operation, m.solver = cut, "DIFFERENCE", "EXACT"
+mc.apply_mods(tub)
+bpy.data.objects.remove(cut)
+g["Body"].append(tub)
+g["Dark"].append(box((-6.8, 0, 9.25), (6.0, 7.0, 0.5)))  # bed liner, top 0.1 above the bed floor
+g["Body"].append(rbox((6.5, 0, 10.45), (5.8, 5.6, 0.7), 0.25))  # hood bulge, top 10.8
+g["Body"].append(rbox((6.4, 0, 11.0), (2.8, 2.6, 0.9), 0.2, 2))  # scoop, top 11.45
+g["Dark"].append(box((7.85, 0, 11.05), (0.2, 2.0, 0.5)))  # scoop intake
+for y in (-0.5, 0.5):
+    g["Chrome"].append(box((7.96, y, 11.05), (0.22, 0.7, 0.12)))  # intake butterflies
+cab = prism_xz([(-3.4, 10.2), (3.4, 10.2), (1.2, 13.2), (-3.4, 13.2)], -3.45, 3.45)
+mc.bevel(cab, 0.35, 3)
+g["Body"].append(cab)
+for xw in (-WX, WX):
+    for s in (-1, 1):
+        y0, y1 = sorted((s * 3.2, s * 7.55))
+        g["Body"].append(arch(xw, WR, 4.55, 5.15, math.radians(35), math.radians(145), y0, y1, 21))
+        ly0, ly1 = sorted((s * 7.55, s * 7.75))
+        g["Accent"].append(arch(xw, WR, 4.95, 5.3, math.radians(35), math.radians(145), ly0, ly1, 21))  # rolled fender lip
+
+# glass: windshield on the sloped face, side windows (front + rear), rear window
+d = (-2.2 / math.hypot(2.2, 3.0), 3.0 / math.hypot(2.2, 3.0))
+nrm = (d[1], -d[0])
+P = lambda tt, off: (3.4 + d[0] * tt + nrm[0] * off, 10.2 + d[1] * tt + nrm[1] * off)
+g["Glass"].append(prism_xz([P(0.75, -0.12), P(0.75, 0.08), P(3.25, 0.08), P(3.25, -0.12)], -2.95, 2.95))
+for s in (-1, 1):
+    y0, y1 = sorted((s * 3.35, s * 3.53))
+    g["Glass"].append(prism_xz([(-0.1, 10.75), (2.5, 10.75), (1.0, 12.8), (-0.1, 12.8)], y0, y1))
+    g["Glass"].append(prism_xz([(-2.95, 10.75), (-0.55, 10.75), (-0.55, 12.8), (-2.95, 12.8)], y0, y1))
+    g["Dark"].append(box((2.3, s * 3.75, 10.5), (0.25, 0.7, 0.18)))  # mirror arm
+    g["Dark"].append(box((2.3, s * 4.25, 10.75), (0.35, 0.5, 0.75), bev=0.1))  # mirror
+g["Glass"].append(box((-3.42, 0, 11.75), (0.2, 5.4, 1.9)))
+
+# racing stripes (Accent): twin stripes over hood + roof, side stripes, tail lights
+for s in (-1, 1):
+    g["Accent"].append(box((6.5, s * 1.75, 10.81), (5.2, 0.6, 0.13)))
+    g["Accent"].append(box((-1.2, s * 1.75, 13.21), (3.6, 0.6, 0.13)))
+    g["Accent"].append(box((0, s * 3.8, 9.65), (19.2, 0.16, 0.5)))
+    g["Accent"].append(box((-10.12, s * 3.0, 9.35), (0.24, 0.9, 0.55)))  # tail lights
+
+# front: grille, chrome surround, headlights, bumpers with tow hooks
+g["Dark"].append(box((10.09, 0, 9.05), (0.18, 3.8, 1.5)))
+for k in range(4):
+    g["Chrome"].append(box((10.18, 0, 8.55 + k * 0.35), (0.16, 3.5, 0.16)))
+for z in (8.2, 9.9):
+    g["Chrome"].append(box((10.2, 0, z), (0.3, 4.1, 0.2)))
+for s in (-1, 1):
+    g["Chrome"].append(box((10.2, s * 1.975, 9.05), (0.3, 0.15, 1.5)))
+    g["Chrome"].append(cyl((10.15, s * 2.75, 9.15), 0.55, 0.3, rot=(0, math.pi / 2, 0), verts=24))  # headlight bezel
+    g["Glow"].append(cyl((10.29, s * 2.75, 9.15), 0.42, 0.18, rot=(0, math.pi / 2, 0), verts=24))
+for sx in (-1, 1):
+    g["Dark"].append(box((sx * 10.2, 0, 7.5), (0.8, 8.8, 1.0), bev=0.25))
+    for s in (-1, 1):
+        g["Accent"].append(torus((sx * 10.75, s * 2.6, 7.5), 0.32, 0.1, rot=(math.pi / 2, 0, 0), seg=16, minor=6))
+
+# roof light bar, roll bar over the bed, chrome exhaust stacks
+g["Dark"].append(box((0.35, 0, 13.35), (0.7, 5.2, 0.7), bev=0.08))
+for k in range(4):
+    g["Glow"].append(box((0.73, -1.95 + k * 1.3, 13.4), (0.14, 1.0, 0.36)))
+for s in (-1, 1):
+    beam(g, "Dark", (-5.0, s * 3.55, 10.3), (-5.0, s * 3.55, 12.9), 0.2)
+    beam(g, "Dark", (-5.0, s * 3.55, 12.7), (-8.8, s * 3.55, 10.3), 0.17)
+    g["Dark"].append(sphere((-5.0, s * 3.55, 12.9), 0.26, 12))
+beam(g, "Dark", (-5.0, -3.55, 12.9), (-5.0, 3.55, 12.9), 0.2)
+for s in (-1, 1):
+    g["Chrome"].append(cyl((-4.35, s * 1.6, 11.475), 0.36, 4.25, verts=20))  # stack 9.35..13.6
+    g["Chrome"].append(cone((-4.35, s * 1.6, 13.85), 0.4, 0.55, 0.5, verts=20))
+    g["Dark"].append(box((-4.35, s * 1.6, 9.6), (1.0, 1.0, 0.3), bev=0.06))  # stack foot
+mt = finish("MonsterTruck", g)
+for c in mt.children:
+    c.data.set_sharp_from_angle(angle=math.radians(40))
+roots.append(mt)
+
 for r in roots:
     r.location = (0, 0, 0)
+# --only A,B: export (and re-measure) just these models, leave the other FBX files untouched
+ONLY = set(sys.argv[sys.argv.index("--only") + 1].split(",")) if "--only" in sys.argv else None
 tris = {}
 for r in roots:
+    if ONLY and r.name not in ONLY:
+        continue
     mc.export([r], os.path.join(OUT, r.name + ".fbx"))
     tris[r.name] = mc.triangles(r)
 print("spawn ok", tris)
@@ -392,8 +625,10 @@ from mathutils import Vector
 import re
 sizes_path = os.path.join(mc.ROOT, "src", "ReplicatedStorage", "Shared", "ModelSizes.lua")
 existing = open(sizes_path).read() if os.path.exists(sizes_path) else ""
-entries = dict(re.findall(r"\n\t(\w+) = (\{ size = .*? \} \}),", existing))
+entries = dict(re.findall(r"\n\t(\w+) = (\{ size = [^\n]*\}),", existing))  # keeps the city entries (w / d) too
 for r in roots:
+    if ONLY and r.name not in ONLY:
+        continue
     pts = [c.matrix_world @ Vector(v) for c in r.children for v in c.bound_box]
     lo = [min(p[i] for p in pts) for i in range(3)]
     hi = [max(p[i] for p in pts) for i in range(3)]
@@ -412,7 +647,7 @@ if "--render" in sys.argv:
     sc, cam, co = mc.setup_scene(1800, 1100)
     lay = {"FinishArch": (0, 40, 0), "Grandstand": (-45, 10, 0), "LeaderboardFrame": (40, 12, 0), "TrophyFountain": (0, 0, 0),
            "CarStand": (-22, -18, 0), "PortalGate": (24, -18, 0), "Planter": (-12, -2, 0), "StreetLamp": (12, -2, 0),
-           "FoodTruck": (-48, -20, 0), "Bench": (8, -26, 0), "StringLightPole": (50, -20, 0)}
+           "FoodTruck": (-48, -20, 0), "Bench": (8, -26, 0), "StringLightPole": (50, -20, 0), "MonsterTruck": (-22, 24, 0)}
     for r in roots:
         r.location = lay.get(r.name, (0, 0, 0))
     co.location = (0, -110, 70)

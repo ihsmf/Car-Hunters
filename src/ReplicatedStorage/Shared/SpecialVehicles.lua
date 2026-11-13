@@ -130,7 +130,8 @@ local function fromBlender(lk)
 	local root = m.PrimaryPart
 	for _, d in ipairs(src:GetDescendants()) do
 		if d:IsA("BasePart") then
-			d.Color = (d.Name == "Body" and lk.body) or (d.Name == "Accent" and lk.accent) or d.Color
+			local key = string.match(d.Name, "^(%a+)") -- FBX pieces keep Blender suffixes ("Accent.003")
+			d.Color = (key == "Body" and lk.body) or (key == "Accent" and lk.accent) or d.Color
 			d.Anchored, d.CanCollide, d.CanQuery, d.CanTouch, d.Massless = false, false, false, false, true
 			local w = Instance.new("WeldConstraint")
 			w.Part0, w.Part1 = root, d
