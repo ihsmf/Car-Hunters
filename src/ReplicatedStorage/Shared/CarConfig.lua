@@ -156,6 +156,8 @@ CarConfig.PointRows = {
 	{ 22, { Common = 28, Uncommon = 36, Rare = 27.4, Epic = 8, Legendary = 0.6 } },
 	{ 50, { Common = 15, Uncommon = 32, Rare = 37.5, Epic = 14, Legendary = 1.5 } },
 	{ 200, { Common = 4, Uncommon = 18, Rare = 42, Epic = 30, Legendary = 6 } },
+	{ 500, { Common = 2, Uncommon = 12, Rare = 38, Epic = 38, Legendary = 10 } }, -- deep districts keep paying off
+	{ 1000, { Common = 1, Uncommon = 6, Rare = 33, Epic = 45, Legendary = 15 } },
 }
 function CarConfig.ChancesForPoints(points)
 	local rows = CarConfig.PointRows

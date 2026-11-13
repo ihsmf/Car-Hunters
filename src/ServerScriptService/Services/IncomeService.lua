@@ -27,6 +27,11 @@ function Income.CreateLeaderstats(player)
 	ls.Parent = player
 end
 
+-- income used to size rewards and cash packs: the current one, but at least half of the best ever
+function Income.RefIncome(s)
+	return math.max(s.income or 0, 0.5 * (s.data and s.data.stats and s.data.stats.peakIncome or 0))
+end
+
 function Income.Recalc(player)
 	local s = S.Data.Get(player)
 	if not s or not s.data then
@@ -46,6 +51,9 @@ function Income.Recalc(player)
 	s.indexMult = mult
 	s.income = math.floor(inc * mult * S.Shop.IncomeMult(s) * S.Rebirth.IncomeMult(s) + 0.5)
 	s.collectionValue = value
+	-- peak income without the temporary x2 boost: rewards never drop to nothing right after a rebirth
+	local st = s.data.stats
+	st.peakIncome = math.max(st.peakIncome or 0, math.floor(s.income / (S.Shop.BoostActive(s, "income") and 2 or 1)))
 	local ls = player:FindFirstChild("leaderstats")
 	if ls then
 		ls.Income.Value = math.min(inc, 2e9)

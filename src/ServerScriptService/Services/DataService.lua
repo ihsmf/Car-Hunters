@@ -151,6 +151,7 @@ local function sanitize(raw)
 	end
 	p.pity = math.min(toCount(raw.pity, 1e6), EconomyConfig.PityThreshold)
 	p.stats.contracts = type(raw.stats) == "table" and toCount(raw.stats.contracts, 1e9) or 0
+	p.stats.peakIncome = type(raw.stats) == "table" and toCount(raw.stats.peakIncome, 1e15) or 0
 	if type(raw.perks) == "table" then
 		for _, def in ipairs(ShopConfig.Perks) do
 			local v = toCount(raw.perks[def.id], def.max)

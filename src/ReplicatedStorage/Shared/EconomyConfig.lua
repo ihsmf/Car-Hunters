@@ -11,10 +11,10 @@ EconomyConfig.MaxFloors = 4
 EconomyConfig.MaxPlayers = 8
 
 -- bay prices: each floor has its own base price, bays inside a floor get pricier (x1.6)
-EconomyConfig.FloorCosts = { [2] = 250000, [3] = 5000000, [4] = 80000000 }
+EconomyConfig.FloorCosts = { [2] = 60000, [3] = 1500000, [4] = 40000000 }
 EconomyConfig.SlotCosts = {}
 do
-	local floorBase = { 1500, 30000, 600000, 10000000 }
+	local floorBase = { 1000, 12000, 250000, 4000000 }
 	for slot = 4, 24 do
 		local floor = math.floor((slot - 1) / 6) + 1
 		local i = (slot - 1) % 6 - ((floor == 1) and 3 or 0)
@@ -23,29 +23,29 @@ do
 end
 
 -- tuned with tools/econ_sim.py (see docs/ECONOMY.md). minValue = collection value gate (keeps players from rushing)
-EconomyConfig.ZoneUnlock = {
-	highway = { cost = 120000, minValue = 15000 },
-	industrial = { cost = 1000000, minValue = 150000 },
-	neon = { cost = 14000000, minValue = 600000 },
-	scrapyard = { cost = 70000000, minValue = 900000 },
-	-- Tier 2 needs a rebirth, Tier 3 three rebirths (RebirthService)
-	docks = { cost = 100000000, minValue = 1000000, rebirths = 1 },
-	desert = { cost = 310000000, minValue = 1200000, rebirths = 1 },
-	bridge = { cost = 850000000, minValue = 1500000, rebirths = 1 },
-	airport = { cost = 2.6e+09, minValue = 2000000, rebirths = 1 },
-	canyon = { cost = 8.5e+09, minValue = 2500000, rebirths = 2 },
-	circuit = { cost = 6e+09, minValue = 2500000, rebirths = 3 },
-	drift = { cost = 1.4e+10, minValue = 2500000, rebirths = 3 },
-	storm = { cost = 2.7e+10, minValue = 2500000, rebirths = 3 },
-	rush = { cost = 5.1e+10, minValue = 2500000, rebirths = 3 },
-	colosseum = { cost = 8.5e+10, minValue = 2500000, rebirths = 3 },
+EconomyConfig.ZoneUnlock = { -- v18 rebalance: each district ~10-60 min of income away; minValue is a soft check
+	highway = { cost = 18000, minValue = 3000 },
+	industrial = { cost = 200000, minValue = 30000 },
+	neon = { cost = 1200000, minValue = 100000 },
+	scrapyard = { cost = 3000000, minValue = 150000 },
+	-- Tier 2 needs a rebirth, Tier 3 three rebirths (RebirthService); rebirths keep unlocked districts
+	docks = { cost = 15000000, minValue = 250000, rebirths = 1 },
+	desert = { cost = 40000000, minValue = 350000, rebirths = 1 },
+	bridge = { cost = 90000000, minValue = 450000, rebirths = 1 },
+	airport = { cost = 200000000, minValue = 550000, rebirths = 1 },
+	canyon = { cost = 400000000, minValue = 650000, rebirths = 2 },
+	circuit = { cost = 600000000, minValue = 750000, rebirths = 3 },
+	drift = { cost = 1.1e+09, minValue = 900000, rebirths = 3 },
+	storm = { cost = 1.8e+09, minValue = 1050000, rebirths = 3 },
+	rush = { cost = 2.8e+09, minValue = 1200000, rebirths = 3 },
+	colosseum = { cost = 4.2e+09, minValue = 1400000, rebirths = 3 },
 }
 
 EconomyConfig.SellFraction = 0.35
 EconomyConfig.DiscoverBonusMult = 1.0
 EconomyConfig.IndexTierBonus = 0.05
 EconomyConfig.IndexFullBonus = 0.10
-EconomyConfig.PityThreshold = 40 -- v13: counted per car caught (1 car per throw at the start)
+EconomyConfig.PityThreshold = 25 -- v13: counted per car caught (1 car per throw at the start)
 EconomyConfig.MaxLuckShift = 0.15 -- all luck sources together
 
 EconomyConfig.ThrowCooldown = 0.8

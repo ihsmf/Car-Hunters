@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
+local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 
@@ -84,7 +85,8 @@ local function valid(player, offer)
 		n = n + 1
 		local found = false
 		for _, c in ipairs(d.cars) do
-			if c.uid == uid and not s.hidden[uid] then
+			local def = CarConfig.ById[c.typeId]
+			if c.uid == uid and not s.hidden[uid] and not (def and def.exclusive) then -- exclusive (Robux) cars stay
 				found = true
 			end
 		end
@@ -103,11 +105,27 @@ local function count(t)
 	return n
 end
 
+-- a player with fewer rebirths cannot hand anything to one with more (no feeding a main account from an alt)
+local function empty(o)
+	return o.money == 0 and next(o.cars) == nil and next(o.parts) == nil
+end
+local function rebirthsOf(p)
+	local s = S.Data.Get(p)
+	return s and s.data.rebirths or 0
+end
+local function uphill(from, to, offer)
+	return not empty(offer) and rebirthsOf(from) < rebirthsOf(to)
+end
+
 local function execute(t)
 	local a, b = t.a, t.b
 	local oa, ob = t.offers[a], t.offers[b]
 	if not valid(a, oa) or not valid(b, ob) then
 		close(t, "Trade cancelled: an offer changed")
+		return
+	end
+	if uphill(a, b, oa) or uphill(b, a, ob) then
+		close(t, "Trade cancelled: you can't give items to a player with more rebirths")
 		return
 	end
 	local sa, sb = S.Data.Get(a), S.Data.Get(b)
@@ -213,6 +231,11 @@ function Trade.Update(player, offer)
 	end
 	if not valid(player, clean) then
 		S.Data.Notify(player, "tradeInvalid", nil, "error")
+		return
+	end
+	local other = t.a == player and t.b or t.a
+	if uphill(player, other, clean) then
+		S.Data.Notify(player, "tradeUphill", nil, "warn")
 		return
 	end
 	t.offers[player] = clean

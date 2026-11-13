@@ -74,7 +74,7 @@ function Donate.Grant(player, key)
 		local now = os.time()
 		d.boosts[item.boost] = math.max(d.boosts[item.boost] or 0, now) + item.seconds
 	elseif item.cash then
-		local amount = math.max(item.cash[2], math.floor((s.income or 0) * item.cash[1]))
+		local amount = math.max(item.cash[2], math.floor(S.Income.RefIncome(s) * item.cash[1]))
 		d.money = math.min(d.money + amount, EconomyConfig.MaxMoney)
 	elseif item.parts then
 		for id, n in pairs(item.parts) do
@@ -85,7 +85,7 @@ function Donate.Grant(player, key)
 		d.garageSlotCount = math.min(d.floors * 6, before + item.slots)
 		local missing = item.slots - (d.garageSlotCount - before)
 		if missing > 0 then -- already maxed: pay it out instead
-			d.money = math.min(d.money + missing * math.max(50000, (s.income or 0) * 600), EconomyConfig.MaxMoney)
+			d.money = math.min(d.money + missing * math.max(50000, S.Income.RefIncome(s) * 600), EconomyConfig.MaxMoney)
 		end
 	elseif key == "offline_x2" then
 		local off = s.offline
@@ -93,7 +93,7 @@ function Donate.Grant(player, key)
 			off.doubled = true
 			d.money = math.min(d.money + off.amount, EconomyConfig.MaxMoney)
 		else
-			d.money = math.min(d.money + math.max(5000, (s.income or 0) * 600), EconomyConfig.MaxMoney)
+			d.money = math.min(d.money + math.max(5000, S.Income.RefIncome(s) * 600), EconomyConfig.MaxMoney)
 		end
 	elseif key == "pity" then
 		d.pity = math.max(d.pity, EconomyConfig.PityThreshold - 1)

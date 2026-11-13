@@ -14,7 +14,7 @@ end
 
 local function give(player, s, entry)
 	local d = s.data
-	local cash = R.Money(entry, s.income)
+	local cash = R.Money(entry, S.Income.RefIncome(s))
 	d.money = math.min(d.money + cash, EconomyConfig.MaxMoney)
 	for id, n in pairs(entry.parts or {}) do
 		d.parts[id] = (d.parts[id] or 0) + n

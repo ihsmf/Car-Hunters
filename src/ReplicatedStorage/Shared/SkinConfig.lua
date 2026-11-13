@@ -49,12 +49,14 @@ end
 SkinConfig.Rebirth = {
 	needZone = { [0] = "scrapyard", [1] = "airport", [2] = "canyon" }, -- beat the arena of your tier; later: "rush"
 	lateZone = "rush",
-	baseMoney = 150000000, growth = 2.2,
-	incomePer = 0.25, startMoney = 500,
+	costs = { 6e6, 2.5e8, 7e8 }, lateGrowth = 2, -- rebirth n+1 costs costs[n+1], later x2 each
+	incomePer = 1.0, startMoney = 50000, -- income x(1 + rebirths); start cash x rebirths
 }
 function SkinConfig.RebirthNeeds(n)
 	local R = SkinConfig.Rebirth
-	return R.needZone[n] or R.lateZone, math.floor(R.baseMoney * R.growth ^ n)
+	local k = #R.costs
+	local money = (n < k) and R.costs[n + 1] or R.costs[k] * R.lateGrowth ^ (n - k + 1)
+	return R.needZone[n] or R.lateZone, math.floor(money)
 end
 
 return SkinConfig

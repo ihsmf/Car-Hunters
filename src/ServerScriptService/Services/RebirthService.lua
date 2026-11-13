@@ -1,6 +1,7 @@
 -- Rebirth (classic reset for a permanent income bonus + tokens) and garage skins.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local SkinConfig = require(Shared:WaitForChild("SkinConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 
@@ -44,22 +45,29 @@ function Rebirth.Do(player)
 	local tokens = math.min(5, math.floor(d.money / money)) -- 1 token, more for overshooting the target
 	d.rebirths = (d.rebirths or 0) + 1
 	d.tokens = (d.tokens or 0) + tokens
-	-- what burns: money, cars, parts, districts, floors/bays, tuning box
+	-- what burns: money, cars (exclusive ones stay), parts, tuning box, jobs. Districts, floors and bays are kept
 	d.money = SkinConfig.Rebirth.startMoney * d.rebirths
-	d.cars = {}
+	local kept = {}
+	for _, c in ipairs(d.cars) do
+		local def = CarConfig.ById[c.typeId]
+		if def and def.exclusive then
+			c.parkedSlot = nil
+			table.insert(kept, c)
+		end
+	end
+	d.cars = kept
 	for id in pairs(d.parts) do
 		d.parts[id] = 0
 	end
 	d.parts.bolts = 3
-	d.unlockedZones = { city = true }
-	d.floors = 1
-	d.garageSlotCount = EconomyConfig.StartSlots + Rebirth.PerkLevel(s, "startSlot")
+	d.garageSlotCount = math.max(d.garageSlotCount, EconomyConfig.StartSlots + Rebirth.PerkLevel(s, "startSlot"))
 	d.tuning = {}
 	d.contracts = {}
 	d.pity = 0
 	s.carried = {}
 	s.carriedZones = {}
 	S.Data.Notify(player, "reborn", { d.rebirths, tokens }, "good")
+	S.Cars.ParkBest(s)
 	S.Income.Recalc(player) -- first: new jobs are priced on the post-rebirth income
 	S.Contracts.Fill(s)
 	S.Base.RefreshAll(player)

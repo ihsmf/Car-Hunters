@@ -106,6 +106,10 @@ function Cars.Sell(player, uid)
 	end
 	local car = d.cars[idx]
 	local def = CarConfig.ById[car.typeId]
+	if def.exclusive then
+		S.Data.Notify(player, "exclusiveKeep", nil, "warn")
+		return
+	end
 	local price = CarConfig.SellPrice(def, car.level)
 	table.remove(d.cars, idx)
 	d.money = math.min(d.money + price, EconomyConfig.MaxMoney)
@@ -133,8 +137,8 @@ function Cars.SellMany(player, uids)
 	local total, n = 0, 0
 	for i = #d.cars, 1, -1 do
 		local car = d.cars[i]
-		if want[car.uid] and not s.hidden[car.uid] then
-			local def = CarConfig.ById[car.typeId]
+		local def = CarConfig.ById[car.typeId]
+		if want[car.uid] and not s.hidden[car.uid] and def and not def.exclusive then
 			total = total + CarConfig.SellPrice(def, car.level)
 			n = n + 1
 			table.remove(d.cars, i)
