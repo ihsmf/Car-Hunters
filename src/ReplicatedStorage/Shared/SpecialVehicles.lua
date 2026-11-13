@@ -107,8 +107,50 @@ SV.BossLooks = {
 	titan = { body = C(200, 30, 40), accent = C(240, 190, 60), L = 30 },
 }
 
+-- Blender model (server only: ServerStorage.BuilderAssets.Props.MonsterTruck, loaded by ModelService), nose on +X.
+-- Scaled to the look's length, "Body"/"Accent" pieces recoloured, every piece welded to an anchored ground Root.
+local function fromBlender(lk)
+	local ss = game:GetService("ServerStorage")
+	local assets = ss:FindFirstChild("BuilderAssets")
+	local props = assets and assets:FindFirstChild("Props")
+	local tpl = props and props:FindFirstChild("MonsterTruck")
+	if not tpl then
+		return nil
+	end
+	local src = tpl:Clone()
+	local _, size = src:GetBoundingBox()
+	if size.X > 0.1 then
+		src:ScaleTo(src:GetScale() * lk.L / size.X)
+	end
+	local bb
+	bb, size = src:GetBoundingBox()
+	-- move the model so its ground centre sits at the origin, where the Root is
+	src:PivotTo(src:GetPivot() - Vector3.new(bb.Position.X, bb.Position.Y - size.Y / 2, bb.Position.Z))
+	local m = kit("MonsterTruck")
+	local root = m.PrimaryPart
+	for _, d in ipairs(src:GetDescendants()) do
+		if d:IsA("BasePart") then
+			d.Color = (d.Name == "Body" and lk.body) or (d.Name == "Accent" and lk.accent) or d.Color
+			d.Anchored, d.CanCollide, d.CanQuery, d.CanTouch, d.Massless = false, false, false, false, true
+			local w = Instance.new("WeldConstraint")
+			w.Part0, w.Part1 = root, d
+			w.Parent = d
+			d.Parent = m
+		end
+	end
+	src:Destroy()
+	m:SetAttribute("Height", size.Y)
+	m:SetAttribute("HalfL", size.X / 2)
+	m:SetAttribute("HalfW", size.Z / 2)
+	return m
+end
+
 function SV.MonsterTruck(look)
 	local lk = SV.BossLooks[look] or SV.BossLooks.crusher
+	local ok, bm = pcall(fromBlender, lk)
+	if ok and bm then
+		return bm
+	end
 	local m, add = kit("MonsterTruck")
 	local L = lk.L
 	local s = L / 22

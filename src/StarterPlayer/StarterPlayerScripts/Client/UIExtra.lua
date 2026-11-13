@@ -500,12 +500,13 @@ local function buildHud()
 	w.contracts = cw
 	w.contractRows = {}
 	-- hot drop banner
-	local hb = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 176), -- own lane under the objective card
-		 Size = UDim2.fromOffset(420, 44), BackgroundColor3 = P.red, Visible = false }, root)
+	-- top-right corner, same row as the zone banner: the very top, never under notifications or the objective card
+	local hb = K.new("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 12), Size = UDim2.fromOffset(380, 42),
+		BackgroundColor3 = P.red, Visible = false }, root)
 	K.corner(hb, 14)
 	K.stroke(hb, P.ink, 3)
 	w.hot = hb
-	w.hotText = K.text(hb, { Text = "", TextSize = 22, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center })
+	w.hotText = K.text(hb, { Text = "", TextSize = 20, Size = UDim2.new(1, -12, 1, 0), Position = UDim2.fromOffset(6, 0), TextXAlignment = Enum.TextXAlignment.Center })
 end
 
 local CONTRACT_PART = function(c)

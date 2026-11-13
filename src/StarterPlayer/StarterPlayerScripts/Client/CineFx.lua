@@ -163,15 +163,23 @@ function Cine.Title(text, color, dur, sizePx, yScale)
 	return holder
 end
 
+local currentSub
 function Cine.Sub(text, color, dur, yScale)
-	local l = new("TextLabel", { BackgroundTransparency = 1, Font = Enum.Font.LuckiestGuy, Text = text, TextSize = 34, TextColor3 = color,
-		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, yScale or 0.56), Size = UDim2.fromOffset(900, 44), ZIndex = 50, TextTransparency = 1 }, titleHolder)
+	if currentSub and currentSub.Parent then
+		currentSub:Destroy()
+	end
+	local l = new("TextLabel", { BackgroundTransparency = 1, Font = Enum.Font.LuckiestGuy, Text = text, TextScaled = true, TextColor3 = color,
+		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, yScale or 0.56), Size = UDim2.fromOffset(1100, 44), ZIndex = 50, TextTransparency = 1 }, titleHolder)
+	new("UITextSizeConstraint", { MaxTextSize = 34 }, l) -- long lines shrink instead of running off the screen
 	new("UIStroke", { Color = Color3.fromRGB(27, 31, 42), Thickness = 3 }, l)
+	currentSub = l
 	tw(l, 0.25, { TextTransparency = 0 })
 	task.delay(dur or 1.5, function()
-		tw(l, 0.25, { TextTransparency = 1 })
-		task.wait(0.3)
-		l:Destroy()
+		if l.Parent then
+			tw(l, 0.25, { TextTransparency = 1 })
+			task.wait(0.3)
+			l:Destroy()
+		end
 	end)
 	return l
 end

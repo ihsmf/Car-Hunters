@@ -471,32 +471,36 @@ local function buildPlaza(ctx)
 		Part(f.Buildings, "ArchSignFoot", Vector3.new(1.2, 0.4, 0.8), CFrame.new(s * 16, 27.8, zE - 4), C(40, 44, 52), M.Metal)
 	end
 
-	-- leaderboard: Blender frame + podium (screen and statues are filled by LeaderboardService)
+	-- leaderboard (v14, built here, no Blender frame): one big screen between two pillars, and the top-3 podium as a
+	-- separate island in front of it, so nothing is squeezed. Local +Z faces the incoming players.
 	local lb = MapConfig.Leaderboard
-	local lbcf = CFrame.new(lb.x, 0.2, lb.z) * CFrame.Angles(0, math.pi, 0) -- screen faces the incoming players (-Z)
+	local lbcf = CFrame.new(lb.x, 0.2, lb.z) * CFrame.Angles(0, math.pi, 0)
 	local lbModel = Instance.new("Model")
 	lbModel.Name = "LeaderboardStand"
-	if not Prefabs.FromTemplate("LeaderboardFrame", lbModel, lbcf) then
-		for _, s in ipairs({ -1, 1 }) do
-			Part(lbModel, "LBPost", Vector3.new(1, 14, 1), lbcf * CFrame.new(s * 10, 7, 0), C(52, 56, 64), M.Metal)
-		end
-		for i, step in ipairs({ { -6, 3, C(220, 222, 226) }, { 0, 4.5, C(232, 178, 50) }, { 6, 2, C(196, 120, 70) } }) do
-			Part(lbModel, "PodiumStep" .. i, Vector3.new(5.6, step[2], 5), lbcf * CFrame.new(step[1], step[2] / 2, 6), step[3], M.SmoothPlastic)
-		end
+	local function lp(name, size, off, color, mat, o)
+		return Part(lbModel, name, size, lbcf * CFrame.new(off), color, mat, o)
 	end
-	-- screen: plain part so the SurfaceGui renders crisply (sits just in front of the frame)
-	-- 0.4 studs in front of the frame's dark panel (face at local z 0.6): no z-fighting at any distance
-	local screen = Part(lbModel, "LeaderboardScreen", Vector3.new(24, 14, 0.2), lbcf * CFrame.new(0, 16, 1.1), C(12, 14, 20), M.SmoothPlastic)
+	local LBGOLD, LBDARK = C(232, 178, 50), C(30, 32, 40)
+	for _, s in ipairs({ -1, 1 }) do
+		lp("LBPillar", Vector3.new(2.2, 19, 2.2), Vector3.new(s * 14, 9.5, 0), LBDARK, M.Metal) -- flanks the screen (0.1 overlap)
+		lp("LBPillarCap", Vector3.new(2.8, 0.6, 2.8), Vector3.new(s * 14, 19.3, 0), LBGOLD, M.Metal)
+	end
+	lp("LBFrame", Vector3.new(27, 14, 0.4), Vector3.new(0, 11.5, -0.4), LBGOLD, M.Metal) -- gold rim behind the screen
+	-- the screen itself (LeaderboardService draws on its +Z face)
+	local screen = lp("LeaderboardScreen", Vector3.new(26, 13, 0.6), Vector3.new(0, 11.5, 0), C(12, 14, 20), M.SmoothPlastic)
 	screen:SetAttribute("Facing", "Back")
 	CollectionService:AddTag(screen, "LeaderboardScreen")
-	for i, x in ipairs({ 0, -6, 6 }) do -- 1st, 2nd, 3rd statue spots on the podium
-		local h = ({ 4.5, 3, 2 })[i]
-		local spot = Part(lbModel, "StatueSpot" .. i, Vector3.new(2, 0.2, 2), lbcf * CFrame.new(x, h + 0.1, 6), C(255, 255, 255), M.SmoothPlastic, { t = 1, collide = false })
+	-- podium island 14 studs in front: 2nd | 1st | 3rd with big numbers on the fronts
+	lp("PodiumBase", Vector3.new(22, 0.6, 9), Vector3.new(0, 0.3, 14), C(236, 232, 224), M.Marble)
+	for i, st in ipairs({ { 0, 4.5, LBGOLD }, { -6.5, 3, C(206, 210, 218) }, { 6.5, 2, C(200, 126, 72) } }) do
+		local step = lp("PodiumStep" .. i, Vector3.new(6, st[2], 6), Vector3.new(st[1], 0.6 + st[2] / 2, 14), st[3], M.SmoothPlastic)
+		Label(step, Enum.NormalId.Back, tostring(i), C(255, 255, 255))
+		local spot = lp("StatueSpot" .. i, Vector3.new(2, 0.2, 2), Vector3.new(st[1], 0.7 + st[2], 14), C(255, 255, 255), M.SmoothPlastic, { t = 1, collide = false })
 		spot:SetAttribute("Rank", i)
 		spot:SetAttribute("Yaw", math.pi)
 	end
 	lbModel.Parent = f.StreetProps
-	table.insert(ctx.foot, { x1 = lb.x - 14, x2 = lb.x + 14, z1 = lb.z - 10, z2 = lb.z + 2 })
+	table.insert(ctx.foot, { x1 = lb.x - 16, x2 = lb.x + 16, z1 = lb.z - 19, z2 = lb.z + 2 })
 
 	-- contracts stand: lit board with three job cards + Big Tony's spot (NPC spawned by MechanicService)
 	local cb = MapConfig.ContractBoard
@@ -1010,7 +1014,7 @@ local function placeBlock(ctx, blk, pal, zid)
 		for _, sx in ipairs({ -1, 1 }) do
 			Part(f.StreetProps, "BannerPost", Vector3.new(1.2, 18, 1.2), CFrame.new(sx * 22, 9, zc), C(52, 56, 64), M.Metal)
 		end
-		local ban = Part(f.StreetProps, "Banner", Vector3.new(43.2, 4, 0.5), CFrame.new(0, 15.8, zc), C(30, 34, 44), M.SmoothPlastic)
+		local ban = Part(f.StreetProps, "Banner", Vector3.new(43, 4, 0.5), CFrame.new(0, 15.8, zc), C(30, 34, 44), M.SmoothPlastic)
 		Label(ban, Enum.NormalId.Front, "NIGHT RACERS ONLY", C(255, 170, 60))
 		Label(ban, Enum.NormalId.Back, "DRIVE SAFE", C(255, 255, 255))
 	end
@@ -1201,7 +1205,7 @@ buildArena = function(ctx, zid)
 	end
 	local banner = Part(f.StreetProps, "ArenaBanner", Vector3.new(60, 6, 1), CFrame.new(0, 26, zone.zMin + 4), C(28, 30, 38), M.SmoothPlastic, { collide = false })
 	for _, s in ipairs({ -1, 1 }) do
-		Part(f.StreetProps, "BannerPost", Vector3.new(1.4, 29.6, 1.4), CFrame.new(s * 30.5, 14.8, zone.zMin + 4), C(52, 56, 64), M.Metal)
+		Part(f.StreetProps, "BannerPost", Vector3.new(1.4, 29.6, 1.4), CFrame.new(s * 30.6, 14.8, zone.zMin + 4), C(52, 56, 64), M.Metal)
 	end
 	Label(banner, Enum.NormalId.Front, zone.name .. " - BOSS", pal.accent)
 	Label(banner, Enum.NormalId.Back, "SURVIVE THE BOSS", pal.accent)
@@ -1274,7 +1278,7 @@ local function buildZone(ctx, zid)
 			Part(f.StreetProps, "CheckpointStripe", Vector3.new((2 * HW - 12) / 40, 0.12, 2), CFrame.new(x, 0.3, cz), (k % 2 == 0) and C(255, 200, 40) or C(28, 28, 32), M.SmoothPlastic, { collide = false, cast = false })
 		end
 		for _, sx in ipairs({ -1, 1 }) do
-			Part(f.StreetProps, "CheckpointPost", Vector3.new(1.6, 13, 1.6), CFrame.new(sx * 16, 6.5, cz), C(40, 44, 52), M.Metal)
+			Part(f.StreetProps, "CheckpointPost", Vector3.new(1.6, 15, 1.6), CFrame.new(sx * 17.7, 7.5, cz), C(40, 44, 52), M.Metal)
 		end
 		local cb = Part(f.StreetProps, "CheckpointSign", Vector3.new(34, 3.4, 1.2), CFrame.new(0, 13.6, cz), C(255, 200, 40), M.SmoothPlastic)
 		Label(cb, Enum.NormalId.Front, "CHECKPOINT - SAVE OR RISK", C(28, 28, 32))
