@@ -121,8 +121,8 @@ Net.Get("HitFx").OnClientEvent:Connect(function(dir, kind)
 	local lost = Store.State and Util.CopyTable(Store.State.carried) or {}
 	TrapFx.Abort()
 	BatchReveal.Close()
+	UI.CloseOverlays() -- first: a live trade marks itself to reopen, so closing its panel does not cancel it
 	UI.TogglePanel(nil)
-	UI.CloseOverlays()
 	UI.HideReveal()
 	if not deathHeld then -- the WRECKED screen hides the HUD like any cinematic; released on respawn
 		deathHeld = true

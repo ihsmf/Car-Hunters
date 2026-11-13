@@ -75,8 +75,9 @@ if __name__ == "__main__":
             if try_fetch(i):
                 ok += 1
                 used.append(i)
-                break
-            bad += 1
+                break  # one model per car keeps the place ~38 MB; a car whose model fails to install uses the built-in body
+            else:
+                bad += 1
     # the baker embeds only these ids (old versions left in assets/rbxm would only make the place bigger)
     with open(os.path.join(OUT, "used.txt"), "w") as f:
         f.write("\n".join(str(i) for i in used) + "\n")

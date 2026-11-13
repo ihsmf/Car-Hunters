@@ -80,14 +80,17 @@ local function run(st)
 	local cam = Cine.Take()
 	local stop = orbit(cam)
 	local newPlayer = (st.tutorial or 0) == 0
+	local cineOn = false
 	local ok, err = pcall(function()
 		if newPlayer then
 			UI.SetCinematic(true) -- HUD away while the question is on screen
+			cineOn = true
 			Cine.Title("CAR HUNTERS", Color3.fromRGB(255, 210, 63), 2.2, 110, 0.22)
 			task.wait(1.2)
 			local yes = ask()
 			stop()
 			UI.SetCinematic(false)
+			cineOn = false
 			if yes then
 				Intro.Play(st) -- the shown steps; ends by starting the step tutorial
 				cam = Cine.Take()
@@ -103,7 +106,9 @@ local function run(st)
 	stop()
 	if not ok then
 		warn("[JoinFlow] " .. tostring(err))
-		UI.SetCinematic(false)
+		if cineOn then
+			UI.SetCinematic(false)
+		end
 	end
 	glideHome(cam, 1.2)
 end
