@@ -163,16 +163,19 @@ function Cine.Title(text, color, dur, sizePx, yScale)
 	return holder
 end
 
-local currentSub
+-- one subtitle per line (yScale): a new line replaces the old one at the same height, other lines stay
+local currentSubs = {}
 function Cine.Sub(text, color, dur, yScale)
-	if currentSub and currentSub.Parent then
-		currentSub:Destroy()
+	local slot = yScale or 0.56
+	local old = currentSubs[slot]
+	if old and old.Parent then
+		old:Destroy()
 	end
 	local l = new("TextLabel", { BackgroundTransparency = 1, Font = Enum.Font.LuckiestGuy, Text = text, TextScaled = true, TextColor3 = color,
 		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, yScale or 0.56), Size = UDim2.fromOffset(1100, 44), ZIndex = 50, TextTransparency = 1 }, titleHolder)
 	new("UITextSizeConstraint", { MaxTextSize = 34 }, l) -- long lines shrink instead of running off the screen
 	new("UIStroke", { Color = Color3.fromRGB(27, 31, 42), Thickness = 3 }, l)
-	currentSub = l
+	currentSubs[slot] = l
 	tw(l, 0.25, { TextTransparency = 0 })
 	task.delay(dur or 1.5, function()
 		if l.Parent then
@@ -185,6 +188,19 @@ function Cine.Sub(text, color, dur, yScale)
 end
 
 -- Camera takeover helpers
+-- removes every title / subtitle at once (a skipped cinematic must not leave long captions on screen)
+function Cine.ClearText()
+	if currentTitle and currentTitle.Parent then
+		currentTitle:Destroy()
+	end
+	for k, l in pairs(currentSubs) do
+		if l.Parent then
+			l:Destroy()
+		end
+		currentSubs[k] = nil
+	end
+end
+
 function Cine.Take()
 	local cam = Workspace.CurrentCamera
 	scripted = true

@@ -261,6 +261,7 @@ function Intro.Play(st)
 			scenes(st, actor, track)
 		end
 	end)
+	Cine.ClearText()
 	Cine.Darken(1, 0.3)
 	task.wait(0.35)
 	for _, x in ipairs(trash) do
