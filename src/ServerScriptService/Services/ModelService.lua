@@ -135,6 +135,13 @@ function ModelService.LoadAll()
 				else
 					local m = rootOf(res, name)
 					style(m, true)
+					-- make_spawn / make_city FBX files arrive turned 180 deg about Y (Roblox maps Blender (x, y, z) to
+					-- (-x, z, y)); turn them back around their origin so fronts face +X as designed and ModelSizes' centres
+					-- match. make_garage (G_*) already compensates before export.
+					if not string.match(name, "^G_") then
+						m.WorldPivot = CFrame.new()
+						m:PivotTo(CFrame.Angles(0, math.pi, 0))
+					end
 					normalize(m, sizes[name])
 					install(props, m)
 					n = n + 1

@@ -114,16 +114,16 @@ function GarageKit.Dress(parent, bcf, y0, style)
 		end
 	end
 	-- back wall (behind the wheel stops at x -41.6): z slots chosen between nothing else, every storey alike
-	local function at(name, x, z, yaw)
-		GarageKit.Template(name, parent, bcf * CFrame.new(back + x, y0, z) * CFrame.Angles(0, yaw or 0, 0))
+	local function at(name, x, z, dy)
+		GarageKit.Template(name, parent, bcf * CFrame.new(back + x, y0 + (dy or 0), z))
 	end
 	at("G_TireRack", 1.4, -40)
 	at("G_Workbench", 1.5, -27)
-	at("G_Pegboard", 0, -27)
+	at("G_Pegboard", 0, -27, 4.6) -- above the bench (bench + tools reach 4.25)
 	at("G_ToolCabinet", 1.1, -19)
 	at("G_OilDrum", 1.2, -12)
 	at("G_Workbench", 1.5, 4)
-	at("G_Pegboard", 0, 4)
+	at("G_Pegboard", 0, 4, 4.6) -- above the bench (bench + tools reach 4.25)
 	at("G_TireRack", 1.4, 19)
 	at("G_ToolCabinet", 1.1, 29)
 	at("G_OilDrum", 1.2, 34)
@@ -148,8 +148,13 @@ end
 -- one parking bay; topY = height of the surface it lies on. Returns the pad.
 -- lift cabin for one storey (y0 = floor level): steel frame, tinted glass on three sides (open towards the deck, -X),
 -- a canopy with a LIFT sign and a call-button panel. mk(name, size, localPos, color, material, opts)
-function GarageKit.Lift(mk, y0, H, frame, accent)
+function GarageKit.Lift(mk, y0, H, frame, accent, parent, bcf)
 	local el = BaseLayout.ElevatorLocal
+	-- the Blender cab (posts, glass with mullions, open sliding doors, header light, floor display, call buttons,
+	-- counterweight rails) replaces the block version below; its doorway faces the deck (-X)
+	if parent and bcf and GarageKit.Template("G_LiftCab", parent, bcf * CFrame.new(el.X, y0, el.Z)) then
+		return
+	end
 	local GLASS = C(150, 190, 215)
 	for _, sx in ipairs({ -1, 1 }) do
 		for _, sz in ipairs({ -1, 1 }) do

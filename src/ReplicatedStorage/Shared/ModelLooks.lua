@@ -17,4 +17,6 @@ return {
 	-- city kit: Wall / Trim / Roof are recoloured per district by the map builder
 	Wall = { M.SmoothPlastic, C(230, 200, 160), 0, 0 }, Trim = { M.SmoothPlastic, C(240, 150, 50), 0, 0 },
 	Roof = { M.SmoothPlastic, C(170, 80, 64), 0, 0 }, Brick = { M.Brick, C(160, 76, 56), 0, 0 },
+	-- garage kit: Frame (dark steel), Accent (hazard stripes) and Wall (door slats) are recoloured by the garage skin
+	Frame = { M.Metal, C(58, 62, 70), 0.05, 0 },
 }
