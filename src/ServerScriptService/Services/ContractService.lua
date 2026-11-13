@@ -59,31 +59,35 @@ local function rewardFor(s, weight)
 	return { money = math.floor(base / 10 + 0.5) * 10, part = partPool[tier], n = (weight >= 2) and 2 or 1 }
 end
 
--- rarities that drop in the player's unlocked districts (safe + risky + road spots)
+-- rarities of the parts that drop at safe + risky spots of the deepest unlocked district, with their share
+-- (rarities under 5% are left out: a job must be doable by farming, not by luck)
 local function rarityPool(d)
-	local seen = {}
+	local best = "city"
 	for _, z in ipairs(MapConfig.ZoneOrder) do
-		if d.unlockedZones[z] then
-			local t = PartConfig.SpawnTables[z]
-			for _, kind in ipairs({ "safe", "risky", "road" }) do
-				for _, e in ipairs(t and t[kind] or {}) do
-					seen[PartConfig.Parts[e[1]].rarity] = true
-				end
-			end
+		if d.unlockedZones[z] and PartConfig.SpawnTables[z] then
+			best = z
+		end
+	end
+	local w, total = {}, 0
+	for _, kind in ipairs({ "safe", "risky" }) do
+		for _, e in ipairs(PartConfig.SpawnTables[best][kind] or {}) do
+			local r = PartConfig.Parts[e[1]].rarity
+			w[r] = (w[r] or 0) + e[2]
+			total = total + e[2]
 		end
 	end
 	local out = {}
 	for _, r in ipairs(CarConfig.RarityOrder) do
-		if seen[r] then
-			table.insert(out, r)
+		local p = (w[r] or 0) / math.max(total, 1)
+		if p >= 0.05 then
+			table.insert(out, { r, p })
 		end
 	end
-	return #out > 0 and out or { "Common" }
+	return #out > 0 and out or { { "Common", 1 } }
 end
 
-local BANK_N = { Common = { 8, 15 }, Uncommon = { 5, 10 }, Rare = { 3, 6 }, Epic = { 1, 3 }, Legendary = { 1, 2 } }
-local BANK_MULT = { Common = 1, Uncommon = 1.7, Rare = 2.8, Epic = 4.8, Legendary = 8 }
-local CATCH_MULT = { Uncommon = 1.5, Rare = 2.5, Epic = 4, Legendary = 7 }
+local BANK_MAX = { Common = 15, Uncommon = 10, Rare = 6, Epic = 3, Legendary = 2 }
+local CATCH_MULT = { Uncommon = 1.5, Rare = 2.2, Epic = 3, Legendary = 4 }
 local KIND_WEIGHTS = { { "bank_rarity", 4 }, { "bank_part", 2 }, { "catch_rarity", 2 }, { "throw", 1 }, { "road", 1 }, { "combo", 1 },
 	{ "speed", 1 }, { "hotdrop", 1 } }
 
@@ -98,15 +102,17 @@ local function build(s)
 	local kind = Util.WeightedPick(KIND_WEIGHTS, rng:NextNumber())
 	local c = { id = HttpService:GenerateGUID(false), kind = kind, progress = 0 }
 	if kind == "bank_rarity" then
-		-- lower rarities more often: weight 1 / position^0.8 in the pool
+		-- the job is sized and paid by the work it takes: about 8-20 pickups in the deepest unlocked district
 		local pool = rarityPool(d)
 		local weighted = {}
-		for i, r in ipairs(pool) do
-			table.insert(weighted, { r, 1 / i ^ 0.8 })
+		for _, e in ipairs(pool) do
+			table.insert(weighted, { e, math.sqrt(e[2]) })
 		end
-		c.rarity = Util.WeightedPick(weighted, rng:NextNumber())
-		c.n = rng:NextInteger(BANK_N[c.rarity][1], BANK_N[c.rarity][2])
-		c.reward = rewardFor(s, BANK_MULT[c.rarity] * (1 + 0.08 * c.n))
+		local pick = Util.WeightedPick(weighted, rng:NextNumber())
+		local p = pick[2]
+		c.rarity = pick[1]
+		c.n = math.clamp(math.floor(rng:NextInteger(8, 20) * p + 0.5), 1, BANK_MAX[c.rarity])
+		c.reward = rewardFor(s, math.clamp(0.8 + (c.n / p) * 0.06, 1, 4))
 	elseif kind == "catch_rarity" then
 		local top = zi <= 2 and 3 or (zi <= 5 and 4 or 5) -- Rare / Epic / Legendary at most
 		c.rarity = CarConfig.RarityOrder[rng:NextInteger(2, top)]

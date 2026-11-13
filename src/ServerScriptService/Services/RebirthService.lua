@@ -60,8 +60,8 @@ function Rebirth.Do(player)
 	s.carried = {}
 	s.carriedZones = {}
 	S.Data.Notify(player, "reborn", { d.rebirths, tokens }, "good")
+	S.Income.Recalc(player) -- first: new jobs are priced on the post-rebirth income
 	S.Contracts.Fill(s)
-	S.Income.Recalc(player)
 	S.Base.RefreshAll(player)
 	S.Data.Push(player)
 	local hum = select(2, S.Data.GetRoot(player))
