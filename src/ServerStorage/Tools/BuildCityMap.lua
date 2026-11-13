@@ -226,7 +226,7 @@ local function buildBase(ctx, i)
 	-- lift shaft (ground stage) to the upper floors
 	local el = BaseLayout.ElevatorLocal
 	mk("ElevatorPad", Vector3.new(8, 0.4, 8), Vector3.new(el.X, 0.7, el.Z), G.frame, M.Metal)
-	GarageKit.Lift(mk, 0.5, H, G.frame, G.accent, model, bcf)
+	GarageKit.Lift(mk, 0.5, H, G.frame, G.accent, model, bcf, math.pi) -- ground floor: doorway towards the forecourt
 	GarageKit.Dress(model, bcf, 0.5, G, 0.6)
 
 	-- the trap: a clean steel car lift with a magnetic crane
@@ -292,10 +292,9 @@ local function buildBase(ctx, i)
 	local floors = Instance.new("Folder")
 	floors.Name = "Floors"
 	floors.Parent = model
-	-- forecourt lamps on the floor (top 0.5), arms pointing into the plot whichever way the garage is turned
-	local lampYaw = (MapConfig.BaseCenters[i].x < 0 and 0 or math.pi) + math.pi
-	Prefabs.Lamp(model, bcf:PointToWorldSpace(Vector3.new(PX - 1.5, 0.7, PZ - 3)), 1, C(255, 230, 180), lampYaw)
-	Prefabs.Lamp(model, bcf:PointToWorldSpace(Vector3.new(PX - 1.5, 0.7, -PZ + 3)), 1, C(255, 230, 180), lampYaw)
+	-- forecourt lamps standing on the floor (top 0.5)
+	Prefabs.Lamp(model, bcf:PointToWorldSpace(Vector3.new(PX - 1.5, 0.7, PZ - 3)), 1, C(255, 230, 180), math.pi)
+	Prefabs.Lamp(model, bcf:PointToWorldSpace(Vector3.new(PX - 1.5, 0.7, -PZ + 3)), 1, C(255, 230, 180), math.pi)
 	model.Parent = f.Bases
 end
 
@@ -617,7 +616,7 @@ local function buildPlaza(ctx)
 		Prefabs.Tree(f.StreetProps, Vector3.new(x + s * 6, 0.2, z + 7), ctx.rng, (z % 2 == 0) and "palm" or "tree")
 		Prefabs.Bush(f.StreetProps, Vector3.new(x - s * 4, 0.2, z - 7), ctx.rng)
 		Prefabs.Bush(f.StreetProps, Vector3.new(x - s * 4, 0.2, z + 7), ctx.rng)
-		bench(x - s * 9, z, s > 0 and -math.pi / 2 or math.pi / 2) -- benches face the promenade
+		bench(x - s * 9, z, s > 0 and math.pi / 2 or -math.pi / 2) -- benches face the promenade
 		Prefabs.Lamp(f.StreetProps, Vector3.new(x - s * 10, 0.4, z + 8), 1, nil, s > 0 and math.pi or 0)
 		table.insert(ctx.foot, { x1 = x - 12, x2 = x + 12, z1 = z - 12, z2 = z + 12 })
 	end

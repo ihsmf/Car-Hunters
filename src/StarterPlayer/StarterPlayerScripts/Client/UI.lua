@@ -442,7 +442,9 @@ local function buildHud()
 	corner(banner, 14)
 	stroke(banner, P.ink, 3.5)
 	hud.bannerGrad = gradient(banner, P.orange)
-	hud.zone = text(banner, { Text = "", TextSize = 26, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, Outline = 3 })
+	-- LuckiestGuy draws high in its line box: the label sits 3 px lower so the word looks centred in the plate
+	hud.zone = text(banner, { Text = "", TextSize = 26, Position = UDim2.fromOffset(8, 5), Size = UDim2.new(1, -16, 1, -6), TextXAlignment = Enum.TextXAlignment.Center,
+		TextYAlignment = Enum.TextYAlignment.Center, Outline = 3 })
 	local hint = new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 70), AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 40), BackgroundColor3 = P.white, BorderSizePixel = 0, Visible = false }, root)
 	corner(hint, 20)
 	stroke(hint, P.ink, 3)

@@ -153,11 +153,12 @@ end
 -- one parking bay; topY = height of the surface it lies on. Returns the pad.
 -- lift cabin for one storey (y0 = floor level): steel frame, tinted glass on three sides (open towards the deck, -X),
 -- a canopy with a LIFT sign and a call-button panel. mk(name, size, localPos, color, material, opts)
-function GarageKit.Lift(mk, y0, H, frame, accent, parent, bcf)
+-- yaw turns the Blender cab: 0 = doorway towards the deck (-X, upper floors), pi = towards the forecourt (ground)
+function GarageKit.Lift(mk, y0, H, frame, accent, parent, bcf, yaw)
 	local el = BaseLayout.ElevatorLocal
 	-- the Blender cab (posts, glass with mullions, open sliding doors, header light, floor display, call buttons,
 	-- counterweight rails) replaces the block version below; its doorway faces the deck (-X)
-	if parent and bcf and GarageKit.Template("G_LiftCab", parent, bcf * CFrame.new(el.X, y0, el.Z), { frame = frame, accent = accent }) then
+	if parent and bcf and GarageKit.Template("G_LiftCab", parent, bcf * CFrame.new(el.X, y0, el.Z) * CFrame.Angles(0, yaw or 0, 0), { frame = frame, accent = accent }) then
 		return
 	end
 	local GLASS = C(150, 190, 215)
