@@ -15,8 +15,8 @@ CarConfig.Rarities = {
 
 CarConfig.MaxLevel = 10
 CarConfig.IncomeGrowth = 0.25
-CarConfig.IncomeMult = 1.3 -- v9: every car earns 30 % more (first rebirth came too slowly in play)
-CarConfig.ValueMultiplier = 40
+CarConfig.IncomeMult = 3.25 -- v19: cars earn 2.5x more than v18 (progress felt too slow)
+CarConfig.ValueMultiplier = 100 -- v19: worth / sell / upgrade 2.5x too, so upgrades keep their payback
 CarConfig.UpgradeCostBase = 0.5
 CarConfig.UpgradeCostGrowth = 1.35
 

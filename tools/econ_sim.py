@@ -346,9 +346,9 @@ def simulate(seed, hours):
     return p
 
 
-# v18 targets in bot hours (a real player is ~1.3-1.6x slower): highway ~15 min, rebirth 1 ~2 h, final boss ~18 h real
-TARGETS = [("first car", 0, 0.05), ("unlock highway", 0.05, 0.3), ("unlock neon", 0.5, 1.2), ("rebirth 1", 1.0, 1.8),
-           ("R1 unlock docks", 1.5, 3.2), ("rebirth 3", 6, 11), ("R3 unlock circuit", 7.5, 12), ("colosseum (final boss)", 10, 16)]
+# v19 targets in bot hours (a real player is ~1.3-1.6x slower): highway ~15 min, rebirth 1 ~2 h, final boss ~18 h real
+TARGETS = [("first car", 0, 0.05), ("unlock highway", 0.02, 0.2), ("unlock neon", 0.2, 0.8), ("rebirth 1", 0.6, 1.4),
+           ("R1 unlock docks", 1.0, 2.5), ("rebirth 3", 4.5, 9), ("R3 unlock circuit", 5.5, 10), ("colosseum (final boss)", 10, 16)]
 
 
 def main():

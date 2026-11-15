@@ -13,12 +13,12 @@ SEARCH = {
     "hyunday_elantro": "hyundai elantra", "skodda_oktavia": "skoda octavia", "shevy_spork": "chevrolet spark", "volvoo_240": "volvo 240",
     "toyoda_takoma": "toyota tacoma", "furd_brongo": "ford bronco", "hunda_akkord": "honda accord", "volksvagen_bitle": "volkswagen beetle",
     "awdi_tt": "audi tt", "lexxus_is": "lexus is", "dodje_ramm": "dodge ram", "mitsubishy_evo": "mitsubishi lancer evo",
-    "nisan_350z": "nissan 350z", "bmv_x5": "bmw x5 suv", "kadillak_eskalade": "cadillac escalade", "toyoda_landkruiser": "toyota land cruiser",
+    "nisan_350z": "nissan 350z", "bmv_x5": "bmw x5", "kadillak_eskalade": "cadillac escalade", "toyoda_landkruiser": "toyota land cruiser",
     "shelbi_kobra": "shelby cobra", "pontiak_firebyrd": "pontiac firebird", "porshe_kayen": "porsche cayenne", "mursides_amg": "mercedes amg gt",
-    "astin_db11": "db11", "lamborgini_uroos": "urus", "ferarri_romma": "roma", "porshe_taykun": "porsche taycan",
+    "astin_db11": "aston martin db11", "lamborgini_uroos": "lamborghini urus", "ferarri_romma": "roma", "porshe_taykun": "porsche taycan",
     "maklaren_720": "mclaren 720s", "awdi_rs6": "audi rs6", "bentli_bentaiga": "bentley bentayga", "mursides_maibah": "maybach",
-    "bugati_veiron": "bugatti veyron", "konigseg_jesko": "koenigsegg jesko", "ferarri_sf90": "ferrari sf90", "lamborgini_sian": "sian",
-    "maklaren_senna": "mclaren senna", "astin_valkyry": "valkyrie", "pagany_huayrar": "pagani huayra", "rimak_nevara": "nevera",
+    "bugati_veiron": "bugatti veyron", "konigseg_jesko": "koenigsegg jesko", "ferarri_sf90": "ferrari sf90", "lamborgini_sian": "lamborghini sian",
+    "maklaren_senna": "mclaren senna", "astin_valkyry": "aston martin valkyrie", "pagany_huayrar": "pagani huayra", "rimak_nevara": "nevera", "golden_magnat_gt": "gold supercar",
 }
 
 

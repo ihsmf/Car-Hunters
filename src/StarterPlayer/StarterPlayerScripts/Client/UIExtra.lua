@@ -466,7 +466,7 @@ end
 local function buildHud()
 	local root = K.root
 	local colF = K.hud.leftCol
-	-- SHOP + JOBS: square toy buttons with the 3D icons, label underneath
+	-- SHOP (+ GIFTS, SETTINGS added by their modules): square toy buttons with the 3D icons, label underneath
 	local brow = K.new("Frame", { Name = "Buttons", Size = UDim2.fromOffset(300, 94), BackgroundTransparency = 1, LayoutOrder = 2 }, colF)
 	K.list(brow, Enum.FillDirection.Horizontal, 12)
 	local function iconButton(name, label, color, order, onClick)
@@ -479,11 +479,6 @@ local function buildHud()
 	end
 	w.shopBtn = iconButton("shop", T("btn_magnate"), GOLD, 1, function()
 		UI.TogglePanel("donate")
-	end)
-	-- JOBS opens the jobs list (Big Tony's rewards tab) from anywhere
-	w.jobsBtn, w.jobsLabel = iconButton("jobs", "JOBS", P.orange, 2, function()
-		tonyTab = "rewards"
-		UI.TogglePanel("tony")
 	end)
 	-- active boosts strip to the right of the wallet card
 	w.boosts = K.new("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 310, 1, -24 - (K.hud.leftLift or 0)), Size = UDim2.fromOffset(240, 40), BackgroundTransparency = 1 }, root)
@@ -501,6 +496,8 @@ local function buildHud()
 	K.list(cw, Enum.FillDirection.Vertical, 7)
 	w.contracts = cw
 	w.contractRows = {}
+	-- the active jobs are always on screen; rewards are collected at Big Tony on the plaza
+	K.text(cw, { Text = "JOBS  -  claim at Big Tony", TextSize = 16, TextColor3 = P.orange, Size = UDim2.new(1, 0, 0, 20), LayoutOrder = 0, Outline = 2.5 })
 	-- hot drop banner
 	-- top-right corner, same row as the zone banner: the very top, never under notifications or the objective card
 	local hb = K.new("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 12), Size = UDim2.fromOffset(380, 42),
@@ -562,13 +559,6 @@ local function refreshHud(st)
 	end
 	w.contracts.Visible = #(st.contracts or {}) > 0 and K.state.open == nil
 	K.hud.leftCol.Visible = K.state.open == nil
-	local ready = 0
-	for _, c in ipairs(st.contracts or {}) do
-		if c.ready then
-			ready = ready + 1
-		end
-	end
-	w.jobsLabel.Text = ready > 0 and ("JOBS " .. ready .. "!") or "JOBS"
 end
 
 local lastMult = 1

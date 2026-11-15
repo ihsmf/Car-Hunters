@@ -14,6 +14,11 @@ local Tool = {}
 
 -- candidates are tried in order until one loads and looks like a car
 Tool.Candidates = {
+	bmv_x5 = { 76662044280322, 12921108207, 5686718226 },
+	astin_db11 = { 6433323089, 8573316692, 6810376207 },
+	lamborgini_sian = { 15212034088, 12735048555, 12648624482 },
+	astin_valkyry = { 8205581664, 8088873597, 4894347527 },
+	golden_magnat_gt = { 6433330180, 84178602199680, 83378404205057 },
 	lamborgini_uroos = { 5145872883 },
 	ferarri_romma = { 15340193334 },
 	rimak_nevara = { 8012562725, 7241154110 },
