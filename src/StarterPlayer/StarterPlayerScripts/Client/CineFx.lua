@@ -27,8 +27,14 @@ end
 function Cine.Init(gui)
 	layer = new("Frame", { Name = "Cine", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 45 }, gui)
 	vignette = new("Frame", { BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 45, BorderSizePixel = 0 }, layer)
-	topBar = new("Frame", { BackgroundColor3 = Color3.new(0, 0, 0), Size = UDim2.new(1, 0, 0, 0), ZIndex = 47, BorderSizePixel = 0 }, layer)
-	botBar = new("Frame", { BackgroundColor3 = Color3.new(0, 0, 0), AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 0), ZIndex = 47, BorderSizePixel = 0 }, layer)
+	-- letterbox bars on their own full-screen layer: edge to edge on every device (no safe-area / top-bar inset),
+	-- under the main UI so titles and the reveal stay on top of them
+	local bars = new("ScreenGui", { Name = "CineBars", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 9, ZIndexBehavior = Enum.ZIndexBehavior.Sibling }, gui.Parent)
+	pcall(function()
+		bars.ScreenInsets = Enum.ScreenInsets.None
+	end)
+	topBar = new("Frame", { BackgroundColor3 = Color3.new(0, 0, 0), Size = UDim2.new(1, 0, 0, 0), BorderSizePixel = 0 }, bars)
+	botBar = new("Frame", { BackgroundColor3 = Color3.new(0, 0, 0), AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 0), BorderSizePixel = 0 }, bars)
 	glitchHolder = new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 48, ClipsDescendants = true }, layer)
 	titleHolder = new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 49 }, layer)
 	flash = new("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 50, BorderSizePixel = 0 }, layer)
@@ -88,8 +94,14 @@ function Cine.Darken(alpha, t)
 	tw(vignette, t or 0.3, { BackgroundTransparency = 1 - alpha })
 end
 
+local StarterGui = game:GetService("StarterGui")
 function Cine.Letterbox(on, t)
-	local h = on and 0.11 or 0
+	local h = on and 0.12 or 0 -- a share of the real screen height: the same look on phones, tablets and PCs
+	-- the Roblox chat and player list would sit over the bars: hidden while the bars are up
+	pcall(function()
+		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, not on)
+		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, not on)
+	end)
 	tw(topBar, t or 0.35, { Size = UDim2.new(1, 0, h, 0) })
 	tw(botBar, t or 0.35, { Size = UDim2.new(1, 0, h, 0) })
 end
