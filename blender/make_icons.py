@@ -37,15 +37,39 @@ for r in P["roots"]:
         for c in r.children:
             c.hide_render = True
 
-# coin: thick gold disc, raised rim, embossed $ (S curve from boxes + bar)
-g = {"Gold": [], "Copper": []}
-g["Gold"].append(cyl((0, 0, 0), 1.6, 0.42, rot=X90, verts=64))  # face points along -X/+X
-g["Gold"].append(torus((-0.2, 0, 0), 1.45, 0.1, rot=X90, seg=64))
-for (z, w, y) in ((0.75, 1.0, 0), (0, 1.0, 0), (-0.75, 1.0, 0)):
-    g["Copper"].append(box((-0.24, y, z), (0.08, w, 0.24)))
-g["Copper"].append(box((-0.24, 0.42, 0.38), (0.08, 0.24, 0.75)))
-g["Copper"].append(box((-0.24, -0.42, -0.38), (0.08, 0.24, 0.75)))
-g["Copper"].append(box((-0.26, 0, 0), (0.08, 0.14, 2.1)))
+# coin: thick gold coin - bevelled body, reeded edge, raised rim, recessed darker field, embossed bold "$" (real font)
+P["LOOK"]["GoldDeep"] = ((0.8, 0.45, 0.05, 1), 1.0, 0.38)
+g = {"Gold": [], "GoldDeep": [], "GoldShine": []}
+P["LOOK"]["GoldShine"] = ((1.0, 0.86, 0.35, 1), 1.0, 0.12)
+body = cyl((0, 0, 0), 1.6, 0.44, rot=X90, verts=96)
+mc.bevel(body, 0.07, 3)
+g["Gold"].append(body)
+for k in range(84):  # reeded edge: thin ridges all around the rim
+    a = k / 84 * 2 * math.pi
+    g["GoldDeep"].append(box((0, math.cos(a) * 1.6, math.sin(a) * 1.6), (0.3, 0.05, 0.05), rot=(a, 0, 0)))
+for sx in (-1, 1):
+    g["GoldShine"].append(torus((sx * 0.22, 0, 0), 1.42, 0.1, rot=X90, seg=96, minor=16))
+    g["GoldDeep"].append(cyl((sx * 0.232, 0, 0), 1.34, 0.02, rot=X90, verts=96))
+FONT_FILE = "/usr/share/fonts/opentype/inter/InterDisplay-Black.otf"
+cu = bpy.data.curves.new("dollar", "FONT")
+cu.body = "$"
+if os.path.exists(FONT_FILE):
+    cu.font = bpy.data.fonts.load(FONT_FILE)
+cu.size = 2.55
+cu.extrude = 0.08
+cu.bevel_depth = 0.02
+cu.align_x, cu.align_y = "CENTER", "CENTER"
+txt = bpy.data.objects.new("dollar", cu)
+bpy.context.collection.objects.link(txt)
+txt.rotation_euler = (math.pi / 2, 0, -math.pi / 2)  # face -X, up = +Z, reads left to right from the camera
+txt.location = (-0.3, 0, -0.05)
+for x in bpy.context.selected_objects:
+    x.select_set(False)
+bpy.context.view_layer.objects.active = txt
+txt.select_set(True)
+bpy.ops.object.convert(target="MESH")
+txt = bpy.context.active_object
+g["GoldShine"].append(txt)
 roots["coin"] = finish("coin", g)
 
 # shop: gold shopping bag with handles
@@ -288,7 +312,8 @@ ICON_LOOK = {
     "Rubber": ((0.2, 0.2, 0.22, 1), 0.0, 0.32), "Dark": ((0.16, 0.17, 0.2, 1), 0.5, 0.35), "Carbon": ((0.16, 0.16, 0.18, 1), 0.3, 0.3),
     "Metal": ((0.75, 0.77, 0.8, 1), 0.85, 0.3), "Chrome": ((0.95, 0.96, 0.98, 1), 1.0, 0.12),
     "Accent": ((0.95, 0.07, 0.05, 1), 0.1, 0.3), "Blue": ((0.05, 0.35, 1.0, 1), 0.2, 0.25), "Green": ((0.05, 0.6, 0.2, 1), 0.0, 0.4),
-    "Gold": ((1.0, 0.75, 0.15, 1), 1.0, 0.22), "Copper": ((0.9, 0.45, 0.2, 1), 1.0, 0.28),
+    "Gold": ((1.0, 0.75, 0.15, 1), 1.0, 0.22), "GoldDeep": ((0.85, 0.48, 0.04, 1), 1.0, 0.36),
+    "GoldShine": ((1.0, 0.88, 0.4, 1), 1.0, 0.1), "Copper": ((0.9, 0.45, 0.2, 1), 1.0, 0.28),
 }
 for m in bpy.data.materials:
     look = m.name.split(".")[0]
@@ -339,7 +364,7 @@ for name, r in roots.items():
     hi = Vector([max(p[i] for p in pts) for i in range(3)])
     centre = (lo + hi) / 2
     ext = max(hi - lo)
-    view = Vector((1.0, -1.25, 0.8)).normalized() if name not in ("coin",) else Vector((-1.0, -0.3, 0.2)).normalized()
+    view = Vector((1.0, -1.25, 0.8)).normalized() if name not in ("coin",) else Vector((-1.0, -0.42, 0.28)).normalized()
     co.location = centre + view * (ext * 4)
     co.rotation_euler = (centre - co.location).to_track_quat("-Z", "Y").to_euler()
     # fit the real silhouette: long side = 88% of the frame (6% margin on each side), centred
@@ -350,6 +375,7 @@ for name, r in roots.items():
     cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
     co.location = co.location + right * (cx - co.location.dot(right)) + up * (cy - co.location.dot(up))
     cam.ortho_scale = max(max(xs) - min(xs), max(ys) - min(ys)) / 0.88
+    sc.render.resolution_x = sc.render.resolution_y = 512 if key == "coin" else 256
     sc.render.filepath = os.path.join(OUT, key + ".png")
     bpy.ops.render.render(write_still=True)
 print("icons ok", sorted(ONLY) if ONLY else sorted(os.listdir(OUT)))

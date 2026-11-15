@@ -22,7 +22,7 @@ DonateConfig.Passes = {
 	{ id = "vip", tab = "pass", icon = "⭐", name = "VIP", desc = "x1.5 income forever + gold name tag", price = 299 },
 	{ id = "big_backpack", tab = "pass", icon = "🎒", name = "Huge Backpack", desc = "Double loot capacity", price = 149 },
 	{ id = "auto_collect", tab = "pass", icon = "🧲", name = "Mega Magnet", desc = "Double pickup radius", price = 199 },
-	{ id = "golden_car", tab = "pass", icon = "🏎️", name = "Golden Magnat GT", desc = "Gold supercar + x1.5 income forever, kept on rebirth", price = 499 },
+	{ id = "golden_car", tab = "pass", icon = "🏎️", name = "Golden Magnat GT", desc = "Gold supercar (+48.8K/s) + x2 income forever, kept on rebirth", price = 499 },
 	{ id = "double_contracts", tab = "pass", icon = "📜", name = "Contract Boss", desc = "x2 contract rewards", price = 149 },
 	{ id = "fast_trap", tab = "pass", icon = "⚡", name = "Fast Trap", desc = "Throw parts twice as often", price = 99 },
 	{ id = "golden_garage", tab = "pass", icon = "👑", name = "Golden Garage", desc = "Gold garage skin, +20% income", price = 249 },

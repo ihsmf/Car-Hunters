@@ -19,6 +19,8 @@ CarConfig.IncomeMult = 3.25 -- v19: cars earn 2.5x more than v18 (progress felt 
 CarConfig.ValueMultiplier = 100 -- v19: worth / sell / upgrade 2.5x too, so upgrades keep their payback
 CarConfig.UpgradeCostBase = 0.5
 CarConfig.UpgradeCostGrowth = 1.35
+-- v22: rarer cars earn proportionally more (base income in the list x this); value / upgrade / sell scale with it
+CarConfig.RarityIncomeMult = { Common = 1, Uncommon = 1.3, Rare = 1.7, Epic = 2.2, Legendary = 3 }
 
 -- Fictional parody cars: inspired by familiar body styles, no real names, logos or badges.
 local list = {
@@ -126,7 +128,7 @@ CarConfig.LegacyIds = {
 
 -- exclusive cars: never drop from the trap, granted by a game pass
 CarConfig.Exclusive = {
-	{ id = "golden_magnat_gt", name = "Golden Magnat GT", rarity = "Legendary", style = "supercar", income = 2000, body = C(232, 178, 50), accent = C(20, 20, 24), chrome = true, neon = C(255, 210, 90), exclusive = true, tag = "Only for true magnates." },
+	{ id = "golden_magnat_gt", name = "Golden Magnat GT", rarity = "Legendary", style = "supercar", income = 15000, body = C(232, 178, 50), accent = C(20, 20, 24), chrome = true, neon = C(255, 210, 90), exclusive = true, tag = "Only for true magnates." },
 }
 
 CarConfig.List = list
@@ -134,6 +136,8 @@ CarConfig.ById = {}
 CarConfig.ByRarity = { Common = {}, Uncommon = {}, Rare = {}, Epic = {}, Legendary = {} }
 for i, def in ipairs(list) do
 	def.order = i
+	def.baseIncome = def.income
+	def.income = math.floor(def.income * CarConfig.RarityIncomeMult[def.rarity] + 0.5)
 	def.value = def.income * CarConfig.ValueMultiplier
 	def.maxLevel = CarConfig.MaxLevel
 	CarConfig.ById[def.id] = def

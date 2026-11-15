@@ -52,7 +52,7 @@ function Shop.IncomeMult(s)
 		m = m * 1.5
 	end
 	if pass(s, "golden_car") then
-		m = m * 1.5 -- Golden Magnat GT: the car + x1.5 income forever
+		m = m * 2 -- Golden Magnat GT: the car (48.8K/s at Lv1) + x2 income forever
 	end
 	if boostActive(s, "income") then
 		m = m * 2
