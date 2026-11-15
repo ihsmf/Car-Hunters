@@ -73,14 +73,13 @@ local function build()
 end
 
 local function card(parent, order, color, title, body, btnText, btnColor, onClick, highlight)
-	local f = K.new("Frame", { Size = UDim2.fromOffset(order and 118 or 160, 196), BackgroundColor3 = P.white, LayoutOrder = order or 0, ZIndex = 23 }, parent)
-	K.corner(f, 16)
-	K.stroke(f, highlight and P.yellow or color, highlight and 5 or 3)
-	local top = K.new("Frame", { Size = UDim2.new(1, 0, 0, 34), BackgroundColor3 = color, ZIndex = 24 }, f)
-	K.corner(top, 16)
-	K.text(top, { Text = title, TextSize = 18, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 25, Outline = 2 })
-	K.new("ImageLabel", { Position = UDim2.new(0.5, -26, 0, 40), Size = UDim2.fromOffset(52, 52), BackgroundTransparency = 1, Image = Icons.Get("gift") or "", ZIndex = 24 }, f)
-	K.text(f, { Text = body, Font = K.BODY, TextSize = 13, TextColor3 = P.ink, TextWrapped = true, Position = UDim2.fromOffset(6, 96), Size = UDim2.new(1, -12, 0, 44), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
+	-- v23: white card with ink outline + shadow; the coloured band is the card's own top (it follows the rounded top
+	-- corners only, the old separate band was rounded at the bottom too); claimable = thick orange outline
+	local f, _, face = K.card(parent, { Size = UDim2.fromOffset(order and 118 or 160, 196), Accent = color, AccentTop = true, AccentSize = 34, Radius = 16,
+		StrokeColor = highlight and P.orange or P.ink, Stroke = highlight and 5 or 3, LayoutOrder = order or 0, ZIndex = 23 })
+	K.text(face, { Text = title, TextSize = 18, Size = UDim2.new(1, 0, 0, 34), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 25, Outline = 2 })
+	K.new("ImageLabel", { Position = UDim2.new(0.5, -26, 0, 6), Size = UDim2.fromOffset(52, 52), BackgroundTransparency = 1, Image = Icons.Get("gift") or "", ZIndex = 24 }, f)
+	K.text(f, { Text = body, Font = K.BODY, TextSize = 13, TextColor3 = P.ink, TextWrapped = true, Position = UDim2.fromOffset(6, 62), Size = UDim2.new(1, -12, 0, 44), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
 	return K.toy(f, { Text = btnText, Color = btnColor, Size = UDim2.new(1, -16, 0, 44), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -6), TextSize = 16, ZIndex = 25, OnClick = onClick })
 end
 

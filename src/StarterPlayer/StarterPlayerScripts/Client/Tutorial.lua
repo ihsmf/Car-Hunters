@@ -67,8 +67,12 @@ local STEPS = {
 		function(_, hrp) return nearestDrop(hrp) end,
 		function() return K.store.CarriedTotal() >= 3 end,
 		function() return math.min(K.store.CarriedTotal(), 3) / 3, string.format("%d / 3", math.min(K.store.CarriedTotal(), 3)) end },
-	{ "RUN HOME TO BANK THEM", "Back through the arch to the plaza - the dark lanes in the middle make you faster", nil,
-		function() return Vector3.new(0, 2, MapConfig.EntryZ - 30) end,
+	{ "RUN HOME TO BANK THEM", "Back through the arch to the plaza - the dark lanes beside the garages make you faster", nil,
+		-- a point on the speed lane on the player's side, just inside the arch
+		function(_, hrp)
+			local lx = MapConfig.PlazaLaneX or 0
+			return Vector3.new((hrp and hrp.Position.X < 0) and -lx or lx, 2, MapConfig.EntryZ - 30)
+		end,
 		function() return events.banked end },
 	{ "THROW PARTS INTO YOUR TRAP", "Go to the lift in your garage, press THROW, then ALL", nil,
 		function(st) return trapPad(st) end,
@@ -94,11 +98,12 @@ local STEPS = {
 local function build()
 	w.goal = K.text(K.root, { Text = "", TextSize = 15, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.fromOffset(760, 18),
 		TextXAlignment = Enum.TextXAlignment.Center, Visible = false, Outline = 2 })
-	local card = K.new("Frame", { Name = "Objective", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 118), Size = UDim2.fromOffset(600, 108), BackgroundColor3 = P.white,
-		ClipsDescendants = true, Visible = false }, K.root)
-	K.corner(card, 20)
-	K.stroke(card, P.ink, 4)
-	w.card = card
+	-- v23: K.card (white face, ink outline, dark tan shadow slab under it); w.card is the holder (position / z / visible /
+	-- pop scale), the content goes on the face
+	local card, holder = K.card(K.root, { Name = "Objective", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 118), Size = UDim2.fromOffset(600, 108),
+		Radius = 20, Stroke = 4, ShadowColor = Color3.fromRGB(150, 138, 112), Visible = false })
+	card.ClipsDescendants = true
+	w.card = holder
 	-- the colour badge follows the card's rounded left corners (ClipsDescendants ignores UICorner, so a square badge
 	-- used to stick out of the outline): rounded badge + a square filler on its right half
 	w.badge = K.new("Frame", { Size = UDim2.fromOffset(108, 108), BackgroundColor3 = P.yellow, BorderSizePixel = 0 }, card)
@@ -117,8 +122,7 @@ local function build()
 	end
 	w.title = K.text(card, { Text = "", TextSize = 26, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(124, 10), Size = UDim2.fromOffset(380, 30) })
 	w.body = K.text(card, { Text = "", Font = K.BODY, TextSize = 16, TextColor3 = P.muted, TextWrapped = true, Position = UDim2.fromOffset(124, 42), Size = UDim2.fromOffset(460, 40) })
-	local bar = K.new("Frame", { Position = UDim2.fromOffset(124, 88), Size = UDim2.fromOffset(300, 8), BackgroundColor3 = C(230, 232, 236), Visible = false }, card)
-	K.corner(bar, 4)
+	local bar = K.inset(card, { Position = UDim2.fromOffset(124, 88), Size = UDim2.fromOffset(300, 8), Radius = 4, Stroke = 1.5, Visible = false })
 	w.bar = bar
 	w.fill = K.new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = P.yellow }, bar)
 	K.corner(w.fill, 4)
@@ -127,7 +131,7 @@ local function build()
 		Radius = 10, OnClick = function()
 			K.confirm("SKIP THE TUTORIAL?", "You can still find every feature on your own.", "SKIP", P.red, Tut.Skip)
 		end })
-	w.scale = K.new("UIScale", {}, card)
+	w.scale = K.new("UIScale", {}, holder)
 	w.tick = K.text(w.badge, { Text = "OK!", TextSize = 30, TextColor3 = C(120, 255, 150), Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, Visible = false, ZIndex = 5 })
 end
 

@@ -44,19 +44,19 @@ local function close()
 	end
 end
 
+-- v23: white card, ink outline, shadow slab, rarity as the card's own top strip (follows the rounded corners)
+-- returns the content body, the car def, the holder (position / scale it) and the outline
 local function card(parent, r, order, big)
 	local def = CarConfig.ById[r.typeId]
-	local f = K.new("Frame", { Size = UDim2.fromOffset(big and 170 or 150, big and 190 or 160), BackgroundColor3 = P.white, LayoutOrder = order, ZIndex = 72 }, parent)
-	K.corner(f, 16)
-	K.stroke(f, rc(r.rarity), 4)
-	-- rarity strip inside the straight part of the top edge (it used to poke out of the rounded corners)
-	local band = K.new("Frame", { Position = UDim2.fromOffset(16, 4), Size = UDim2.new(1, -32, 0, 6), BackgroundColor3 = rc(r.rarity), BorderSizePixel = 0, ZIndex = 73 }, f)
-	K.corner(band, 3)
-	return f, def
+	local f, holder, _, st = K.card(parent, { Size = UDim2.fromOffset(big and 170 or 150, big and 190 or 160), Accent = rc(r.rarity), AccentTop = true, AccentSize = 6,
+		Radius = 16, LayoutOrder = order, ZIndex = 72 })
+	return f, def, holder, st
 end
 
 local function grid(res)
-	local scr = K.new("Frame", { Name = "Grid", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(940, 600), BackgroundColor3 = P.cream, ZIndex = 70, Active = true }, root)
+	-- v23: shared dialog shell (drop shadow + header strip); the card stays Active so taps on it do not close
+	local scr, shell = K.dialogShell(root, { Name = "Grid", Size = UDim2.fromOffset(940, 600), Radius = 28, ZIndex = 70, Active = true, Color = P.orange, HeadH = 64,
+		Title = string.format("YOU GOT %d CARS", #res.cars), TitleSize = 38 })
 	-- a tap outside the card closes the results (on small screens the buttons were the only way out)
 	local r = root
 	task.delay(0.6, function()
@@ -64,9 +64,7 @@ local function grid(res)
 			r.Activated:Connect(close)
 		end
 	end)
-	K.corner(scr, 28)
-	K.stroke(scr, P.ink, 5)
-	local sc = K.new("UIScale", { Scale = 0.6 }, scr)
+	local sc = K.new("UIScale", { Scale = 0.6 }, shell)
 	K.tween(sc, 0.3, { Scale = 1 }, Enum.EasingStyle.Back)
 	local counts, bonus, merged, newN = {}, 0, 0, 0
 	for _, r in ipairs(res.cars) do
@@ -75,11 +73,10 @@ local function grid(res)
 		merged = merged + (r.merged and 1 or 0)
 		newN = newN + (r.isNew and 1 or 0)
 	end
-	K.text(scr, { Text = string.format("YOU GOT %d CARS", #res.cars), TextSize = 40, Position = UDim2.fromOffset(28, 14), Size = UDim2.new(1, -56, 0, 44), ZIndex = 71, Outline = 3 })
 	local parts = {}
 	for _, r in ipairs(CarConfig.RarityOrder) do
 		if counts[r] then
-			table.insert(parts, string.format('<font color="#%s">%d %s</font>', rc(r):ToHex(), counts[r], r))
+			table.insert(parts, string.format('<font color="#%s">%d %s</font>', K.lift(rc(r), -0.3):ToHex(), counts[r], r))
 		end
 	end
 	local extra = {}
@@ -93,10 +90,11 @@ local function grid(res)
 		table.insert(extra, "discovery +$" .. Util.FormatNumber(bonus))
 	end
 	K.text(scr, { Text = table.concat(parts, "   ") .. (#extra > 0 and ("     ·     " .. table.concat(extra, "  ·  ")) or ""), Font = K.BODY, TextSize = 18, TextColor3 = P.ink, RichText = true,
-		Position = UDim2.fromOffset(28, 62), Size = UDim2.new(1, -56, 0, 24), ZIndex = 71 })
-	local list = K.new("ScrollingFrame", { Position = UDim2.fromOffset(20, 96), Size = UDim2.new(1, -40, 1, -190), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8,
-		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 71 }, scr)
+		Position = UDim2.fromOffset(28, 72), Size = UDim2.new(1, -56, 0, 24), ZIndex = 72 })
+	local list = K.new("ScrollingFrame", { Position = UDim2.fromOffset(20, 102), Size = UDim2.new(1, -40, 1, -196), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8,
+		ScrollBarImageColor3 = P.ink, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 72 }, scr)
 	K.new("UIGridLayout", { CellSize = UDim2.fromOffset(160, 170), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder }, list)
+	K.padding(list, 8, 14) -- 5 x 160 + 4 x 10 = 840 of the 878 px inside: outlines and shadows of the outer cards stay visible
 	-- best first, then by rarity
 	local order = {}
 	for i, r in ipairs(res.cars) do
@@ -116,14 +114,14 @@ local function grid(res)
 	end)
 	for k, o in ipairs(order) do
 		local r = o.r
-		local f, def = card(list, r, k)
+		local f, def, _, outline = card(list, r, k)
 		if k <= 12 then
-			K.carViewport(f, def, { Position = UDim2.fromOffset(4, 12), Size = UDim2.new(1, -8, 0, 92), ZIndex = 73 })
+			K.carViewport(f, def, { Position = UDim2.fromOffset(4, 6), Size = UDim2.new(1, -8, 0, 92), ZIndex = 73 })
 		else
-			local tile = K.new("Frame", { Position = UDim2.fromOffset(10, 18), Size = UDim2.new(1, -20, 0, 80), BackgroundColor3 = rc(r.rarity), BackgroundTransparency = 0.6, ZIndex = 73 }, f)
+			local tile = K.new("Frame", { Position = UDim2.fromOffset(10, 12), Size = UDim2.new(1, -20, 0, 80), BackgroundColor3 = rc(r.rarity), BackgroundTransparency = 0.6, ZIndex = 73 }, f)
 			K.corner(tile, 12)
 		end
-		K.text(f, { Text = def.name, Font = K.BODY, TextSize = 15, TextColor3 = P.ink, TextWrapped = true, Position = UDim2.fromOffset(6, 104), Size = UDim2.new(1, -12, 0, 34), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 73 })
+		K.text(f, { Text = def.name, Font = K.BODY, TextSize = 15, TextColor3 = P.ink, TextWrapped = true, Position = UDim2.fromOffset(6, 98), Size = UDim2.new(1, -12, 0, 34), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 73 })
 		local tag, col
 		if r.merged then
 			tag, col = "MERGED  Lv" .. r.merged, P.blue
@@ -140,10 +138,12 @@ local function grid(res)
 		K.corner(t, 11)
 		K.text(t, { Text = tag, TextSize = 14, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 74 })
 		if o.i == res.best then
-			K.stroke(f, P.yellow, 6)
+			-- the best car: thick gold-orange outline (the ink one becomes it; a yellow rim alone vanished on cream)
+			outline.Color = P.orange
+			outline.Thickness = 5
 		end
 	end
-	local btns = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14), Size = UDim2.fromOffset(640, 72), BackgroundTransparency = 1, ZIndex = 71 }, scr)
+	local btns = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14), Size = UDim2.fromOffset(640, 72), BackgroundTransparency = 1, ZIndex = 72 }, scr)
 	K.list(btns, Enum.FillDirection.Horizontal, 20, Enum.HorizontalAlignment.Center)
 	K.toy(btns, { Text = "SEE BEST CAR", Color = P.orange, Size = UDim2.fromOffset(300, 70), TextSize = 26, LayoutOrder = 1, ZIndex = 72, OnClick = function()
 		local best = res.cars[res.best]
@@ -184,14 +184,14 @@ local function reel(res, onDone)
 	local W = 180
 	local bestCard
 	for k, r in ipairs(seq) do
-		local f = card(track, r, k)
+		local f, _, holder = card(track, r, k)
 		if k == stopAt then
-			bestCard = f
+			bestCard = holder
 		end
-		f.Position = UDim2.fromOffset((k - 1) * W, 30)
-		K.text(f, { Text = CarConfig.ById[r.typeId].name, Font = K.BODY, TextSize = 16, TextColor3 = P.ink, TextWrapped = true, Position = UDim2.fromOffset(6, 70), Size = UDim2.new(1, -12, 0, 40),
+		holder.Position = UDim2.fromOffset((k - 1) * W, 30)
+		K.text(f, { Text = CarConfig.ById[r.typeId].name, Font = K.BODY, TextSize = 16, TextColor3 = P.ink, TextWrapped = true, Position = UDim2.fromOffset(6, 64), Size = UDim2.new(1, -12, 0, 40),
 			TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 73 })
-		K.text(f, { Text = string.upper(r.rarity), TextSize = 16, TextColor3 = rc(r.rarity), Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 73 })
+		K.text(f, { Text = string.upper(r.rarity), TextSize = 16, TextColor3 = rc(r.rarity), Position = UDim2.fromOffset(0, 18), Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 73 })
 	end
 	local target = (stopAt - 1) * W + 75 -- card centre under the marker
 	local dur = 2.6

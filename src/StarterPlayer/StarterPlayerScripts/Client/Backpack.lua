@@ -36,14 +36,13 @@ function Backpack.Start(ui)
 	for i, id in ipairs(PartConfig.Order) do
 		local part = PartConfig.Parts[id]
 		local rc = CarConfig.Rarities[part.rarity].color
-		local f = K.new("Frame", { BackgroundColor3 = P.white, LayoutOrder = i, ZIndex = 23 }, grid)
-		K.corner(f, 16)
-		K.stroke(f, rc, 3)
-		local icon = K.new("ImageLabel", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromOffset(92, 92), BackgroundTransparency = 1,
+		-- v23: white card, ink outline + shadow, rarity as a top strip (cell 190 = 4 shadow + 6 strip + 180 body)
+		local f = K.card(grid, { Accent = rc, AccentTop = true, AccentSize = 6, Radius = 16, LayoutOrder = i, ZIndex = 23 })
+		local icon = K.new("ImageLabel", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.fromOffset(92, 92), BackgroundTransparency = 1,
 			Image = Icons.Get(id) or "", ScaleType = Enum.ScaleType.Fit, ZIndex = 24 }, f)
 		K.text(f, { Text = part.name, TextSize = 16, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(6, 102), Size = UDim2.new(1, -12, 0, 22),
 			TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
-		K.text(f, { Text = string.upper(part.rarity), Font = K.BODY, TextSize = 13, TextColor3 = rc, Position = UDim2.fromOffset(6, 124), Size = UDim2.new(1, -12, 0, 18),
+		K.text(f, { Text = string.upper(part.rarity), Font = K.BODY, TextSize = 13, TextColor3 = K.lift(rc, -0.3), Position = UDim2.fromOffset(6, 124), Size = UDim2.new(1, -12, 0, 18),
 			TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
 		local count = K.text(f, { Text = "x0", TextSize = 24, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(6, 146), Size = UDim2.new(1, -12, 0, 30),
 			TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })

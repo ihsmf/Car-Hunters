@@ -54,17 +54,23 @@ local function refresh()
 	end
 end
 
-local function slider(parent, y, key, title)
-	K.text(parent, { Text = title, TextSize = 20, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(0, y), Size = UDim2.fromOffset(220, 30), ZIndex = 23 })
-	local track = K.new("TextButton", { Text = "", AutoButtonColor = false, Position = UDim2.fromOffset(230, y + 9), Size = UDim2.fromOffset(250, 12),
-		BackgroundColor3 = Color3.fromRGB(220, 222, 228), ZIndex = 23 }, parent)
-	K.corner(track, 6)
-	local fill = K.new("Frame", { Size = UDim2.fromScale(cur[key], 1), BackgroundColor3 = P.blue, ZIndex = 24 }, track)
+-- v23: every setting is its own white card row (ink outline + shadow) so it reads on the cream panel
+local ROW_H, ROW_STEP = 54, 64
+local function rowCard(parent, i)
+	return K.card(parent, { Position = UDim2.fromOffset(0, (i - 1) * ROW_STEP), Size = UDim2.new(1, 0, 0, ROW_H), Radius = 16, ZIndex = 22 })
+end
+
+local function slider(parent, i, key, title)
+	local r = rowCard(parent, i)
+	K.text(r, { Text = title, TextSize = 20, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(16, 12), Size = UDim2.fromOffset(204, 30), ZIndex = 24 })
+	-- recessed track (the knob still follows the finger over the whole track)
+	local track = K.inset(r, { Class = "TextButton", Position = UDim2.fromOffset(230, 21), Size = UDim2.fromOffset(250, 12), Radius = 6, ZIndex = 24 })
+	local fill = K.new("Frame", { Size = UDim2.fromScale(cur[key], 1), BackgroundColor3 = P.blue, ZIndex = 25 }, track)
 	K.corner(fill, 6)
-	local knob = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(cur[key], 0, 0.5, 0), Size = UDim2.fromOffset(26, 26), BackgroundColor3 = P.white, ZIndex = 25 }, track)
+	local knob = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(cur[key], 0, 0.5, 0), Size = UDim2.fromOffset(26, 26), BackgroundColor3 = P.white, ZIndex = 26 }, track)
 	K.corner(knob, 13)
 	K.stroke(knob, P.ink, 3)
-	local value = K.text(parent, { Text = "", Font = K.BODY, TextSize = 18, TextColor3 = P.ink, Position = UDim2.fromOffset(496, y), Size = UDim2.fromOffset(70, 30), ZIndex = 23 })
+	local value = K.text(r, { Text = "", Font = K.BODY, TextSize = 18, TextColor3 = P.ink, Position = UDim2.fromOffset(500, 12), Size = UDim2.fromOffset(70, 30), ZIndex = 24 })
 	widgets[key] = { fill = fill, knob = knob, value = value }
 	local dragging = false
 	local function setFrom(x)
@@ -100,16 +106,17 @@ local function build()
 	K.hud.icon(b.face, "settings", 54, UDim2.fromOffset(6, 3)).ZIndex = b.face.ZIndex + 1
 	K.text(holder, { Text = "SETTINGS", TextSize = 15, Position = UDim2.fromOffset(-6, 72), Size = UDim2.new(1, 12, 0, 20), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 })
 
-	local p = K.panelShell("settings", "SETTINGS", 640, 360, P.blue)
+	-- 4 rows x 64 px = 252 px of the 276 px content (panel 380 high: 20 px more for the row shadows)
+	local p = K.panelShell("settings", "SETTINGS", 640, 380, P.blue)
 	local c = p.content
-	slider(c, 0, "music", "MUSIC")
-	slider(c, 46, "sfx", "SOUND EFFECTS")
+	slider(c, 1, "music", "MUSIC")
+	slider(c, 2, "sfx", "SOUND EFFECTS")
 	for i, s in ipairs(SWITCHES) do
-		local y = 104 + (i - 1) * 56
-		K.text(c, { Text = s[2], Font = K.BODY, TextSize = 19, TextColor3 = P.ink, Position = UDim2.fromOffset(0, y + 8), Size = UDim2.fromOffset(400, 30), ZIndex = 23 })
+		local r = rowCard(c, 2 + i)
+		K.text(r, { Text = s[2], Font = K.BODY, TextSize = 19, TextColor3 = P.ink, Position = UDim2.fromOffset(16, 12), Size = UDim2.fromOffset(400, 30), ZIndex = 24 })
 		local key = s[1]
 		widgets[key] = {
-			btn = K.toy(c, { Text = "ON", Color = P.green, Size = UDim2.fromOffset(110, 48), Position = UDim2.fromOffset(456, y), TextSize = 20, ZIndex = 23, OnClick = function()
+			btn = K.toy(r, { Text = "ON", Color = P.green, Size = UDim2.fromOffset(110, 44), Position = UDim2.fromOffset(464, 4), TextSize = 20, ZIndex = 24, OnClick = function()
 				cur[key] = not cur[key]
 				apply()
 				refresh()

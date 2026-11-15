@@ -28,6 +28,9 @@ local P = {
 	yellow = C(255, 210, 63), orange = C(255, 138, 31), red = C(255, 59, 59), green = C(52, 208, 88),
 	blue = C(46, 168, 255), cyan = C(34, 224, 224), ink = C(27, 31, 42), white = C(255, 255, 255),
 	cream = C(255, 246, 224), grey = C(170, 176, 188), muted = C(96, 102, 116),
+	-- v23 contours: cards sit on the cream panels as white faces with an ink outline and a tan slab under them,
+	-- fields / tracks / counters are recessed into a darker cream inset
+	card = C(255, 255, 255), inset = C(236, 228, 210), cardShadow = C(196, 182, 150),
 }
 local PART_ICON = {}
 for id, p in pairs(PartConfig.Parts) do
@@ -181,6 +184,122 @@ end
 
 local function rarityColor(r)
 	return CarConfig.Rarities[r].color
+end
+
+-- v23 contours ------------------------------------------------------------------------------------------------
+-- card(parent, props) -> content, holder, face, stroke
+-- A white face with an ink outline and a tan shadow slab under it (so it reads on the cream panel). Built as a
+-- transparent holder (takes Size/Position/AnchorPoint/LayoutOrder/Visible; works inside list and grid layouts,
+-- in a grid the cell size wins) with the slab and the face inside; the holder is `Shadow` px taller than Size.
+-- props: Size, Position, AnchorPoint, LayoutOrder, ZIndex, Visible, Name, Class ("Frame" / "TextButton"),
+--   Color (fill, default P.card), Accent (Color3: left band, or a top strip with AccentTop), AccentSize (8),
+--   Radius (14), Stroke (ink thickness 3, 0 = none), StrokeColor, Shadow (4, 0 = none), ShadowColor.
+-- With an Accent the face is filled with the accent colour and the returned content frame is the inner body
+-- (inset by AccentSize on the accent side); face.BackgroundColor3 then changes the accent.
+local function card(parent, o)
+	o = o or {}
+	local sh = o.Shadow or 4
+	local r = o.Radius or 14
+	local z = o.ZIndex or 1
+	local holder = new("Frame", { Name = o.Name or "Card", BackgroundTransparency = 1, BorderSizePixel = 0, Position = o.Position or UDim2.new(),
+		AnchorPoint = o.AnchorPoint or Vector2.zero, LayoutOrder = o.LayoutOrder or 0, ZIndex = z, Visible = o.Visible ~= false }, parent)
+	if o.Size then
+		holder.Size = UDim2.new(o.Size.X.Scale, o.Size.X.Offset, o.Size.Y.Scale, o.Size.Y.Offset + sh)
+	end
+	if sh > 0 then
+		local slab = new("Frame", { Name = "Shadow", BackgroundColor3 = o.ShadowColor or P.cardShadow, BorderSizePixel = 0, Position = UDim2.fromOffset(0, sh),
+			Size = UDim2.new(1, 0, 1, -sh), ZIndex = z }, holder)
+		corner(slab, r)
+	end
+	local face = new(o.Class or "Frame", { Name = "Face", BackgroundColor3 = o.Accent or o.Color or P.card, BorderSizePixel = 0, Size = UDim2.new(1, 0, 1, -sh), ZIndex = z + 1 }, holder)
+	if face:IsA("GuiButton") then
+		face.AutoButtonColor = false
+		if face:IsA("TextButton") then
+			face.Text = ""
+		end
+	end
+	corner(face, r)
+	local st
+	if (o.Stroke or 3) > 0 then
+		st = stroke(face, o.StrokeColor or P.ink, o.Stroke or 3)
+	end
+	local content = face
+	if o.Accent then
+		-- the body keeps the face's radius: its far corners sit exactly on the face's, the near ones leave a curved band
+		local a = o.AccentSize or 8
+		content = new("Frame", { Name = "Body", BackgroundColor3 = o.Color or P.card, BorderSizePixel = 0, ZIndex = z + 1,
+			Position = o.AccentTop and UDim2.fromOffset(0, a) or UDim2.fromOffset(a, 0), Size = o.AccentTop and UDim2.new(1, 0, 1, -a) or UDim2.new(1, -a, 1, 0) }, face)
+		corner(content, r)
+	end
+	return content, holder, face, st
+end
+
+-- inset(parent, props) -> a recessed field (counter, money box, slider track, bar track): darker cream, soft ink rim.
+-- props: any properties of the instance plus Class ("Frame" / "TextBox" / "TextButton"), Color, Radius (10), Stroke (2).
+local function inset(parent, o)
+	o = o or {}
+	local f = new(o.Class or "Frame", { BackgroundColor3 = o.Color or P.inset, BorderSizePixel = 0 }, parent)
+	if f:IsA("GuiButton") then
+		f.AutoButtonColor = false
+		if f:IsA("TextButton") then
+			f.Text = ""
+		end
+	end
+	for k, v in pairs(o) do
+		if k ~= "Class" and k ~= "Color" and k ~= "Radius" and k ~= "Stroke" then
+			f[k] = v
+		end
+	end
+	corner(f, o.Radius or 10)
+	if (o.Stroke or 2) > 0 then
+		new("UIStroke", { Color = P.ink, Thickness = o.Stroke or 2, Transparency = 0.35, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, f)
+	end
+	return f
+end
+
+-- room inside a scrolling list / grid so outlines and shadow slabs of the first and last cards never get clipped
+local function padding(o, px, right)
+	return new("UIPadding", { PaddingTop = UDim.new(0, px or 8), PaddingBottom = UDim.new(0, (px or 8) + 4), PaddingLeft = UDim.new(0, px or 8),
+		PaddingRight = UDim.new(0, right or ((px or 8) + 6)) }, o)
+end
+
+-- dialogShell(parent, props) -> card, holder, head
+-- The pop-up look shared by every dialog: cream body, 5 px ink outline, a dark drop shadow 6 px under it and, with
+-- props.Color, a gradient header strip like the panels (props.Title / TitleSize / HeadH). Put the pop-in UIScale on
+-- the holder (it carries the shadow too). props: Size, Position, AnchorPoint (centre), ZIndex, Radius (26), Class,
+-- Active, Name.
+local function dialogShell(parent, o)
+	local z = o.ZIndex or 1
+	local r = o.Radius or 26
+	local holder = new("Frame", { Name = o.Name or "Dialog", BackgroundTransparency = 1, BorderSizePixel = 0, AnchorPoint = o.AnchorPoint or Vector2.new(0.5, 0.5),
+		Position = o.Position or UDim2.fromScale(0.5, 0.5), Size = o.Size, ZIndex = z }, parent)
+	local slab = new("Frame", { Name = "Shadow", BackgroundColor3 = P.ink, BackgroundTransparency = 0.35, BorderSizePixel = 0, Position = UDim2.fromOffset(0, 6),
+		Size = UDim2.fromScale(1, 1), ZIndex = z }, holder)
+	corner(slab, r)
+	local cardF = new(o.Class or "Frame", { Name = "Card", BackgroundColor3 = P.cream, BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), ZIndex = z + 1 }, holder)
+	if cardF:IsA("GuiButton") then
+		cardF.AutoButtonColor = false
+		if cardF:IsA("TextButton") then
+			cardF.Text = ""
+		end
+	end
+	if o.Active ~= nil then
+		cardF.Active = o.Active
+	end
+	corner(cardF, r)
+	stroke(cardF, P.ink, 5)
+	local head
+	if o.Color then
+		head = new("Frame", { Name = "Head", Size = UDim2.new(1, 0, 0, o.HeadH or 64), BackgroundColor3 = P.white, BorderSizePixel = 0, ZIndex = z + 2 }, cardF)
+		corner(head, r)
+		stroke(head, P.ink, 5)
+		gradient(head, o.Color)
+		if o.Title then
+			text(head, { Text = o.Title, TextSize = o.TitleSize or 32, Position = UDim2.fromOffset(20, 0), Size = UDim2.new(1, -40, 1, 0), TextXAlignment = Enum.TextXAlignment.Center,
+				ZIndex = z + 3, Outline = 3 })
+		end
+	end
+	return cardF, holder, head
 end
 
 local function fitCamera(vp, model, angle)
@@ -512,9 +631,8 @@ end
 local function panelShell(name, title, w, h, color)
 	local dim = new("TextButton", { Name = name, Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.5, Visible = false, ZIndex = 20 }, root)
 	dim.Activated:Connect(function() UI.TogglePanel(nil) end)
-	local card = new("TextButton", { Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(w, h), BackgroundColor3 = P.cream, ZIndex = 21 }, dim)
-	corner(card, 28)
-	stroke(card, P.ink, 5)
+	-- v23: the card sits on a dark drop shadow (shell holder carries both, the open/close UIScale goes on it)
+	local card, shell = dialogShell(dim, { Class = "TextButton", Size = UDim2.fromOffset(w, h), Radius = 28, ZIndex = 21 })
 	local head = new("Frame", { Size = UDim2.new(1, 0, 0, 70), BackgroundColor3 = P.white, ZIndex = 22 }, card)
 	corner(head, 28)
 	stroke(head, P.ink, 5)
@@ -522,16 +640,17 @@ local function panelShell(name, title, w, h, color)
 	text(head, { Text = title, TextSize = 38, Position = UDim2.fromOffset(28, 0), Size = UDim2.new(1, -110, 1, 0), ZIndex = 23, Outline = 3 })
 	toy(card, { Text = "X", Color = P.red, Size = UDim2.fromOffset(60, 64), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 14, 0, -18), ZIndex = 24, OnClick = function() UI.TogglePanel(nil) end })
 	local content = new("Frame", { Position = UDim2.fromOffset(22, 86), Size = UDim2.new(1, -44, 1, -104), BackgroundTransparency = 1, ZIndex = 22 }, card)
-	local sc = new("UIScale", {}, card)
+	local sc = new("UIScale", {}, shell)
 	panels[name] = { root = dim, card = card, content = content, scale = sc }
 	return panels[name]
 end
 
+-- v23: 8 px all round (outer outlines + the shadow slabs of the first / last cards never clip), scrollbar gap on the right
 local function scroller(parent, pos, size)
 	local s = new("ScrollingFrame", { Position = pos, Size = size, BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8, ScrollBarImageColor3 = P.ink,
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 22 }, parent)
 	list(s, Enum.FillDirection.Vertical, 10)
-	new("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 12) }, s)
+	padding(s, 8, 14)
 	return s
 end
 
@@ -565,9 +684,8 @@ local function buildThrow()
 	panels.catchInfo = text(c, { Text = "", Font = BODY, TextSize = 17, TextColor3 = P.ink, RichText = true, Position = UDim2.fromOffset(0, 420), Size = UDim2.fromOffset(560, 26), ZIndex = 23 })
 	for i, id in ipairs(PartConfig.Order) do
 		local rc = rarityColor(PartConfig.Parts[id].rarity)
-		local r = new("Frame", { Size = UDim2.fromOffset(548, 74), BackgroundColor3 = P.white, LayoutOrder = i, ZIndex = 23 }, rows)
-		corner(r, 18)
-		local st = stroke(r, rc, 4)
+		-- v23: white card with ink outline + shadow; the rarity is the left band (faded while none is picked)
+		local r, _, band, st = card(rows, { Size = UDim2.fromOffset(540, 74), Accent = rc, Radius = 18, LayoutOrder = i, ZIndex = 23 })
 		-- the real 3D part (same model as on the map), slowly turning
 		local img = new("ViewportFrame", { Position = UDim2.fromOffset(8, 5), Size = UDim2.fromOffset(64, 64), BackgroundTransparency = 1, Ambient = C(190, 190, 200),
 			LightColor = C(255, 250, 240), LightDirection = Vector3.new(-1, -1.5, -1), ZIndex = 24 }, r)
@@ -590,8 +708,7 @@ local function buildThrow()
 			return toy(r, { Text = label, Color = color, Size = UDim2.fromOffset(w, 48), Position = UDim2.fromOffset(x, 12), TextSize = label == "MAX" and 18 or 26, ZIndex = 25, OnClick = onClick })
 		end
 		local minus = stepBtn("-", P.red, 240, 46, function() setMix(id, (state.mix[id] or 0) - 1) end)
-		local cnt = new("Frame", { Position = UDim2.fromOffset(294, 15), Size = UDim2.fromOffset(72, 44), BackgroundColor3 = C(244, 240, 230), ZIndex = 24 }, r)
-		corner(cnt, 12)
+		local cnt = inset(r, { Position = UDim2.fromOffset(294, 15), Size = UDim2.fromOffset(72, 44), Radius = 12, ZIndex = 24 })
 		local cntText = text(cnt, { Text = "0", TextSize = 26, TextColor3 = P.ink, Outline = false, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 25 })
 		local plus = stepBtn("+", P.green, 374, 46, function() setMix(id, (state.mix[id] or 0) + 1) end)
 		local max = stepBtn("MAX", P.blue, 428, 80, function() setMix(id, store.Banked(id)) end)
@@ -611,7 +728,7 @@ local function buildThrow()
 			pair[1].face.MouseLeave:Connect(function() held = false end)
 			pair[1].face.InputEnded:Connect(function() held = false end)
 		end
-		panels.throwRows[id] = { frame = r, stroke = st, img = img, owned = owned, cnt = cntText, minus = minus, plus = plus, max = max, rc = rc }
+		panels.throwRows[id] = { frame = r, stroke = st, band = band, img = img, owned = owned, cnt = cntText, minus = minus, plus = plus, max = max, rc = rc }
 	end
 	-- right column: quick picks, expected cars, merge toggle, throw
 	local right = new("Frame", { Position = UDim2.fromOffset(582, 0), Size = UDim2.fromOffset(312, 480), BackgroundTransparency = 1, ZIndex = 22 }, c)
@@ -646,12 +763,11 @@ local function buildThrow()
 		state.mix = {}
 		UI.Refresh()
 	end })
-	local odds = new("Frame", { Position = UDim2.fromOffset(0, 60), Size = UDim2.fromOffset(312, 196), BackgroundColor3 = P.white, ZIndex = 23 }, right)
-	corner(odds, 18)
-	stroke(odds, P.ink, 3)
+	local odds = card(right, { Position = UDim2.fromOffset(0, 58), Size = UDim2.fromOffset(312, 196), Radius = 18, ZIndex = 23 })
 	text(odds, { Text = "CHANCE PER CAR", TextSize = 18, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(14, 10), Size = UDim2.fromOffset(280, 22), ZIndex = 24 })
-	local bar = new("Frame", { Position = UDim2.fromOffset(14, 38), Size = UDim2.fromOffset(284, 16), BackgroundColor3 = C(230, 232, 236), ClipsDescendants = true, ZIndex = 24 }, odds)
-	corner(bar, 8)
+	-- recessed track; the coloured shares live in an inner strip (refresh clears that one, the track keeps its rim)
+	local track = inset(odds, { Position = UDim2.fromOffset(14, 38), Size = UDim2.fromOffset(284, 16), Radius = 4, ZIndex = 24 })
+	local bar = new("Frame", { Position = UDim2.fromOffset(2, 2), Size = UDim2.new(1, -4, 1, -4), BackgroundTransparency = 1, ClipsDescendants = true, ZIndex = 24 }, track)
 	list(bar, Enum.FillDirection.Horizontal, 0)
 	panels.oddsBar = bar
 	panels.oddsLines = {}
@@ -750,8 +866,9 @@ local function refreshThrow()
 		row.owned.Text = own > 0 and string.format("%d owned", own) or "none owned"
 		row.cnt.Text = tostring(n)
 		row.cnt.TextColor3 = n > 0 and P.ink or P.grey
-		row.stroke.Color = n > 0 and row.rc or C(220, 222, 226)
-		row.stroke.Thickness = n > 0 and 4 or 2
+		-- picked: full rarity band + bolder outline; not picked: faded band, normal outline (never lighter than the panel)
+		row.band.BackgroundColor3 = n > 0 and row.rc or row.rc:Lerp(P.inset, 0.7)
+		row.stroke.Thickness = n > 0 and 4 or 3
 		row.img.ImageTransparency = own > 0 and 0 or 0.55
 		row.minus.SetColor(n > 0 and P.red or P.grey)
 		row.plus.SetColor(n < own and P.green or P.grey)
@@ -798,6 +915,7 @@ local function buildTeleport()
 	panels.tpGrid = new("ScrollingFrame", { Size = UDim2.new(1, 0, 1, -40), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8, ScrollBarImageColor3 = P.ink,
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 22 }, p.content)
 	new("UIGridLayout", { CellSize = UDim2.fromOffset(240, 196), CellPadding = UDim2.fromOffset(16, 18), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }, panels.tpGrid)
+	padding(panels.tpGrid, 8, 14) -- 3 x 240 + 2 x 16 = 752 of the 754 px inside: the first row's outlines no longer clip
 	text(p.content, { Text = "⚠ " .. T("tp_walk"), Font = BODY, TextSize = 19, TextColor3 = P.red, AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), ZIndex = 22 })
 end
 
@@ -872,19 +990,20 @@ function UI.Confirm(title, body, okText, okColor, onOk, def)
 		return
 	end
 	local dim = new("TextButton", { Name = "Confirm", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.45, ZIndex = 85 }, overlay)
-	local card = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(480, def and 400 or 260), BackgroundColor3 = P.cream, ZIndex = 86 }, dim)
-	corner(card, 26)
-	stroke(card, P.ink, 5)
-	local sc = new("UIScale", { Scale = 0.6 }, card)
+	-- v23: shared dialog shell (shadow + header strip in the action's colour); the card is a plain Frame as before,
+	-- so a tap on it still reaches the dim behind (= KEEP)
+	local box, shell = dialogShell(dim, { Size = UDim2.fromOffset(480, def and 416 or 276), ZIndex = 86, Color = okColor or P.red, HeadH = 60, Title = title, TitleSize = 30 })
+	local sc = new("UIScale", { Scale = 0.6 }, shell)
 	tween(sc, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
-	text(card, { Text = title, TextSize = 32, Position = UDim2.fromOffset(0, 16), Size = UDim2.new(1, 0, 0, 40), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 87, Outline = 3 })
-	local y = 62
+	local y = 76
 	if def then
-		carViewport(card, def, { Position = UDim2.fromOffset(90, 56), Size = UDim2.fromOffset(300, 140), ZIndex = 87 })
-		y = 200
+		-- the car stands on a white card so it does not melt into the cream
+		local stage = card(box, { Position = UDim2.fromOffset(90, 72), Size = UDim2.fromOffset(300, 136), Radius = 18, ZIndex = 87 })
+		carViewport(stage, def, { Size = UDim2.fromScale(1, 1), ZIndex = 89 })
+		y = 220
 	end
-	text(card, { Text = body, Font = BODY, TextSize = 20, TextColor3 = P.ink, RichText = true, TextWrapped = true, Position = UDim2.fromOffset(24, y), Size = UDim2.new(1, -48, 0, 70), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 87 })
-	local btns = new("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -18), Size = UDim2.fromOffset(440, 70), BackgroundTransparency = 1, ZIndex = 87 }, card)
+	text(box, { Text = body, Font = BODY, TextSize = 20, TextColor3 = P.ink, RichText = true, TextWrapped = true, Position = UDim2.fromOffset(24, y), Size = UDim2.new(1, -48, 0, 70), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 87 })
+	local btns = new("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -18), Size = UDim2.fromOffset(440, 70), BackgroundTransparency = 1, ZIndex = 87 }, box)
 	list(btns, Enum.FillDirection.Horizontal, 16, Enum.HorizontalAlignment.Center)
 	toy(btns, { Text = "KEEP", Color = P.grey, Size = UDim2.fromOffset(170, 66), TextSize = 24, LayoutOrder = 1, ZIndex = 88, OnClick = function() dim:Destroy() end })
 	toy(btns, { Text = okText, Color = okColor or P.red, Size = UDim2.fromOffset(220, 66), TextSize = 24, LayoutOrder = 2, ZIndex = 88, OnClick = function()
@@ -1030,15 +1149,13 @@ local function refreshGarage()
 	for i, c in ipairs(cars) do
 		local def = CarConfig.ById[c.typeId]
 		local rc = rarityColor(def.rarity)
-		local row = new("Frame", { Size = UDim2.new(1, 0, 0, 88), BackgroundColor3 = P.white, LayoutOrder = i, ZIndex = 23 }, panels.carList)
-		corner(row, 18)
-		stroke(row, rc, 4)
+		local row = card(panels.carList, { Size = UDim2.new(1, 0, 0, 88), Accent = rc, Radius = 18, LayoutOrder = i, ZIndex = 23 })
 		if i <= 24 then
 			carViewport(row, def, { Position = UDim2.fromOffset(8, 6), Size = UDim2.fromOffset(120, 76), ZIndex = 24 })
 		end
 		text(row, { Text = def.name, TextSize = 22, TextColor3 = P.ink, Outline = false, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(136, 10), Size = UDim2.fromOffset(260, 28), ZIndex = 24 })
 		local where = c.slot and ("Bay " .. c.slot) or "Storage"
-		text(row, { Text = string.format('<font color="#%s">%s</font> · Lv %d · <font color="#1E9E40">+%s/s</font> · %s', rc:ToHex(), string.upper(T("rarity_" .. def.rarity)),
+		text(row, { Text = string.format('<font color="#%s">%s</font> · Lv %d · <font color="#1E9E40">+%s/s</font> · %s', lift(rc, -0.3):ToHex(), string.upper(T("rarity_" .. def.rarity)),
 			c.level, Util.FormatNumber(CarConfig.CarIncome(c)), where),
 			Font = BODY, TextSize = 14, TextColor3 = P.muted, RichText = true, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(136, 46), Size = UDim2.fromOffset(260, 24), ZIndex = 24 })
 		local btns = new("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(470, 60), BackgroundTransparency = 1, ZIndex = 24 }, row)
@@ -1083,7 +1200,9 @@ local function buildIndex()
 	panels.indexInfo = text(p.content, { Text = "", Font = BODY, TextSize = 19, TextColor3 = P.ink, Size = UDim2.new(1, 0, 0, 26), ZIndex = 22 })
 	local s = new("ScrollingFrame", { Position = UDim2.fromOffset(0, 34), Size = UDim2.new(1, 0, 1, -34), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8,
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 22 }, p.content)
-	new("UIGridLayout", { CellSize = UDim2.fromOffset(196, 150), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder }, s)
+	-- 4 x 196 + 3 x 12 = 820 of the 834 px inside the padding; +8 px height for the rarity strip and the shadow slab
+	new("UIGridLayout", { CellSize = UDim2.fromOffset(196, 158), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder }, s)
+	padding(s, 8, 14)
 	panels.indexGrid = s
 	panels.indexCards = {}
 end
@@ -1103,9 +1222,8 @@ local function refreshIndex()
 				cd.frame:Destroy()
 			end
 			local rc = rarityColor(def.rarity)
-			local f = new("Frame", { BackgroundColor3 = known and P.white or C(60, 64, 76), LayoutOrder = i, ZIndex = 23 }, panels.indexGrid)
-			corner(f, 18)
-			stroke(f, rc, 4)
+			-- v23: ink outline + shadow; the rarity is a strip along the top
+			local f, holder = card(panels.indexGrid, { Color = known and P.card or C(60, 64, 76), Accent = rc, AccentTop = true, Radius = 18, LayoutOrder = i, ZIndex = 23 })
 			if known then
 				carViewport(f, def, { Size = UDim2.new(1, 0, 1, -44), ZIndex = 24 })
 			else
@@ -1113,9 +1231,10 @@ local function refreshIndex()
 			end
 			text(f, { Text = known and def.name or T("index_unknown"), TextSize = 17, TextColor3 = known and P.ink or P.white, Outline = false, AnchorPoint = Vector2.new(0, 1),
 				Position = UDim2.new(0, 0, 1, -20), Size = UDim2.new(1, 0, 0, 22), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
-			text(f, { Text = string.upper(T("rarity_" .. def.rarity)), Font = BODY, TextSize = 14, TextColor3 = rc, AnchorPoint = Vector2.new(0, 1),
+			-- darker rarity tone on the white card (the light Common / Legendary hues washed out); bright on the dark one
+			text(f, { Text = string.upper(T("rarity_" .. def.rarity)), Font = BODY, TextSize = 14, TextColor3 = known and lift(rc, -0.3) or rc, AnchorPoint = Vector2.new(0, 1),
 				Position = UDim2.new(0, 0, 1, -2), Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
-			panels.indexCards[def.id] = { frame = f, known = known }
+			panels.indexCards[def.id] = { frame = holder, known = known }
 		end
 	end
 end
@@ -1869,6 +1988,7 @@ function UI.Kit()
 	return {
 		new = new, toy = toy, text = text, corner = corner, stroke = stroke, gradient = gradient, list = list, clear = clear,
 		tween = tween, pill = pill, lift = lift, panelShell = panelShell, scroller = scroller, carViewport = carViewport,
+		card = card, inset = inset, padding = padding, dialogShell = dialogShell,
 		P = P, HEAD = HEAD, BODY = BODY, root = root, gui = gui, overlay = overlay, hud = hud, panels = panels, state = state, store = store,
 		actions = actions, PART_ICON = PART_ICON, confirm = UI.Confirm,
 	}

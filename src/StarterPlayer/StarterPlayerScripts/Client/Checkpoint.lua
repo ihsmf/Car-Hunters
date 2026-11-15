@@ -33,7 +33,7 @@ end
 local function show(o)
 	close()
 	UI.Sfx("ping")
-	local dim = K.new("Frame", { Name = "Checkpoint", Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.55, ZIndex = 80 }, K.overlay)
+	local dim = K.new("Frame", { Name = "Checkpoint", Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.55, ZIndex = 78 }, K.overlay) -- v23 layers: under WelcomeBack (80) / JoinFlow (82) / Confirm (85)
 	open = dim
 	UI.SetDialog(true)
 	-- the server only accepts the choice near the checkpoint and within 60 s: the card goes away before that
@@ -50,25 +50,21 @@ local function show(o)
 			end
 		end
 	end)
-	local card = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(760, 420), BackgroundColor3 = P.cream, ZIndex = 81 }, dim)
-	K.corner(card, 28)
-	K.stroke(card, P.ink, 5)
-	local sc = K.new("UIScale", { Scale = 0.6 }, card)
+	-- v23: shared dialog shell (drop shadow, gradient header strip like the panels instead of a flat yellow block)
+	local card, shell, head = K.dialogShell(dim, { Size = UDim2.fromOffset(760, 420), Radius = 28, ZIndex = 81, Color = P.yellow, HeadH = 70 })
+	local sc = K.new("UIScale", { Scale = 0.6 }, shell)
 	K.tween(sc, 0.3, { Scale = 1 }, Enum.EasingStyle.Back)
-	local head = K.new("Frame", { Size = UDim2.new(1, 0, 0, 70), BackgroundColor3 = P.yellow, ZIndex = 82 }, card)
-	K.corner(head, 28)
-	K.stroke(head, P.ink, 5)
 	K.text(head, { Text = string.upper(zoneName(o.zone)) .. " CLEARED!", TextSize = 36, Position = UDim2.fromOffset(28, 0), Size = UDim2.new(1, -56, 1, 0), ZIndex = 83, Outline = 3 })
 	local banked = math.floor(o.carried * o.combo * o.risk + 0.5)
 	K.text(card, { Text = string.format("You carry <b>%d parts</b>  ·  combo %s  ·  risk %s", o.carried, fmtMult(o.combo), fmtMult(o.risk)), Font = K.BODY, TextSize = 19, TextColor3 = P.ink,
 		RichText = true, Position = UDim2.fromOffset(28, 84), Size = UDim2.new(1, -56, 0, 26), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 82 })
 	-- two big choice cards
 	local function choice(x, color, title, lines, btnText, enabled, onPick)
-		local f = K.new("Frame", { Position = UDim2.fromOffset(x, 124), Size = UDim2.fromOffset(340, 270), BackgroundColor3 = P.white, ZIndex = 82 }, card)
-		K.corner(f, 22)
-		K.stroke(f, enabled and color or P.grey, 5)
-		K.text(f, { Text = title, TextSize = 28, TextColor3 = enabled and color or P.grey, Position = UDim2.fromOffset(0, 14), Size = UDim2.new(1, 0, 0, 34), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 83, Outline = 2 })
-		K.text(f, { Text = lines, Font = K.BODY, TextSize = 17, TextColor3 = P.ink, RichText = true, TextWrapped = true, Position = UDim2.fromOffset(18, 56), Size = UDim2.new(1, -36, 0, 110),
+		-- white card with ink outline + shadow, the choice colour as a top strip (grey when not possible)
+		local f = K.card(card, { Position = UDim2.fromOffset(x, 124), Size = UDim2.fromOffset(340, 270), Accent = enabled and color or P.grey, AccentTop = true, AccentSize = 10,
+			Radius = 22, ZIndex = 82 })
+		K.text(f, { Text = title, TextSize = 28, TextColor3 = enabled and color or P.grey, Position = UDim2.fromOffset(0, 8), Size = UDim2.new(1, 0, 0, 34), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 84, Outline = 2 })
+		K.text(f, { Text = lines, Font = K.BODY, TextSize = 17, TextColor3 = P.ink, RichText = true, TextWrapped = true, Position = UDim2.fromOffset(18, 48), Size = UDim2.new(1, -36, 0, 110),
 			TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 83 })
 		K.toy(f, { Text = btnText, Color = enabled and color or P.grey, Size = UDim2.fromOffset(290, 72), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -16), TextSize = 24, ZIndex = 84,
 			OnClick = function()

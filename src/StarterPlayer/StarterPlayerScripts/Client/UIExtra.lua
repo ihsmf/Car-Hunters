@@ -35,7 +35,7 @@ local hot = nil -- current hot drop info
 local donateTab = "boost"
 local shopTab = "perks"
 local tuneUid = nil
-local TONY = C(30, 36, 58)
+local TONY = C(72, 96, 156) -- v23: steel blue (the old near-black navy swallowed the panel's ink outline)
 local GOLD = C(232, 178, 50)
 local TEAL = C(40, 150, 140) -- rebirth teal (no purple in this UI)
 local contractText -- defined with the HUD widgets
@@ -60,7 +60,9 @@ local function buildShop()
 	end
 	local grid = K.new("ScrollingFrame", { Position = UDim2.fromOffset(0, 66), Size = UDim2.new(1, 0, 1, -66), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8,
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 22 }, p.content)
-	K.new("UIGridLayout", { CellSize = UDim2.fromOffset(204, 214), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder }, grid)
+	-- v23: padding so the outlines / shadows of the outer cards never clip; 4 x 198 + 3 x 12 = 828 of the 834 px inside
+	K.new("UIGridLayout", { CellSize = UDim2.fromOffset(198, 214), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder }, grid)
+	K.padding(grid, 8, 14)
 	w.shopGrid = grid
 end
 
@@ -68,9 +70,8 @@ local function refreshSkins(st)
 	for _, def in ipairs(SkinConfig.Skins) do
 		local owned = (st.skins and st.skins[def.id]) or (def.pass and st.passes and st.passes[def.pass])
 		local on = st.skin == def.id
-		local card = K.new("Frame", { BackgroundColor3 = def.style.wall:Lerp(Color3.new(1, 1, 1), 0.75), LayoutOrder = def.order, ZIndex = 23 }, w.shopGrid)
-		K.corner(card, 20)
-		K.stroke(card, on and P.green or P.ink, on and 5 or 3)
+		local card = K.card(w.shopGrid, { Color = def.style.wall:Lerp(Color3.new(1, 1, 1), 0.75), StrokeColor = on and P.green or P.ink, Stroke = on and 5 or 3,
+			Radius = 20, LayoutOrder = def.order, ZIndex = 23 })
 		-- mini swatch of the skin colours
 		local sw = K.new("Frame", { Position = UDim2.new(0.5, 0, 0, 10), AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(150, 40), BackgroundTransparency = 1, ZIndex = 24 }, card)
 		K.list(sw, Enum.FillDirection.Horizontal, 4, Enum.HorizontalAlignment.Center)
@@ -118,9 +119,7 @@ local function refreshShop(st, open)
 	for _, def in ipairs(ShopConfig.Perks) do
 		local lvl = st.perks and st.perks[def.id] or 0
 		local cost = ShopConfig.NextCost(def.id, lvl)
-		local card = K.new("Frame", { BackgroundColor3 = P.white, LayoutOrder = def.order, ZIndex = 23 }, w.shopGrid)
-		K.corner(card, 20)
-		K.stroke(card, P.ink, 3)
+		local card = K.card(w.shopGrid, { Radius = 20, LayoutOrder = def.order, ZIndex = 23 })
 		K.text(card, { Text = def.icon, Font = K.BODY, TextSize = 40, Size = UDim2.new(1, 0, 0, 48), Position = UDim2.fromOffset(0, 6), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
 		K.text(card, { Text = string.upper(def.name), TextSize = 20, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(0, 54), Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
 		K.text(card, { Text = def.desc, Font = K.BODY, TextSize = 14, TextColor3 = P.muted, TextWrapped = true, Position = UDim2.fromOffset(8, 78), Size = UDim2.new(1, -16, 0, 36), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
@@ -158,7 +157,9 @@ local function buildDonate()
 	end
 	local grid = K.new("ScrollingFrame", { Position = UDim2.fromOffset(0, 66), Size = UDim2.new(1, 0, 1, -66), BackgroundTransparency = 1, BorderSizePixel = 0,
 		ScrollBarThickness = 8, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 22 }, p.content)
-	K.new("UIGridLayout", { CellSize = UDim2.fromOffset(204, 200), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder }, grid)
+	-- 4 x 204 + 3 x 12 = 852 of the 854 px inside the padding; +6 px height for the gold strip and the shadow slab
+	K.new("UIGridLayout", { CellSize = UDim2.fromOffset(204, 206), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder }, grid)
+	K.padding(grid, 8, 14)
 	w.donateGrid = grid
 end
 
@@ -175,9 +176,8 @@ local function refreshDonate(st, open)
 		-- live game: only products that exist on Roblox, and no paid random items where they are not allowed
 		if it.tab == donateTab and DonateConfig.Available(it, ProductIds, IS_STUDIO, randomRestricted) then
 			local owned = it.isPass and st.passes and st.passes[it.id]
-			local card = K.new("Frame", { BackgroundColor3 = C(255, 250, 236), LayoutOrder = it.order, ZIndex = 23 }, w.donateGrid)
-			K.corner(card, 20)
-			K.stroke(card, GOLD, 4)
+			-- v23: white card + ink outline + shadow (the near-cream fill with a gold rim melted into the panel); gold top strip
+			local card = K.card(w.donateGrid, { Accent = GOLD, AccentTop = true, AccentSize = 6, Radius = 20, LayoutOrder = it.order, ZIndex = 23 })
 			K.text(card, { Text = it.icon, Font = K.BODY, TextSize = 40, Size = UDim2.new(1, 0, 0, 48), Position = UDim2.fromOffset(0, 6), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
 			K.text(card, { Text = string.upper(it.name), TextSize = 19, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(0, 54), Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
 			local desc = it.desc
@@ -229,11 +229,10 @@ local function buildTony()
 	w.tonyList = K.scroller(p.content, UDim2.fromOffset(0, 32), UDim2.new(1, 0, 1, -32))
 end
 
+-- v23: a list row is a white card (ink outline + shadow slab); the state colour is its left band (tan = nothing yet)
+local ROW_IDLE = C(214, 204, 180)
 local function row(parent, order, h, accent)
-	local r = K.new("Frame", { Size = UDim2.new(1, 0, 0, h), BackgroundColor3 = P.white, LayoutOrder = order, ZIndex = 23 }, parent)
-	K.corner(r, 18)
-	K.stroke(r, accent or P.ink, 3)
-	return r
+	return (K.card(parent, { Size = UDim2.new(1, 0, 0, h), Accent = accent or ROW_IDLE, Radius = 18, LayoutOrder = order, ZIndex = 23 }))
 end
 
 -- which recipes the wallet covers, e.g. "1101..." (the list is only rebuilt on money ticks when this changes)
@@ -267,15 +266,15 @@ local function refreshTony(st, open)
 				end
 			end
 			local can = partsOk and moneyOk
-			local fr = row(w.tonyList, i, TONY_ROW_H, can and P.green or P.ink)
+			local fr = row(w.tonyList, i, TONY_ROW_H, can and P.green or nil)
 			-- left: the tuning part you get
 			K.text(fr, { Text = it.icon, Font = K.BODY, TextSize = 40, Position = UDim2.fromOffset(10, 0), Size = UDim2.fromOffset(64, TONY_ROW_H), ZIndex = 24,
 				TextXAlignment = Enum.TextXAlignment.Center })
-			K.text(fr, { Text = string.upper(it.name), TextSize = 22, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(82, 14), Size = UDim2.fromOffset(276, 30), ZIndex = 24 })
+			K.text(fr, { Text = string.upper(it.name), TextSize = 22, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(82, 14), Size = UDim2.fromOffset(262, 30), ZIndex = 24 })
 			K.text(fr, { Text = string.format("+%d%% car income", math.floor(it.bonus * 100 + 0.5)), Font = K.BODY, TextSize = 17, TextColor3 = GREEN_TXT,
-				Position = UDim2.fromOffset(82, 48), Size = UDim2.fromOffset(276, 22), ZIndex = 24 })
+				Position = UDim2.fromOffset(82, 48), Size = UDim2.fromOffset(262, 22), ZIndex = 24 })
 			K.text(fr, { Text = T("tony_have", (st.tuning or {})[r.out] or 0), Font = K.BODY, TextSize = 15, TextColor3 = P.muted, Position = UDim2.fromOffset(82, 76),
-				Size = UDim2.fromOffset(276, 20), ZIndex = 24 })
+				Size = UDim2.fromOffset(262, 20), ZIndex = 24 })
 			-- right: everything it costs, one line per ingredient, green = you have enough
 			local col = K.new("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -196, 0.5, 0), Size = UDim2.fromOffset(300, TONY_ROW_H - 16),
 				BackgroundTransparency = 1, ZIndex = 24 }, fr)
@@ -354,11 +353,9 @@ local function refreshJobs(st, open)
 	for i, c in ipairs(list) do
 		local n = math.max(math.floor(tonumber(c.n) or 1), 1)
 		local prog = math.clamp(math.floor(tonumber(c.progress) or 0), 0, n)
-		local r = row(w.jobsList, i, JOB_ROW_H, c.ready and P.green or P.ink)
+		local r = row(w.jobsList, i, JOB_ROW_H, c.ready and P.green or nil)
 		K.text(r, { Text = contractText(c), TextSize = 20, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(18, 10), Size = UDim2.new(1, -250, 0, 28), ZIndex = 24 })
-		local bar = K.new("Frame", { Position = UDim2.fromOffset(18, 48), Size = UDim2.new(1, -330, 0, 14), BackgroundColor3 = C(225, 222, 214), BorderSizePixel = 0, ZIndex = 24 }, r)
-		K.corner(bar, 7)
-		K.stroke(bar, P.ink, 2)
+		local bar = K.inset(r, { Position = UDim2.fromOffset(18, 48), Size = UDim2.new(1, -330, 0, 14), Radius = 7, ZIndex = 24 })
 		local fill = K.new("Frame", { Size = UDim2.fromScale(c.ready and 1 or prog / n, 1), BackgroundColor3 = c.ready and P.yellow or C(70, 200, 100), BorderSizePixel = 0, ZIndex = 25 }, bar)
 		K.corner(fill, 7)
 		K.text(r, { Text = c.ready and "✅" or string.format("%d / %d", prog, n), Font = K.BODY, TextSize = 16, TextColor3 = P.ink, Position = UDim2.new(1, -306, 0, 42),
@@ -402,7 +399,7 @@ local function refreshTune(st, open)
 	for i, cat in ipairs(TuningConfig.Categories) do
 		local cur = car.tune and car.tune[cat.id]
 		local curIt = cur and TuningConfig.Items[cur]
-		local fr = row(w.tuneList, i, 76, curIt and P.green or P.ink)
+		local fr = row(w.tuneList, i, 76, curIt and P.green or nil)
 		K.text(fr, { Text = cat.icon, Font = K.BODY, TextSize = 30, Position = UDim2.fromOffset(10, 0), Size = UDim2.fromOffset(46, 76), ZIndex = 24, TextXAlignment = Enum.TextXAlignment.Center })
 		K.text(fr, { Text = string.upper(cat.name), TextSize = 18, TextColor3 = P.muted, Outline = false, Position = UDim2.fromOffset(62, 6), Size = UDim2.fromOffset(160, 22), ZIndex = 24 })
 		K.text(fr, { Text = curIt and string.format("%s +%d%%", curIt.name, math.floor(curIt.bonus * 100 + 0.5)) or T("tune_empty"), TextSize = 18,
@@ -431,22 +428,21 @@ end
 ---------------------------------------------------------------- Welcome back (offline earnings)
 local function showOffline(info)
 	local dim = K.new("TextButton", { Name = "WelcomeBack", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.45, ZIndex = 80 }, K.overlay)
-	local card = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(520, 330), BackgroundColor3 = P.cream, ZIndex = 81 }, dim)
-	K.corner(card, 28)
-	K.stroke(card, P.ink, 5)
-	local sc = K.new("UIScale", { Scale = 0.5 }, card)
+	-- v23: shared dialog shell (shadow + green header strip); the amount sits on a white card
+	local card, shell = K.dialogShell(dim, { Size = UDim2.fromOffset(520, 340), Radius = 28, ZIndex = 81, Color = P.green, HeadH = 64, Title = "WELCOME BACK!", TitleSize = 38 })
+	local sc = K.new("UIScale", { Scale = 0.5 }, shell)
 	K.tween(sc, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
-	K.text(card, { Text = "WELCOME BACK!", TextSize = 42, Position = UDim2.fromOffset(0, 18), Size = UDim2.new(1, 0, 0, 48), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 82, Outline = 3 })
 	local h = math.floor(info.seconds / 3600)
 	local m = math.floor(info.seconds % 3600 / 60)
 	K.text(card, { Text = string.format("Your garage worked for %dh %02dm while you were away%s", h, m, info.capped and " (max 8h)" or ""), Font = K.BODY, TextSize = 17, TextColor3 = P.muted,
-		TextWrapped = true, Position = UDim2.fromOffset(30, 72), Size = UDim2.new(1, -60, 0, 44), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 82 })
-	K.new("ImageLabel", { Position = UDim2.fromOffset(110, 128), Size = UDim2.fromOffset(64, 64), BackgroundTransparency = 1, Image = require(game:GetService("ReplicatedStorage").Shared.Icons).Get("coin") or "", ZIndex = 82 }, card)
-	K.text(card, { Text = "+$" .. Util.FormatNumber(info.amount), TextSize = 48, TextColor3 = C(70, 220, 100), Position = UDim2.fromOffset(184, 132), Size = UDim2.fromOffset(300, 56), ZIndex = 82, Outline = 3 })
+		TextWrapped = true, Position = UDim2.fromOffset(30, 72), Size = UDim2.new(1, -60, 0, 44), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 83 })
+	local amount = K.card(card, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 122), Size = UDim2.fromOffset(400, 76), Radius = 18, ZIndex = 83 })
+	K.new("ImageLabel", { Position = UDim2.fromOffset(40, 6), Size = UDim2.fromOffset(64, 64), BackgroundTransparency = 1, Image = require(game:GetService("ReplicatedStorage").Shared.Icons).Get("coin") or "", ZIndex = 85 }, amount)
+	K.text(amount, { Text = "+$" .. Util.FormatNumber(info.amount), TextSize = 48, TextColor3 = C(70, 220, 100), Position = UDim2.fromOffset(114, 10), Size = UDim2.fromOffset(270, 56), ZIndex = 85, Outline = 3 })
 	local function closeCard()
 		dim:Destroy()
 	end
-	local btns = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -22), Size = UDim2.fromOffset(470, 76), BackgroundTransparency = 1, ZIndex = 82 }, card)
+	local btns = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -20), Size = UDim2.fromOffset(470, 76), BackgroundTransparency = 1, ZIndex = 83 }, card)
 	K.list(btns, Enum.FillDirection.Horizontal, 16, Enum.HorizontalAlignment.Center)
 	K.toy(btns, { Text = "COLLECT", Color = P.green, Size = UDim2.fromOffset(210, 72), TextSize = 26, LayoutOrder = 1, ZIndex = 83, OnClick = closeCard })
 	local x2 = DonateConfig.ById.offline_x2
@@ -463,8 +459,10 @@ end
 ---------------------------------------------------------------- Rebirth + token shop
 local function buildRebirth()
 	local p = K.panelShell("rebirth", T("rebirth_title"), 860, 600, TEAL)
-	w.rbInfo = K.text(p.content, { Text = "", Font = K.BODY, TextSize = 19, TextColor3 = P.ink, RichText = true, TextWrapped = true, Size = UDim2.new(1, 0, 0, 150),
-		TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 23 })
+	-- v23: the conditions sit on their own white card instead of straight on the cream
+	local info = K.card(p.content, { Size = UDim2.new(1, 0, 0, 146), Accent = TEAL, Radius = 18, ZIndex = 22 })
+	w.rbInfo = K.text(info, { Text = "", Font = K.BODY, TextSize = 19, TextColor3 = P.ink, RichText = true, TextWrapped = true, Position = UDim2.fromOffset(16, 10),
+		Size = UDim2.new(1, -32, 1, -20), TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 24 })
 	w.rbGo = K.toy(p.content, { Text = T("rebirth_go"), Color = P.grey, Size = UDim2.fromOffset(300, 70), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 158),
 		ZIndex = 24, TextSize = 28, OnClick = function()
 			if w.rbArmed and os.clock() - w.rbArmed < 3 then
@@ -509,9 +507,7 @@ local function refreshRebirth(st, open)
 	K.clear(w.rbShop)
 	for i, def in ipairs(SkinConfig.TokenPerks) do
 		local lvl = st.tokenPerks and st.tokenPerks[def.id] or 0
-		local card = K.new("Frame", { BackgroundColor3 = P.white, LayoutOrder = i, ZIndex = 24 }, w.rbShop)
-		K.corner(card, 18)
-		K.stroke(card, P.ink, 3)
+		local card = K.card(w.rbShop, { Radius = 18, LayoutOrder = i, ZIndex = 24 })
 		K.text(card, { Text = def.icon, Font = K.BODY, TextSize = 36, Size = UDim2.new(1, 0, 0, 44), Position = UDim2.fromOffset(0, 6), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 25 })
 		K.text(card, { Text = string.upper(def.name), TextSize = 17, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(6, 54), Size = UDim2.new(1, -12, 0, 40), TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 25 })
 		K.text(card, { Text = string.format("%d / %d", lvl, def.max), Font = K.BODY, TextSize = 15, TextColor3 = P.muted, Position = UDim2.fromOffset(0, 96), Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 25 })
