@@ -90,18 +90,21 @@ local YELLOW = C(255, 205, 40)
 -- drops row 2 on LOW graphics, see Perf).
 local SKYLINE = { "Skyline_Office", "Skyline_Apartment", "Skyline_Deco", "Skyline_Parking", "Skyline_Tank", "Skyline_Billboard",
 	"Skyline_Stepped", "Skyline_Warehouse", "Skyline_Hotel", "Skyline_Radio" }
-local SKY_ROWS = { { x1 = 252, x2 = 282, scale = { 0.9, 1.1 }, gap = { 10, 22 } }, { x1 = 340, x2 = 392, scale = { 1.25, 1.55 }, gap = { 18, 34 } } }
-local function skyFallback(parent, cf, row, rng, pal)
+-- rows by the INNER edge (towards the playfield) so any footprint stays clear of the wall, tunnels and cranes
+-- (tunnel mouths end at |x| 242); the far row is scaled up a little
+local SKY_ROWS = { { edge = { 244, 262 }, scale = { 0.8, 1.0 }, gap = { 8, 20 } }, { edge = { 336, 360 }, scale = { 1.1, 1.3 }, gap = { 14, 30 } } }
+-- plain box tower filling the given footprint (used when the Blender model is not loaded)
+local function skyFallback(parent, pos, size, row, rng, pal)
 	local m = Instance.new("Model")
 	m.Name = "Skyline_Box"
-	local w, d = rr(rng, 24, 40), rr(rng, 24, 36)
 	local h = (row == 1) and rr(rng, 40, 90) or rr(rng, 70, 140)
-	Part(m, "Backdrop", Vector3.new(d, h, w), cf * CFrame.new(0, h / 2, 0), pick(rng, pal.buildings), M.SmoothPlastic, { cast = false })
+	local cf = CFrame.new(pos)
+	Part(m, "Backdrop", Vector3.new(size, h, size * 0.8), cf * CFrame.new(0, h / 2, 0), pick(rng, pal.buildings), M.SmoothPlastic, { cast = false })
 	for y = 8, h - 6, row == 1 and 8 or 12 do
-		Part(m, "BackdropWindows", Vector3.new(d + 0.2, 2.6, w * 0.8), cf * CFrame.new(0, y, 0), C(70, 96, 120), M.Glass, { cast = false, collide = false, t = 0.1 })
+		Part(m, "BackdropWindows", Vector3.new(size + 0.2, 2.6, size * 0.64), cf * CFrame.new(0, y, 0), C(70, 96, 120), M.Glass, { cast = false, collide = false, t = 0.1 })
 	end
 	m.Parent = parent
-	return m, math.max(w, d)
+	return m
 end
 local function buildSkyline(ctx)
 	local f = ctx.f
@@ -141,10 +144,10 @@ local function buildSkyline(ctx)
 				local name = pick(rng, SKYLINE)
 				local scale = rr(rng, R.scale[1], R.scale[2])
 				local info = ModelSizes[name]
-				local foot = ((info and (info.w and math.max(info.w, info.d or 0) or info.size)) or 36) * scale
-				foot = math.min(foot, 60)
+				-- footprint side: the larger of w/d, so any of the four 90-degree turns fits the same slot
+				local foot = ((info and info.w) and math.max(info.w, info.d or info.w) or 36) * scale
 				local zc = z + foot / 2
-				local x = sx * rr(rng, R.x1, R.x2)
+				local x = sx * (rr(rng, R.edge[1], R.edge[2]) + foot / 2)
 				local yaw = math.floor(rng() * 4) * math.pi / 2
 				local cf = CFrame.new(x, -1.3, zc) * CFrame.Angles(0, yaw, 0)
 				if blocked(sx, row, zc - foot / 2, zc + foot / 2) then
@@ -154,9 +157,7 @@ local function buildSkyline(ctx)
 					if not m then
 						local zone = MapConfig.ZoneAt(zc)
 						local pal = (zone == "plaza") and plazaPal or MapConfig.Zones[zone].palette
-						local w
-						m, w = skyFallback(f.Buildings, cf, row, rng, pal)
-						foot = w
+						m = skyFallback(f.Buildings, Vector3.new(x, -1.3, zc), math.min(foot, 44), row, rng, pal)
 					end
 					m:SetAttribute("Row", row)
 					CollectionService:AddTag(m, "Skyline")
