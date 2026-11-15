@@ -33,7 +33,6 @@ local P
 local w = {}
 local hot = nil -- current hot drop info
 local donateTab = "boost"
-local tonyTab = "rewards"
 local shopTab = "perks"
 local tuneUid = nil
 local TONY = C(30, 36, 58)
@@ -197,40 +196,37 @@ local function refreshDonate(st, open)
 	end
 end
 
----------------------------------------------------------------- Big Tony: rewards + exchange
-local function costLine(r, st)
-	local bits = {}
-	local function add(have, need, label)
-		local col = have >= need and "#1E9E40" or "#D6342C"
-		table.insert(bits, string.format('<font color="%s">%s</font>', col, label))
-	end
-	for _, part in ipairs(PartConfig.Order or { "bolts", "tire", "engine", "turbo", "core" }) do
+---------------------------------------------------------------- Big Tony's Tuning: car parts + money -> tuning parts
+local GREEN_TXT, RED_TXT = C(30, 158, 64), C(214, 52, 44)
+
+-- every ingredient of a recipe as { label, have, need }, in a fixed order: car parts, tuning parts, money
+local function ingredients(r, st)
+	local out = {}
+	for _, part in ipairs(PartConfig.Order) do
 		local n = r.parts and r.parts[part]
-		if n then
-			add(st.parts[part] or 0, n, K.PART_ICON[part] .. n)
+		local def = PartConfig.Parts[part]
+		if n and def then
+			table.insert(out, { label = def.emoji .. " " .. def.name, have = (st.parts or {})[part] or 0, need = n })
 		end
 	end
-	for item, n in pairs(r.tune or {}) do
+	for _, item in ipairs(TuningConfig.Order) do
+		local n = r.tune and r.tune[item]
 		local it = TuningConfig.Items[item]
-		add((st.tuning or {})[item] or 0, n, it.icon .. it.name .. " x" .. n)
+		if n and it then
+			table.insert(out, { label = it.icon .. " " .. it.name, have = (st.tuning or {})[item] or 0, need = n, tune = true })
+		end
 	end
-	add(K.store.Money, r.money, "$" .. Util.FormatNumber(r.money))
-	return table.concat(bits, "  ")
+	if (r.money or 0) > 0 then
+		table.insert(out, { money = true, have = K.store.Money or 0, need = r.money })
+	end
+	return out
 end
 
 local function buildTony()
 	local p = K.panelShell("tony", T("tony_title"), 920, 600, TONY)
-	local tabs = K.new("Frame", { Size = UDim2.new(1, 0, 0, 56), BackgroundTransparency = 1, ZIndex = 22 }, p.content)
-	K.list(tabs, Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Center)
-	w.tonyTabs = {}
-	for i, tab in ipairs({ "rewards", "exchange" }) do
-		w.tonyTabs[tab] = K.toy(tabs, { Text = T("tony_" .. tab), Color = P.grey, Size = UDim2.fromOffset(200, 52), LayoutOrder = i, ZIndex = 23, TextSize = 20,
-			OnClick = function()
-				tonyTab = tab
-				UI.Refresh()
-			end })
-	end
-	w.tonyList = K.scroller(p.content, UDim2.fromOffset(0, 66), UDim2.new(1, 0, 1, -66))
+	K.text(p.content, { Text = T("tony_hint"), Font = K.BODY, TextSize = 16, TextColor3 = P.muted, Size = UDim2.new(1, 0, 0, 24), ZIndex = 23,
+		TextXAlignment = Enum.TextXAlignment.Center })
+	w.tonyList = K.scroller(p.content, UDim2.fromOffset(0, 32), UDim2.new(1, 0, 1, -32))
 end
 
 local function row(parent, order, h, accent)
@@ -240,45 +236,141 @@ local function row(parent, order, h, accent)
 	return r
 end
 
+-- which recipes the wallet covers, e.g. "1101..." (the list is only rebuilt on money ticks when this changes)
+local function tonyMoneySig()
+	local bits, money = {}, K.store.Money or 0
+	for i, r in ipairs(TuningConfig.Recipes) do
+		bits[i] = money >= (r.money or 0) and "1" or "0"
+	end
+	return table.concat(bits)
+end
+
+local TONY_ROW_H = 112
 local function refreshTony(st, open)
 	if open ~= "tony" then
 		return
 	end
-	for tab, b in pairs(w.tonyTabs) do
-		b.SetColor(tab == tonyTab and P.yellow or P.grey)
-	end
+	w.tonySig = tonyMoneySig()
 	K.clear(w.tonyList)
-	if tonyTab == "rewards" then
-		local none = #(st.contracts or {}) == 0
-		K.text(w.tonyList, { Text = none and "No jobs right now - new ones arrive soon. Finish jobs, then claim them here." or T("tony_hint"), Font = K.BODY, TextSize = 16,
-			TextColor3 = P.muted, Size = UDim2.new(1, 0, 0, 24), LayoutOrder = 0, ZIndex = 23, TextXAlignment = Enum.TextXAlignment.Center })
-		for i, c in ipairs(st.contracts or {}) do
-			local r = row(w.tonyList, i, 84, c.ready and P.green or P.ink)
-			K.text(r, { Text = contractText(c), TextSize = 20, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(18, 10), Size = UDim2.new(1, -260, 0, 30), ZIndex = 24 })
-			local part = c.reward and K.PART_ICON[c.reward.part] or ""
-			K.text(r, { Text = string.format("%d/%d   ·   +$%s  %s x%d", c.progress, c.n, Util.FormatNumber(c.reward.money), part, c.reward.n), Font = K.BODY, TextSize = 16,
-				TextColor3 = P.muted, Position = UDim2.fromOffset(18, 44), Size = UDim2.new(1, -260, 0, 26), ZIndex = 24 })
-			K.toy(r, { Text = c.ready and T("tony_claim") or T("tony_working"), Color = c.ready and P.green or P.grey, Size = UDim2.fromOffset(200, 60), AnchorPoint = Vector2.new(1, 0.5),
-				Position = UDim2.new(1, -12, 0.5, 0), ZIndex = 25, TextSize = c.ready and 24 or 16,
-				OnClick = function()
-					if c.ready then
-						K.actions.Claim(c.id)
+	for i, r in ipairs(TuningConfig.Recipes) do
+		local it = TuningConfig.Items[r.out]
+		if it then
+			local lines = ingredients(r, st)
+			local partsOk, moneyOk = true, true
+			for _, e in ipairs(lines) do
+				if e.have < e.need then
+					if e.money then
+						moneyOk = false
+					else
+						partsOk = false
+					end
+				end
+			end
+			local can = partsOk and moneyOk
+			local fr = row(w.tonyList, i, TONY_ROW_H, can and P.green or P.ink)
+			-- left: the tuning part you get
+			K.text(fr, { Text = it.icon, Font = K.BODY, TextSize = 40, Position = UDim2.fromOffset(10, 0), Size = UDim2.fromOffset(64, TONY_ROW_H), ZIndex = 24,
+				TextXAlignment = Enum.TextXAlignment.Center })
+			K.text(fr, { Text = string.upper(it.name), TextSize = 22, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(82, 14), Size = UDim2.fromOffset(276, 30), ZIndex = 24 })
+			K.text(fr, { Text = string.format("+%d%% car income", math.floor(it.bonus * 100 + 0.5)), Font = K.BODY, TextSize = 17, TextColor3 = GREEN_TXT,
+				Position = UDim2.fromOffset(82, 48), Size = UDim2.fromOffset(276, 22), ZIndex = 24 })
+			K.text(fr, { Text = T("tony_have", (st.tuning or {})[r.out] or 0), Font = K.BODY, TextSize = 15, TextColor3 = P.muted, Position = UDim2.fromOffset(82, 76),
+				Size = UDim2.fromOffset(276, 20), ZIndex = 24 })
+			-- right: everything it costs, one line per ingredient, green = you have enough
+			local col = K.new("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -196, 0.5, 0), Size = UDim2.fromOffset(300, TONY_ROW_H - 16),
+				BackgroundTransparency = 1, ZIndex = 24 }, fr)
+			K.list(col, Enum.FillDirection.Vertical, 2, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center)
+			K.text(col, { Text = T("tony_needs"), TextSize = 14, TextColor3 = P.muted, Outline = false, Size = UDim2.new(1, 0, 0, 16), LayoutOrder = 0, ZIndex = 25 })
+			for k, e in ipairs(lines) do
+				local label
+				if e.money then
+					label = "💵 $" .. Util.FormatNumber(e.need)
+				else
+					label = string.format("%s   %s/%s", e.label, Util.FormatNumber(e.have), Util.FormatNumber(e.need))
+				end
+				K.text(col, { Text = label, Font = K.BODY, TextSize = 18, TextColor3 = e.have >= e.need and GREEN_TXT or RED_TXT, Size = UDim2.new(1, 0, 0, 24),
+					LayoutOrder = k, ZIndex = 25 })
+			end
+			local btnText = can and T("tony_build") or (partsOk and T("tony_needMoney") or T("tony_needParts"))
+			K.toy(fr, { Text = btnText, Color = can and P.orange or P.grey, Size = UDim2.fromOffset(170, 60), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0),
+				ZIndex = 25, TextSize = can and 22 or 18, OnClick = function()
+					if can then
+						K.actions.Craft(r.id)
 					end
 				end })
 		end
-	else
-		for i, r in ipairs(TuningConfig.Recipes) do
-			local it = TuningConfig.Items[r.out]
-			local fr = row(w.tonyList, i, 78)
-			K.text(fr, { Text = it.icon, Font = K.BODY, TextSize = 34, Position = UDim2.fromOffset(12, 0), Size = UDim2.fromOffset(50, 78), ZIndex = 24, TextXAlignment = Enum.TextXAlignment.Center })
-			K.text(fr, { Text = string.format("%s  <font color=\"#1E9E40\">+%d%%</font>", string.upper(it.name), math.floor(it.bonus * 100 + 0.5)), RichText = true, TextSize = 20,
-				TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(70, 8), Size = UDim2.new(1, -300, 0, 28), ZIndex = 24 })
-			K.text(fr, { Text = costLine(r, st), RichText = true, Font = K.BODY, TextSize = 15, TextColor3 = P.muted, Position = UDim2.fromOffset(70, 40), Size = UDim2.new(1, -300, 0, 26), ZIndex = 24 })
-			K.text(fr, { Text = T("tony_have", (st.tuning or {})[r.out] or 0), Font = K.BODY, TextSize = 14, TextColor3 = P.muted, AnchorPoint = Vector2.new(1, 0.5),
-				Position = UDim2.new(1, -184, 0.5, 0), Size = UDim2.fromOffset(70, 20), ZIndex = 24, TextXAlignment = Enum.TextXAlignment.Right })
-			K.toy(fr, { Text = T("tony_build"), Color = P.orange, Size = UDim2.fromOffset(160, 58), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0),
-				ZIndex = 25, TextSize = 22, OnClick = function() K.actions.Craft(r.id) end })
+	end
+end
+
+---------------------------------------------------------------- Jobs: active contracts, claimed anywhere in the safe zone
+local JOBS = C(170, 120, 70)
+
+-- "+$1,200   ⚙️ Engine x2" (sep puts the part on its own line on the narrow board cards)
+local function rewardText(c, st, sep)
+	local rw = c.reward
+	if type(rw) ~= "table" then
+		return ""
+	end
+	local mult = (st.passes and st.passes.double_contracts == true) and 2 or 1
+	local def = PartConfig.Parts[rw.part]
+	local part = def and string.format("%s%s %s x%d", sep or "   ", def.emoji, def.name, (rw.n or 1) * mult) or ""
+	return "+$" .. Util.FormatNumber((rw.money or 0) * mult) .. part
+end
+
+local function anyReady(st)
+	for _, c in ipairs(st.contracts or {}) do
+		if c.ready then
+			return true
 		end
+	end
+	return false
+end
+
+local function buildJobs()
+	local p = K.panelShell("jobs", T("jobs_title"), 880, 580, JOBS)
+	w.jobsHint = K.text(p.content, { Text = T("jobs_hint"), Font = K.BODY, TextSize = 16, TextColor3 = P.muted, Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, -230, 0, 58),
+		TextWrapped = true, ZIndex = 23 })
+	w.jobsAll = K.toy(p.content, { Text = T("jobs_claimAll"), Color = P.green, Size = UDim2.fromOffset(210, 58), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0),
+		ZIndex = 24, TextSize = 22, OnClick = function()
+			if K.store.State and anyReady(K.store.State) then
+				K.actions.Claim("all")
+			end
+		end })
+	w.jobsList = K.scroller(p.content, UDim2.fromOffset(0, 70), UDim2.new(1, 0, 1, -70))
+end
+
+local JOB_ROW_H = 104
+local function refreshJobs(st, open)
+	if open ~= "jobs" then
+		return
+	end
+	w.jobsAll.holder.Visible = anyReady(st)
+	K.clear(w.jobsList)
+	local list = st.contracts or {}
+	if #list == 0 then
+		K.text(w.jobsList, { Text = T("jobs_none"), Font = K.BODY, TextSize = 18, TextColor3 = P.muted, Size = UDim2.new(1, 0, 0, 40), LayoutOrder = 0, ZIndex = 23,
+			TextXAlignment = Enum.TextXAlignment.Center })
+	end
+	for i, c in ipairs(list) do
+		local n = math.max(math.floor(tonumber(c.n) or 1), 1)
+		local prog = math.clamp(math.floor(tonumber(c.progress) or 0), 0, n)
+		local r = row(w.jobsList, i, JOB_ROW_H, c.ready and P.green or P.ink)
+		K.text(r, { Text = contractText(c), TextSize = 20, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(18, 10), Size = UDim2.new(1, -250, 0, 28), ZIndex = 24 })
+		local bar = K.new("Frame", { Position = UDim2.fromOffset(18, 48), Size = UDim2.new(1, -330, 0, 14), BackgroundColor3 = C(225, 222, 214), BorderSizePixel = 0, ZIndex = 24 }, r)
+		K.corner(bar, 7)
+		K.stroke(bar, P.ink, 2)
+		local fill = K.new("Frame", { Size = UDim2.fromScale(c.ready and 1 or prog / n, 1), BackgroundColor3 = c.ready and P.yellow or C(70, 200, 100), BorderSizePixel = 0, ZIndex = 25 }, bar)
+		K.corner(fill, 7)
+		K.text(r, { Text = c.ready and "✅" or string.format("%d / %d", prog, n), Font = K.BODY, TextSize = 16, TextColor3 = P.ink, Position = UDim2.new(1, -306, 0, 42),
+			Size = UDim2.fromOffset(60, 26), ZIndex = 24, TextXAlignment = Enum.TextXAlignment.Center })
+		K.text(r, { Text = T("jobs_reward") .. "  " .. rewardText(c, st), Font = K.BODY, TextSize = 17, TextColor3 = GREEN_TXT, Position = UDim2.fromOffset(18, 72),
+			Size = UDim2.new(1, -250, 0, 24), ZIndex = 24 })
+		K.toy(r, { Text = c.ready and T("jobs_claim") or T("jobs_working"), Color = c.ready and P.green or P.grey, Size = UDim2.fromOffset(200, 60), AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -12, 0.5, 0), ZIndex = 25, TextSize = c.ready and 24 or 16, OnClick = function()
+				if c.ready then
+					K.actions.Claim(c.id)
+				end
+			end })
 	end
 end
 
@@ -446,14 +538,14 @@ local function refreshBoard(st)
 				TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 2 })
 			K.text(gui, { Name = "Prog", Text = "", TextSize = 40, TextColor3 = P.ink, Outline = false, Position = UDim2.new(0, 0, 0.55, 0), Size = UDim2.new(1, 0, 0, 48),
 				TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 2 })
-			K.text(gui, { Name = "Reward", Text = "", Font = K.BODY, TextSize = 26, TextColor3 = C(30, 158, 64), Outline = false, Position = UDim2.new(0, 0, 0.75, 0), Size = UDim2.new(1, 0, 0, 34),
-				TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 2 })
+			K.text(gui, { Name = "Reward", Text = "", Font = K.BODY, TextSize = 26, TextColor3 = C(30, 158, 64), Outline = false, Position = UDim2.new(0, 6, 0.74, 0),
+				Size = UDim2.new(1, -12, 0.24, 0), TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 2 })
 		end
 		if c then
 			gui.Title.Text = contractText(c)
-			gui.Prog.Text = c.ready and "✅ CLAIM AT TONY" or string.format("%d / %d", c.progress, c.n)
+			gui.Prog.Text = c.ready and "✅ READY - CLAIM" or string.format("%d / %d", c.progress, c.n)
 			gui.Prog.TextColor3 = c.ready and C(30, 158, 64) or P.ink
-			gui.Reward.Text = "+$" .. Util.FormatNumber(c.reward.money) .. "  " .. (K.PART_ICON[c.reward.part] or "") .. "x" .. c.reward.n
+			gui.Reward.Text = rewardText(c, st, "\n")
 			gui.Bg.BackgroundColor3 = c.ready and C(220, 250, 226) or C(255, 248, 228)
 		else
 			gui.Title.Text, gui.Prog.Text, gui.Reward.Text = "NEW JOB SOON", "...", ""
@@ -480,6 +572,14 @@ local function buildHud()
 	w.shopBtn = iconButton("shop", T("btn_magnate"), GOLD, 1, function()
 		UI.TogglePanel("donate")
 	end)
+	local jobsBtn = iconButton("jobs", T("btn_jobs"), C(170, 120, 70), 2, function()
+		UI.TogglePanel("jobs")
+	end)
+	-- red dot while a finished job waits to be claimed
+	w.jobsDot = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(60, 4), Size = UDim2.fromOffset(18, 18), BackgroundColor3 = P.red, ZIndex = 30,
+		Visible = false }, jobsBtn.holder.Parent)
+	K.corner(w.jobsDot, 9)
+	K.stroke(w.jobsDot, P.white, 2)
 	-- active boosts strip to the right of the wallet card
 	w.boosts = K.new("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 310, 1, -24 - (K.hud.leftLift or 0)), Size = UDim2.fromOffset(240, 40), BackgroundTransparency = 1 }, root)
 	K.list(w.boosts, Enum.FillDirection.Horizontal, 6)
@@ -496,8 +596,8 @@ local function buildHud()
 	K.list(cw, Enum.FillDirection.Vertical, 7)
 	w.contracts = cw
 	w.contractRows = {}
-	-- the active jobs are always on screen; rewards are collected at Big Tony on the plaza
-	K.text(cw, { Text = "JOBS  -  claim at Big Tony", TextSize = 16, TextColor3 = P.orange, Size = UDim2.new(1, 0, 0, 20), LayoutOrder = 0, Outline = 2.5 })
+	-- the active jobs are always on screen; rewards are claimed anywhere in the safe zone (JOBS button / Job Board)
+	K.text(cw, { Text = T("jobs_hud"), TextSize = 16, TextColor3 = P.orange, Size = UDim2.new(1, 0, 0, 20), LayoutOrder = 0, Outline = 2.5 })
 	-- hot drop banner
 	-- top-right corner, same row as the zone banner: the very top, never under notifications or the objective card
 	local hb = K.new("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 12), Size = UDim2.fromOffset(380, 42),
@@ -550,7 +650,7 @@ local function refreshHud(st)
 	w.contractRows = {}
 	for i, c in ipairs(st.contracts or {}) do
 		local row = K.new("Frame", { Size = UDim2.new(1, 0, 0, 24), BackgroundTransparency = 1, LayoutOrder = i }, w.contracts)
-		local line = c.ready and "READY  -  see Big Tony" or string.format("%d/%d   %s", c.progress, c.n, contractText(c))
+		local line = c.ready and T("jobs_ready") or string.format("%d/%d   %s", c.progress, c.n, contractText(c))
 		local lbl = K.text(row, { Text = line, Font = K.BODY, TextSize = 14, TextColor3 = c.ready and P.yellow or P.white, TextTruncate = Enum.TextTruncate.AtEnd, Size = UDim2.new(1, 0, 0, 18) })
 		K.new("UIStroke", { Color = P.ink, Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual }, lbl)
 		local bar = K.new("Frame", { Position = UDim2.fromOffset(0, 21), Size = UDim2.fromOffset(250, 2), BackgroundColor3 = P.ink, BackgroundTransparency = 0.5, BorderSizePixel = 0 }, row)
@@ -558,6 +658,7 @@ local function refreshHud(st)
 		table.insert(w.contractRows, row)
 	end
 	w.contracts.Visible = #(st.contracts or {}) > 0 and K.state.open == nil
+	w.jobsDot.Visible = anyReady(st)
 	K.hud.leftCol.Visible = K.state.open == nil
 end
 
@@ -630,6 +731,12 @@ function X.HotDrop()
 	return hot
 end
 
+local function inPlaza()
+	local char = game:GetService("Players").LocalPlayer.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	return hrp ~= nil and MapConfig.ZoneAt(hrp.Position.Z) == "plaza"
+end
+
 function X.Init(ui)
 	UI = ui
 	K = UI.Kit()
@@ -637,6 +744,7 @@ function X.Init(ui)
 	buildShop()
 	buildDonate()
 	buildTony()
+	buildJobs()
 	buildTune()
 	buildRebirth()
 	buildHud()
@@ -648,6 +756,7 @@ function X.Init(ui)
 		refreshShop(st, open)
 		refreshDonate(st, open)
 		refreshTony(st, open)
+		refreshJobs(st, open)
 		refreshTune(st, open)
 		refreshRebirth(st, open)
 		refreshHud(st)
@@ -657,6 +766,8 @@ function X.Init(ui)
 		local st = K.store.State
 		if st and K.state.open == "shop" then
 			refreshShop(st, "shop")
+		elseif st and K.state.open == "tony" and tonyMoneySig() ~= w.tonySig then
+			refreshTony(st, "tony") -- money lines + BUILD buttons follow the wallet
 		end
 	end)
 	require(Shared:WaitForChild("Net")).Get("OfflineEarnings").OnClientEvent:Connect(showOffline)
@@ -676,14 +787,17 @@ function X.Init(ui)
 				K.actions.Donate("golden_car")
 			end
 		elseif n == "TonyPrompt" then
-			tonyTab = "rewards"
-			for _, c in ipairs(K.store.State and K.store.State.contracts or {}) do
-				if c.ready then
-					K.actions.Claim("all") -- walking up pays out everything that's done
-					break
-				end
+			if K.state.open ~= "tony" then
+				UI.TogglePanel("tony")
 			end
-			UI.TogglePanel("tony")
+		elseif n == "JobPrompt" then
+			local st = K.store.State
+			if st and anyReady(st) and inPlaza() then
+				K.actions.Claim("all") -- walking up pays out everything that's done
+			end
+			if K.state.open ~= "jobs" then
+				UI.TogglePanel("jobs")
+			end
 		end
 	end)
 	local acc = 0

@@ -158,7 +158,7 @@ Net.Get("AutoPark").OnServerEvent:Connect(function(p) S.Cars.AutoPark(p) end)
 Net.Get("Teleport").OnServerEvent:Connect(function(p, dest) S.Warp.Go(p, dest) end)
 Net.Get("BuyPerk").OnServerEvent:Connect(function(p, id) S.Shop.Buy(p, id) end)
 Net.Get("Donate").OnServerEvent:Connect(function(p, id) S.Donate.Request(p, id) end)
-Net.Get("ClaimContract").OnServerEvent:Connect(function(p, id) S.Mechanic.Claim(p, id) end)
+Net.Get("ClaimContract").OnServerEvent:Connect(function(p, id) S.Contracts.Claim(p, id) end)
 Net.Get("CraftTuning").OnServerEvent:Connect(function(p, id) S.Mechanic.Craft(p, id) end)
 Net.Get("Rebirth").OnServerEvent:Connect(function(p) S.Rebirth.Do(p) end)
 Net.Get("SetSkin").OnServerEvent:Connect(function(p, id) S.Rebirth.Skin(p, id) end)
@@ -211,7 +211,7 @@ local function onPlayerAdded(player)
 	S.Income.Recalc(player)
 	S.Base.RefreshAll(player)
 	s.ready = true
-	S.Contracts.Fill(s) -- Big Tony's board is full from the first second
+	S.Contracts.Fill(s) -- the Job Board is full from the first second
 	S.Income.PayOffline(player)
 	S.Data.Push(player)
 	player:LoadCharacter()

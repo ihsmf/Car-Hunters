@@ -1,5 +1,7 @@
--- Contracts board: five active jobs per player. Finished jobs wait as "ready" until claimed at Big Tony.
+-- Job Board: five active jobs per player. Finished jobs wait as "ready" until claimed in the safe zone
+-- (HUD JOBS panel or Dispatcher Dee at the Job Board on the plaza).
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -12,6 +14,7 @@ local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 
 local Contracts = {}
 local S
+local anims -- Dispatcher Dee's animations
 local rng = Random.new()
 
 Contracts.Active = 5
@@ -177,7 +180,7 @@ function Contracts.Fill(s)
 	end
 end
 
--- paid out by MechanicService when the player talks to Big Tony
+-- paid out by Contracts.Claim (safe zone only)
 -- quiet = the caller sends one combined notification (claiming several contracts at once)
 function Contracts.Reward(player, s, c, index, quiet)
 	local d = s.data
@@ -197,6 +200,38 @@ function Contracts.Reward(player, s, c, index, quiet)
 		end
 	end)
 	return c.reward.money * mult
+end
+
+-- claim one finished job (id) or every finished job ("all"); only inside the safe zone
+function Contracts.Claim(player, id)
+	if id ~= "all" and type(id) ~= "string" then
+		return
+	end
+	local s = S.Data.Get(player)
+	if not s or not s.ready or not S.Data.RateLimit(player, "claim", 0.3) then
+		return
+	end
+	local hrp = S.Data.GetRoot(player)
+	if not hrp or MapConfig.ZoneAt(hrp.Position.Z) ~= "plaza" then
+		S.Data.Notify(player, "claimInPlaza", nil, "warn")
+		return
+	end
+	local d = s.data
+	local total, n = 0, 0
+	for i = #d.contracts, 1, -1 do
+		local c = d.contracts[i]
+		if (id == "all" or c.id == id) and c.ready then
+			total = total + Contracts.Reward(player, s, c, i, true)
+			n = n + 1
+		end
+	end
+	if n > 0 then -- one combined message + one state push
+		S.Data.Notify(player, n > 1 and "contractsDone" or "contractDone", n > 1 and { n, Util.FormatNumber(total) } or { Util.FormatNumber(total) }, "good")
+		S.Data.Push(player)
+		if anims and anims.wave then
+			anims.wave:Play()
+		end
+	end
 end
 
 -- event: "bank_part"(partId, n, zoneCounts) | "combo"(mult) | "speed"(seconds) | "throw" | "road" | "hotdrop"
@@ -258,6 +293,60 @@ function Contracts.Progress(player, event, amount, extra)
 	end
 end
 
+-- Dispatcher Dee: headset, clipboard and a hi-vis vest
+local function dressDee(n)
+	local A = S.Shop.Attach
+	local BLACK, ORANGE, YELLOW = Color3.fromRGB(28, 28, 32), Color3.fromRGB(245, 130, 30), Color3.fromRGB(230, 240, 60)
+	local M = Enum.Material
+	-- headset: band over the head, two ear cups, mic boom
+	A(n, "Head", Vector3.new(1.3, 0.14, 0.22), CFrame.new(0, 0.66, 0), BLACK)
+	A(n, "Head", Vector3.new(0.18, 0.5, 0.5), CFrame.new(0.66, 0.05, 0), BLACK)
+	A(n, "Head", Vector3.new(0.18, 0.5, 0.5), CFrame.new(-0.66, 0.05, 0), BLACK)
+	A(n, "Head", Vector3.new(0.08, 0.08, 0.6), CFrame.new(-0.6, -0.2, -0.35), BLACK)
+	A(n, "Head", Vector3.new(0.14, 0.14, 0.14), CFrame.new(-0.55, -0.22, -0.66), Color3.fromRGB(214, 52, 44))
+	-- hi-vis vest with reflective stripes
+	A(n, "UpperTorso", Vector3.new(1.5, 1.3, 0.1), CFrame.new(0, 0.1, -0.53), ORANGE)
+	A(n, "UpperTorso", Vector3.new(1.5, 1.3, 0.1), CFrame.new(0, 0.1, 0.53), ORANGE)
+	A(n, "UpperTorso", Vector3.new(1.52, 0.16, 0.12), CFrame.new(0, -0.15, -0.56), YELLOW, M.Neon)
+	-- clipboard in the left hand
+	A(n, "LeftHand", Vector3.new(0.1, 1.3, 1.0), CFrame.new(0, -0.2, -0.3), Color3.fromRGB(150, 100, 60), M.Wood)
+	A(n, "LeftHand", Vector3.new(0.12, 1.1, 0.85), CFrame.new(0.02, -0.25, -0.3), Color3.fromRGB(250, 250, 250))
+end
+
+local function startDispatcher()
+	local map = Workspace:WaitForChild("GeneratedMap", 60)
+	local board = map and map:FindFirstChild("JobBoard", true)
+	if not board then
+		warn("[Contracts] JobBoard not found in GeneratedMap")
+		return
+	end
+	local prompt = board:FindFirstChild("JobPrompt", true)
+	if prompt and prompt:IsA("BasePart") then
+		local pp = Instance.new("ProximityPrompt")
+		pp.ActionText = "Jobs"
+		pp.ObjectText = "Job Board"
+		pp.HoldDuration = 0
+		pp.MaxActivationDistance = 14
+		pp.RequiresLineOfSight = false
+		pp.Parent = prompt
+	end
+	local spot = board:FindFirstChild("JobSpot", true)
+	if not spot or not spot:IsA("BasePart") then
+		return
+	end
+	local npc, a = S.Shop.MakeNpc("DispatcherDee", {
+		skin = Color3.fromRGB(176, 118, 84), arms = Color3.fromRGB(60, 110, 160),
+		torso = Color3.fromRGB(60, 110, 160), legs = Color3.fromRGB(40, 48, 70),
+	}, spot, dressDee)
+	if not npc then
+		return
+	end
+	anims = a
+	if S.Mechanic and S.Mechanic.FaceLikeSpot then
+		S.Mechanic.FaceLikeSpot(npc, spot)
+	end
+end
+
 -- new sessions are filled by ServerBootstrap the moment the profile is ready; this covers players already in game
 function Contracts.Start()
 	for _, p in ipairs(Players:GetPlayers()) do
@@ -266,6 +355,7 @@ function Contracts.Start()
 			Contracts.Fill(s)
 		end
 	end
+	task.spawn(startDispatcher)
 end
 
 return Contracts

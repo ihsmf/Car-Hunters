@@ -205,7 +205,7 @@ local function scenes(st, actor, track)
 		local tony = spot.Position
 		local a = tony + Vector3.new(14, 0, -12)
 		camTo(CFrame.lookAt(tony + Vector3.new(16, 8, -26), tony + Vector3.new(0, 3, 0)), true)
-		caption(3, "MEET BIG TONY", "Bring him parts and he tunes your cars - tuned cars earn more", 6)
+		caption(3, "MEET BIG TONY", "He builds tuning parts from your car parts", 6)
 		if not run(actor, track, a, tony + Vector3.new(3, 0, -4), 3.2) then
 			return
 		end

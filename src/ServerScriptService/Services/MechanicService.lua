@@ -1,11 +1,10 @@
--- Big Tony, the rich mechanic next to the contracts board: hands out finished contract rewards
--- and trades banked parts for tuning parts.
+-- Big Tony's Tuning: the rich mechanic in his own garage on the plaza. He only sells tuning parts,
+-- built from banked car parts + money (jobs are claimed at the Job Board, see ContractService).
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
-local Util = require(Shared:WaitForChild("Util"))
 local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
 
 local Mechanic = {}
@@ -27,31 +26,6 @@ local function gesture()
 		anims.point:Play()
 	elseif anims and anims.wave then
 		anims.wave:Play()
-	end
-end
-
-function Mechanic.Claim(player, id)
-	local s = S.Data.Get(player)
-	if not s or not s.ready or not S.Data.RateLimit(player, "claim", 0.3) then
-		return
-	end
-	if not nearTony(player) then
-		S.Data.Notify(player, "seeTony", nil, "warn")
-		return
-	end
-	local d = s.data
-	local total, n = 0, 0
-	for i = #d.contracts, 1, -1 do
-		local c = d.contracts[i]
-		if (id == "all" or c.id == id) and c.ready then
-			total = total + S.Contracts.Reward(player, s, c, i, true)
-			n = n + 1
-			gesture()
-		end
-	end
-	if n > 0 then -- one combined message + one state push
-		S.Data.Notify(player, n > 1 and "contractsDone" or "contractDone", n > 1 and { n, Util.FormatNumber(total) } or { Util.FormatNumber(total) }, "good")
-		S.Data.Push(player)
 	end
 end
 
@@ -127,20 +101,43 @@ local function dressTony(n)
 	A(n, "RightFoot", Vector3.new(0.8, 0.3, 1.2), CFrame.new(0, -0.1, -0.1), BLACK, M.SmoothPlastic)
 end
 
+-- the map's TonyGarage model (older maps: the contracts stand)
+local function findSpot(map)
+	local garage = map and map:FindFirstChild("TonyGarage", true)
+	local spot = garage and garage:FindFirstChild("TonySpot", true)
+	if not spot then
+		garage = map and map:FindFirstChild("ContractStand", true)
+		spot = garage and garage:FindFirstChild("TonySpot", true)
+	end
+	return garage, spot
+end
+
+-- MakeNpc turns the NPC by the spot's Yaw attribute; without one, follow the spot's own facing
+local function faceLikeSpot(npc, spot)
+	if spot:GetAttribute("Yaw") ~= nil then
+		return
+	end
+	local look = spot.CFrame.LookVector * Vector3.new(1, 0, 1)
+	if look.Magnitude > 0.01 then
+		local pos = npc:GetPivot().Position
+		npc:PivotTo(CFrame.lookAt(pos, pos + look.Unit))
+	end
+end
+Mechanic.FaceLikeSpot = faceLikeSpot
+
 function Mechanic.Start()
 	task.spawn(function()
 		local map = Workspace:WaitForChild("GeneratedMap", 60)
-		local stand = map and map:FindFirstChild("ContractStand", true)
-		local spot = stand and stand:FindFirstChild("TonySpot")
+		local garage, spot = findSpot(map)
 		if not spot then
-			warn("[Mechanic] ContractStand/TonySpot not found")
+			warn("[Mechanic] TonyGarage/TonySpot not found")
 			return
 		end
 		spotPos = spot.Position
-		local prompt = stand:FindFirstChild("TonyPrompt")
-		if prompt then
+		local prompt = garage:FindFirstChild("TonyPrompt", true)
+		if prompt and prompt:IsA("BasePart") then
 			local pp = Instance.new("ProximityPrompt")
-			pp.ActionText = "Talk"
+			pp.ActionText = "Tuning Shop"
 			pp.ObjectText = "Big Tony"
 			pp.HoldDuration = 0
 			pp.MaxActivationDistance = 14
@@ -155,9 +152,10 @@ function Mechanic.Start()
 		if not npc then
 			return
 		end
+		faceLikeSpot(npc, spot)
 		npc:ScaleTo(1.12)
 		npc:PivotTo(npc:GetPivot() + Vector3.new(0, 0.37, 0))
-		-- nod at players who have rewards waiting
+		-- wave at players who walk up
 		local cool = 0
 		while npc.Parent do
 			task.wait(0.5)
@@ -166,7 +164,7 @@ function Mechanic.Start()
 				for _, p in ipairs(Players:GetPlayers()) do
 					local hrp = S.Data.GetRoot(p)
 					if hrp and (hrp.Position - spotPos).Magnitude < 22 then
-						if anims.wave then
+						if anims and anims.wave then
 							anims.wave:Play()
 						end
 						cool = 9
