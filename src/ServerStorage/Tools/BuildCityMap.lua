@@ -8,6 +8,7 @@ local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local BaseLayout = require(Shared:WaitForChild("BaseLayout"))
 local TrafficMath = require(Shared:WaitForChild("TrafficMath"))
+local ModelSizes = require(Shared:WaitForChild("ModelSizes"))
 local VehicleFactory = require(Shared:WaitForChild("VehicleFactory"))
 local Prefabs = require(script.Parent:WaitForChild("MapPrefabs"))
 local GarageKit = require(Shared:WaitForChild("GarageKit"))
@@ -83,6 +84,94 @@ end
 local WHITE = C(240, 240, 245)
 local YELLOW = C(255, 205, 40)
 
+-- v23 skyline: background buildings outside the perimeter wall, two depth rows along the whole map (plaza included).
+-- Blender models Skyline_* (ModelService installs them by their ModelIds name); a missing one falls back to a plain
+-- box tower. Pure scenery: no collision/touch/query, no shadows, tagged "Skyline" with attribute Row (the client
+-- drops row 2 on LOW graphics, see Perf).
+local SKYLINE = { "Skyline_Office", "Skyline_Apartment", "Skyline_Deco", "Skyline_Parking", "Skyline_Tank", "Skyline_Billboard",
+	"Skyline_Stepped", "Skyline_Warehouse", "Skyline_Hotel", "Skyline_Radio" }
+local SKY_ROWS = { { x1 = 252, x2 = 282, scale = { 0.9, 1.1 }, gap = { 10, 22 } }, { x1 = 340, x2 = 392, scale = { 1.25, 1.55 }, gap = { 18, 34 } } }
+local function skyFallback(parent, cf, row, rng, pal)
+	local m = Instance.new("Model")
+	m.Name = "Skyline_Box"
+	local w, d = rr(rng, 24, 40), rr(rng, 24, 36)
+	local h = (row == 1) and rr(rng, 40, 90) or rr(rng, 70, 140)
+	Part(m, "Backdrop", Vector3.new(d, h, w), cf * CFrame.new(0, h / 2, 0), pick(rng, pal.buildings), M.SmoothPlastic, { cast = false })
+	for y = 8, h - 6, row == 1 and 8 or 12 do
+		Part(m, "BackdropWindows", Vector3.new(d + 0.2, 2.6, w * 0.8), cf * CFrame.new(0, y, 0), C(70, 96, 120), M.Glass, { cast = false, collide = false, t = 0.1 })
+	end
+	m.Parent = parent
+	return m, math.max(w, d)
+end
+local function buildSkyline(ctx)
+	local f = ctx.f
+	local rng = TrafficMath.NewRng(MapConfig.Seed + 4242) -- own stream: the rest of the World section stays as it was
+	local zS, zE = MapConfig.StartZ, MapConfig.EndZ
+	-- keep the road corridors free (traffic loops run on past the tunnel mouths), and the industrial cranes
+	-- outside the wall (buildZone: x -(HW + 40) at mid - 60, x +(HW + 40) at mid + 60; counterweight reaches 11 out)
+	local cranes = { [-1] = {}, [1] = {} }
+	for _, zid in ipairs(MapConfig.ZoneOrder) do
+		local zone = MapConfig.Zones[zid]
+		if zone.style == "industrial" then
+			local mid = (zone.zMin + zone.zMax) / 2
+			table.insert(cranes[-1], mid - 60)
+			table.insert(cranes[1], mid + 60)
+		end
+	end
+	local function blocked(sx, row, z1, z2)
+		for _, r in ipairs(MapConfig.Roads) do
+			if z2 > r.z - r.width / 2 - 6 and z1 < r.z + r.width / 2 + 6 then
+				return true
+			end
+		end
+		if row == 1 then
+			for _, cz in ipairs(cranes[sx]) do
+				if z2 > cz - 8 and z1 < cz + 8 then
+					return true
+				end
+			end
+		end
+		return false
+	end
+	local plazaPal = { buildings = { C(120, 130, 150), C(150, 160, 180), C(170, 160, 150) } }
+	for _, sx in ipairs({ -1, 1 }) do
+		for row, R in ipairs(SKY_ROWS) do
+			local z = zS - 60 + rr(rng, 0, 30)
+			while z < zE + 60 do
+				local name = pick(rng, SKYLINE)
+				local scale = rr(rng, R.scale[1], R.scale[2])
+				local info = ModelSizes[name]
+				local foot = ((info and (info.w and math.max(info.w, info.d or 0) or info.size)) or 36) * scale
+				foot = math.min(foot, 60)
+				local zc = z + foot / 2
+				local x = sx * rr(rng, R.x1, R.x2)
+				local yaw = math.floor(rng() * 4) * math.pi / 2
+				local cf = CFrame.new(x, -1.3, zc) * CFrame.Angles(0, yaw, 0)
+				if blocked(sx, row, zc - foot / 2, zc + foot / 2) then
+					z = z + 12 -- slide on until the street is passed
+				else
+					local m = Prefabs.FromTemplate(name, f.Buildings, cf, { scale = scale })
+					if not m then
+						local zone = MapConfig.ZoneAt(zc)
+						local pal = (zone == "plaza") and plazaPal or MapConfig.Zones[zone].palette
+						local w
+						m, w = skyFallback(f.Buildings, cf, row, rng, pal)
+						foot = w
+					end
+					m:SetAttribute("Row", row)
+					CollectionService:AddTag(m, "Skyline")
+					for _, d in ipairs(m:GetDescendants()) do
+						if d:IsA("BasePart") then
+							d.CanCollide, d.CanTouch, d.CanQuery, d.CastShadow = false, false, false, false
+						end
+					end
+					z = zc + foot / 2 + rr(rng, R.gap[1], R.gap[2])
+				end
+			end
+		end
+	end
+end
+
 local function buildWorld(ctx)
 	local f = ctx.f
 	local zS, zE = MapConfig.StartZ, MapConfig.EndZ
@@ -138,20 +227,8 @@ local function buildWorld(ctx)
 			Part(f.Buildings, "TunnelBlocker", Vector3.new(2, 16, W), CFrame.new(sx * (HW - 1), 8, z0), C(255, 255, 255), M.SmoothPlastic, { t = 1, cast = false })
 		end
 		seg(cursor, zE + 2)
-
-		local z = zS
-		while z < zE do
-			local zone = MapConfig.ZoneAt(z)
-			local pal = (zone == "plaza") and { buildings = { C(120, 130, 150), C(150, 160, 180) }, accent = C(80, 200, 255) } or MapConfig.Zones[zone].palette
-			local w, d, h = rr(ctx.rng, 24, 44), rr(ctx.rng, 24, 40), rr(ctx.rng, 40, 100)
-			local cx = sx * (HW + 92 + rr(ctx.rng, 0, 40))
-			local tower = Part(f.Buildings, "Backdrop", Vector3.new(d, h, w), CFrame.new(cx, h / 2 - 1, z), pick(ctx.rng, pal.buildings), M.SmoothPlastic, { cast = false })
-			for y = 8, h - 6, 7 do
-				Part(f.Buildings, "BackdropWindows", Vector3.new(d + 0.2, 2.6, w * 0.8), CFrame.new(cx, y, z), C(70, 96, 120), M.Glass, { cast = false, collide = false, t = 0.1 })
-			end
-			z = z + 58 + rr(ctx.rng, 0, 14)
-		end
 	end
+	buildSkyline(ctx)
 	local crng = ctx.rng
 	for _ = 1, math.floor(44 * MapConfig.DecorationDensity + 10) do
 		Prefabs.Cloud(f.StreetProps, Vector3.new(rr(crng, -520, 520), rr(crng, 150, 230), rr(crng, zS - 200, zE + 200)), crng)
@@ -299,19 +376,24 @@ local function buildBase(ctx, i)
 end
 
 local function nearBaseRow(z, pad)
-	for i = 1, #MapConfig.BaseCenters, 2 do
-		if math.abs(z - MapConfig.BaseCenters[i].z) < pad then
+	for _, rz in ipairs(MapConfig.BaseRowsZ) do
+		if math.abs(z - rz) < pad then
 			return true
 		end
 	end
 	return false
 end
 
+-- a hub stand's frame: on the hub paving, local -Z (the front) towards the hub centre
+local function hubCF(cfg, dy)
+	return CFrame.new(cfg.x, MapConfig.Hub.top + (dy or 0), cfg.z) * CFrame.Angles(0, cfg.yaw, 0)
+end
+
 -- Pit Stop: upgrade shop with a mechanic NPC (NPC itself is spawned by ShopService at runtime)
 local function buildShop(ctx)
 	local f = ctx.f
 	local cfg = MapConfig.Shop
-	local cf = CFrame.new(cfg.x, 0.2, cfg.z) * CFrame.Angles(0, cfg.yaw, 0) -- local -Z = front
+	local cf = hubCF(cfg) -- local -Z = front (towards the hub centre)
 	local m = Instance.new("Model")
 	m.Name = "PitStopShop"
 	local function mk(name, size, off, color, mat, o)
@@ -321,7 +403,7 @@ local function buildShop(ctx)
 	local W, D, H = 12, 8, 8.5
 	local G = 0.5 -- top of the slab
 	local RED, WHITE, DARK2, WOOD = C(214, 52, 44), C(246, 244, 238), C(36, 40, 48), C(150, 104, 62)
-	mk("Slab", Vector3.new(18, 0.6, 16), Vector3.new(0, 0.2, -2), C(206, 204, 198), M.SmoothPlastic)
+	mk("Slab", Vector3.new(17, 0.6, 14), Vector3.new(0, 0.2, -1.5), C(206, 204, 198), M.SmoothPlastic)
 	mk("BackWall", Vector3.new(W, H, 0.6), Vector3.new(0, G + H / 2, D / 2 - 0.3), WHITE)
 	for _, sx in ipairs({ -1, 1 }) do
 		mk("SideWall", Vector3.new(0.6, H, D - 0.6), Vector3.new(sx * (W / 2 - 0.3), G + H / 2, -0.3), WHITE)
@@ -340,6 +422,7 @@ local function buildShop(ctx)
 	-- sign on the roof
 	local sign = mk("ShopSign", Vector3.new(W - 1, 2.6, 0.5), Vector3.new(0, G + H + 1.9, -D / 2 + 0.6), DARK2)
 	Label(sign, Enum.NormalId.Front, "PIT STOP", C(255, 210, 63))
+	Label(sign, Enum.NormalId.Back, "PIT STOP", C(255, 210, 63)) -- readable from the lanes too
 	-- back shelves with parts for sale
 	for k, y in ipairs({ 3.2, 5.6 }) do
 		mk("Shelf", Vector3.new(W - 2.4, 0.25, 1.2), Vector3.new(0, G + y, D / 2 - 1.2), WOOD, M.Wood)
@@ -371,14 +454,14 @@ end
 local function buildDonateStall(ctx)
 	local f = ctx.f
 	local cfg = MapConfig.DonateStall
-	local cf = CFrame.new(cfg.x, 0.2, cfg.z) * CFrame.Angles(0, cfg.yaw, 0)
+	local cf = hubCF(cfg)
 	local m = Instance.new("Model")
 	m.Name = "MagnateStall"
 	local function mk(name, size, off, color, mat, o)
 		return Part(m, name, size, cf * CFrame.new(off), color, mat, o)
 	end
 	local GOLD, DEEP, CREAM, WOOD = C(232, 178, 50), C(28, 32, 44), C(250, 240, 214), C(110, 70, 40)
-	mk("Rug", Vector3.new(18, 0.12, 14), Vector3.new(0, 0.15, -2), C(150, 30, 40), M.Fabric, { collide = false })
+	mk("Rug", Vector3.new(17, 0.12, 12), Vector3.new(0, 0.2, -1.5), C(150, 30, 40), M.Fabric, { collide = false })
 	mk("Counter", Vector3.new(14, 4, 3.4), Vector3.new(0, 2.2, -4), WOOD, M.Wood)
 	mk("CounterTop", Vector3.new(14.6, 0.5, 4), Vector3.new(0, 4.4, -4), GOLD, M.Metal, { refl = 0.25 })
 	mk("BackPanel", Vector3.new(14, 11, 1), Vector3.new(0, 5.7, 4), DEEP, M.SmoothPlastic)
@@ -392,6 +475,7 @@ local function buildDonateStall(ctx)
 	end
 	local sign = mk("StallSign", Vector3.new(16.4, 3, 0.8), Vector3.new(0, 14.9, 4), DEEP, M.SmoothPlastic)
 	Label(sign, Enum.NormalId.Front, "GOLDEN MAGNATE", GOLD)
+	Label(sign, Enum.NormalId.Back, "GOLDEN MAGNATE", GOLD)
 	-- treasure: coin piles and gold bars
 	for k = 0, 4 do
 		local c = mk("Coins", Vector3.new(0.6, 1.4, 1.4), Vector3.new(-5 + k * 2.4, 5, -4), GOLD, M.Metal, { shape = CYL, refl = 0.3, collide = false })
@@ -414,6 +498,300 @@ local function buildDonateStall(ctx)
 end
 
 
+-- v23 hub stands --------------------------------------------------------------------------------------------------
+
+-- leaderboard: one screen between two pillars and the top-3 podium 11 studs in front of it (towards the hub centre).
+-- Local +Z faces the centre here (the screen is drawn on its Back face).
+local function buildLeaderboard(ctx)
+	local f = ctx.f
+	local lb = MapConfig.Leaderboard
+	local lbcf = hubCF(lb) * CFrame.Angles(0, math.pi, 0)
+	local lbModel = Instance.new("Model")
+	lbModel.Name = "LeaderboardStand"
+	local function lp(name, size, off, color, mat, o)
+		return Part(lbModel, name, size, lbcf * CFrame.new(off), color, mat, o)
+	end
+	local LBGOLD, LBDARK = C(232, 178, 50), C(30, 32, 40)
+	for _, s in ipairs({ -1, 1 }) do
+		lp("LBPillar", Vector3.new(2.2, 20.5, 2.2), Vector3.new(s * 12, 10.25, 0), LBDARK, M.Metal) -- flanks the screen (0.1 overlap)
+		lp("LBPillarCap", Vector3.new(2.8, 0.6, 2.8), Vector3.new(s * 12, 20.8, 0), LBGOLD, M.Metal)
+	end
+	lp("LBFrame", Vector3.new(23, 12, 0.4), Vector3.new(0, 13, -0.4), LBGOLD, M.Metal) -- gold rim behind the screen
+	local screen = lp("LeaderboardScreen", Vector3.new(22, 11, 0.6), Vector3.new(0, 13, 0), C(12, 14, 20), M.SmoothPlastic)
+	screen:SetAttribute("Facing", "Back")
+	CollectionService:AddTag(screen, "LeaderboardScreen")
+	lp("PodiumBase", Vector3.new(18, 0.6, 7), Vector3.new(0, 0.3, 11), C(236, 232, 224), M.Marble)
+	for i, st in ipairs({ { 0, 4.5, LBGOLD }, { -5.5, 3, C(206, 210, 218) }, { 5.5, 2, C(200, 126, 72) } }) do
+		local step = lp("PodiumStep" .. i, Vector3.new(5, st[2], 5), Vector3.new(st[1], 0.6 + st[2] / 2, 11), st[3], M.SmoothPlastic)
+		Label(step, Enum.NormalId.Back, tostring(i), C(255, 255, 255))
+		local spot = lp("StatueSpot" .. i, Vector3.new(2, 0.2, 2), Vector3.new(st[1], 0.7 + st[2], 11), C(255, 255, 255), M.SmoothPlastic, { t = 1, collide = false })
+		spot:SetAttribute("Rank", i)
+		spot:SetAttribute("Yaw", lb.yaw) -- statues face the hub centre
+	end
+	lbModel.Parent = f.StreetProps
+end
+
+-- Golden Magnat GT (game pass "golden_car") on a gold turntable: spotlight, name plate and Buy prompt towards the centre
+local function buildMagnatPodium(ctx)
+	local f = ctx.f
+	local cfg = MapConfig.MagnatPodium
+	local x, z, top = cfg.x, cfg.z, MapConfig.Hub.top
+	local front = Vector3.new(-math.sin(cfg.yaw), 0, -math.cos(cfg.yaw)) -- towards the hub centre
+	local def = CarConfig.ById.golden_magnat_gt
+	local SCALE = 0.85 -- the Blender stand is 24 wide: a bit smaller so it fits the ring
+	local standTop = top + 1.37 * SCALE -- turntable top of the Blender CarStand (pivot + 1.37)
+	local stand = Prefabs.FromTemplate("CarStand", f.StreetProps, CFrame.new(x, top, z) * CFrame.Angles(0, cfg.yaw - math.pi, 0),
+		{ scale = SCALE, colors = { Accent = C(232, 178, 50), Metal = C(60, 52, 40) } })
+	if not stand then
+		Part(f.StreetProps, "Podium", Vector3.new(1.2, 17, 17), CFrame.new(x, top + 0.6, z) * UPRIGHT, C(40, 36, 30), M.Metal, { shape = CYL })
+		Part(f.StreetProps, "PodiumRim", Vector3.new(1.0, 17.6, 17.6), CFrame.new(x, top + 0.5, z) * UPRIGHT, C(232, 178, 50), M.Metal, { shape = CYL, collide = false })
+		standTop = top + 1.2
+	end
+	if def then
+		local car = VehicleFactory.BuildCar(def)
+		car.Name = "MagnatShowcar"
+		car:PivotTo(CFrame.new(x, standTop + 3, z) * CFrame.Angles(0, cfg.yaw + math.pi / 2 + 0.5, 0))
+		local ccf, csize = car:GetBoundingBox()
+		car:PivotTo(car:GetPivot() - Vector3.new(0, (ccf.Position.Y - csize.Y / 2) - (standTop + 0.02), 0))
+		for _, d in ipairs(car:GetDescendants()) do
+			if d:IsA("BasePart") then
+				d.Anchored = true
+				d.CanCollide = false
+			end
+		end
+		car.Parent = f.StreetProps
+	end
+	local lamp = Part(f.StreetProps, "MagnatLight", Vector3.new(1, 1, 1), CFrame.new(x, 15, z), C(0, 0, 0), M.SmoothPlastic, { collide = false, t = 1 })
+	local spot = Instance.new("SpotLight")
+	spot.Face = Enum.NormalId.Bottom
+	spot.Angle = 60
+	spot.Range = 20
+	spot.Brightness = 3
+	spot.Color = C(255, 220, 140)
+	spot.Parent = lamp
+	-- plate in front of the stand (clear of the turntable), facing the hub centre
+	local pp0 = Vector3.new(x, 0, z) + front * 11.8
+	local pcf = CFrame.new(pp0.X, top + 3.2, pp0.Z) * CFrame.Angles(0, cfg.yaw, 0)
+	local plate = Part(f.StreetProps, "MagnatPlate", Vector3.new(11.8, 3.2, 0.3), pcf, C(26, 22, 16), M.SmoothPlastic, { collide = false })
+	for _, sx in ipairs({ -1, 1 }) do
+		Part(f.StreetProps, "MagnatPlatePost", Vector3.new(0.6, 6, 0.6), pcf * CFrame.new(sx * 6.2, -0.4, 0), C(255, 200, 80), M.Metal)
+	end
+	Label(plate, Enum.NormalId.Front, "GOLDEN MAGNAT GT", C(255, 210, 90))
+	Label(plate, Enum.NormalId.Back, "GOLDEN MAGNAT GT", C(255, 210, 90))
+	-- walk-up prompt (client: UIExtra opens the game-pass purchase)
+	local pq = pp0 + front * 1.5
+	local pp = Part(f.StreetProps, "MagnatPrompt", Vector3.new(2, 2, 2), CFrame.new(pq.X, top + 2.8, pq.Z), C(0, 0, 0), M.SmoothPlastic, { collide = false, t = 1 })
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Buy (game pass)"
+	prompt.ObjectText = "Golden Magnat GT"
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 14
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = pp
+	Prefabs.Count = Prefabs.Count + 1
+end
+
+-- Big Tony's Tuning: a small open tuning bay (lift, tool chest, tyre rack, workbench) under a sign. Tony himself is
+-- spawned by MechanicService on TonySpot (its CFrame looks out at the visitors); TonyPrompt carries the talk prompt.
+local function buildTonyGarage(ctx)
+	local f = ctx.f
+	local cfg = MapConfig.Tony
+	local cf = hubCF(cfg) -- local -Z = the open front
+	local m = Instance.new("Model")
+	m.Name = "TonyGarage"
+	local function mk(name, size, off, color, mat, o)
+		return Part(m, name, size, cf * CFrame.new(off), color, mat, o)
+	end
+	local NAVY, STEEL, RED, YEL, FLOOR, WALL = C(30, 36, 58), C(56, 60, 70), C(200, 30, 36), C(255, 196, 40), C(92, 96, 104), C(236, 232, 224)
+	local W, D, H = 18, 14, 10 -- bay x -9..9, z -7..7, walls up to H
+	mk("BayFloor", Vector3.new(W, 0.5, D), Vector3.new(0, 0.15, 0), FLOOR, M.SmoothPlastic)
+	-- hazard band on the floor's front SIDE face (never on a top face, so nothing shimmers)
+	for k = 0, 8 do
+		mk("BayHazard", Vector3.new(W / 9, 0.3, 0.12), Vector3.new(-W / 2 + (k + 0.5) * W / 9, 0.2, -D / 2 - 0.07), (k % 2 == 0) and YEL or C(28, 28, 30), M.SmoothPlastic, { collide = false, cast = false })
+	end
+	mk("BackWall", Vector3.new(W, H, 0.8), Vector3.new(0, 0.4 + H / 2, D / 2 - 0.4), WALL)
+	for _, sx in ipairs({ -1, 1 }) do
+		mk("SideWall", Vector3.new(0.8, H, D - 4.8), Vector3.new(sx * (W / 2 - 0.4), 0.4 + H / 2, 1.6), WALL) -- z -1.6..6.2: open front corners
+		mk("FrontPost", Vector3.new(0.9, H, 0.9), Vector3.new(sx * (W / 2 - 0.45), 0.4 + H / 2, -D / 2 + 0.6), NAVY, M.Metal)
+		mk("WallStripe", Vector3.new(0.9, 0.8, D - 4.7), Vector3.new(sx * (W / 2 - 0.4), 3.2, 1.6), RED, M.SmoothPlastic, { collide = false })
+	end
+	mk("Roof", Vector3.new(W + 1.4, 0.6, D + 1), Vector3.new(0, 0.4 + H + 0.3, -0.3), NAVY)
+	local sign = mk("TonySign", Vector3.new(W - 1, 2.6, 0.5), Vector3.new(0, 0.4 + H + 1.95, -D / 2 + 0.2), NAVY)
+	Label(sign, Enum.NormalId.Front, "BIG TONY'S TUNING", YEL)
+	Label(sign, Enum.NormalId.Back, "BIG TONY'S TUNING", YEL)
+	mk("SignTrim", Vector3.new(W - 0.6, 0.3, 0.7), Vector3.new(0, 0.4 + H + 0.75, -D / 2 + 0.2), YEL, M.SmoothPlastic, { collide = false })
+	-- two-post car lift on the left side
+	local LX = -4.2
+	for _, dx in ipairs({ -3.4, 3.4 }) do
+		mk("LiftPost", Vector3.new(0.9, 8.6, 0.9), Vector3.new(LX + dx, 0.4 + 4.3, 1.5), RED, M.Metal)
+		mk("LiftArm", Vector3.new(0.4, 0.4, 4.4), Vector3.new(LX + dx * 0.72, 2.6, -0.4), STEEL, M.Metal, { collide = false })
+	end
+	mk("LiftBeam", Vector3.new(7.7, 0.6, 0.7), Vector3.new(LX, 0.4 + 8.9, 1.5), RED, M.Metal)
+	mk("LiftPad", Vector3.new(6, 0.12, 8), Vector3.new(LX, 0.47, -0.6), C(70, 74, 82), M.DiamondPlate, { collide = false, cast = false })
+	-- back wall kit (Blender garage props when imported: their front looks along local +X, so turn them to -Z)
+	local TURN = CFrame.Angles(0, math.pi / 2, 0)
+	local backZ = D / 2 - 0.8
+	local function kit(name, x, depth, fallback)
+		if not Prefabs.FromTemplate(name, m, cf * CFrame.new(x, 0.4, backZ - depth) * TURN) then
+			fallback(x)
+		end
+	end
+	kit("G_ToolCabinet", 6.3, 1.1, function(x)
+		mk("ToolChest", Vector3.new(3, 4, 2), Vector3.new(x, 0.4 + 2, backZ - 1), RED, M.SmoothPlastic)
+		for k = 0, 3 do
+			mk("ChestHandle", Vector3.new(2, 0.15, 0.2), Vector3.new(x, 1.2 + k * 0.9, backZ - 2.07), C(240, 190, 60), M.Metal, { collide = false })
+		end
+	end)
+	kit("G_TireRack", 1.0, 1.4, function(x)
+		mk("RackFrame", Vector3.new(5, 0.3, 2), Vector3.new(x, 0.4 + 3.4, backZ - 1), STEEL, M.Metal)
+		for k = -1, 1 do
+			Part(m, "RackTire", Vector3.new(1.1, 3, 3), cf * CFrame.new(x + k * 1.5, 0.4 + 1.6, backZ - 1) * CFrame.Angles(0, math.pi / 2, 0), C(32, 32, 36), M.SmoothPlastic, { shape = CYL })
+		end
+	end)
+	mk("Jack", Vector3.new(2.4, 0.5, 1), Vector3.new(6.2, 0.65, -3.2), C(220, 222, 228), M.Metal, { refl = 0.3, collide = false })
+	Prefabs.TireStack(m, cf:PointToWorldSpace(Vector3.new(W / 2 + 1.8, 0, -4.5)), ctx.rng)
+	local bulb = mk("BayLight", Vector3.new(0.4, 0.4, 0.4), Vector3.new(0, H - 0.4, 0.5), C(255, 240, 210), M.SmoothPlastic, { collide = false, t = 1 })
+	local l = Instance.new("PointLight")
+	l.Range, l.Brightness, l.Color = 16, 1.3, C(255, 232, 196)
+	l.Parent = bulb
+	-- Tony stands in the bay mouth, right of the lift, looking out at the visitors
+	local spotCF = cf * CFrame.new(2.8, 0.5, -2.2)
+	local spot = Part(m, "TonySpot", Vector3.new(2, 0.2, 2), spotCF, WALL, M.SmoothPlastic, { t = 1, collide = false })
+	spot:SetAttribute("Yaw", cfg.yaw)
+	local tp = mk("TonyPrompt", Vector3.new(6, 6, 4), Vector3.new(2.8, 3.5, -6.2), WALL, M.SmoothPlastic, { t = 1, collide = false })
+	CollectionService:AddTag(tp, "TonyPrompt")
+	m.Parent = f.StreetProps
+end
+
+-- Job Board: lit board with five job cards on two posts; the dispatcher NPC (ContractService) stands on JobSpot
+local function buildJobBoard(ctx)
+	local f = ctx.f
+	local cfg = MapConfig.JobBoard
+	local bcf = hubCF(cfg) -- front faces the hub centre (-Z)
+	local st = Instance.new("Model")
+	st.Name = "JobBoard"
+	local function sp(name, size, off, color, mat, o)
+		return Part(st, name, size, bcf * CFrame.new(off), color, mat, o)
+	end
+	local STEEL, WOODD, CREAM2, ORANGE = C(40, 44, 52), C(96, 62, 36), C(250, 240, 214), C(240, 120, 30)
+	sp("StandBase", Vector3.new(27.4, 0.5, 7.5), Vector3.new(-2, 0.25, 0.25), C(196, 194, 188), M.SmoothPlastic)
+	for _, x in ipairs({ -11, 11 }) do
+		sp("StandPost", Vector3.new(1.2, 13.5, 1.2), Vector3.new(x, 0.5 + 6.75, 1), STEEL, M.Metal)
+	end
+	local panel = sp("ContractBoard", Vector3.new(21, 9.5, 0.8), Vector3.new(0, 7.3, 1), WOODD, M.Wood)
+	CollectionService:AddTag(panel, "ContractBoard")
+	local head = sp("BoardHeader", Vector3.new(24, 2.6, 1.4), Vector3.new(0, 13.4, 1), ORANGE, M.SmoothPlastic)
+	Label(head, Enum.NormalId.Front, "JOB BOARD", C(255, 255, 255))
+	Label(head, Enum.NormalId.Back, "JOB BOARD", C(255, 255, 255))
+	sp("HeaderTrim", Vector3.new(24.4, 0.35, 1.6), Vector3.new(0, 12, 1), STEEL, M.Metal)
+	for i, x in ipairs({ -8.4, -4.2, 0, 4.2, 8.4 }) do -- one card per job (Contracts.Active = 5)
+		local card = sp("ContractCard" .. i, Vector3.new(3.8, 7.4, 0.2), Vector3.new(x, 7.1, 0.45), CREAM2, M.SmoothPlastic)
+		card:SetAttribute("Index", i)
+		CollectionService:AddTag(card, "ContractCard")
+		sp("CardPin", Vector3.new(0.35, 0.5, 0.5), Vector3.new(x, 10.5, 0.2), C(214, 52, 44), M.SmoothPlastic, { shape = CYL, collide = false })
+	end
+	for _, x in ipairs({ -6, 6 }) do -- two arm lamps light the cards
+		sp("LampArm", Vector3.new(0.3, 0.3, 2.6), Vector3.new(x, 12, -0.6), STEEL, M.Metal, { collide = false })
+		local shade = sp("LampShade", Vector3.new(1.4, 0.6, 1), Vector3.new(x, 11.7, -1.9), STEEL, M.Metal, { collide = false })
+		local sl = Instance.new("SpotLight")
+		sl.Face = Enum.NormalId.Bottom
+		sl.Angle = 80
+		sl.Range = 14
+		sl.Brightness = 2.2
+		sl.Color = C(255, 236, 200)
+		sl.Parent = shade
+	end
+	-- dispatcher's corner beside the board: a little desk with a clipboard
+	local JX = -13.5
+	sp("JobDesk", Vector3.new(3.2, 3, 1.8), Vector3.new(JX, 0.5 + 1.5, 2.2), C(60, 110, 160), M.SmoothPlastic)
+	sp("DeskTop", Vector3.new(3.6, 0.25, 2.2), Vector3.new(JX, 0.5 + 3.12, 2.2), WOODD, M.Wood)
+	local spot = Part(st, "JobSpot", Vector3.new(2, 0.2, 2), bcf * CFrame.new(JX, 0.6, -0.6), CREAM2, M.SmoothPlastic, { t = 1, collide = false })
+	spot:SetAttribute("Yaw", cfg.yaw)
+	local jp = sp("JobPrompt", Vector3.new(8, 6, 3), Vector3.new(-3, 3.5, -3.5), CREAM2, M.SmoothPlastic, { t = 1, collide = false })
+	CollectionService:AddTag(jp, "JobPrompt")
+	st.Parent = f.StreetProps
+end
+
+-- facing helpers (yaw for CFrame.Angles(0, yaw, 0)): benches are sat looking along local +Z, stands look along -Z
+local function yawLookingPlusZ(dx, dz)
+	return math.atan2(dx, dz)
+end
+
+-- the round hub: layered paving discs, a low ring curb, the fountain island, the six stands, decor between them
+local function buildHub(ctx, deco)
+	local f = ctx.f
+	local hub = MapConfig.Hub
+	local HX, HZ, R = hub.x, hub.z, hub.r
+	local function disc(name, r, top, color, mat)
+		-- cylinders lie along X: UPRIGHT stands them up; 0.5 thick, top face at `top`
+		return Part(f.Ground, name, Vector3.new(0.5, 2 * r, 2 * r), CFrame.new(HX, top - 0.25, HZ) * UPRIGHT, color, mat, { shape = CYL, cast = false })
+	end
+	-- every layer's top is >= 0.1 above the one below (promenade paving top 0.2): no shared planes, no flicker
+	disc("HubBorder", R, 0.32, C(118, 114, 110), M.Slate)
+	disc("HubPaving", R - 1.5, hub.top, C(226, 220, 206), M.Pavement)
+	disc("HubBrickRing", 30.5, hub.top + 0.1, C(172, 92, 72), M.Brick) -- inside every stand
+	disc("HubInner", 29, hub.top + 0.2, C(214, 208, 196), M.Pavement)
+	disc("HubInnerRing", hub.island + 2.5, hub.top + 0.3, C(150, 146, 140), M.Slate)
+	-- fountain island: raised slate drum with a grass top
+	local IT = hub.top + 1.3 -- island top
+	Part(f.Ground, "IslandDrum", Vector3.new(1.2, 2 * hub.island, 2 * hub.island), CFrame.new(HX, IT - 0.6, HZ) * UPRIGHT, C(120, 116, 112), M.Slate, { shape = CYL })
+	Part(f.Ground, "IslandGrass", Vector3.new(0.3, 2 * hub.island - 1.2, 2 * hub.island - 1.2), CFrame.new(HX, IT - 0.05, HZ) * UPRIGHT, C(96, 176, 84), M.Grass, { shape = CYL, cast = false })
+	if not Prefabs.FromTemplate("TrophyFountain", f.Buildings, CFrame.new(HX, IT, HZ)) then
+		local fc = CFrame.new(HX, IT, HZ)
+		Part(f.Buildings, "FountainRim", Vector3.new(1.6, 18, 18), fc * CFrame.new(0, 0.8, 0) * UPRIGHT, C(228, 222, 212), M.Marble, { shape = CYL })
+		Part(f.Buildings, "FountainWater", Vector3.new(0.3, 16.4, 16.4), fc * CFrame.new(0, 1.55, 0) * UPRIGHT, C(110, 196, 240), M.Glass, { shape = CYL, t = 0.25, collide = false, cast = false })
+		Part(f.Buildings, "FountainTier", Vector3.new(4, 6, 6), fc * CFrame.new(0, 3, 0) * UPRIGHT, C(240, 236, 228), M.Marble, { shape = CYL })
+		Part(f.Buildings, "FountainBowl", Vector3.new(0.8, 9, 9), fc * CFrame.new(0, 5.2, 0) * UPRIGHT, C(232, 178, 50), M.Metal, { shape = CYL })
+		Part(f.Buildings, "FountainTrophy", Vector3.new(1.6, 4, 1.6), fc * CFrame.new(0, 7.6, 0), C(232, 178, 50), M.Metal, { refl = 0.3 })
+	end
+	-- low ring curb along the edge, open at the four axis passages (decor only: you can walk across it)
+	local N = 48
+	for k = 0, N - 1 do
+		local deg = (k + 0.5) * 360 / N
+		local off = deg % 90
+		if off > 12 and off < 78 then
+			local a = math.rad(deg)
+			Part(f.Ground, "HubCurb", Vector3.new(1, 0.35, 2 * math.pi * (R - 0.6) / N + 0.1),
+				CFrame.new(HX + (R - 0.6) * math.cos(a), 0.32 + 0.17, HZ + (R - 0.6) * math.sin(a)) * CFrame.Angles(0, -a, 0),
+				C(232, 226, 214), M.Slate, { collide = false, cast = false })
+		end
+	end
+
+	buildShop(ctx)
+	buildDonateStall(ctx)
+	buildLeaderboard(ctx)
+	buildMagnatPodium(ctx)
+	buildTonyGarage(ctx)
+	buildJobBoard(ctx)
+
+	-- lamps flank each passage, arm reaching inwards
+	for _, axis in ipairs({ 0, 90, 180, 270 }) do
+		for _, d in ipairs({ -9, 9 }) do
+			local a = math.rad(axis + d)
+			deco.lamp(HX + (R - 1.6) * math.cos(a), HZ + (R - 1.6) * math.sin(a), math.pi - a, hub.top)
+		end
+	end
+	-- benches round the fountain, looking out at the stands
+	for k = 0, 3 do
+		local a = math.rad(45 + k * 90)
+		deco.bench(HX + 18 * math.cos(a), HZ + 18 * math.sin(a), yawLookingPlusZ(math.cos(a), math.sin(a)), hub.top + 0.2)
+	end
+	-- the two free slots: a tree bed with a bench looking at the fountain
+	for _, g in ipairs(MapConfig.HubGardens) do
+		local a = math.rad(g.angle)
+		local c = Vector3.new(g.x, 0, g.z)
+		Part(f.StreetProps, "TreeBed", Vector3.new(1.2, 11, 11), CFrame.new(c.X, hub.top + 0.5, c.Z) * UPRIGHT, C(214, 206, 192), M.Slate, { shape = CYL })
+		Part(f.StreetProps, "TreeBedSoil", Vector3.new(0.3, 9.8, 9.8), CFrame.new(c.X, hub.top + 1.05, c.Z) * UPRIGHT, C(96, 176, 84), M.Grass, { shape = CYL, collide = false, cast = false })
+		Prefabs.Tree(f.StreetProps, Vector3.new(c.X, hub.top + 1.1, c.Z), ctx.rng, "tree")
+		Prefabs.Bush(f.StreetProps, c + Vector3.new(0, hub.top + 1.1, 0) + Vector3.new(-math.sin(a), 0, math.cos(a)) * 3, ctx.rng)
+		Prefabs.Bush(f.StreetProps, c + Vector3.new(0, hub.top + 1.1, 0) - Vector3.new(-math.sin(a), 0, math.cos(a)) * 3, ctx.rng)
+		local b = c - Vector3.new(math.cos(a), 0, math.sin(a)) * 7.5
+		deco.bench(b.X, b.Z, yawLookingPlusZ(-math.cos(a), -math.sin(a)), hub.top)
+	end
+	-- welcome sign over the passage towards the arch
+	Prefabs.DistrictSign(f.StreetProps, Vector3.new(HX, 0.2, HZ + R + 3), "CAR HUNTERS PLAZA", C(214, 52, 44), 0)
+end
+
 local function buildPlaza(ctx)
 	local f = ctx.f
 	local P = MapConfig.Plaza
@@ -421,6 +799,8 @@ local function buildPlaza(ctx)
 	local zS, zE = MapConfig.StartZ, MapConfig.EntryZ
 	local len = zE - zS
 	local zm = (zS + zE) / 2
+	local hub = MapConfig.Hub
+	local LX = MapConfig.PlazaLaneX
 	Part(f.Ground, "PlazaGround", Vector3.new(2 * HW, 2, len), CFrame.new(0, -1, zm), P.ground, M.Grass)
 	-- safe-zone floor (v11): light warm stone pavers. Joints are real 0.25-stud gaps over a darker base
 	-- (no coplanar overlays -> no flicker), a slate border along the curbs.
@@ -433,11 +813,14 @@ local function buildPlaza(ctx)
 	Part(f.Ground, "PavingBase", Vector3.new(2 * PW, 0.3, pz1 - pz0), CFrame.new(0, -0.05, (pz0 + pz1) / 2), JOINT, M.Slate, { cast = false })
 	for i = 0, nx - 1 do
 		for j = 0, nz - 1 do
-			local edge = i == 0 or i == nx - 1
-			local col = edge and BORDER or (((i + j) % 2 == 0) and STONE1 or STONE2)
-			local gap = edge and 0 or 0.25
-			Part(f.Ground, "Paving", Vector3.new(sx - gap, 0.4, sz - gap), CFrame.new(-PW + (i + 0.5) * sx, 0, pz0 + (j + 0.5) * sz), col,
-				edge and M.Slate or M.Pavement, { cast = false })
+			local cx, cz = -PW + (i + 0.5) * sx, pz0 + (j + 0.5) * sz
+			-- tiles fully under the hub are skipped (the hub discs cover them)
+			if (cx - hub.x) ^ 2 + (cz - hub.z) ^ 2 > (hub.r - 9.5) ^ 2 then
+				local edge = i == 0 or i == nx - 1
+				local col = edge and BORDER or (((i + j) % 2 == 0) and STONE1 or STONE2)
+				local gap = edge and 0 or 0.25
+				Part(f.Ground, "Paving", Vector3.new(sx - gap, 0.4, sz - gap), CFrame.new(cx, 0, cz), col, edge and M.Slate or M.Pavement, { cast = false })
+			end
 		end
 	end
 	for _, s in ipairs({ -1, 1 }) do
@@ -447,8 +830,6 @@ local function buildPlaza(ctx)
 	for i = 1, MapConfig.BaseCount do
 		buildBase(ctx, i)
 	end
-	buildShop(ctx)
-	buildDonateStall(ctx)
 
 	-- entry: Blender finish arch (truss towers, checkered banner, start lights) with a lit sign
 	local function tpl(name, cf, fallback)
@@ -473,243 +854,99 @@ local function buildPlaza(ctx)
 		Part(f.Buildings, "ArchSignFoot", Vector3.new(1.2, 0.4, 0.8), CFrame.new(s * 16, 27.8, zE - 4), C(40, 44, 52), M.Metal)
 	end
 
-	-- leaderboard (v14, built here, no Blender frame): one big screen between two pillars, and the top-3 podium as a
-	-- separate island in front of it, so nothing is squeezed. Local +Z faces the incoming players.
-	local lb = MapConfig.Leaderboard
-	local lbcf = CFrame.new(lb.x, 0.2, lb.z) * CFrame.Angles(0, math.pi, 0)
-	local lbModel = Instance.new("Model")
-	lbModel.Name = "LeaderboardStand"
-	local function lp(name, size, off, color, mat, o)
-		return Part(lbModel, name, size, lbcf * CFrame.new(off), color, mat, o)
-	end
-	local LBGOLD, LBDARK = C(232, 178, 50), C(30, 32, 40)
-	for _, s in ipairs({ -1, 1 }) do
-		lp("LBPillar", Vector3.new(2.2, 19, 2.2), Vector3.new(s * 14, 9.5, 0), LBDARK, M.Metal) -- flanks the screen (0.1 overlap)
-		lp("LBPillarCap", Vector3.new(2.8, 0.6, 2.8), Vector3.new(s * 14, 19.3, 0), LBGOLD, M.Metal)
-	end
-	lp("LBFrame", Vector3.new(27, 14, 0.4), Vector3.new(0, 11.5, -0.4), LBGOLD, M.Metal) -- gold rim behind the screen
-	-- the screen itself (LeaderboardService draws on its +Z face)
-	local screen = lp("LeaderboardScreen", Vector3.new(26, 13, 0.6), Vector3.new(0, 11.5, 0), C(12, 14, 20), M.SmoothPlastic)
-	screen:SetAttribute("Facing", "Back")
-	CollectionService:AddTag(screen, "LeaderboardScreen")
-	-- podium island 14 studs in front: 2nd | 1st | 3rd with big numbers on the fronts
-	lp("PodiumBase", Vector3.new(22, 0.6, 9), Vector3.new(0, 0.3, 14), C(236, 232, 224), M.Marble)
-	for i, st in ipairs({ { 0, 4.5, LBGOLD }, { -6.5, 3, C(206, 210, 218) }, { 6.5, 2, C(200, 126, 72) } }) do
-		local step = lp("PodiumStep" .. i, Vector3.new(6, st[2], 6), Vector3.new(st[1], 0.6 + st[2] / 2, 14), st[3], M.SmoothPlastic)
-		Label(step, Enum.NormalId.Back, tostring(i), C(255, 255, 255))
-		local spot = lp("StatueSpot" .. i, Vector3.new(2, 0.2, 2), Vector3.new(st[1], 0.7 + st[2], 14), C(255, 255, 255), M.SmoothPlastic, { t = 1, collide = false })
-		spot:SetAttribute("Rank", i)
-		spot:SetAttribute("Yaw", 0) -- statues face the players (the screen side is world -Z)
-	end
-	lbModel.Parent = f.StreetProps
-	table.insert(ctx.foot, { x1 = lb.x - 16, x2 = lb.x + 16, z1 = lb.z - 19, z2 = lb.z + 2 })
-
-	-- contracts stand: lit board with three job cards + Big Tony's spot (NPC spawned by MechanicService)
-	local cb = MapConfig.ContractBoard
-	local st = Instance.new("Model")
-	st.Name = "ContractStand"
-	local bcf = CFrame.new(cb.x, 0.4, cb.z) -- front faces -Z
-	local function sp(name, size, off, color, mat, o)
-		return Part(st, name, size, bcf * CFrame.new(off), color, mat, o)
-	end
-	local STEEL, WOODD, CREAM2, ORANGE = C(40, 44, 52), C(96, 62, 36), C(250, 240, 214), C(240, 120, 30)
-	sp("StandBase", Vector3.new(30, 0.5, 9), Vector3.new(-4, 0.25, 0.5), C(196, 194, 188), M.SmoothPlastic)
-	for _, x in ipairs({ -11, 11 }) do
-		sp("StandPost", Vector3.new(1.2, 13.5, 1.2), Vector3.new(x, 0.5 + 6.75, 1), STEEL, M.Metal)
-	end
-	local panel = sp("ContractBoard", Vector3.new(21, 9.5, 0.8), Vector3.new(0, 7.3, 1), WOODD, M.Wood)
-	CollectionService:AddTag(panel, "ContractBoard")
-	local head = sp("BoardHeader", Vector3.new(24, 2.6, 1.4), Vector3.new(0, 13.4, 1), ORANGE, M.SmoothPlastic)
-	Label(head, Enum.NormalId.Front, "CONTRACTS", C(255, 255, 255))
-	sp("HeaderTrim", Vector3.new(24.4, 0.35, 1.6), Vector3.new(0, 12, 1), STEEL, M.Metal)
-	for i, x in ipairs({ -8.4, -4.2, 0, 4.2, 8.4 }) do -- one card per job (Contracts.Active = 5)
-		local card = sp("ContractCard" .. i, Vector3.new(3.8, 7.4, 0.2), Vector3.new(x, 7.1, 0.45), CREAM2, M.SmoothPlastic)
-		card:SetAttribute("Index", i)
-		CollectionService:AddTag(card, "ContractCard")
-		sp("CardPin", Vector3.new(0.35, 0.5, 0.5), Vector3.new(x, 10.5, 0.2), C(214, 52, 44), M.SmoothPlastic, { shape = CYL, collide = false })
-	end
-	-- two arm lamps light the cards
-	for _, x in ipairs({ -6, 6 }) do
-		sp("LampArm", Vector3.new(0.3, 0.3, 2.6), Vector3.new(x, 12, -0.6), STEEL, M.Metal, { collide = false })
-		local shade = sp("LampShade", Vector3.new(1.4, 0.6, 1), Vector3.new(x, 11.7, -1.9), STEEL, M.Metal, { collide = false })
-		local sl = Instance.new("SpotLight")
-		sl.Face = Enum.NormalId.Bottom
-		sl.Angle = 80
-		sl.Range = 14
-		sl.Brightness = 2.2
-		sl.Color = C(255, 236, 200)
-		sl.Parent = shade
-	end
-	-- Big Tony's corner: gold-trimmed tool chest and a chrome car jack
-	local TX, TZ = -15, -1
-	sp("ToolChest", Vector3.new(3, 4, 2), Vector3.new(TX - 2.8, 0.5 + 2, TZ + 3), C(200, 30, 36), M.SmoothPlastic)
-	for k = 0, 3 do
-		sp("ChestHandle", Vector3.new(2, 0.15, 0.2), Vector3.new(TX - 2.8, 1.3 + k * 0.9, TZ + 1.93), C(240, 190, 60), M.Metal, { collide = false })
-	end
-	sp("Jack", Vector3.new(2.4, 0.5, 1), Vector3.new(TX + 2.4, 0.75, TZ + 2), C(220, 222, 228), M.Metal, { refl = 0.3 })
-	local spot = sp("TonySpot", Vector3.new(2, 0.2, 2), Vector3.new(TX, 0.6, TZ), CREAM2, M.SmoothPlastic, { t = 1, collide = false })
-	spot:SetAttribute("Yaw", 0)
-	local tp = sp("TonyPrompt", Vector3.new(6, 6, 4), Vector3.new(TX, 3.5, TZ - 3), CREAM2, M.SmoothPlastic, { t = 1, collide = false })
-	CollectionService:AddTag(tp, "TonyPrompt")
-	st.Parent = f.StreetProps
-
-	-- three themed areas along the promenade; everything stays clear of the central running lanes (|x| < 9)
-	-- and of the garage connector lanes (base rows +-9)
 	local function clearOfRows(z, pad)
 		return not nearBaseRow(z, pad or 9)
 	end
-	local function lamp(x, z, yaw)
-		if not Prefabs.FromTemplate("StreetLamp", f.StreetProps, CFrame.new(x, 0.2, z) * CFrame.Angles(0, yaw or 0, 0)) then
-			Prefabs.Lamp(f.StreetProps, Vector3.new(x, 0.4, z), 1, C(255, 228, 180), yaw or 0)
+	local deco = {}
+	-- lamps: the arm reaches along local +X; y = floor top
+	function deco.lamp(x, z, yaw, y)
+		y = y or 0.2
+		if not Prefabs.FromTemplate("StreetLamp", f.StreetProps, CFrame.new(x, y, z) * CFrame.Angles(0, yaw or 0, 0)) then
+			Prefabs.Lamp(f.StreetProps, Vector3.new(x, y + 0.2, z), 1, C(255, 228, 180), yaw or 0)
 		end
 	end
-	local function planter(x, z)
+	function deco.planter(x, z)
 		if not Prefabs.FromTemplate("Planter", f.StreetProps, CFrame.new(x, 0.2, z)) then
 			Prefabs.Tree(f.StreetProps, Vector3.new(x, 0.4, z), ctx.rng, "palm")
 		end
 	end
-	local function bench(x, z, yaw)
-		if not Prefabs.FromTemplate("Bench", f.StreetProps, CFrame.new(x, 0.2, z) * CFrame.Angles(0, yaw, 0)) then
-			Prefabs.Bench(f.StreetProps, Vector3.new(x, 0.4, z), yaw)
+	-- benches are sat looking along local +Z; y = floor top
+	function deco.bench(x, z, yaw, y)
+		y = y or 0.2
+		if not Prefabs.FromTemplate("Bench", f.StreetProps, CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0)) then
+			Prefabs.Bench(f.StreetProps, Vector3.new(x, y + 0.2, z), yaw)
 		end
 	end
-	-- promenade edges: lamps + palms in a steady rhythm
+
+	-- the round hub in the middle of the garages (v23)
+	buildHub(ctx, deco)
+
+	-- lane edges (gaps in front of every garage door): street lamps on the garage side, the arm over the lane;
+	-- low planters on the inner side, palms in between them
 	local toggle = false
 	for z = zS + 14, zE - 30, 22 do
 		if clearOfRows(z, 10) then
 			toggle = not toggle
-			for _, sx in ipairs({ -1, 1 }) do
+			for _, s in ipairs({ -1, 1 }) do
 				if toggle then
-					lamp(sx * (PW - 5), z, sx < 0 and 0 or math.pi)
-				else
-					planter(sx * (PW - 6), z)
+					deco.lamp(s * (PW - 1.8), z, s < 0 and 0 or math.pi)
+				end
+				if math.abs(z - hub.z) > hub.r + 6 then
+					if toggle then
+						Prefabs.Planter(f.StreetProps, Vector3.new(s * (LX - 7.5), 0.2, z), C(214, 206, 192))
+					else
+						deco.planter(s * (LX - 7.5), z)
+					end
 				end
 			end
 		end
 	end
 
-	-- 1) STREET CAR MEET (near the first garages): string lights, food truck, tuned cars, benches
-	local meetZ1, meetZ2 = zS + 6, MapConfig.BaseCenters[3].z - 12
+	-- NORTH: an open boulevard from the hub to the arch - two tree rows, benches, flower beds; the middle stays clear
+	for z = hub.z + hub.r + 12, zE - 26, 26 do
+		for _, s in ipairs({ -1, 1 }) do
+			Prefabs.Tree(f.StreetProps, Vector3.new(s * 26, 0.2, z), ctx.rng, "tree")
+		end
+	end
+	for _, z in ipairs({ hub.z + hub.r + 25, hub.z + hub.r + 77 }) do
+		for _, s in ipairs({ -1, 1 }) do
+			deco.bench(s * 26, z, s < 0 and math.pi / 2 or -math.pi / 2) -- looking at the boulevard
+			Prefabs.FlowerBed(f.StreetProps, Vector3.new(s * 37, 0.2, z), 8, 5, ctx.rng)
+		end
+	end
+
+	-- SOUTH: street car meet - string lights, food truck, benches, flower beds, two garden islands
+	local meetZ1, meetZ2 = zS + 6, hub.z - hub.r - 14
 	for z = meetZ1 + 6, meetZ2, 18 do
 		if clearOfRows(z) then
-			for _, sx in ipairs({ -1, 1 }) do
-				Prefabs.FromTemplate("StringLightPole", f.StreetProps, CFrame.new(sx * 16, 0.2, z) * CFrame.Angles(0, math.pi / 2, 0))
+			for _, s in ipairs({ -1, 1 }) do
+				Prefabs.FromTemplate("StringLightPole", f.StreetProps, CFrame.new(s * 16, 0.2, z) * CFrame.Angles(0, math.pi / 2, 0))
 			end
 		end
 	end
-	Prefabs.FromTemplate("FoodTruck", f.Buildings, CFrame.new(-42, 0.2, zS + 26) * CFrame.Angles(0, math.pi / 2, 0))
-	-- (v13: no parked cars in the safe zone - only the Golden Magnat GT on its podium; planters instead)
-	for _, p in ipairs({ { 38, zS + 22 }, { 40, zS + 85 } }) do
+	Prefabs.FromTemplate("FoodTruck", f.Buildings, CFrame.new(-36, 0.2, zS + 26) * CFrame.Angles(0, math.pi / 2, 0))
+	for _, p in ipairs({ { 36, zS + 22 }, { 36, zS + 85 } }) do
 		Prefabs.FlowerBed(f.StreetProps, Vector3.new(p[1], 0.2, p[2]), 8, 5, ctx.rng)
 	end
-	for _, p in ipairs({ { -26, zS + 40, 0 }, { 26, zS + 41, math.pi }, { -28, zS + 100, math.pi / 2 } }) do
-		bench(p[1], p[2], p[3])
+	for _, p in ipairs({ { -26, zS + 46, math.pi / 2 }, { 26, zS + 41, -math.pi / 2 } }) do
+		deco.bench(p[1], p[2], p[3])
 	end
-
-	-- 2) GARDEN SQUARE (middle, v11): green islands with flower beds, trees, benches and lamps, a fountain,
-	-- and the Golden Magnat GT on its podium (walk up and buy it). No more car stands with random cars.
-	local rows = { MapConfig.BaseCenters[3].z - 28, MapConfig.Shop.z - 22, MapConfig.Shop.z + 23 }
 	local function island(x, z)
 		local s = math.sign(x)
 		Prefabs.FlowerBed(f.StreetProps, Vector3.new(x, 0.2, z), 10, 6, ctx.rng)
 		Prefabs.Tree(f.StreetProps, Vector3.new(x + s * 6, 0.2, z - 7), ctx.rng, "tree")
-		Prefabs.Tree(f.StreetProps, Vector3.new(x + s * 6, 0.2, z + 7), ctx.rng, (z % 2 == 0) and "palm" or "tree")
+		Prefabs.Tree(f.StreetProps, Vector3.new(x + s * 6, 0.2, z + 7), ctx.rng, "palm")
 		Prefabs.Bush(f.StreetProps, Vector3.new(x - s * 4, 0.2, z - 7), ctx.rng)
 		Prefabs.Bush(f.StreetProps, Vector3.new(x - s * 4, 0.2, z + 7), ctx.rng)
-		bench(x - s * 9, z, s > 0 and math.pi / 2 or -math.pi / 2) -- benches face the promenade
+		deco.bench(x - s * 9, z, s > 0 and math.pi / 2 or -math.pi / 2)
 		Prefabs.Lamp(f.StreetProps, Vector3.new(x - s * 10, 0.4, z + 8), 1, nil, s > 0 and math.pi or 0)
-		table.insert(ctx.foot, { x1 = x - 12, x2 = x + 12, z1 = z - 12, z2 = z + 12 })
 	end
-	for i, z in ipairs(rows) do
-		island(-32, z)
-		if i == 1 then
-			island(32, z)
-		elseif i == 3 then
-			-- fountain island
-			if not Prefabs.FromTemplate("TrophyFountain", f.Buildings, CFrame.new(32, 0.2, z)) then
-				Prefabs.Fountain(f.Buildings, Vector3.new(32, 0.2, z), C(255, 210, 90))
-			end
-			for _, dz in ipairs({ -11, 11 }) do
-				Prefabs.FlowerBed(f.StreetProps, Vector3.new(32, 0.2, z + dz), 8, 4, ctx.rng)
-			end
-			table.insert(ctx.foot, { x1 = 20, x2 = 44, z1 = z - 14, z2 = z + 14 })
-		end
+	for _, s in ipairs({ -1, 1 }) do
+		island(s * 31, hub.z - hub.r - 31)
 	end
-
-	-- Golden Magnat GT podium (game pass "golden_car"): gold stand, spotlight, plate, Buy prompt
-	do
-		local x, z = 32, rows[2]
-		local def = CarConfig.ById.golden_magnat_gt
-		local standTop = 1.57 -- turntable top of the Blender CarStand (pivot y 0.2 + 1.37)
-		local stand = Prefabs.FromTemplate("CarStand", f.StreetProps, CFrame.new(x, 0.2, z) * CFrame.Angles(0, -math.pi / 2, 0),
-			{ colors = { Accent = C(232, 178, 50), Metal = C(60, 52, 40) } })
-		if not stand then
-			Part(f.StreetProps, "Podium", Vector3.new(1.2, 18, 18), CFrame.new(x, 0.8, z) * UPRIGHT, C(40, 36, 30), M.Metal, { shape = CYL })
-			Part(f.StreetProps, "PodiumRim", Vector3.new(1.0, 18.6, 18.6), CFrame.new(x, 0.7, z) * UPRIGHT, C(232, 178, 50), M.Metal, { shape = CYL, collide = false })
-			standTop = 1.4
-		end
-		if def then
-			local car = VehicleFactory.BuildCar(def)
-			car.Name = "MagnatShowcar"
-			car:PivotTo(CFrame.new(x, standTop + 3, z) * CFrame.Angles(0, math.pi + 0.5, 0))
-			local ccf, csize = car:GetBoundingBox()
-			car:PivotTo(car:GetPivot() - Vector3.new(0, (ccf.Position.Y - csize.Y / 2) - (standTop + 0.02), 0))
-			for _, d in ipairs(car:GetDescendants()) do
-				if d:IsA("BasePart") then
-					d.Anchored = true
-					d.CanCollide = false
-				end
-			end
-			car.Parent = f.StreetProps
-		end
-		local lamp = Part(f.StreetProps, "MagnatLight", Vector3.new(1, 1, 1), CFrame.new(x, 15, z), C(0, 0, 0), M.SmoothPlastic, { collide = false, t = 1 })
-		lamp.CanQuery, lamp.CanTouch = false, false
-		local spot = Instance.new("SpotLight")
-		spot.Face = Enum.NormalId.Bottom
-		spot.Angle = 60
-		spot.Range = 20
-		spot.Brightness = 3
-		spot.Color = C(255, 220, 140)
-		spot.Parent = lamp
-		-- plate towards the promenade, clear of the stand (0.3 gap)
-		local plate = Part(f.StreetProps, "MagnatPlate", Vector3.new(11.8, 3.2, 0.3), CFrame.new(x - 13.4, 3.4, z) * CFrame.Angles(0, math.pi / 2, 0), C(26, 22, 16), M.SmoothPlastic, { collide = false })
-		for _, sz in ipairs({ -1, 1 }) do
-			Part(f.StreetProps, "MagnatPlatePost", Vector3.new(0.6, 6, 0.6), CFrame.new(x - 13.4, 3, z + sz * 6.2), C(255, 200, 80), M.Metal)
-		end
-		Label(plate, Enum.NormalId.Front, "GOLDEN MAGNAT GT", C(255, 210, 90))
-		-- walk-up prompt (client: UIExtra opens the game-pass purchase)
-		local pp = Part(f.StreetProps, "MagnatPrompt", Vector3.new(2, 2, 2), CFrame.new(x - 12, 3, z), C(0, 0, 0), M.SmoothPlastic, { collide = false, t = 1 })
-		pp.CanQuery, pp.CanTouch = false, false
-		local prompt = Instance.new("ProximityPrompt")
-		prompt.ActionText = "Buy (game pass)"
-		prompt.ObjectText = "Golden Magnat GT"
-		prompt.HoldDuration = 0
-		prompt.MaxActivationDistance = 14
-		prompt.RequiresLineOfSight = false
-		prompt.Parent = pp
-		table.insert(ctx.foot, { x1 = x - 14, x2 = x + 12, z1 = z - 12, z2 = z + 12 })
-		Prefabs.Count = Prefabs.Count + 1
-	end
-	-- (marble inlay removed: overlays on the paving flickered)
-
-	-- 3) RACE PADDOCK (towards the exit): trophy fountain, grandstand, tyre walls
-	local pz = MapConfig.BaseCenters[7].z - 30
-	if not Prefabs.FromTemplate("TrophyFountain", f.Buildings, CFrame.new(-36, 0.2, pz)) then
-		Part(f.Buildings, "Fountain", Vector3.new(2, 18, 18), CFrame.new(-36, 1, pz) * UPRIGHT, C(230, 226, 218), M.Marble, { shape = CYL })
-	end
-	Prefabs.FromTemplate("Grandstand", f.Buildings, CFrame.new(40, 0.2, pz) * CFrame.Angles(0, -math.pi / 2, 0))
-	table.insert(ctx.foot, { x1 = -46, x2 = -26, z1 = pz - 10, z2 = pz + 10 })
-	table.insert(ctx.foot, { x1 = 30, x2 = 50, z1 = pz - 17, z2 = pz + 17 })
-	for _, sx in ipairs({ -1, 1 }) do
-		for z = MapConfig.BaseCenters[7].z + 12, zE - 12, 6 do
-			Prefabs.TireStack(f.StreetProps, Vector3.new(sx * (PW - 2), 0.2, z), ctx.rng) -- outside the lamp line (PW - 5)
-		end
-	end
-	bench(-20, pz + 16, math.pi)
-	bench(20, pz - 16, 0)
 end
 
--- Running lanes: dark asphalt strips, white separator, white arrows. One lane each way.
+-- Running lanes: dark asphalt strips, white edge lines, white arrows (double-headed on the two-way plaza lanes).
 local function buildSpeedLanes(ctx)
 	local f = ctx.f
 	local LANE, WHITE = C(54, 56, 62), C(245, 245, 245)
@@ -735,9 +972,20 @@ local function buildSpeedLanes(ctx)
 			local t = (k + 0.5) / n
 			local p = alongZ and Vector3.new(cx, y + 0.1, r[3] + t * l) or Vector3.new(r[1] + t * w, y + 0.1, cz)
 			local acf = CFrame.new(p) * CFrame.Angles(0, yaw, 0) -- local -Z = arrow direction
-			Part(f.StreetProps, "Arrow", Vector3.new(0.7, 0.1, 4), acf * CFrame.new(0, 0, 0.6), WHITE, M.SmoothPlastic, { collide = false, cast = false })
-			for _, s in ipairs({ -1, 1 }) do
-				Part(f.StreetProps, "ArrowHead", Vector3.new(0.7, 0.1, 2.4), acf * CFrame.new(s * 0.75, 0, -1.6) * CFrame.Angles(0, s * math.rad(40), 0), WHITE, M.SmoothPlastic, { collide = false, cast = false })
+			if r[7] then
+				-- two-way lane: one double-headed arrow
+				Part(f.StreetProps, "Arrow", Vector3.new(0.7, 0.1, 5.6), acf, WHITE, M.SmoothPlastic, { collide = false, cast = false })
+				for _, e in ipairs({ -1, 1 }) do
+					local ecf = acf * CFrame.Angles(0, e > 0 and 0 or math.pi, 0)
+					for _, s in ipairs({ -1, 1 }) do
+						Part(f.StreetProps, "ArrowHead", Vector3.new(0.7, 0.1, 2.4), ecf * CFrame.new(s * 0.75, 0, -2.2) * CFrame.Angles(0, s * math.rad(40), 0), WHITE, M.SmoothPlastic, { collide = false, cast = false })
+					end
+				end
+			else
+				Part(f.StreetProps, "Arrow", Vector3.new(0.7, 0.1, 4), acf * CFrame.new(0, 0, 0.6), WHITE, M.SmoothPlastic, { collide = false, cast = false })
+				for _, s in ipairs({ -1, 1 }) do
+					Part(f.StreetProps, "ArrowHead", Vector3.new(0.7, 0.1, 2.4), acf * CFrame.new(s * 0.75, 0, -1.6) * CFrame.Angles(0, s * math.rad(40), 0), WHITE, M.SmoothPlastic, { collide = false, cast = false })
+				end
 			end
 		end
 	end

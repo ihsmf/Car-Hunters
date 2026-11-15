@@ -4,6 +4,7 @@ Usage:
   ROBLOX_API_KEY=... python3 tools/roblox_open_cloud.py sounds   --creator-user 123456      (or --creator-group 123)
   ROBLOX_API_KEY=... python3 tools/roblox_open_cloud.py products --universe 987654
   ROBLOX_API_KEY=... python3 tools/roblox_open_cloud.py models   --creator-user 123456      (Blender FBX -> Model assets)
+      [--folders skyline,city]  only those assets/ folders (spawn city garage arena skyline parts props); [--only A,B] by name
   ROBLOX_API_KEY=... python3 tools/roblox_open_cloud.py publish  --universe 987654 --place 123456 [--version-type Saved]
 The API key needs: Assets (read+write) for sounds/models/icons; Developer Products + Game Passes (write) for products;
 universe-places (write) for publish, with the experience in the key's Access list.
@@ -86,15 +87,17 @@ def upload_sounds(args):
 
 
 def upload_models(args):
-    """every FBX in assets/spawn, assets/city, assets/garage, assets/arena + assets/parts/parts.fbx + assets/props/props.fbx -> Model assets -> ModelIds.lua"""
+    """every FBX in assets/spawn, assets/city, assets/garage, assets/arena, assets/skyline + assets/parts/parts.fbx +
+    assets/props/props.fbx -> Model assets -> ModelIds.lua (key = file name; parts/props -> PartsKit/PropsKit)"""
     creator = {"userId": str(args.creator_user)} if args.creator_user else {"groupId": str(args.creator_group)}
+    folders = args.folders.split(",") if args.folders else ["spawn", "city", "garage", "arena", "skyline", "parts", "props"]
     files = []
-    for folder in ("spawn", "city", "garage", "arena"):
+    for folder in ("spawn", "city", "garage", "arena", "skyline"):
         d = os.path.join(ROOT, "assets", folder)
-        if not os.path.isdir(d):
+        if folder not in folders or not os.path.isdir(d):
             continue
         files += [os.path.join(d, f) for f in sorted(os.listdir(d)) if f.endswith(".fbx")]
-    files += [os.path.join(ROOT, "assets", "parts", "parts.fbx"), os.path.join(ROOT, "assets", "props", "props.fbx")]
+    files += [os.path.join(ROOT, "assets", k, k + ".fbx") for k in ("parts", "props") if k in folders]
     ids_path = os.path.join(SHARED, "ModelIds.lua")
     done = {}
     for path in files:
@@ -245,7 +248,8 @@ if __name__ == "__main__":
     ap.add_argument("--universe", type=int)
     ap.add_argument("--place", type=int)
     ap.add_argument("--version-type", default="Published", choices=["Published", "Saved"])
-    ap.add_argument("--only", help="comma-separated sound names to upload")
+    ap.add_argument("--only", help="comma-separated names to upload (sounds / models / icons)")
+    ap.add_argument("--folders", help="models: comma-separated assets/ folders to upload (default: all)")
     a = ap.parse_args()
     if a.what == "icons":
         if not (a.creator_user or a.creator_group):

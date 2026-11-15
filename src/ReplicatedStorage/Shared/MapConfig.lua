@@ -3,7 +3,7 @@ local C = Color3.fromRGB
 local MapConfig = {}
 
 MapConfig.Seed = 12345
-MapConfig.Version = 18 -- bump when the map changes: a saved older GeneratedMap is rebuilt at server start
+MapConfig.Version = 19 -- bump when the map changes: a saved older GeneratedMap is rebuilt at server start
 MapConfig.MapHalfWidth = 190
 MapConfig.StartZ = -330
 MapConfig.EndZ = 1056 -- recomputed below once every district is placed
@@ -16,31 +16,51 @@ MapConfig.RoadTopY = 0.2
 MapConfig.SidewalkTopY = 0.8
 MapConfig.SidewalkWidth = 6
 MapConfig.TunnelLength = 50
-MapConfig.EntryHalfWidth = 60
+MapConfig.EntryHalfWidth = 66 -- v23: wide enough for the two plaza speed lanes (x +-58..64)
 MapConfig.GateHalfWidth = 30
 MapConfig.EntryZ = 74
 MapConfig.PromenadeHalfWidth = 68
 
 MapConfig.BasePlot = { x = 110, z = 95 }
 MapConfig.BaseCount = 8
+-- v23: index 1-2 = the row next to the arch, so the first players get the shortest run (BaseService takes the first free)
 MapConfig.BaseCenters = {
-	{ x = -125, z = -275 }, { x = 125, z = -275 },
-	{ x = -125, z = -177 }, { x = 125, z = -177 },
-	{ x = -125, z = -79 },  { x = 125, z = -79 },
 	{ x = -125, z = 19 },   { x = 125, z = 19 },
+	{ x = -125, z = -79 },  { x = 125, z = -79 },
+	{ x = -125, z = -177 }, { x = 125, z = -177 },
+	{ x = -125, z = -275 }, { x = 125, z = -275 },
 }
+MapConfig.BaseRowsZ = { 19, -79, -177, -275 } -- garage row centres (the garage doors open here), nearest the arch first
 
--- centre of the plaza, between the garages
-MapConfig.Shop = { x = -38, z = -128, yaw = -math.pi / 2 } -- faces the running lanes (+X)
-MapConfig.DonateStall = { x = 38, z = -128, yaw = math.pi / 2 }
-MapConfig.ContractBoard = { x = -30, z = 48 }
-MapConfig.Leaderboard = { x = 34, z = 50 }
+-- v23 HUB: one round square in the middle of the garages. Every stand sits on a ring around the fountain, faces the
+-- centre and is placed by angle (degrees, 0 = +X, 90 = +Z towards the arch). The four axis directions stay open:
+-- +-X lead to the speed lanes and the garage doors, +Z to the arch, -Z to the car meet.
+-- top = stand floor level (the hub paving the stands stand on).
+MapConfig.Hub = { x = 0, z = -128, r = 54, top = 0.42, island = 11.5 }
+local function onRing(deg, r)
+	local a = math.rad(deg)
+	local h = MapConfig.Hub
+	-- yaw: local -Z (the stand's front) looks at the hub centre
+	return { x = h.x + r * math.cos(a), z = h.z + r * math.sin(a), yaw = math.pi / 2 - a, angle = deg, r = r }
+end
+MapConfig.HubRing = onRing
+MapConfig.Shop = onRing(28, 45) -- Pit Stop
+MapConfig.MagnatPodium = onRing(62, 42) -- Golden Magnat GT on its stand
+MapConfig.DonateStall = onRing(118, 45) -- Golden Magnate
+MapConfig.Leaderboard = onRing(152, 49) -- screen; the top-3 podium stands 11 studs towards the centre
+MapConfig.Tony = onRing(232, 45) -- Big Tony's Tuning garage
+MapConfig.JobBoard = onRing(308, 46)
+MapConfig.ContractBoard = MapConfig.JobBoard -- old name (kept for older callers)
+MapConfig.HubGardens = { onRing(200, 46), onRing(340, 46) } -- tree beds with benches in the two free slots
+
 MapConfig.NoNeon = true -- map decor uses lit materials only where something is a real light source
 
 -- Speed lanes: player WalkSpeed boost while standing on them (never cross roads)
 MapConfig.WalkSpeed = 18
 MapConfig.LaneSpeed = 48
-MapConfig.LaneWidth = 6 -- each running lane; two lanes side by side, opposite directions
+MapConfig.LaneWidth = 6 -- each running lane
+-- v23 plaza lanes: one two-way lane on each side between the hub and the garage doors, through the entry opening
+MapConfig.PlazaLaneX = 61 -- lane centre (|x|): hub edge 54, garage fronts 70, entry fence opening +-66
 
 -- Route along +Z: plaza -> Tier 1 (4 districts) -> arena -> Tier 2 -> arena -> Tier 3 -> final arena.
 MapConfig.ZoneOrder = {
@@ -287,9 +307,10 @@ function MapConfig.ZoneBlocks(zoneId)
 end
 
 -- rectangles {x1, x2, z1, z2}
--- Running lanes: one central pair (out / back home) down the plaza and every district, stopping before roads.
--- Each lane = { x1, x2, z1, z2, dx, dz } where (dx,dz) is
--- the arrow direction; the boost only works while running that way.
+-- Running lanes: in the plaza one two-way lane on each side (every garage door opens onto one; they run through the
+-- entry opening beside the arch); in every district one central pair (out / back home), stopping before roads.
+-- Each lane = { x1, x2, z1, z2, dx, dz, twoWay } where (dx,dz) is the arrow direction; the boost only works while
+-- running that way (or its opposite on a two-way lane).
 function MapConfig.SpeedLanes()
 	if MapConfig._lanes then
 		return MapConfig._lanes
@@ -300,7 +321,10 @@ function MapConfig.SpeedLanes()
 		table.insert(out, { -g - w, -g, z1, z2, 0, 1 }) -- left lane: away from the garages
 		table.insert(out, { g, g + w, z1, z2, 0, -1 }) -- right lane: back home
 	end
-	pairZ(MapConfig.StartZ + 14, MapConfig.EntryZ + 8)
+	for _, sx in ipairs({ -1, 1 }) do
+		local cx = sx * MapConfig.PlazaLaneX
+		table.insert(out, { cx - w / 2, cx + w / 2, MapConfig.StartZ + 8, MapConfig.EntryZ + 8, 0, 1, true })
+	end
 	for _, zid in ipairs(MapConfig.ZoneOrder) do
 		for _, b in ipairs(MapConfig.ZoneBlocks(zid)) do
 			if b[2] - b[1] > 16 then
@@ -326,6 +350,12 @@ function MapConfig.OnSpeedLane(pos)
 	return MapConfig.LaneAt(pos) ~= nil
 end
 
+-- does running along md (Vector3 move direction) on this lane get the boost?
+function MapConfig.LaneBoosts(lane, md)
+	local dot = md.X * lane[5] + md.Z * lane[6]
+	return dot > 0.5 or (lane[7] == true and dot < -0.5)
+end
+
 function MapConfig.Validate()
 	local errors = {}
 	for _, r in ipairs(MapConfig.Roads) do
@@ -342,6 +372,47 @@ function MapConfig.Validate()
 			if ox and oz then
 				table.insert(errors, "Bases " .. i .. " and " .. j .. " overlap")
 			end
+		end
+	end
+	-- v23 hub + plaza lanes: clear of every garage plot, lanes clear of the hub ring and inside the entry opening
+	local hub = MapConfig.Hub
+	local PX, PZ = MapConfig.BasePlot.x / 2, MapConfig.BasePlot.z / 2
+	local function rectHitsPlot(x1, x2, z1, z2)
+		for i, b in ipairs(MapConfig.BaseCenters) do
+			if x2 > b.x - PX and x1 < b.x + PX and z2 > b.z - PZ and z1 < b.z + PZ then
+				return i
+			end
+		end
+		return nil
+	end
+	local hp = rectHitsPlot(hub.x - hub.r, hub.x + hub.r, hub.z - hub.r, hub.z + hub.r)
+	if hp then
+		table.insert(errors, "Hub overlaps base " .. hp)
+	end
+	if hub.z - hub.r < MapConfig.StartZ or hub.z + hub.r > MapConfig.EntryZ then
+		table.insert(errors, "Hub outside the plaza")
+	end
+	for _, l in ipairs(MapConfig.SpeedLanes()) do
+		if l[3] < MapConfig.EntryZ then
+			local p = rectHitsPlot(l[1], l[2], l[3], l[4])
+			if p then
+				table.insert(errors, string.format("Plaza lane x %.1f overlaps base %d", (l[1] + l[2]) / 2, p))
+			end
+			-- nearest point of the lane rectangle to the hub centre
+			local nx = math.clamp(hub.x, l[1], l[2])
+			local nz = math.clamp(hub.z, l[3], l[4])
+			if (nx - hub.x) ^ 2 + (nz - hub.z) ^ 2 < hub.r * hub.r then
+				table.insert(errors, string.format("Plaza lane x %.1f crosses the hub", (l[1] + l[2]) / 2))
+			end
+			if l[4] > MapConfig.EntryZ and (math.abs(l[1]) > MapConfig.EntryHalfWidth or math.abs(l[2]) > MapConfig.EntryHalfWidth) then
+				table.insert(errors, string.format("Plaza lane x %.1f hits the entry fence", (l[1] + l[2]) / 2))
+			end
+		end
+	end
+	for _, key in ipairs({ "Shop", "DonateStall", "MagnatPodium", "Leaderboard", "Tony", "JobBoard" }) do
+		local s = MapConfig[key]
+		if not s or math.sqrt((s.x - hub.x) ^ 2 + (s.z - hub.z) ^ 2) > hub.r - 4 then
+			table.insert(errors, key .. " is not on the hub ring")
 		end
 	end
 	return errors

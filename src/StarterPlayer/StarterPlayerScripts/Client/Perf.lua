@@ -1,7 +1,8 @@
 -- Adaptive quality: measures FPS and steps HIGH -> MED -> LOW (and back) so the game stays smooth on every device.
 --   Perf.Level()        -> "HIGH" | "MED" | "LOW"
 --   Perf.Changed.Event  -> fires (level) whenever the level changes
---   Perf.Start()        -> begins measuring, applies the lighting budget and the parked-car exhaust LOD
+--   Perf.Start()        -> begins measuring, applies the lighting budget, the parked-car exhaust LOD and the skyline
+--                          LOD (LOW drops the far row of background buildings)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -130,6 +131,37 @@ local function refreshExhaust()
 	end
 end
 
+-- ---------------------------------------------------------------- skyline LOD
+-- background buildings (tag "Skyline", attribute Row = 1 near / 2 far): on LOW the far row is taken out of the
+-- client's world (a local reparent; the map has no streaming, the server keeps them) and put back on MED/HIGH
+local skyHidden = {} -- model -> its original parent
+local function skyRow2(inst)
+	return inst:IsA("Model") and inst:GetAttribute("Row") == 2
+end
+local function hideSky(m)
+	if skyHidden[m] == nil and m.Parent and skyRow2(m) then
+		skyHidden[m] = m.Parent
+		m.Parent = nil
+	end
+end
+local function applySkyline()
+	if LEVELS[idx] == "LOW" then
+		for _, m in ipairs(CollectionService:GetTagged("Skyline")) do
+			hideSky(m)
+		end
+	else
+		for m, parent in pairs(skyHidden) do
+			skyHidden[m] = nil
+			-- a map rebuilt meanwhile destroyed the old folders: only restore into a live parent
+			if parent:IsDescendantOf(game) then
+				pcall(function()
+					m.Parent = parent
+				end)
+			end
+		end
+	end
+end
+
 local function setLevel(newIdx)
 	newIdx = math.clamp(newIdx, 1, maxIdx)
 	if newIdx == idx then
@@ -138,6 +170,7 @@ local function setLevel(newIdx)
 	idx = newIdx
 	applyLighting()
 	refreshExhaust()
+	applySkyline()
 	Perf.Changed:Fire(LEVELS[idx])
 end
 
@@ -150,6 +183,13 @@ function Perf.Start()
 	started = true
 	init()
 	applyLighting()
+	applySkyline()
+	-- the map can arrive after Perf starts (or be rebuilt): new far-row buildings follow the current level
+	CollectionService:GetInstanceAddedSignal("Skyline"):Connect(function(m)
+		if LEVELS[idx] == "LOW" then
+			task.defer(hideSky, m)
+		end
+	end)
 	Lighting.ChildAdded:Connect(function(c)
 		if c.Name == "CHBloom" or c.Name == "CHSunRays" then
 			task.defer(applyLighting)

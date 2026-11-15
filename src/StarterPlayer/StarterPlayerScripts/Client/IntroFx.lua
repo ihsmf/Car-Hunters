@@ -199,14 +199,21 @@ local function scenes(st, actor, track)
 		end
 	end
 	-- 3) Big Tony: parts for tuning
-	local stand = Workspace:FindFirstChild("GeneratedMap") and Workspace.GeneratedMap:FindFirstChild("ContractStand", true)
-	local spot = stand and stand:FindFirstChild("TonySpot")
+	local map = Workspace:FindFirstChild("GeneratedMap")
+	local stand = map and (map:FindFirstChild("TonyGarage", true) or map:FindFirstChild("ContractStand", true))
+	local spot = stand and stand:FindFirstChild("TonySpot", true)
 	if spot then
 		local tony = spot.Position
-		local a = tony + Vector3.new(14, 0, -12)
-		camTo(CFrame.lookAt(tony + Vector3.new(16, 8, -26), tony + Vector3.new(0, 3, 0)), true)
+		-- shot offsets are in Tony's own frame (he looks along the spot's -Z, out at the visitors)
+		local look = spot.CFrame.LookVector * Vector3.new(1, 0, 1)
+		local tcf = CFrame.lookAt(tony, tony + (look.Magnitude > 0.01 and look.Unit or Vector3.new(0, 0, -1)))
+		local function at(x, y, z)
+			return tcf:PointToWorldSpace(Vector3.new(x, y, z))
+		end
+		local a = at(14, 0, -12)
+		camTo(CFrame.lookAt(at(16, 8, -26), tony + Vector3.new(0, 3, 0)), true)
 		caption(3, "MEET BIG TONY", "He builds tuning parts from your car parts", 6)
-		if not run(actor, track, a, tony + Vector3.new(3, 0, -4), 3.2) then
+		if not run(actor, track, a, at(3, 0, -4), 3.2) then
 			return
 		end
 		if not wait(2.6) then

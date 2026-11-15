@@ -1,4 +1,5 @@
--- Running lanes: dark strips with white arrows. Boost only while running the way the arrows point.
+-- Running lanes: dark strips with white arrows. Boost only while running the way the arrows point (either way on
+-- the two-way plaza lanes).
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -20,7 +21,7 @@ function SpeedLanes.Start(getBaseSpeed)
 		if hum and hrp and hum.Health > 0 and hrp.Position.Y < 8 then
 			local lane = MapConfig.LaneAt(hrp.Position)
 			local md = hum.MoveDirection
-			if lane and md.Magnitude > 0.1 and (md.X * lane[5] + md.Z * lane[6]) > 0.5 then
+			if lane and md.Magnitude > 0.1 and MapConfig.LaneBoosts(lane, md) then
 				boost = true
 			end
 			local base = getBaseSpeed and getBaseSpeed() or MapConfig.WalkSpeed

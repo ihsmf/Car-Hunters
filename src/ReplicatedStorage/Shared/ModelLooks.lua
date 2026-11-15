@@ -21,4 +21,7 @@ return {
 	Frame = { M.Metal, C(58, 62, 70), 0.05, 0 },
 	-- arena kit: Screen (jumbotron face the map builder labels), Rust (scrap cars, fire barrels)
 	Screen = { M.SmoothPlastic, C(12, 14, 20), 0, 0 }, Rust = { M.CorrodedMetal, C(136, 70, 40), 0, 0 },
+	-- skyline kit (blender/make_skyline.py): opaque window glass + facade colours
+	Window = { M.Glass, C(118, 168, 214), 0.12, 0 }, Cream = { M.SmoothPlastic, C(236, 222, 192), 0, 0 },
+	Teal = { M.SmoothPlastic, C(46, 160, 166), 0, 0 }, Sand = { M.SmoothPlastic, C(220, 178, 128), 0, 0 },
 }
