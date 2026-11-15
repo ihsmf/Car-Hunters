@@ -42,6 +42,8 @@ function Rebirth.Do(player)
 		return
 	end
 	local d = s.data
+	-- remember the income before the reset (without a running x2 boost): rewards stay meaningful afterwards
+	d.stats.peakIncome = math.max(d.stats.peakIncome or 0, math.floor((s.income or 0) / (S.Shop.BoostActive(s, "income") and 2 or 1)))
 	local tokens = math.min(5, math.floor(d.money / money)) -- 1 token, more for overshooting the target
 	d.rebirths = (d.rebirths or 0) + 1
 	d.tokens = (d.tokens or 0) + tokens

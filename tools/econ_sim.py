@@ -102,9 +102,10 @@ class Player:
         self.parts = {k: 0 for k in ORDER}
         self.parts["bolts"] = 2 if first else 3
         self.cars = []  # [income, level, rarity, tune_mult]
-        self.zones = {"city"}
-        self.slots = Eco.StartSlots
-        self.floors = 1
+        if first:  # v18: a rebirth keeps districts, floors and bays
+            self.zones = {"city"}
+            self.slots = Eco.StartSlots
+            self.floors = 1
         self.pity = 0
         self.tune = 0  # tuning parts in the box (each worth ~ +25% on one car)
 
@@ -345,8 +346,9 @@ def simulate(seed, hours):
     return p
 
 
-TARGETS = [("first car", 0, 2 / 60), ("unlock highway", 0.2, 0.6), ("unlock neon", 1.5, 4), ("rebirth 1", 2.5, 5),
-           ("R1 unlock docks", 4, 10), ("rebirth 3", 20, 40), ("R3 unlock circuit", 28, 55), ("colosseum (final boss)", 70, 140)]
+# v18 targets in bot hours (a real player is ~1.3-1.6x slower): highway ~15 min, rebirth 1 ~2 h, final boss ~18 h real
+TARGETS = [("first car", 0, 0.05), ("unlock highway", 0.05, 0.3), ("unlock neon", 0.5, 1.2), ("rebirth 1", 1.0, 1.8),
+           ("R1 unlock docks", 1.5, 3.2), ("rebirth 3", 6, 11), ("R3 unlock circuit", 7.5, 12), ("colosseum (final boss)", 10, 16)]
 
 
 def main():

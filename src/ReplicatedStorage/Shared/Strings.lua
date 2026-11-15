@@ -41,7 +41,7 @@ local en = {
 	n_skinOn = "Garage skin: %s", btn_rebirth = "REBIRTH", rebirth_title = "REBIRTH", rebirth_go = "REBIRTH NOW",
 	rebirth_need = "Unlock %s and have $%s", rebirth_lose = "You lose: money, cars, parts, tuning parts, jobs",
 	rebirth_keep = "You keep: districts, garage floors and bays, Golden Magnat GT, index, skins, Pit Stop upgrades, passes, tokens",
-	rebirth_gain = "You get: +25%% income forever (now x%s) and rebirth tokens", rebirth_tokens = "TOKENS: %d", rebirth_shop = "TOKEN SHOP",
+	rebirth_gain = "You get: +100%% income per rebirth (now x%s) and rebirth tokens", rebirth_tokens = "TOKENS: %d", rebirth_shop = "TOKEN SHOP",
 	skin_equip = "EQUIP", skin_on = "ON", skin_bonus = "+%d%% income",
 	boss_throw = "THROW!", boss_hint = "Throw to scare it off", boss_empty = "Nothing to throw!", boss_fleeing = "Boss is fleeing!",
 	tut_find = "Grab a glowing part - one car hit = WRECKED!",
