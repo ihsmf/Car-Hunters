@@ -270,7 +270,7 @@ def beam_material(color, strength=1.6, fac=0.14):
 PCOL = [(0.25, 0.9, 1.0, 1), (1.0, 0.8, 0.2, 1), (0.3, 1.0, 0.5, 1), (1.0, 0.35, 0.8, 1)]
 
 
-def glow_part(root, loc, s, color=(0.25, 0.9, 1.0, 1)):
+def glow_part(root, loc, s, color=(0.25, 0.9, 1.0, 1), beam=True):
     """a pickup as it looks in game: the part, a glowing ring under it, a soft halo and a light"""
     p = inst(root, loc, s=s)
     lo, hi = bounds(p)
@@ -282,6 +282,7 @@ def glow_part(root, loc, s, color=(0.25, 0.9, 1.0, 1)):
     halo = bpy.context.active_object  # light beam rising from the pickup ring, as in game
     halo.data.materials.append(beam_m)
     halo.visible_shadow = False
+    halo.hide_render = not beam
     rg = ring("ring", (loc[0], loc[1], 0.75), rad * 0.85, 0.16 * s, ring_m)
     rg.visible_shadow = False
     rg.visible_camera = True
@@ -406,13 +407,13 @@ def shot2(sc):
     city_street(city, (1, SHOT_LEN))
     sky()
     sun(4.2, (48, 0, 150))
-    piv, spin, rg = glow_part(parts["Part_turbo"], (0, -22, 2.4), 2.3)
+    piv, spin, rg = glow_part(parts["Part_turbo"], (0, -22, 2.4), 2.3, beam=False)
     animate_pickup(piv, spin, 1, SHOT_LEN, rate=0.045)
-    piv2, spin2, _ = glow_part(parts["Part_core"], (16, -19, 3.0), 1.5, color=(0.3, 1.0, 0.6, 1))
+    piv2, spin2, _ = glow_part(parts["Part_core"], (16, -19, 3.0), 1.5, color=(0.3, 1.0, 0.6, 1), beam=False)
     animate_pickup(piv2, spin2, 1, SHOT_LEN, phase=1.3)
-    piv3, spin3, _ = glow_part(parts["Part_bolts"], (-17, -18, 3.0), 1.4, color=(1.0, 0.8, 0.2, 1))
+    piv3, spin3, _ = glow_part(parts["Part_bolts"], (-17, -18, 3.0), 1.4, color=(1.0, 0.8, 0.2, 1), beam=False)
     animate_pickup(piv3, spin3, 1, SHOT_LEN, phase=2.1)
-    co = camera(32, fstop=2.0)
+    co = camera(32, fstop=0.7)
     for f in range(1, SHOT_LEN + 1):
         t = ease((f - 1) / (SHOT_LEN - 1))
         a = math.radians(-125 + 45 * t)
@@ -425,7 +426,7 @@ def shot3(sc):
     sky()
     sun(4.0, (40, 0, 205))  # sun from outside the doors (+X), shining in
     floor = material("floor", (0.55, 0.56, 0.58, 1), rough=0.35)
-    wall = material("wall", (0.86, 0.84, 0.8, 1), rough=0.8)
+    wall = material("wall", (0.86, 0.84, 0.8, 1), rough=0.8, emit=0.18)  # faint self-light: the inner front wall gets no sun
     trim = material("walltrim", (0.15, 0.4, 0.85, 1), rough=0.5)
     yel = material("bayline", (1.0, 0.78, 0.1, 1), rough=0.5)
     out = material("apron", (0.3, 0.31, 0.33, 1), rough=0.8)
