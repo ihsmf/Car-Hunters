@@ -92,6 +92,8 @@ local STEPS = {
 }
 
 local function build()
+	w.goal = K.text(K.root, { Text = "", TextSize = 15, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.fromOffset(760, 18),
+		TextXAlignment = Enum.TextXAlignment.Center, Visible = false, Outline = 2 })
 	local card = K.new("Frame", { Name = "Objective", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 118), Size = UDim2.fromOffset(600, 108), BackgroundColor3 = P.white,
 		ClipsDescendants = true, Visible = false }, K.root)
 	K.corner(card, 20)
@@ -182,17 +184,17 @@ local function tick()
 		return
 	end
 	local step = math.max(st.tutorial or 0, localStep or 0, 1)
+	w.goal.Visible = false
 	if step >= DONE then
 		Guide.Point(nil)
 		pulse(nil)
 		local goal = K.hud.nextGoal
-		w.card.ZIndex = 1
-		w.card.Position = UDim2.new(0.5, 0, 0, 118)
 		K.hud.tutInPanel = false
-		if goal and K.state.open == nil then
-			show("goal:" .. goal[1], "GOAL", "", P.blue, goal[1], goal[2], nil, nil, false)
-		else
-			w.card.Visible = false
+		w.card.Visible = false
+		-- after the tutorial the goal is one small line at the very bottom, under the THROW button
+		w.goal.Visible = goal ~= nil and K.state.open == nil
+		if goal then
+			w.goal.Text = goal[1] .. "  ·  " .. goal[2]
 		end
 		return
 	end

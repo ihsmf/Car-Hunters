@@ -41,7 +41,7 @@ player.CameraMinZoomDistance = 6
 Strings.SetLocale(player.LocaleId)
 
 local actions = {
-	ThrowBatch = function(counts, merge) Net.Get("ThrowBatch"):FireServer(counts, merge) end,
+	ThrowBatch = function(counts, merge, cars) Net.Get("ThrowBatch"):FireServer(counts, merge, cars) end,
 	Place = function(uid, slot) Net.Get("PlaceCar"):FireServer(uid, slot) end,
 	Remove = function(uid) Net.Get("RemoveCar"):FireServer(uid) end,
 	Upgrade = function(uid, level) Net.Get("UpgradeCar"):FireServer(uid, level) end,

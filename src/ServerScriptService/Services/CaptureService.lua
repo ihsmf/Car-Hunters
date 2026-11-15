@@ -82,7 +82,8 @@ local function bestCopy(d, typeId, except)
 end
 
 -- counts = { partId = n }, merge = fold duplicates into the owned copy (+1 level up to MergeMaxLevel)
-function Capture.ThrowBatch(player, counts, merge)
+-- chosen = how many cars to catch (1..Multi Catch limit); fewer cars share the points: each rolls on points * limit / chosen
+function Capture.ThrowBatch(player, counts, merge, chosen)
 	if type(counts) ~= "table" or not S.Data.RateLimit(player, "throw", EconomyConfig.ThrowCooldown) then
 		return
 	end
@@ -123,7 +124,9 @@ function Capture.ThrowBatch(player, counts, merge)
 			bestPart = id
 		end
 	end
-	local cars = EconomyConfig.CatchLimit(S.Shop.Level(s, "multi"))
+	local limit = EconomyConfig.CatchLimit(S.Shop.Level(s, "multi"))
+	local cars = (type(chosen) == "number" and chosen == chosen and chosen % 1 == 0) and math.clamp(chosen, 1, limit) or limit
+	points = math.floor(points * limit / cars)
 	s.busy = true
 	local results, anyPity = {}, false
 	for id, n in pairs(plan) do

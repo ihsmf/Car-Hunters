@@ -617,7 +617,7 @@ local function buildThrow()
 		state.mix = {}
 		UI.Refresh()
 	end })
-	local odds = new("Frame", { Position = UDim2.fromOffset(0, 60), Size = UDim2.fromOffset(312, 212), BackgroundColor3 = P.white, ZIndex = 23 }, right)
+	local odds = new("Frame", { Position = UDim2.fromOffset(0, 60), Size = UDim2.fromOffset(312, 196), BackgroundColor3 = P.white, ZIndex = 23 }, right)
 	corner(odds, 18)
 	stroke(odds, P.ink, 3)
 	text(odds, { Text = "CHANCE PER CAR", TextSize = 18, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(14, 10), Size = UDim2.fromOffset(280, 22), ZIndex = 24 })
@@ -631,9 +631,20 @@ local function buildThrow()
 		corner(dot, 6)
 		panels.oddsLines[r] = text(odds, { Text = "", Font = BODY, TextSize = 15, TextColor3 = P.ink, RichText = true, Position = UDim2.fromOffset(34, 58 + (i - 1) * 22), Size = UDim2.fromOffset(260, 22), ZIndex = 24 })
 	end
-	panels.oddsText = text(odds, { Text = "", Font = BODY, TextSize = 14, TextColor3 = P.orange, Position = UDim2.fromOffset(14, 178), Size = UDim2.fromOffset(284, 22), ZIndex = 24 })
+	panels.oddsText = text(odds, { Text = "", Font = BODY, TextSize = 14, TextColor3 = P.orange, Position = UDim2.fromOffset(14, 172), Size = UDim2.fromOffset(284, 20), ZIndex = 24 })
+	-- how many cars this throw catches (Multi Catch): fewer cars = every car rolled on more points
+	local carsRow = new("Frame", { Position = UDim2.fromOffset(0, 262), Size = UDim2.fromOffset(312, 32), BackgroundTransparency = 1, Visible = false, ZIndex = 23 }, right)
+	text(carsRow, { Text = "CARS", TextSize = 16, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(0, 6), Size = UDim2.fromOffset(60, 20), ZIndex = 24 })
+	panels.carsRow, panels.carsBtns = carsRow, {}
+	for n = 1, EconomyConfig.MaxCatch do
+		panels.carsBtns[n] = toy(carsRow, { Text = tostring(n), Color = P.grey, Size = UDim2.fromOffset(52, 32), Position = UDim2.fromOffset(64 + (n - 1) * 62, 0), TextSize = 18,
+			Depth = 4, Radius = 10, ZIndex = 24, OnClick = function()
+				state.cars = n
+				UI.Refresh()
+			end })
+	end
 	-- merge toggle
-	local tg = new("TextButton", { Text = "", AutoButtonColor = false, Position = UDim2.fromOffset(0, 286), Size = UDim2.fromOffset(312, 44), BackgroundTransparency = 1, ZIndex = 23 }, right)
+	local tg = new("TextButton", { Text = "", AutoButtonColor = false, Position = UDim2.fromOffset(0, 300), Size = UDim2.fromOffset(312, 44), BackgroundTransparency = 1, ZIndex = 23 }, right)
 	local sw = new("Frame", { Position = UDim2.fromOffset(0, 7), Size = UDim2.fromOffset(52, 30), BackgroundColor3 = P.green, ZIndex = 24 }, tg)
 	corner(sw, 15)
 	stroke(sw, P.ink, 3)
@@ -661,7 +672,7 @@ local function buildThrow()
 					counts[id] = n
 				end
 			end
-			actions.ThrowBatch(counts, state.merge)
+			actions.ThrowBatch(counts, state.merge, state.cars)
 			state.mix = {}
 			UI.TogglePanel(nil)
 		end })
@@ -718,13 +729,22 @@ local function refreshThrow()
 		row.max.SetColor(own > 0 and P.blue or P.grey)
 		points = points + n * PartConfig.Parts[id].points
 	end
-	-- all parts add rarity points; the throw catches `lim` cars, each rolled on those points
-	panels.catchInfo.Text = string.format("<b>%d</b> rarity points  ·  catches <b>%d</b> car%s%s", points, lim, lim > 1 and "s" or "",
-		lim < EconomyConfig.MaxCatch and "  ·  more with <b>Multi Catch</b> (Pit Stop)" or "")
-	local chances = CarConfig.ChancesForPoints(math.max(points, 1))
+	-- all parts add rarity points; the throw catches `cars` cars (1..limit), each rolled on points * limit / cars
+	state.cars = math.clamp(state.cars or lim, 1, lim)
+	local cars = state.cars
+	local perCar = math.floor(points * lim / cars)
+	panels.carsRow.Visible = lim > 1
+	for n, b in ipairs(panels.carsBtns) do
+		b.holder.Visible = n <= lim
+		b.SetColor(n == cars and P.blue or P.grey)
+	end
+	panels.catchInfo.Text = string.format("<b>%d</b> rarity points  ·  <b>%d</b> car%s%s%s", points, cars, cars > 1 and "s" or "",
+		cars < lim and string.format(" with <b>x%s</b> points each", (lim / cars) % 1 == 0 and tostring(lim // cars) or string.format("%.1f", lim / cars)) or "",
+		lim < EconomyConfig.MaxCatch and "  ·  more with <b>Multi Catch</b>" or "")
+	local chances = CarConfig.ChancesForPoints(math.max(perCar, 1))
 	local expected = {}
 	for _, r in ipairs(CarConfig.RarityOrder) do
-		expected[r] = total > 0 and lim * chances[r] / 100 or 0
+		expected[r] = total > 0 and cars * chances[r] / 100 or 0
 	end
 	clear(panels.oddsBar)
 	for i, r in ipairs(CarConfig.RarityOrder) do
