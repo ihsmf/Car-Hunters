@@ -19,4 +19,6 @@ return {
 	Roof = { M.SmoothPlastic, C(170, 80, 64), 0, 0 }, Brick = { M.Brick, C(160, 76, 56), 0, 0 },
 	-- garage kit: Frame (dark steel), Accent (hazard stripes) and Wall (door slats) are recoloured by the garage skin
 	Frame = { M.Metal, C(58, 62, 70), 0.05, 0 },
+	-- arena kit: Screen (jumbotron face the map builder labels), Rust (scrap cars, fire barrels)
+	Screen = { M.SmoothPlastic, C(12, 14, 20), 0, 0 }, Rust = { M.CorrodedMetal, C(136, 70, 40), 0, 0 },
 }

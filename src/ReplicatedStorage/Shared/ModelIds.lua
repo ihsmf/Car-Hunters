@@ -1,5 +1,13 @@
 -- Blender models uploaded as Roblox Model assets (tools/roblox_open_cloud.py models). ModelService loads them.
 return {
+	A_Bleachers = 135440315177123,
+	A_CarPile = 128932209527864,
+	A_FireBarrel = 84114635647508,
+	A_FloodLight = 87325276559632,
+	A_Jumbotron = 134565826130611,
+	A_Ramp = 76593453105414,
+	A_Skull = 101361482058758,
+	A_TireWall = 102080887107267,
 	B_apartment = 128945150146148,
 	B_cafe = 81914827915425,
 	B_club = 94385829612424,
