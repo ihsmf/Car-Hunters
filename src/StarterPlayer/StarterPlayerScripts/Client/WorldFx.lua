@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MapConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("MapConfig"))
+local Perf = require(script.Parent:WaitForChild("Perf"))
 
 local MOODS = {
 	plaza = { clock = 14.3, bright = 2.3, tint = Color3.fromRGB(255, 250, 244), sat = 0.16, amb = Color3.fromRGB(132, 128, 118) },
@@ -27,7 +28,17 @@ local MOODS = {
 local mood = { clock = 14.3, bright = 2.3, tint = Color3.fromRGB(255, 250, 244), sat = 0.16, amb = Color3.fromRGB(132, 128, 118) }
 local tintFx
 local lastBackfire = 0
+-- what was last written to Lighting: only real changes are written (every Lighting write is costly on the GPU side)
+local written = {}
+local lastClockWrite = 0
+local CLOCK_EVERY = 0.4 -- s: the sun moves at ~2.5 Hz during a zone blend
+local function colorDiff(a, b)
+	return math.max(math.abs(a.R - b.R), math.abs(a.G - b.G), math.abs(a.B - b.B))
+end
 local spinAcc = 0
+local SPIN_RADIUS = { HIGH = 300, MED = 200, LOW = 130 }
+local lastSpinScan = 0
+local spinNear, spinParts, spinCFs = {}, {}, {}
 
 local Fx = {}
 local spinning = {}
@@ -96,19 +107,38 @@ function Fx.Start(storeModule)
 			mood.sat = mood.sat + (target.sat - mood.sat) * a
 			mood.tint = mood.tint:Lerp(target.tint, a)
 			mood.amb = mood.amb:Lerp(target.amb, a)
-			Lighting.ClockTime = mood.clock
-			Lighting.Brightness = mood.bright
-			Lighting.OutdoorAmbient = mood.amb
-			tintFx.TintColor = mood.tint
-			tintFx.Saturation = mood.sat
+			local now = os.clock()
+			if written.clock == nil or (math.abs(mood.clock - written.clock) > 0.01 and now - lastClockWrite >= CLOCK_EVERY) then
+				written.clock = mood.clock
+				lastClockWrite = now
+				Lighting.ClockTime = mood.clock
+			end
+			if written.bright == nil or math.abs(mood.bright - written.bright) > 0.005 then
+				written.bright = mood.bright
+				Lighting.Brightness = mood.bright
+			end
+			if written.amb == nil or colorDiff(mood.amb, written.amb) > 0.002 then
+				written.amb = mood.amb
+				Lighting.OutdoorAmbient = mood.amb
+			end
+			if written.tint == nil or colorDiff(mood.tint, written.tint) > 0.002 then
+				written.tint = mood.tint
+				tintFx.TintColor = mood.tint
+			end
+			if written.sat == nil or math.abs(mood.sat - written.sat) > 0.002 then
+				written.sat = mood.sat
+				tintFx.Saturation = mood.sat
+			end
 		end
 		local t = os.clock()
 		-- (v10: showcase cars stand still on static stands - no turntable spinning)
-		if t - lastBackfire > 2.2 then
+		local level = Perf.Level()
+		if t - lastBackfire > 2.2 and level ~= "LOW" then
 			lastBackfire = t
 			local camPos = cam and cam.CFrame.Position or Vector3.zero
+			local range = level == "HIGH" and 140 or 90
 			for _, att in ipairs(CollectionService:GetTagged("Backfire")) do
-				if att.Parent and (att.WorldPosition - camPos).Magnitude < 140 and math.random() < 0.45 then
+				if att.Parent and (att.WorldPosition - camPos).Magnitude < range and math.random() < 0.45 then
 					local fire = att:FindFirstChildOfClass("ParticleEmitter")
 					if fire then
 						fire:Emit(14)
@@ -116,11 +146,31 @@ function Fx.Start(storeModule)
 				end
 			end
 		end
-		for m, s in pairs(spinning) do
-			if s.root.Parent then
-				s.root.CFrame = s.base * CFrame.Angles(0, t * 2 + s.phase, 0) + Vector3.new(0, math.sin(t * 2 + s.phase) * 0.5, 0)
-			else
-				spinning[m] = nil
+		-- spinning drops: only the ones near the camera animate (list refreshed at 2 Hz), moved in one bulk call
+		if t - lastSpinScan > 0.5 then
+			lastSpinScan = t
+			table.clear(spinNear)
+			local camPos = cam and cam.CFrame.Position
+			local r = SPIN_RADIUS[level] or 200
+			for m, s in pairs(spinning) do
+				if not s.root.Parent then
+					spinning[m] = nil
+				elseif camPos and (s.base.Position - camPos).Magnitude < r then
+					table.insert(spinNear, s)
+				end
+			end
+		end
+		if #spinNear > 0 then
+			table.clear(spinParts)
+			table.clear(spinCFs)
+			for _, s in ipairs(spinNear) do
+				if s.root.Parent then
+					table.insert(spinParts, s.root)
+					table.insert(spinCFs, s.base * CFrame.Angles(0, t * 2 + s.phase, 0) + Vector3.new(0, math.sin(t * 2 + s.phase) * 0.5, 0))
+				end
+			end
+			if #spinParts > 0 then
+				Workspace:BulkMoveTo(spinParts, spinCFs, Enum.BulkMoveMode.FireCFrameChanged)
 			end
 		end
 	end)

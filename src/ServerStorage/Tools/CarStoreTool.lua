@@ -176,6 +176,7 @@ end
 -- keeps only what is drawn. An invisible part that carries visible parts (A-Chassis wheel hubs: Wheels/FL holds
 -- the real tire + rim meshes) stays as an invisible holder - deleting it used to delete the real wheels.
 -- Hidden parts are never made visible again (they are alternative rim sets, airbags, colliders).
+local fidelityOk = nil
 local function sanitize(car)
 	local parts = 0
 	for _, d in ipairs(car:GetDescendants()) do
@@ -199,6 +200,15 @@ local function sanitize(car)
 				d.CanTouch = false
 				d.CanQuery = false
 				d.Massless = true
+				if math.max(d.Size.X, d.Size.Y, d.Size.Z) < 2 then
+					d.CastShadow = false -- tiny detail parts: no shadow pass
+				end
+				if fidelityOk ~= false and d:IsA("MeshPart") then
+					-- writable from the command bar / plugins only; a live server refuses it once and stops trying
+					fidelityOk = pcall(function()
+						d.CollisionFidelity = Enum.CollisionFidelity.Box
+					end)
+				end
 				if d:IsA("Seat") or d:IsA("VehicleSeat") then
 					d.Disabled = true
 				end

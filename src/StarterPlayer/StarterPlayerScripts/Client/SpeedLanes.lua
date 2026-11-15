@@ -33,7 +33,9 @@ function SpeedLanes.Start(getBaseSpeed)
 		if cam and cam.CameraType == Enum.CameraType.Custom then
 			local kick = boost and game:GetService("Players").LocalPlayer:GetAttribute("Opt_fov") ~= false -- Settings
 			fov = fov + ((kick and 80 or 70) - fov) * math.min(1, dt * 5)
-			cam.FieldOfView = fov
+			if math.abs(cam.FieldOfView - fov) > 0.01 then -- a camera write re-renders: only when it really moves
+				cam.FieldOfView = fov
+			end
 		end
 	end)
 end

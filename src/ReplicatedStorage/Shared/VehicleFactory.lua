@@ -19,6 +19,30 @@ local BOXY = { van = true, truck = true, service = true, minibus = true }
 
 local templateCache = {}
 
+-- render-cost trims for decoration parts. CollisionFidelity / RenderFidelity are not writable from every
+-- script context, so each is tried once and skipped for good when the engine refuses it.
+local canSetFidelity, canSetRender = nil, nil
+local function trimPart(d)
+	local s = d.Size
+	if math.max(s.X, s.Y, s.Z) < 2 then
+		d.CastShadow = false -- tiny parts: shadows cost draw calls and are invisible anyway
+	end
+	if canSetFidelity ~= false and d:IsA("MeshPart") then
+		local ok = pcall(function()
+			d.CollisionFidelity = Enum.CollisionFidelity.Box
+		end)
+		canSetFidelity = ok
+	end
+end
+local function lowRender(d)
+	if canSetRender ~= false and d:IsA("MeshPart") then
+		local ok = pcall(function()
+			d.RenderFidelity = Enum.RenderFidelity.Performance
+		end)
+		canSetRender = ok
+	end
+end
+
 local function newRoot()
 	local root = Instance.new("Part")
 	root.Name = "Root"
@@ -86,6 +110,7 @@ local function prepareTemplate(tpl, targetL, opts)
 			d.CanQuery = false
 			d.CanTouch = false
 			d.Massless = true
+			trimPart(d)
 			if d:IsA("Seat") or d:IsA("VehicleSeat") then
 				d.Disabled = true
 			end
@@ -383,6 +408,7 @@ function VehicleFactory.BuildTraffic(kindName, color, variant)
 				for _, d in ipairs(m:GetDescendants()) do
 					if d:IsA("BasePart") then
 						d.CastShadow = false
+						lowRender(d)
 					end
 				end
 				return m

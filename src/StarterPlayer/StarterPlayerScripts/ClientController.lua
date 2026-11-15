@@ -77,6 +77,7 @@ CineFx.Init(UI.Gui())
 TrapFx.SetSfx(UI.Sfx)
 TrapFx.SetReveal(UI.ShowReveal, UI.HideReveal)
 TrapFx.SetCinematic(UI.SetCinematic)
+require(Client:WaitForChild("Perf")).Start() -- adaptive quality (HIGH/MED/LOW) + exhaust LOD
 WorldFx.Start(Store)
 TrafficRenderer.Start()
 Guidance.Start()

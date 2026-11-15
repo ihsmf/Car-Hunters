@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
 local TrafficMath = require(Shared:WaitForChild("TrafficMath"))
+local Perf = require(script.Parent:WaitForChild("Perf"))
 
 local ZoneFx = {}
 local C = Color3.fromRGB
@@ -30,6 +31,7 @@ local function trainNear(roadId, t)
 	return false
 end
 
+local LIGHT_ON, LIGHT_OFF = C(255, 40, 30), C(90, 20, 20)
 local function crossings(t)
 	local blink = math.floor(t * 2.5) % 2
 	local state = {}
@@ -39,8 +41,12 @@ local function crossings(t)
 			state[rid] = trainNear(rid, t)
 		end
 		local on = state[rid] and (l:GetAttribute("Phase") % 2 == blink)
-		l.Color = on and C(255, 40, 30) or C(90, 20, 20)
-		l.Material = on and Enum.Material.Neon or Enum.Material.SmoothPlastic
+		local mat = on and Enum.Material.Neon or Enum.Material.SmoothPlastic
+		local col = on and LIGHT_ON or LIGHT_OFF
+		if l.Material ~= mat or l.Color ~= col then
+			l.Color = col
+			l.Material = mat
+		end
 	end
 	for _, arm in ipairs(CollectionService:GetTagged("CrossingArm")) do
 		local rid = arm:GetAttribute("RoadId")
@@ -57,7 +63,10 @@ local function crossings(t)
 		local s = arm:GetAttribute("Side")
 		local pivot = base * CFrame.new(s * 6, 0, 0)
 		local goal = down and pivot * CFrame.new(-s * 6, 0, 0) or pivot * CFrame.Angles(0, 0, -s * math.rad(80)) * CFrame.new(-s * 6, 0, 0)
-		arm.CFrame = arm.CFrame:Lerp(goal, 0.1)
+		local armCF = arm.CFrame
+		if (armCF.Position - goal.Position).Magnitude > 0.01 or armCF.LookVector:Dot(goal.LookVector) < 0.99999 or armCF.UpVector:Dot(goal.UpVector) < 0.99999 then
+			arm.CFrame = armCF:Lerp(goal, 0.1)
+		end
 	end
 end
 
@@ -91,17 +100,22 @@ local function ensureWeather()
 end
 
 local lastBolt = 0
+local RAIN_RATE = { HIGH = 900, MED = 450, LOW = 180 }
+local cur -- the atmosphere values this script last wrote (lerped here, written only when they really change)
 local function weather(zid, t, camPos)
 	ensureWeather()
 	local d0, h0, c0 = atmo:GetAttribute("BaseDensity"), atmo:GetAttribute("BaseHaze"), atmo:GetAttribute("BaseColor")
 	local wantD, wantH, wantC = d0, h0, c0
 	local rate = 0
+	if not cur then
+		cur = { d = atmo.Density, h = atmo.Haze, c = atmo.Color }
+	end
 	if zid == "desert" then
 		local wave = math.max(0, math.sin(t * 2 * math.pi / 40)) -- a storm front every 40 s
 		wantD, wantH, wantC = d0 + 0.45 * wave, h0 + 6 * wave, c0:Lerp(C(214, 170, 110), wave)
 	elseif zid == "storm" then
 		wantD, wantH, wantC = d0 + 0.4, h0 + 3, c0:Lerp(C(90, 100, 116), 0.8)
-		rate = 900
+		rate = RAIN_RATE[Perf.Level()] or 900
 		if t - lastBolt > 6 + (t % 5) then
 			lastBolt = t
 			local cc = Lighting:FindFirstChild("BoltFlash") or Instance.new("ColorCorrectionEffect", Lighting)
@@ -116,11 +130,25 @@ local function weather(zid, t, camPos)
 			end)
 		end
 	end
-	atmo.Density = atmo.Density + (wantD - atmo.Density) * 0.05
-	atmo.Haze = atmo.Haze + (wantH - atmo.Haze) * 0.05
-	atmo.Color = atmo.Color:Lerp(wantC, 0.05)
-	rain.Rate = rate
-	rainPart.CFrame = CFrame.new(camPos + Vector3.new(0, 40, 0))
+	if math.abs(wantD - cur.d) > 0.001 then
+		cur.d = cur.d + (wantD - cur.d) * 0.05
+		atmo.Density = cur.d
+	end
+	if math.abs(wantH - cur.h) > 0.005 then
+		cur.h = cur.h + (wantH - cur.h) * 0.05
+		atmo.Haze = cur.h
+	end
+	local dc = math.max(math.abs(wantC.R - cur.c.R), math.abs(wantC.G - cur.c.G), math.abs(wantC.B - cur.c.B))
+	if dc > 0.002 then
+		cur.c = cur.c:Lerp(wantC, 0.05)
+		atmo.Color = cur.c
+	end
+	if rain.Rate ~= rate then
+		rain.Rate = rate
+	end
+	if rate > 0 then
+		rainPart.CFrame = CFrame.new(camPos + Vector3.new(0, 40, 0))
+	end
 end
 
 -- planes push players standing in their exhaust

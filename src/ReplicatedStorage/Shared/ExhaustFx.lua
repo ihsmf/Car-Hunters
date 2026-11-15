@@ -1,4 +1,5 @@
 -- Rarity-based exhaust for cars parked in a garage. Rarer = denser, brighter, flashier.
+-- Everything is created switched off and tagged: the client (Client/Perf.lua) only runs the ones near the camera.
 local CollectionService = game:GetService("CollectionService")
 local Kinds = require(script.Parent:WaitForChild("VehicleKinds"))
 
@@ -49,6 +50,8 @@ local function emitter(att, layer)
 	e.EmissionDirection = Enum.NormalId.Left -- -X = out of the tailpipe (cars face +X)
 	e.RotSpeed = NumberRange.new(-60, 60)
 	e.Rotation = NumberRange.new(0, 360)
+	e.Enabled = false
+	CollectionService:AddTag(e, "ExhaustEmitter")
 	e.Parent = att
 	return e
 end
@@ -79,6 +82,8 @@ function ExhaustFx.Attach(model, def, rarityIndex)
 		light.Color = C(255, 190, 60)
 		light.Range = 10
 		light.Brightness = 2
+		light.Enabled = false
+		CollectionService:AddTag(light, "ExhaustLight")
 		light.Parent = root
 	end
 end

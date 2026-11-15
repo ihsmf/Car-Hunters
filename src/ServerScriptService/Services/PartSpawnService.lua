@@ -18,6 +18,12 @@ local S
 local points = {}
 local rng = Random.new()
 local drops
+-- spatial grid over the spawn points (X/Z cells): a pickup check only looks at the cells around the player
+local CELL = 32
+local grid = {}
+local function cellKey(cx, cz)
+	return (cx + 50000) * 100000 + (cz + 50000)
+end
 
 function PartSpawn.Init(hub)
 	S = hub
@@ -74,9 +80,17 @@ function PartSpawn.Start()
 		end
 	end
 	local now = os.clock()
-	for _, pt in ipairs(points) do
+	for i, pt in ipairs(points) do
 		pt.readyAt = now + rng:NextNumber() * 5
+		local key = cellKey(math.floor(pt.pos.X / CELL), math.floor(pt.pos.Z / CELL))
+		local cell = grid[key]
+		if not cell then
+			cell = {}
+			grid[key] = cell
+		end
+		table.insert(cell, i)
 	end
+	local nearby = {}
 
 	local acc = 0
 	local warnedAt = {}
@@ -100,7 +114,21 @@ function PartSpawn.Start()
 				local hrp = S.Data.GetRoot(player)
 				if hrp then
 					local pos = hrp.Position
-					for _, pt in ipairs(points) do
+					-- same order as a full scan (sorted point indices), but only the points within reach
+					table.clear(nearby)
+					for cx = math.floor((pos.X - r) / CELL), math.floor((pos.X + r) / CELL) do
+						for cz = math.floor((pos.Z - r) / CELL), math.floor((pos.Z + r) / CELL) do
+							local cell = grid[cellKey(cx, cz)]
+							if cell then
+								for _, i in ipairs(cell) do
+									table.insert(nearby, i)
+								end
+							end
+						end
+					end
+					table.sort(nearby)
+					for _, i in ipairs(nearby) do
+						local pt = points[i]
 						if pt.active then
 							local d = pt.pos - pos
 							if d.X * d.X + d.Z * d.Z <= r2 and math.abs(d.Y) < 12 then

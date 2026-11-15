@@ -132,8 +132,10 @@ function Markers.Start(kit, extraModule)
 
 	store.Changed.Event:Connect(ensureBase)
 	local t = 0
+	local textAcc = 1 -- distance labels refresh at 10 Hz (the billboards themselves follow every frame)
 	RunService.RenderStepped:Connect(function(dt)
 		t = t + dt
+		textAcc = textAcc + dt
 		local cam = Workspace.CurrentCamera
 		local char = Players.LocalPlayer.Character
 		local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -151,16 +153,22 @@ function Markers.Start(kit, extraModule)
 			removeMark("hot")
 		end
 		-- distances
-		for _, m in pairs(marks) do
-			local d = (m.adornee.Position - hrp.Position).Magnitude
-			m.dist.Text = (d > 12) and (math.floor(d) .. " m") or ""
+		if textAcc >= 0.1 then
+			textAcc = 0
+			for _, m in pairs(marks) do
+				local d = (m.adornee.Position - hrp.Position).Magnitude
+				local txt = (d > 12) and (math.floor(d) .. " m") or ""
+				if m.dist.Text ~= txt then
+					m.dist.Text = txt
+				end
+			end
 		end
 		-- edge arrow
 		local obj = objective()
 		-- no arrow / world labels over panels or cinematics, or when switched off in Settings
 		local busy = K.state.open ~= nil or K.state.cine == true or game:GetService("Players").LocalPlayer:GetAttribute("Opt_markers") == false
 		for _, m in pairs(marks) do
-			if m.bb then
+			if m.bb and m.bb.Enabled == busy then
 				m.bb.Enabled = not busy
 			end
 		end

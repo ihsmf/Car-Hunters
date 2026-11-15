@@ -56,7 +56,9 @@ local function ensure(hrp)
 		arrow.Parent = bb
 		marker.Parent = workspace
 	end
-	beam.Attachment1 = att1
+	if beam.Attachment1 ~= att1 then
+		beam.Attachment1 = att1
+	end
 end
 
 -- target: BasePart, Vector3 or nil (off)
@@ -73,18 +75,23 @@ function Guidance.Start()
 			pos = nil -- Settings: guidance beam off
 		end
 		if not hrp or not pos then
-			if beam then
+			if beam and beam.Enabled then
 				beam.Enabled = false
 			end
-			if marker then
+			if marker and marker.Parent then
 				marker.Parent = nil
 			end
 			return
 		end
 		ensure(hrp)
-		marker.Parent = workspace
+		if marker.Parent ~= workspace then
+			marker.Parent = workspace
+		end
 		marker.Position = pos + Vector3.new(0, 7 + math.sin(os.clock() * 4) * 0.8, 0)
-		beam.Enabled = (hrp.Position - pos).Magnitude > 12
+		local on = (hrp.Position - pos).Magnitude > 12
+		if beam.Enabled ~= on then
+			beam.Enabled = on
+		end
 	end)
 end
 
