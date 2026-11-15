@@ -5,6 +5,7 @@ local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ContentProvider = game:GetService("ContentProvider")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Strings = require(Shared:WaitForChild("Strings"))
@@ -16,6 +17,7 @@ local PartVisual = require(Shared:WaitForChild("PartVisual"))
 local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 local VehicleFactory = require(Shared:WaitForChild("VehicleFactory"))
+local RevealFx = require(script.Parent:WaitForChild("RevealFx"))
 
 local T = Strings.T
 local C = Color3.fromRGB
@@ -379,10 +381,18 @@ task.spawn(function()
 		task.wait(0.1)
 		pcall(function()
 			local now = os.clock()
-			for _, it in ipairs(table.clone(notes.items)) do
+			-- no table copy every tick: collect the expired ones first (noteRemove edits notes.items), usually none
+			local due
+			for _, it in ipairs(notes.items) do
 				if state.cine then
 					it.expire = math.max(it.expire, now + 0.5) -- hidden during cinematics: keep it for afterwards
 				elseif now >= it.expire then
+					due = due or {}
+					table.insert(due, it)
+				end
+			end
+			if due then
+				for _, it in ipairs(due) do
 					noteRemove(it)
 				end
 			end
@@ -421,9 +431,28 @@ local function buildHud()
 	end
 	-- money
 	local money = new("Frame", { Name = "Money", Size = UDim2.fromOffset(280, 64), BackgroundTransparency = 1, LayoutOrder = 5 }, colF)
-	icon(money, "coin", 56, UDim2.fromOffset(0, 4))
-	hud.money = text(money, { Position = UDim2.fromOffset(64, 0), Size = UDim2.new(1, -64, 0, 42), TextSize = 40, TextColor3 = P.white, Outline = 3 })
-	hud.income = outline(text(money, { Position = UDim2.fromOffset(65, 42), Size = UDim2.new(1, -65, 0, 20), TextSize = 18, Font = BODY, TextColor3 = C(70, 220, 100) }), 2.5)
+	-- v22 coin: soft gold halo behind it (stacked circles fading outwards), a shine sweep every ~4 s,
+	-- a spin-bounce whenever money comes in (UI.CoinBounce)
+	local halo = new("Frame", { Name = "CoinGlow", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(28, 32), Size = UDim2.fromOffset(56, 56),
+		BackgroundTransparency = 1, ZIndex = 1 }, money)
+	for _, k in ipairs({ { 1.9, 0.94 }, { 1.62, 0.91 }, { 1.38, 0.88 }, { 1.16, 0.84 }, { 0.96, 0.8 } }) do
+		local g = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(k[1], k[1]), BackgroundColor3 = C(255, 196, 48),
+			BackgroundTransparency = k[2], BorderSizePixel = 0, ZIndex = 1 }, halo)
+		new("UICorner", { CornerRadius = UDim.new(0.5, 0) }, g)
+	end
+	local haloScale = new("UIScale", {}, halo)
+	TweenService:Create(haloScale, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Scale = 1.12 }):Play() -- lives as long as the HUD
+	local coin = icon(money, "coin", 56, UDim2.fromOffset(0, 4))
+	coin.ZIndex = 2
+	hud.coin = coin
+	hud.coinScale = new("UIScale", {}, coin)
+	local shine = new("Frame", { Name = "Shine", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.8, 0.8),
+		BackgroundColor3 = P.white, BorderSizePixel = 0, ZIndex = 3 }, coin)
+	new("UICorner", { CornerRadius = UDim.new(0.5, 0) }, shine)
+	local shineGrad = new("UIGradient", { Transparency = RevealFx.ShineBand(0.35, 0.14), Rotation = 25 }, shine)
+	RevealFx.Sweep(shineGrad, 0.7, 3.4)
+	hud.money = text(money, { Position = UDim2.fromOffset(64, 0), Size = UDim2.new(1, -64, 0, 42), TextSize = 40, TextColor3 = P.white, Outline = 3, ZIndex = 3 })
+	hud.income = outline(text(money, { Position = UDim2.fromOffset(65, 42), Size = UDim2.new(1, -65, 0, 20), TextSize = 18, Font = BODY, TextColor3 = C(70, 220, 100), ZIndex = 3 }), 2.5)
 	hud.moneyScale = new("UIScale", {}, money)
 	-- loot carried on this run (only while carrying)
 	local bag = new("Frame", { Name = "Carrying", Size = UDim2.fromOffset(280, 28), BackgroundTransparency = 1, Visible = false, LayoutOrder = 3 }, colF)
@@ -1170,6 +1199,16 @@ function UI.CloseOverlays()
 end
 
 ---------------------------------------------------------------- reveal
+-- v22 "WOW" reveal: build-up (black silhouette hovering over a shaking disc, pulsing "?", energy rings pulled in,
+-- the badge climbing the rarity tiers faster and faster) -> impact (flash, the car lights up and drops onto the
+-- disc, shockwaves, confetti + stars, box shake, rays spin up) -> name pops letter by letter, income counts up,
+-- NEW! stamp slams in last. Longer and bigger the rarer the car (Common ~1.5 s build-up, Legendary ~3.1 s).
+local MYSTERY = C(206, 212, 228)
+local REVEAL_AMBIENT, REVEAL_LIGHT = C(200, 200, 210), C(255, 250, 240)
+local GOLD = C(255, 200, 70)
+local CAR_AT = UDim2.fromOffset(350, 236) -- centre of the car in the box
+local DISC_AT = UDim2.fromOffset(350, 352)
+
 local function buildReveal()
 	-- showcase: blurred world, rarity backdrop with turning rays + light streaks, car spinning on a glowing turntable
 	local r = new("TextButton", { Name = "Reveal", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(6, 7, 12), BackgroundTransparency = 0, Visible = false, ZIndex = 60 }, overlay)
@@ -1194,6 +1233,19 @@ local function buildReveal()
 		corner(sp, 3)
 		sparks[k] = { f = sp, x = math.random(), y = math.random(), v = 0.03 + math.random() * 0.06, s = 3 + math.random() * 7 }
 	end
+	-- Legendary: gold glow along the screen edges (pulses)
+	local rim = new("Frame", { Name = "Rim", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, ZIndex = 61 }, r)
+	local rimEdges = {}
+	for _, e in ipairs({
+		{ UDim2.fromScale(0, 0), UDim2.new(1, 0, 0, 110), 90, Vector2.zero },
+		{ UDim2.fromScale(0, 1), UDim2.new(1, 0, 0, 110), -90, Vector2.new(0, 1) },
+		{ UDim2.fromScale(0, 0), UDim2.new(0, 110, 1, 0), 0, Vector2.zero },
+		{ UDim2.fromScale(1, 0), UDim2.new(0, 110, 1, 0), 180, Vector2.new(1, 0) },
+	}) do
+		local f = new("Frame", { AnchorPoint = e[4], Position = e[1], Size = e[2], BackgroundColor3 = GOLD, BorderSizePixel = 0, ZIndex = 61 }, rim)
+		new("UIGradient", { Transparency = NumberSequence.new(0, 1), Rotation = e[3] }, f)
+		table.insert(rimEdges, f)
+	end
 	local box = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(700, 640), BackgroundTransparency = 1, ZIndex = 61 }, r)
 	local sc = new("UIScale", {}, box)
 	local top = text(box, { Text = T("reveal_new"), TextSize = 34, Size = UDim2.new(1, 0, 0, 40), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 62 })
@@ -1201,37 +1253,78 @@ local function buildReveal()
 	corner(badge, 27)
 	stroke(badge, P.ink, 4)
 	local badgeGrad = gradient(badge, P.yellow)
+	local badgeScale = new("UIScale", {}, badge)
+	-- Epic+: a shine stripe runs over the badge (same rounded shape, transparent but for the moving band)
+	local badgeShine = new("Frame", { Name = "Shine", Size = UDim2.fromScale(1, 1), BackgroundColor3 = P.white, BorderSizePixel = 0, Visible = false, ZIndex = 62 }, badge)
+	corner(badgeShine, 27)
+	local badgeShineGrad = new("UIGradient", { Transparency = RevealFx.ShineBand(0.25, 0.1), Rotation = 20 }, badgeShine)
 	local rarity = text(badge, { Text = "", TextSize = 36, Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 63, Outline = 3 })
 	-- turntable: glowing ellipse under the car
-	local disc = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(350, 352), Size = UDim2.fromOffset(470, 90), BackgroundColor3 = P.yellow, BorderSizePixel = 0, ZIndex = 61 }, box)
+	local disc = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = DISC_AT, Size = UDim2.fromOffset(470, 90), BackgroundColor3 = P.yellow, BorderSizePixel = 0, ZIndex = 61 }, box)
 	corner(disc, 200)
 	new("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(0.5, 0.25), NumberSequenceKeypoint.new(1, 0.9) }) }, disc)
-	local ring = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(350, 352), Size = UDim2.fromOffset(420, 70), BackgroundTransparency = 1, ZIndex = 61 }, box)
+	local ring = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = DISC_AT, Size = UDim2.fromOffset(420, 70), BackgroundTransparency = 1, ZIndex = 61 }, box)
 	corner(ring, 200)
 	local ringStroke = stroke(ring, P.white, 4)
 	local vpHolder = new("Frame", { Position = UDim2.fromOffset(40, 106), Size = UDim2.fromOffset(620, 300), BackgroundTransparency = 1, ZIndex = 62 }, box)
+	-- the pulsing "?" over the silhouette (TextSize tops out at 100: a UIScale makes it bigger)
+	local q = text(box, { Text = "?", TextSize = 100, NoFit = true, AnchorPoint = Vector2.new(0.5, 0.5), Position = CAR_AT, Size = UDim2.fromOffset(120, 120), TextXAlignment = Enum.TextXAlignment.Center,
+		TextYAlignment = Enum.TextYAlignment.Center, Outline = 5, ZIndex = 63, Visible = false })
+	local qScale = new("UIScale", { Scale = 1.6 }, q)
 	local name = text(box, { Text = "", TextSize = 64, Position = UDim2.fromOffset(0, 410), Size = UDim2.new(1, 0, 0, 70), TextXAlignment = Enum.TextXAlignment.Center, Outline = 4, ZIndex = 62 })
+	local nameScale = new("UIScale", {}, name)
+	local nameGrad = new("UIGradient", { Enabled = false, Rotation = 12 }, name) -- Epic+: shine sweep over the letters
 	local info = text(box, { Text = "", Font = BODY, TextSize = 24, Position = UDim2.fromOffset(0, 482), Size = UDim2.new(1, 0, 0, 30), TextXAlignment = Enum.TextXAlignment.Center, RichText = true, ZIndex = 62 })
 	local stamp = text(box, { Text = "NEW!", TextSize = 46, TextColor3 = P.yellow, Rotation = -14, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(600, 120), Size = UDim2.fromOffset(160, 60), TextXAlignment = Enum.TextXAlignment.Center, Outline = 4, ZIndex = 64, Visible = false })
+	local stampScale = new("UIScale", {}, stamp)
 	local ok = toy(box, { Text = T("btn_awesome"), Color = P.green, Size = UDim2.fromOffset(300, 86), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, 0), ZIndex = 63,
 		OnClick = function() UI.HideReveal() end })
-	panels.reveal = { root = r, rays = rays, box = box, sc = sc, top = top, badgeGrad = badgeGrad, rarity = rarity, vpHolder = vpHolder, name = name, info = info, ok = ok,
-		glow = glow, glowGrad = glowGrad, disc = disc, ringStroke = ringStroke, streaks = streaks, sparks = sparks, stamp = stamp }
+	local okScale = new("UIScale", {}, ok.holder)
+	-- impact flash over everything
+	local flash = new("Frame", { Name = "Flash", Size = UDim2.fromScale(1, 1), BackgroundColor3 = P.white, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 70 }, r)
+	panels.reveal = { root = r, rays = rays, box = box, sc = sc, top = top, badge = badge, badgeGrad = badgeGrad, badgeScale = badgeScale, badgeShine = badgeShine,
+		badgeShineGrad = badgeShineGrad, rarity = rarity, vpHolder = vpHolder, name = name, nameScale = nameScale, nameGrad = nameGrad, info = info, ok = ok, okScale = okScale,
+		glow = glow, glowGrad = glowGrad, disc = disc, ringStroke = ringStroke, streaks = streaks, sparks = sparks, stamp = stamp, stampScale = stampScale,
+		q = q, qScale = qScale, flash = flash, rim = rim, rimEdges = rimEdges, closableAt = 0 }
 	r.Activated:Connect(function()
-		if os.clock() - (panels.reveal.shownAt or 0) > 0.8 then -- ignore the tap that was still meant for the throw
+		-- tap anywhere closes, but never before the car is revealed (impact + 0.5 s; also eats the tap meant for the throw)
+		if os.clock() >= (panels.reveal.closableAt or 0) then
 			UI.HideReveal()
 		end
 	end)
 end
 
+-- ends the running reveal session: every connection, tween, particle burst and effect layer goes
+local function endReveal(rv)
+	local s = rv.sess
+	if not s then
+		return
+	end
+	rv.sess = nil
+	for _, c in ipairs(s.conns) do
+		c:Disconnect()
+	end
+	for _, x in ipairs(s.tweens) do
+		x:Cancel()
+	end
+	for _, fn in ipairs(s.stops) do
+		pcall(fn)
+	end
+	s.back:Destroy()
+	s.front:Destroy()
+	rv.flash.BackgroundTransparency = 1
+	rv.rim.Visible = false
+	rv.box.Position = UDim2.fromScale(0.5, 0.5)
+	rv.badge.Rotation = 0
+	rv.disc.Position = DISC_AT
+end
+
 function UI.HideReveal()
 	local rv = panels.reveal
+	endReveal(rv)
 	if rv.root.Visible then
 		rv.root.Visible = false
-		if rv.conn then
-			rv.conn:Disconnect()
-			rv.conn = nil
-		end
+		clear(rv.vpHolder) -- frees the showcase car
 		if rv.blur then
 			rv.blur:Destroy()
 			rv.blur = nil
@@ -1246,40 +1339,117 @@ end
 
 function UI.ShowReveal(res, onClosed)
 	local rv = panels.reveal
-	rv.onClosed = onClosed
 	local def = CarConfig.ById[res.typeId]
 	if not def then
 		return
 	end
+	-- a reveal still running: end it first; whoever waited for that one is told it closed
+	endReveal(rv)
+	local prev = rv.onClosed
+	rv.onClosed = onClosed
+	if prev and prev ~= onClosed then
+		task.spawn(prev)
+	end
 	local rc = rarityColor(res.rarity)
-	rv.top.Text = res.isNew and T("reveal_new") or T("reveal_got")
-	rv.badgeGrad.Color = ColorSequence.new(lift(rc, 0.35), rc)
-	rv.rarity.Text = "★ " .. string.upper(T("rarity_" .. res.rarity)) .. " ★"
-	rv.name.Text = string.upper(def.name)
-	rv.name.TextColor3 = rc
-	local lines = { string.format('<font color="#34D058">+%s/s</font>', Util.FormatNumber(CarConfig.IncomeAt(def, 1))) }
-	table.insert(lines, (res.merged and string.format("Merged into your copy - now Lv %d", res.merged))
+	local lvl = CarConfig.Rarities[res.rarity].index
+	local shakeK = Players.LocalPlayer:GetAttribute("Opt_shake") == false and 0 or 1
+	-- build-up: Common 1.5 s, Uncommon 1.9, Rare 2.3, Epic 2.7, Legendary 3.1 (a faster trap pass trims it a little)
+	local buildT = math.max(1, (1.1 + 0.4 * lvl) / math.sqrt(math.max(1, res.speed or 1)))
+	local carName = string.upper(def.name)
+	local income = CarConfig.IncomeAt(def, 1)
+	local rest = {}
+	table.insert(rest, (res.merged and string.format("Merged into your copy - now Lv %d", res.merged))
 		or (res.sold and string.format("Garage full - sold for $%s", Util.FormatNumber(res.sold)))
 		or (res.slot and T("reveal_placed", res.slot)) or T("reveal_stored"))
 	if res.isNew and res.bonus and res.bonus > 0 then
-		table.insert(lines, T("reveal_first", Util.FormatNumber(res.bonus)))
+		table.insert(rest, T("reveal_first", Util.FormatNumber(res.bonus)))
 	end
 	if res.pityUsed then
-		table.insert(lines, T("reveal_pity"))
+		table.insert(rest, T("reveal_pity"))
 	end
-	rv.info.Text = table.concat(lines, "  ·  ")
-	for _, ray in ipairs(rv.rays:GetChildren()) do
-		ray.BackgroundColor3 = rc
+	local function infoText(v)
+		local parts = { string.format('<font color="#34D058">+%s/s</font>', Util.FormatNumber(v)) }
+		for _, l in ipairs(rest) do
+			table.insert(parts, l)
+		end
+		return table.concat(parts, "  ·  ")
 	end
-	rv.glow.BackgroundColor3 = rc
-	rv.disc.BackgroundColor3 = rc
-	rv.ringStroke.Color = lift(rc, 0.4)
-	rv.stamp.Visible = res.isNew == true
+
+	local s = { conns = {}, tweens = {}, stops = {}, t0 = os.clock(), tint = MYSTERY }
+	s.back = new("Frame", { Name = "FxBack", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 61 }, rv.box)
+	s.front = new("Frame", { Name = "FxFront", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 66 }, rv.box)
+	rv.sess = s
+	local function live()
+		return rv.sess == s
+	end
+	local function stw(o, t, props, style, dir)
+		local x = tween(o, t, props, style, dir)
+		table.insert(s.tweens, x)
+		return x
+	end
+	local function later(d, fn)
+		task.delay(d, function()
+			if live() then
+				fn()
+			end
+		end)
+	end
+	-- the whole scene takes the colour of the current tier (neutral silver while it is still "?")
+	local function tint(c)
+		s.tint = c
+		for _, ray in ipairs(rv.rays:GetChildren()) do
+			ray.BackgroundColor3 = c
+		end
+		rv.glow.BackgroundColor3 = c
+		rv.disc.BackgroundColor3 = c
+		rv.ringStroke.Color = lift(c, 0.4)
+		rv.badgeGrad.Color = ColorSequence.new(lift(c, 0.35), c)
+		rv.q.TextColor3 = lift(c, 0.55)
+	end
+
+	-- reset everything a previous reveal may have left
+	rv.top.Text = "WHAT DID YOU CATCH?"
+	rv.rarity.Text = "?  ?  ?"
+	rv.badgeScale.Scale = 1
+	rv.badge.Rotation = 0
+	rv.badgeShine.Visible = false
+	rv.name.Text = carName
+	rv.name.MaxVisibleGraphemes = 0
+	rv.name.TextColor3 = rc
+	rv.nameScale.Scale = 1
+	rv.nameGrad.Enabled = false
+	rv.info.Text = ""
+	rv.info.TextTransparency = 1
+	rv.stamp.Visible = false
+	rv.stampScale.Scale = 1
+	rv.ok.holder.Visible = false
+	rv.okScale.Scale = 1
+	rv.q.Visible = true
+	rv.qScale.Scale = 1.6
+	rv.flash.BackgroundColor3 = P.white
+	rv.flash.BackgroundTransparency = 1
+	rv.rim.Visible = false
+	rv.glow.BackgroundTransparency = 0.55
+	rv.closableAt = math.huge
 	for _, sp in ipairs(rv.sparks) do
-		sp.f.BackgroundColor3 = math.random() < 0.5 and rc or C(255, 255, 255)
+		sp.f.BackgroundColor3 = P.white
 	end
+	tint(MYSTERY)
+
+	-- the car: a black silhouette until the impact (ImageColor3 black hides even neon parts)
 	clear(rv.vpHolder)
+	rv.vpHolder.Position = UDim2.fromOffset(40, 51)
 	local vp, model = carViewport(rv.vpHolder, def, { Size = UDim2.fromScale(1, 1), ZIndex = 62 })
+	vp.ImageColor3 = C(0, 0, 0)
+	vp.Ambient = C(0, 0, 0)
+	vp.LightColor = C(0, 0, 0)
+	-- safety: CarPreload has normally downloaded this car already; the impact waits (max 0.8 s) if it has not
+	task.spawn(function()
+		pcall(function()
+			ContentProvider:PreloadAsync({ model })
+		end)
+		s.modelReady = true
+	end)
 	if not rv.blur then
 		rv.blur = new("BlurEffect", { Name = "RevealBlur", Size = 0 }, game:GetService("Lighting"))
 		tween(rv.blur, 0.35, { Size = 22 })
@@ -1287,23 +1457,29 @@ function UI.ShowReveal(res, onClosed)
 	rv.root.Visible = true
 	rv.shownAt = os.clock()
 	rv.sc.Scale = 0.2
-	tween(rv.sc, 0.45, { Scale = 1 }, Enum.EasingStyle.Back)
-	UI.Sfx("fanfare")
-	local lvl = CarConfig.Rarities[res.rarity].index
-	local t0 = os.clock()
-	if rv.conn then
-		rv.conn:Disconnect()
-	end
-	rv.conn = RunService.RenderStepped:Connect(function(dt)
-		local t = os.clock() - t0
-		rv.rays.Rotation = t * (18 + lvl * 4)
-		rv.glow.Size = UDim2.fromScale(1.3 + math.sin(t * 2) * 0.05, 1.3 + math.sin(t * 2) * 0.05)
+	stw(rv.sc, 0.45, { Scale = 1 }, Enum.EasingStyle.Back)
+	UI.Sfx("charge")
+
+	-- per frame: rays, glow, streaks, sparks, turntable, hover/drop, shakes
+	local rayAngle, camA = 0, math.rad(35)
+	table.insert(s.conns, RunService.RenderStepped:Connect(function(dt)
+		local now = os.clock()
+		local t = now - s.t0
+		local imp = s.impact
+		local f = imp and 1 or math.clamp(t / buildT, 0, 1)
+		local since = imp and (now - imp) or 0
+		local base = 18 + lvl * 4
+		rayAngle = (rayAngle + (imp and (base + 900 * math.exp(-since * 2.5)) or (10 + f * 110)) * dt) % 360
+		rv.rays.Rotation = rayAngle
+		local g = imp and (1.3 + math.sin(t * 2) * 0.05) or (1.2 + f * 0.1 + math.sin(t * (6 + f * 8)) * (0.02 + f * 0.04))
+		rv.glow.Size = UDim2.fromScale(g, g)
 		for k, st in ipairs(rv.streaks) do
 			local ph = ((t * (0.35 + k * 0.12)) + k * 0.33) % 1.6 - 0.3
 			st.Position = UDim2.fromScale(ph, 0.25 + k * 0.18)
 		end
+		local rise = imp and (1 + lvl * 0.3) or (0.6 + f * 2.5) -- sparkles get sucked up during the build-up
 		for _, sp in ipairs(rv.sparks) do
-			sp.y = sp.y - sp.v * dt * (1 + lvl * 0.3)
+			sp.y = sp.y - sp.v * dt * rise
 			if sp.y < -0.05 then
 				sp.y, sp.x = 1.05, math.random()
 			end
@@ -1311,11 +1487,212 @@ function UI.ShowReveal(res, onClosed)
 			sp.f.Size = UDim2.fromOffset(sp.s, sp.s)
 			sp.f.BackgroundTransparency = 0.2 + 0.6 * math.abs(math.sin(t * 3 + sp.s))
 		end
-		rv.stamp.Rotation = -14 + math.sin(t * 4) * 4
+		if rv.stamp.Visible then
+			rv.stamp.Rotation = -14 + math.sin(t * 4) * 4
+		end
+		-- turntable: slow while hidden, a fast spin on impact that settles
+		camA = camA + (imp and (0.9 + 2.6 * math.exp(-since * 1.8)) or 0.35) * dt
 		if model.Parent then
-			fitCamera(vp, model, math.rad(35) + t * 0.9)
+			fitCamera(vp, model, camA)
+		end
+		-- hover (trembling more and more) -> drop onto the disc with a bounce
+		local x, y
+		if imp then
+			local a = math.clamp(since / 0.55, 0, 1)
+			x, y = 0, -55 * (1 - TweenService:GetValue(a, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out))
+		else
+			local j = f * f * 5 * shakeK
+			x, y = (math.random() - 0.5) * j, -55 + math.sin(t * 3) * 5 + (math.random() - 0.5) * j
+		end
+		rv.vpHolder.Position = UDim2.fromOffset(40 + x, 106 + y)
+		local dj = imp and 0 or f * (4 + lvl) * shakeK
+		rv.disc.Position = UDim2.fromOffset(350 + (math.random() - 0.5) * dj, 352 + (math.random() - 0.5) * dj * 0.5)
+		if rv.q.Visible then
+			rv.qScale.Scale = 1.6 * (1 + (0.08 + f * 0.1) * math.sin(t * (5 + f * 12)))
+		end
+		-- box shake after the impact (and a small kick for the NEW! stamp)
+		local bm = imp and (10 + lvl * 3) * math.exp(-since * 7) or 0
+		if s.kickAt then
+			bm = bm + 6 * math.exp(-(now - s.kickAt) * 9)
+		end
+		bm = bm * shakeK
+		rv.box.Position = UDim2.new(0.5, (math.random() - 0.5) * 2 * bm, 0.5, (math.random() - 0.5) * 2 * bm)
+		if s.badgeAt then
+			local e = now - s.badgeAt
+			rv.badge.Rotation = math.sin(e * 50) * 8 * math.exp(-e * 8) * shakeK
+		end
+		if rv.rim.Visible then
+			local p = 0.15 + 0.3 * (0.5 + 0.5 * math.sin(t * 3.2))
+			for _, e in ipairs(rv.rimEdges) do
+				e.BackgroundTransparency = p
+			end
+		end
+	end))
+
+	-- energy rings pulled into the car, faster towards the impact
+	task.spawn(function()
+		while live() and not s.impact do
+			local f = math.clamp((os.clock() - s.t0) / buildT, 0, 1)
+			RevealFx.Implode(s.front, { pos = CAR_AT, color = s.tint, dur = 0.6 - f * 0.2, thick = 4 + f * 6, from = Vector2.new(620, 620), to = Vector2.new(40, 40) })
+			task.wait(math.max(0.12, 0.42 - f * 0.3))
 		end
 	end)
+
+	-- timeline
+	task.spawn(function()
+		-- 1) tier climb: two "?" ticks, then every rarity below the real one, each tick faster; the real one lands on impact
+		local steps = { false, false }
+		for i = 1, lvl - 1 do
+			table.insert(steps, CarConfig.RarityOrder[i])
+		end
+		local ratio, m = 0.78, #steps
+		local first = (buildT - 0.2) * (1 - ratio) / (1 - ratio ^ m)
+		task.wait(0.2)
+		for j, step in ipairs(steps) do
+			if not live() then
+				return
+			end
+			rv.rarity.Text = step and string.upper(T("rarity_" .. step)) or "?  ?  ?"
+			tint(step and rarityColor(step) or MYSTERY)
+			rv.badgeScale.Scale = 1.18
+			stw(rv.badgeScale, 0.12, { Scale = 1 })
+			UI.Sfx("click")
+			task.wait(first * ratio ^ (j - 1))
+		end
+		local w0 = os.clock()
+		while live() and not s.modelReady and os.clock() - w0 < 0.8 do
+			task.wait(0.05)
+		end
+		if not live() then
+			return
+		end
+
+		-- 2) impact
+		s.impact = os.clock()
+		rv.closableAt = s.impact + 0.5
+		tint(rc)
+		for _, sp in ipairs(rv.sparks) do
+			sp.f.BackgroundColor3 = math.random() < 0.5 and rc or P.white
+		end
+		rv.top.Text = res.isNew and T("reveal_new") or T("reveal_got")
+		UI.Sfx(lvl >= 4 and "revealBig" or "reveal")
+		rv.flash.BackgroundTransparency = 0
+		stw(rv.flash, 0.5, { BackgroundTransparency = 1 })
+		rv.q.Visible = false
+		stw(vp, 0.35, { ImageColor3 = P.white, Ambient = REVEAL_AMBIENT, LightColor = REVEAL_LIGHT })
+		stw(rv.glow, 0.3, { BackgroundTransparency = 0 })
+		rv.rarity.Text = "★ " .. string.upper(T("rarity_" .. res.rarity)) .. " ★"
+		rv.badgeScale.Scale = 2
+		stw(rv.badgeScale, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
+		s.badgeAt = os.clock()
+		-- shockwaves: two flat rings across the turntable, a round one from the car for Epic+
+		RevealFx.Shockwave(s.back, { pos = DISC_AT, from = Vector2.new(120, 24), to = Vector2.new(1100, 230), dur = 0.75, color = rc, thick = 12 })
+		RevealFx.Shockwave(s.back, { pos = DISC_AT, from = Vector2.new(80, 16), to = Vector2.new(820, 170), dur = 0.7, color = P.white, thick = 7, delay = 0.09 })
+		if lvl >= 4 then
+			RevealFx.Shockwave(s.front, { pos = CAR_AT, from = Vector2.new(60, 60), to = Vector2.new(900, 900), dur = 0.8, color = lift(rc, 0.4), thick = 9, delay = 0.16 })
+		end
+		table.insert(s.stops, RevealFx.Burst(s.front, { at = CAR_AT, colors = { rc, P.white, lift(rc, 0.5), P.yellow }, count = RevealFx.Count(), power = 0.85 + lvl * 0.08 }))
+		if lvl >= 4 then
+			-- Epic / Legendary: shine sweeps over the name and the badge
+			rv.name.TextColor3 = P.white
+			rv.nameGrad.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, rc), ColorSequenceKeypoint.new(0.42, rc), ColorSequenceKeypoint.new(0.5, P.white),
+				ColorSequenceKeypoint.new(0.58, rc), ColorSequenceKeypoint.new(1, rc),
+			})
+			rv.nameGrad.Enabled = true
+			table.insert(s.tweens, RevealFx.Sweep(rv.nameGrad, 0.9, 1.1))
+			rv.badgeShine.Visible = true
+			table.insert(s.tweens, RevealFx.Sweep(rv.badgeShineGrad, 0.9, 1.1))
+		end
+		if lvl >= 5 then
+			-- Legendary: gold rim glow + a second, golden flash with its own burst
+			rv.rim.Visible = true
+			later(0.35, function()
+				rv.flash.BackgroundColor3 = GOLD
+				rv.flash.BackgroundTransparency = 0.15
+				stw(rv.flash, 0.6, { BackgroundTransparency = 1 })
+				RevealFx.Shockwave(s.front, { pos = CAR_AT, from = Vector2.new(80, 80), to = Vector2.new(1000, 1000), dur = 0.9, color = GOLD, thick = 12 })
+				table.insert(s.stops, RevealFx.Burst(s.front, { at = CAR_AT, colors = { GOLD, P.white, P.yellow }, count = RevealFx.Count(0.5), power = 1.1 }))
+				UI.Sfx("combo")
+			end)
+		end
+		later(0.5, function()
+			-- AWESOME bounces in (a tap anywhere closes from now on too)
+			rv.ok.holder.Visible = true
+			rv.okScale.Scale = 0
+			stw(rv.okScale, 0.4, { Scale = 1 }, Enum.EasingStyle.Back)
+		end)
+
+		-- 3) the name pops in letter by letter
+		task.wait(0.12)
+		if not live() then
+			return
+		end
+		UI.Sfx("fanfare")
+		rv.nameScale.Scale = 1.3
+		stw(rv.nameScale, 0.4, { Scale = 1 }, Enum.EasingStyle.Back)
+		local n = utf8.len(carName) or #carName
+		local per = math.clamp(0.5 / math.max(n, 1), 0.025, 0.06)
+		for i = 1, n do
+			rv.name.MaxVisibleGraphemes = i
+			task.wait(per)
+			if not live() then
+				return
+			end
+		end
+		rv.name.MaxVisibleGraphemes = -1
+
+		-- 4) info line fades in, income counts up
+		rv.info.Text = infoText(0)
+		stw(rv.info, 0.25, { TextTransparency = 0 })
+		local c0, dur = os.clock(), 0.7
+		while true do
+			local a = math.min(1, (os.clock() - c0) / dur)
+			rv.info.Text = infoText(math.floor(income * (1 - (1 - a) ^ 3) + 0.5))
+			if a >= 1 then
+				break
+			end
+			task.wait(1 / 30)
+			if not live() then
+				return
+			end
+		end
+		UI.Sfx("ping")
+
+		-- 5) NEW! stamp slams in last
+		if res.isNew then
+			task.wait(0.1)
+			if not live() then
+				return
+			end
+			rv.stamp.Visible = true
+			rv.stampScale.Scale = 3
+			stw(rv.stampScale, 0.3, { Scale = 1 }, Enum.EasingStyle.Back)
+			later(0.12, function()
+				UI.Sfx("clank")
+				s.kickAt = os.clock()
+				RevealFx.Shockwave(s.front, { pos = UDim2.fromOffset(600, 120), from = Vector2.new(60, 40), to = Vector2.new(320, 220), dur = 0.45, color = P.yellow, thick = 6 })
+			end)
+		end
+	end)
+end
+
+-- coin spin-bounce: a small hop on every income tick, a big wobble for anything larger (bank, sale, discovery)
+local coinTweens = {}
+function UI.CoinBounce(gain)
+	local img, sc = hud.coin, hud.coinScale
+	if not img or not sc then
+		return
+	end
+	for _, x in ipairs(coinTweens) do
+		x:Cancel()
+	end
+	table.clear(coinTweens)
+	local big = (gain or 0) > math.max((store.Income or 0) * 2.5, 1)
+	sc.Scale = big and 1.32 or 1.1
+	img.Rotation = big and -24 or -7
+	table.insert(coinTweens, tween(sc, big and 0.45 or 0.3, { Scale = 1 }, Enum.EasingStyle.Back))
+	table.insert(coinTweens, tween(img, big and 0.7 or 0.4, { Rotation = 0 }, Enum.EasingStyle.Elastic))
 end
 
 ---------------------------------------------------------------- refresh
@@ -1477,6 +1854,9 @@ function UI.Init(storeModule, actionTable)
 		if store.Money > lastMoney then
 			hud.moneyScale.Scale = 1.08
 			tween(hud.moneyScale, 0.2, { Scale = 1 })
+			if lastMoney > 0 then -- not the first sync after joining
+				UI.CoinBounce(store.Money - lastMoney)
+			end
 		end
 		lastMoney = store.Money
 		refreshHud()

@@ -14,6 +14,7 @@ local BaseLayout = require(Shared:WaitForChild("BaseLayout"))
 local VehicleFactory = require(Shared:WaitForChild("VehicleFactory"))
 local PartVisual = require(Shared:WaitForChild("PartVisual"))
 local Cine = require(script.Parent:WaitForChild("CineFx"))
+local CarPreload = require(script.Parent:WaitForChild("CarPreload"))
 
 local TrapFx = {}
 local sfx
@@ -151,6 +152,8 @@ local function body(res, baseIndex, ctx)
 		local def = CarConfig.ById[res.typeId]
 		if not def or not baseIndex then
 			if def and TrapFx.Reveal then
+				CarPreload.Ready(def, 2) -- the showcase car must not pop in late
+				check(ctx)
 				local shown = false
 				TrapFx.Reveal(res, function()
 					shown = true
@@ -265,6 +268,12 @@ local function body(res, baseIndex, ctx)
 		sparks.Enabled = false
 		smoke.Enabled = false
 		play(lvl >= 4 and "revealBig" or "reveal")
+		-- v22 punch: a rarity flash, a quick FOV kick (back to 70 under the blackout) and a glitch pulse for Rare+
+		Cine.Flash(rc:Lerp(Color3.new(1, 1, 1), 0.5), 0.25 - lvl * 0.03, 0.45)
+		Cine.Zoom(62 - lvl * 2, 0.15, Enum.EasingStyle.Back)
+		if lvl >= 3 then
+			Cine.Glitch(0.14 + lvl * 0.04, 0.5 + lvl * 0.2)
+		end
 		cc.Brightness = 0.35
 		cc.Contrast = 0.25
 		cc.TintColor = rc:Lerp(Color3.new(1, 1, 1), 0.6)
@@ -272,16 +281,25 @@ local function body(res, baseIndex, ctx)
 		Cine.Shake(1 + lvl * 0.45, 0.6)
 		burst(padPos + Vector3.new(0, 3, 0), { c1 = rc, c2 = Color3.new(1, 1, 1), s1 = 0.8, life = 0.9, speed = 22 + lvl * 4, drag = 2 }, 30 + lvl * 20)
 		if lvl >= 4 then
-			Cine.Title(string.upper(res.rarity) .. "!", rc, 1.1, 150, 0.28)
+			-- hype without naming the rarity: the showcase's tier climb reveals it
+			Cine.Title(lvl >= 5 and "INSANE!!" or "WHOA!", rc, 1.1, 150, 0.28)
 		end
 
 		-- 5) blackout: the screen goes fully dark, then the showcase (UI.ShowReveal) on a solid dark backdrop
 		Cine.Shake(1.2 + lvl * 0.3, 0.5)
-		task.wait(lvl >= 4 and 0.55 or 0.3)
+		-- the car must be downloaded + prepared before the showcase (normally done long ago: CarPreload.Ensure ran
+		-- when the result arrived); the wait overlaps the climax beat and is capped at 2 s
+		local beat0 = os.clock()
+		CarPreload.Ready(def, 2)
+		local beat = (lvl >= 4 and 0.55 or 0.3) - (os.clock() - beat0)
+		if beat > 0 then
+			task.wait(beat)
+		end
 		check(ctx)
 		Cine.Darken(1, 0.22)
 		task.wait(0.25)
 		check(ctx)
+		Cine.Zoom(70, 0.05) -- undo the FOV kick while the screen is black
 		if magnet then
 			magnet.CFrame = magnetCF
 			light.Brightness = 0

@@ -8,6 +8,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local Util = require(Shared:WaitForChild("Util"))
+local CarPreload = require(script.Parent:WaitForChild("CarPreload"))
+local RevealFx = require(script.Parent:WaitForChild("RevealFx"))
 
 local BR = {}
 local K, UI, Cine, TrapFx
@@ -180,8 +182,12 @@ local function reel(res, onDone)
 		table.insert(seq, res.cars[math.random(1, #res.cars)])
 	end
 	local W = 180
+	local bestCard
 	for k, r in ipairs(seq) do
 		local f = card(track, r, k)
+		if k == stopAt then
+			bestCard = f
+		end
 		f.Position = UDim2.fromOffset((k - 1) * W, 30)
 		K.text(f, { Text = CarConfig.ById[r.typeId].name, Font = K.BODY, TextSize = 16, TextColor3 = P.ink, TextWrapped = true, Position = UDim2.fromOffset(6, 70), Size = UDim2.new(1, -12, 0, 40),
 			TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 73 })
@@ -200,6 +206,22 @@ local function reel(res, onDone)
 		track.Position = UDim2.new(0.5, -target, 0, 0)
 		UI.Sfx(CarConfig.Rarities[res.cars[res.best].rarity].index >= 4 and "revealBig" or "reveal")
 		Cine.Shake(0.6, 0.3)
+		-- v22: the best card lands with a flash, shockwaves and a confetti burst (layer goes with the root / after 2.2 s)
+		local best = res.cars[res.best]
+		local brc = rc(best.rarity)
+		local fx = K.new("Frame", { Name = "ReelFx", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 76 }, root)
+		RevealFx.Flash(fx, { color = brc, from = 0.55, dur = 0.45 })
+		if bestCard then
+			RevealFx.Flash(bestCard, { color = P.white, from = 0, dur = 0.5, corner = 16, z = 80 })
+			local pop = K.new("UIScale", { Scale = 1.25 }, bestCard)
+			K.tween(pop, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
+		end
+		RevealFx.Shockwave(fx, { pos = UDim2.fromScale(0.5, 0.5), from = Vector2.new(150, 160), to = Vector2.new(700, 700), dur = 0.6, color = brc, thick = 10 })
+		RevealFx.Shockwave(fx, { pos = UDim2.fromScale(0.5, 0.5), from = Vector2.new(120, 130), to = Vector2.new(520, 520), dur = 0.55, color = P.white, thick = 6, delay = 0.1 })
+		RevealFx.Burst(fx, { at = UDim2.fromScale(0.5, 0.5), colors = { brc, P.white, P.yellow }, count = RevealFx.Count(), power = 0.9 })
+		task.delay(2.2, function()
+			fx:Destroy()
+		end)
 		task.delay(0.8, function()
 			strip:Destroy()
 			marker:Destroy()
@@ -240,8 +262,18 @@ function BR.Play(res)
 	root = K.new("TextButton", { Name = "BatchReveal", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(6, 7, 12), BackgroundTransparency = 1, ZIndex = 69 }, K.overlay)
 	K.tween(root, 0.25, { BackgroundTransparency = 0 })
 	blur = K.new("BlurEffect", { Size = 18 }, Lighting)
+	local myRoot = root
 	reel(res, function()
-		if root then
+		if root ~= myRoot then
+			return -- closed (or a newer batch) meanwhile
+		end
+		-- the grid's car viewports must not pop in: wait for their models (normally ready already), max 2 s
+		local ids = {}
+		for _, r in ipairs(res.cars) do
+			table.insert(ids, r.typeId)
+		end
+		CarPreload.ReadyAll(ids, 2)
+		if root and root == myRoot then
 			grid(res)
 		end
 	end)

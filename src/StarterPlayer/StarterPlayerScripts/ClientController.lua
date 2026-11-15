@@ -34,6 +34,7 @@ local JoinFlow = require(Client:WaitForChild("JoinFlow"))
 local PhotoMode = require(Client:WaitForChild("PhotoMode"))
 local Rewards = require(Client:WaitForChild("Rewards"))
 local Trade = require(Client:WaitForChild("Trade"))
+local CarPreload = require(Client:WaitForChild("CarPreload"))
 
 local player = Players.LocalPlayer
 -- keep the camera close: no flying out over the map edge
@@ -101,6 +102,7 @@ ClientFx.Init(UI)
 Markers.Start(UI.Kit(), UIExtra)
 GaragePrompts.Start(UI.Kit(), CineFx)
 UI.Refresh()
+CarPreload.Start() -- background: car meshes + templates (owned and likely cars first), so reveals never pop in
 
 Net.Get("HotDrop").OnClientEvent:Connect(function(info) UIExtra.OnHotDrop(info) end)
 Net.Get("PickupFx").OnClientEvent:Connect(function(info) ClientFx.Pickup(info) end)
@@ -135,7 +137,20 @@ Net.Get("HitFx").OnClientEvent:Connect(function(dir, kind)
 end)
 Net.Get("ThrowResult").OnClientEvent:Connect(function(res)
 	local idx = Store.State and Store.State.baseIndex
+	if res and res.typeId then
+		CarPreload.Ensure({ res.typeId }) -- top priority: ready long before the blackout reveal
+	end
 	TrapFx.Play(res, idx)
+end)
+-- batch throws: BatchReveal plays them (its own listener); the cars start loading right away for its grid
+Net.Get("ThrowBatchResult").OnClientEvent:Connect(function(res)
+	if res and type(res.cars) == "table" then
+		local ids = {}
+		for _, r in ipairs(res.cars) do
+			table.insert(ids, r.typeId)
+		end
+		CarPreload.Ensure(ids)
+	end
 end)
 player.CharacterAdded:Connect(function()
 	DeathFx.Recover()
