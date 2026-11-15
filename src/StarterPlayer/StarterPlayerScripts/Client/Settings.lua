@@ -132,7 +132,8 @@ function Settings.Start(ui)
 		if not loaded and st and type(st.settings) == "table" then
 			loaded = true
 			for k, v in pairs(st.settings) do
-				if cur[k] ~= nil and type(v) == type(cur[k]) then
+				-- guide / shake / fov have no switch any more: always on (an old saved "false" would be stuck)
+				if cur[k] ~= nil and type(v) == type(cur[k]) and k ~= "guide" and k ~= "shake" and k ~= "fov" then
 					cur[k] = v
 				end
 			end

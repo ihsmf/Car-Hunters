@@ -182,6 +182,7 @@ function Perf.Start()
 	local lowFor, highFor = 0, 0
 	local raiseNeed = RAISE_SECS
 	local lastRaise = -math.huge
+	local peak = 0 -- highest recent FPS (slowly decays): the device's real frame cap
 	local warmup = 6 -- loading hitches right after joining do not count
 	RunService.Heartbeat:Connect(function(dt)
 		if warmup > 0 then
@@ -217,12 +218,16 @@ function Perf.Start()
 			return -- not enough history yet
 		end
 		local fps = f / s
-		if fps < DROP_FPS then
+		-- the device's own frame cap (30 FPS limit / battery saver): judge against it, not only absolute numbers
+		peak = math.max(peak * 0.995, fps)
+		local dropAt = math.min(DROP_FPS, peak * 0.72)
+		local raiseAt = math.min(RAISE_FPS, peak * 0.9)
+		if fps < dropAt then
 			lowFor = lowFor + step
 		else
 			lowFor = 0
 		end
-		if fps > RAISE_FPS then
+		if fps > raiseAt then
 			highFor = highFor + step
 		else
 			highFor = 0

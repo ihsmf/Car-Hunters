@@ -106,7 +106,9 @@ function Cine.Letterbox(on, t)
 	tw(botBar, t or 0.35, { Size = UDim2.new(1, 0, h, 0) })
 end
 
+local glitchOwner = nil -- the running Cine.Glitch (a Grade call cancels its colour restore)
 function Cine.Grade(props, t)
+	glitchOwner = nil
 	tw(cc, t or 0.3, props)
 end
 
@@ -128,15 +130,20 @@ function Cine.Glitch(dur, power)
 	task.spawn(function()
 		local t0 = os.clock()
 		local flip = false
-		while os.clock() - t0 < dur do
+		local tint0, con0 = cc.TintColor, cc.Contrast
+		local mine = {}
+		glitchOwner = mine
+		while os.clock() - t0 < dur and glitchOwner == mine do
 			flip = not flip
 			cc.TintColor = flip and Color3.fromRGB(255, 225, 225) or Color3.fromRGB(225, 245, 255)
 			cc.Contrast = 0.15 * power
 			Cine.Shake(0.4 * power, 0.08)
 			task.wait(0.06)
 		end
-		cc.TintColor = Color3.new(1, 1, 1)
-		cc.Contrast = 0
+		if glitchOwner == mine then -- a later Cine.Grade (death screen) took over: leave its colours alone
+			glitchOwner = nil
+			cc.TintColor, cc.Contrast = tint0, con0
+		end
 	end)
 end
 
