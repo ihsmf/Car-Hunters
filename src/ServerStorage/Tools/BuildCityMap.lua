@@ -1175,6 +1175,54 @@ buildArena = function(ctx, zid)
 	CollectionService:AddTag(center, "Arena")
 	-- dirt track ring + start/finish ramps for show
 	Part(f.Ground, "ArenaDirt", Vector3.new(2 * HW - 20, 0.1, zone.zMax - zone.zMin - 20), CFrame.new(0, 0.05, zc), pal.ground:Lerp(C(90, 70, 50), 0.35), M.Ground, { collide = false, cast = false })
+	-- show dressing from the Blender arena kit (blender/make_arena.py): bleachers + floodlights around the edge, a big
+	-- screen at the far end, tyre walls, scrap piles, jump ramps, fire barrels and the boss skull at the entrance.
+	-- Every model faces +X; placed first so the boss covers and loot points keep clear of them.
+	local zMin, zMax = zone.zMin, zone.zMax
+	local function face(x, z, tx, tz) -- yaw that turns a model's +X towards (tx, tz)
+		return CFrame.new(x, 0, z) * CFrame.Angles(0, math.atan2(-(tz - z), tx - x), 0)
+	end
+	local function deco(name, cf, fw, fd)
+		if Prefabs.FromTemplate(name, f.StreetProps, cf) then
+			local p = cf.Position
+			table.insert(ctx.foot, { x1 = p.X - fw, x2 = p.X + fw, z1 = p.Z - fd, z2 = p.Z + fd })
+			return true
+		end
+	end
+	if zid ~= "colosseum" then -- the colosseum has its own stone stands
+		for z = zMin + 40, zMax - 40, 32 do
+			for _, s in ipairs({ -1, 1 }) do
+				deco("A_Bleachers", face(s * (HW - 10), z, 0, z), 6, 13)
+			end
+		end
+	end
+	for _, sx in ipairs({ -1, 1 }) do
+		for _, zz in ipairs({ zMin + 14, zc, zMax - 14 }) do
+			deco("A_FloodLight", face(sx * (HW - 3), zz, 0, zc), 3, 3)
+		end
+		for z = zMin + 30, zMax - 30, 16 do
+			if math.abs(z - zc) > 12 then
+				deco("A_TireWall", face(sx * (HW - 22), z, 0, z), 2, 7)
+			end
+		end
+		deco("A_FireBarrel", CFrame.new(sx * (HW - 26), 0, zMin + 22), 2, 2)
+		deco("A_FireBarrel", CFrame.new(sx * (HW - 26), 0, zMax - 22), 2, 2)
+		deco("A_Ramp", face(sx * 70, zc + sx * 30, 0, zc + sx * 30), 8, 5)
+		deco("A_CarPile", face(sx * 110, zc - sx * 40, 0, zc), 7, 7)
+	end
+	local screenModel = Prefabs.FromTemplate("A_Jumbotron", f.StreetProps, face(0, zMax - 12, 0, zc))
+	if screenModel then
+		table.insert(ctx.foot, { x1 = -12, x2 = 12, z1 = zMax - 18, z2 = zMax - 6 })
+		for _, d in ipairs(screenModel:GetDescendants()) do
+			if d:IsA("BasePart") and string.match(d.Name, "^Screen") then
+				Label(d, Enum.NormalId.Right, zone.name .. "  BOSS", pal.accent, C(10, 10, 16))
+			end
+		end
+	end
+	for _, sx in ipairs({ -1, 1 }) do
+		deco("A_Skull", face(sx * 38, zMin + 10, 0, zMin - 20), 5, 4)
+	end
+
 	local covers = 0
 	local tries = 0
 	while covers < 14 and tries < 200 do

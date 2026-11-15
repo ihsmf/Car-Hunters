@@ -14,20 +14,18 @@ local loaded = false
 local widgets = {}
 local saveToken = 0
 
+-- only the basics on screen; guide / shake / fov keep their defaults (on) and still work from saved settings
 local SWITCHES = {
-	{ "markers", "Map markers + goal arrow" },
-	{ "guide", "Guide beam to your goal" },
-	{ "notes", "Notifications at the top" },
-	{ "shake", "Camera shake" },
-	{ "fov", "Zoom-out on running lanes" },
+	{ "markers", "Map markers" },
+	{ "notes", "Notifications" },
 }
 
 local function apply()
 	UI.MusicGroup.Volume = cur.music
 	UI.SfxGroup.Volume = cur.sfx
 	local lp = Players.LocalPlayer
-	for _, s in ipairs(SWITCHES) do
-		lp:SetAttribute("Opt_" .. s[1], cur[s[1]])
+	for _, key in ipairs({ "markers", "guide", "notes", "shake", "fov" }) do
+		lp:SetAttribute("Opt_" .. key, cur[key])
 	end
 	UI.SetNotificationsEnabled(cur.notes)
 end
@@ -102,7 +100,7 @@ local function build()
 	K.hud.icon(b.face, "settings", 54, UDim2.fromOffset(6, 3)).ZIndex = b.face.ZIndex + 1
 	K.text(holder, { Text = "SETTINGS", TextSize = 15, Position = UDim2.fromOffset(-6, 72), Size = UDim2.new(1, 12, 0, 20), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 })
 
-	local p = K.panelShell("settings", "SETTINGS", 640, 500, P.blue)
+	local p = K.panelShell("settings", "SETTINGS", 640, 360, P.blue)
 	local c = p.content
 	slider(c, 0, "music", "MUSIC")
 	slider(c, 46, "sfx", "SOUND EFFECTS")
