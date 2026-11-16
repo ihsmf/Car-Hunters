@@ -5,7 +5,12 @@ local RS = game:GetService("ReplicatedStorage")
 local C = require(RS.Shared.Config)
 local Map = require(script.Parent.Map).Build()
 
-local store = DataStoreService:GetDataStore("BilliardV1")
+-- В Studio без публикации/API Services DataStore недоступен — тогда прогресс живёт только в сессии
+local okStore, store = pcall(DataStoreService.GetDataStore, DataStoreService, "BilliardV1")
+if not okStore then
+	warn("DataStore недоступен, сохранения отключены:", store)
+	store = { GetAsync = function() return nil end, SetAsync = function() end }
+end
 local remotes = Instance.new("Folder")
 remotes.Name = "Remotes"
 local Request = Instance.new("RemoteFunction", remotes)
@@ -228,6 +233,8 @@ function actions.Product(plr, _, i)
 	if p and p.id > 0 then MarketplaceService:PromptProductPurchase(plr, p.id) end
 end
 
+function actions.Sync() return true end
+
 Request.OnServerInvoke = function(plr, action, arg)
 	local s, fn = sessions[plr], actions[action]
 	if not (s and fn) then return false end
@@ -237,7 +244,7 @@ Request.OnServerInvoke = function(plr, action, arg)
 end
 
 -- Игроки
-Players.PlayerAdded:Connect(function(plr)
+local function onPlayer(plr)
 	local slot
 	for i = 1, #Map.Bases do
 		if not taken[i] then slot = i break end
@@ -272,7 +279,9 @@ Players.PlayerAdded:Connect(function(plr)
 	if plr.Character then onChar(plr.Character) end
 	refreshBase(plr)
 	sync(plr)
-end)
+end
+Players.PlayerAdded:Connect(onPlayer)
+for _, p in Players:GetPlayers() do task.spawn(onPlayer, p) end
 
 local function save(plr)
 	local s = sessions[plr]

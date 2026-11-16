@@ -16,7 +16,6 @@ local zoneLen = T.Length / N
 local FELT_Y = 3.3
 local R = 1.1 -- радиус шара
 local rng = Random.new()
-local mySlot
 
 local function sfx(k) if _G.PlaySfx then _G.PlaySfx(k) end end
 local function tween(o, t, props, style, dir)
@@ -296,11 +295,10 @@ local function placeCue(m, tip) -- кий лежит вдоль +Z, кончик
 end
 
 Fx.OnClientEvent:Connect(function(kind, a, dist, id)
-	if kind == "State" then mySlot = a.slot return end
 	if kind ~= "Throw" then return end
 	local slot, ch = a, C.Characters[id]
 	local rcol = C.Rarities[ch.rarity][2]
-	local mine = slot == mySlot
+	local mine = slot == _G.MySlot
 	local x = laneX(slot)
 	local start = Vector3.new(x, FELT_Y + R, T.StartZ + 3)
 	local b = ball(Color3.new(1, 1, 1), R * 2)

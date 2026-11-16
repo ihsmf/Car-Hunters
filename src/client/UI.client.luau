@@ -273,6 +273,7 @@ end)
 Fx.OnClientEvent:Connect(function(kind, a)
 	if kind == "State" then
 		state = a
+		_G.MySlot = a.slot
 		cashLabel.Text = "💵 " .. C.Short(a.d.cash)
 		statLabel.Text = string.format("💪 %s   📈 %s/с   🍀 +%d", C.Short(a.d.strength), C.Short(a.income), a.luck)
 		for n, p in panels do if p.frame.Visible then renderers[n](p.list) end end
@@ -289,3 +290,5 @@ Fx.OnClientEvent:Connect(function(kind, a)
 		end
 	end
 end)
+
+Request:InvokeServer("Sync")

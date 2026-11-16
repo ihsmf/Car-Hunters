@@ -6,19 +6,21 @@
 | Путь | Что внутри |
 |---|---|
 | `src/shared/Config.luau` | UI-токены (шрифт, цвета, кнопки), 12 редкостей, 36 персонажей, кии, гейм-пассы, бонусы |
-| `src/server/Map.luau` | карта: 4 базы с ограждениями, столом, гантелей, ларьком киёв; длинный стол из 12 зон |
+| `tools/place.py` | генерирует готовый `BilliardHunters.rbxlx`: вся карта (~5000 деталей) сразу в Workspace + скрипты |
+| `tools/preview.py` | рендер превью карты через Blender (bpy) |
+| `src/server/Map.luau` | ссылки на объекты карты и её анимации |
 | `src/server/Main.server.luau` | DataStore, бросок, доход, прокачка, ежедневный бонус и бонус за время в игре, покупки |
 | `src/client/UI.client.luau` | HUD, кнопки (иконка + текст), панели: Настройки / Инвентарь / Бонус / Магазин / Кии |
 | `src/client/Balls.client.luau` | анимация броска (шар катится, оставляет след и падает в лузу), декоративные шары на столах баз |
 | `blender/build_models.py` | генерация мешей: PoolTable, Cue, Ball, Dumbbell, Fence → `blender/export/*.fbx` |
 
 ## Запуск
-1. `rojo serve` → подключиться из Studio через плагин Rojo.
-2. Импортировать `blender/export/*.fbx` через 3D Importer, переименовать по имени файла и положить в `ReplicatedStorage/Models`. Без них карта собирается из примитивов.
-3. Вписать ID гейм-пассов и продуктов в `Config.GamePasses` / `Config.Products`, а также ID звуков в `Config.Sounds`.
-4. Game Settings → Security → включить API Services (для DataStore).
+1. Открыть `BilliardHunters.rbxlx` в Roblox Studio — карта видна сразу.
+2. Нажать **Play (F5)**: появляются кнопки, база, бросок и вся механика.
+3. Для сохранений: опубликовать плейс и включить Game Settings → Security → API Services (без этого игра работает, но прогресс не сохраняется).
+4. Вписать ID гейм-пассов/продуктов в `Config.GamePasses` / `Config.Products`.
 
-Пересобрать модели: `blender -b -P blender/build_models.py` (или `pip install bpy && python blender/build_models.py`).
+Пересборка после правок: `python3 tools/place.py`.
 
 ## Механика
 - Дальность = сила × множитель кия × уровень кия. Сила растёт от подходов к гантеле (ProximityPrompt), прибавка за подход = уровень гантели.
