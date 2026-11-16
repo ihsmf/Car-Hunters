@@ -404,11 +404,11 @@ local function buildShop(ctx)
 	local W, D, H = 12, 8, 8.5
 	local G = 0.5 -- top of the slab
 	local RED, WHITE, DARK2, WOOD = C(214, 52, 44), C(246, 244, 238), C(36, 40, 48), C(150, 104, 62)
-	mk("Slab", Vector3.new(17, 0.6, 14), Vector3.new(0, 0.2, -1.5), C(206, 204, 198), M.SmoothPlastic)
+	mk("Slab", Vector3.new(20, 0.6, 14), Vector3.new(0, 0.2, -1.5), C(206, 204, 198), M.SmoothPlastic)
 	mk("BackWall", Vector3.new(W, H, 0.6), Vector3.new(0, G + H / 2, D / 2 - 0.3), WHITE)
 	for _, sx in ipairs({ -1, 1 }) do
 		mk("SideWall", Vector3.new(0.6, H, D - 0.6), Vector3.new(sx * (W / 2 - 0.3), G + H / 2, -0.3), WHITE)
-		mk("Corner", Vector3.new(0.8, H + 0.4, 0.8), Vector3.new(sx * (W / 2 - 0.2), G + (H + 0.4) / 2, -D / 2 + 0.2), RED)
+		mk("Corner", Vector3.new(0.9, H + 0.4, 0.8), Vector3.new(sx * (W / 2 - 0.25), G + (H + 0.4) / 2, -D / 2 + 0.2), RED)
 	end
 	mk("Counter", Vector3.new(W - 1.6, 3.6, 1.1), Vector3.new(0, G + 1.8, -D / 2 + 0.75), RED)
 	mk("CounterTop", Vector3.new(W - 1.2, 0.3, 1.8), Vector3.new(0, G + 3.75, -D / 2 + 0.7), WOOD, M.Wood)
@@ -462,12 +462,12 @@ local function buildDonateStall(ctx)
 		return Part(m, name, size, cf * CFrame.new(off), color, mat, o)
 	end
 	local GOLD, DEEP, CREAM, WOOD = C(232, 178, 50), C(28, 32, 44), C(250, 240, 214), C(110, 70, 40)
-	mk("Rug", Vector3.new(17, 0.12, 12), Vector3.new(0, 0.2, -1.5), C(150, 30, 40), M.Fabric, { collide = false })
-	mk("Counter", Vector3.new(14, 4, 3.4), Vector3.new(0, 2.2, -4), WOOD, M.Wood)
+	mk("Rug", Vector3.new(17, 0.12, 12), Vector3.new(0, 0.05, -1.5), C(150, 30, 40), M.Fabric, { collide = false })
+	mk("Counter", Vector3.new(14, 4, 3.4), Vector3.new(0, 2.05, -4), WOOD, M.Wood)
 	mk("CounterTop", Vector3.new(14.6, 0.5, 4), Vector3.new(0, 4.4, -4), GOLD, M.Metal, { refl = 0.25 })
-	mk("BackPanel", Vector3.new(14, 11, 1), Vector3.new(0, 5.7, 4), DEEP, M.SmoothPlastic)
+	mk("BackPanel", Vector3.new(14, 11, 1), Vector3.new(0, 5.55, 4), DEEP, M.SmoothPlastic)
 	for _, s in ipairs({ -1, 1 }) do
-		mk("Pillar", Vector3.new(1.2, 13.5, 1.2), Vector3.new(s * 7.4, 6.75, 4), GOLD, M.Metal, { refl = 0.2 })
+		mk("Pillar", Vector3.new(1.2, 13.4, 1.2), Vector3.new(s * 7.4, 6.7, 4), GOLD, M.Metal, { refl = 0.2 })
 		mk("PillarFront", Vector3.new(1, 11, 1), Vector3.new(s * 7.4, 5.5, -5.6), GOLD, M.Metal, { refl = 0.2 })
 	end
 	for k = 0, 6 do
@@ -483,7 +483,7 @@ local function buildDonateStall(ctx)
 		c.CFrame = cf * CFrame.new(-5 + k * 2.4, 4.95 + (k % 2) * 0.3, -4) * UPRIGHT
 	end
 	for k = 0, 2 do
-		mk("GoldBar", Vector3.new(2, 0.7, 1), Vector3.new(-1.5 + k * 1.5, 1.2 + (k == 1 and 0.7 or 0), 1.5), GOLD, M.Metal, { refl = 0.35 })
+		mk("GoldBar", Vector3.new(2, 0.7, 1), Vector3.new(3.5 + k * 1.5, 0.43 + (k == 1 and 0.7 or 0), 1.5), GOLD, M.Metal, { refl = 0.35 })
 	end
 	local spot = mk("NpcSpot", Vector3.new(2, 0.2, 2), Vector3.new(0, 0.5, 1.6), CREAM, M.SmoothPlastic, { t = 1, collide = false })
 	spot:SetAttribute("Yaw", cfg.yaw)
@@ -514,7 +514,7 @@ local function buildLeaderboard(ctx)
 	end
 	local LBGOLD, LBDARK = C(232, 178, 50), C(30, 32, 40)
 	for _, s in ipairs({ -1, 1 }) do
-		lp("LBPillar", Vector3.new(2.2, 20.5, 2.2), Vector3.new(s * 12, 10.25, 0), LBDARK, M.Metal) -- flanks the screen (0.1 overlap)
+		lp("LBPillar", Vector3.new(2.2, 20.5, 2.2), Vector3.new(s * 12.1, 10.25, 0), LBDARK, M.Metal) -- flanks the screen (0.1 overlap)
 		lp("LBPillarCap", Vector3.new(2.8, 0.6, 2.8), Vector3.new(s * 12, 20.8, 0), LBGOLD, M.Metal)
 	end
 	lp("LBFrame", Vector3.new(23, 12, 0.4), Vector3.new(0, 13, -0.4), LBGOLD, M.Metal) -- gold rim behind the screen
@@ -608,16 +608,16 @@ local function buildTonyGarage(ctx)
 	mk("BayFloor", Vector3.new(W, 0.5, D), Vector3.new(0, 0.15, 0), FLOOR, M.SmoothPlastic)
 	-- hazard band on the floor's front SIDE face (never on a top face, so nothing shimmers)
 	for k = 0, 8 do
-		mk("BayHazard", Vector3.new(W / 9, 0.3, 0.12), Vector3.new(-W / 2 + (k + 0.5) * W / 9, 0.2, -D / 2 - 0.07), (k % 2 == 0) and YEL or C(28, 28, 30), M.SmoothPlastic, { collide = false, cast = false })
+		mk("BayHazard", Vector3.new(W / 9, 0.4, 0.12), Vector3.new(-W / 2 + (k + 0.5) * W / 9, 0.15, -D / 2 - 0.07), (k % 2 == 0) and YEL or C(28, 28, 30), M.SmoothPlastic, { collide = false, cast = false })
 	end
 	mk("BackWall", Vector3.new(W, H, 0.8), Vector3.new(0, 0.4 + H / 2, D / 2 - 0.4), WALL)
 	for _, sx in ipairs({ -1, 1 }) do
 		mk("SideWall", Vector3.new(0.8, H, D - 4.8), Vector3.new(sx * (W / 2 - 0.4), 0.4 + H / 2, 1.6), WALL) -- z -1.6..6.2: open front corners
 		mk("FrontPost", Vector3.new(0.9, H, 0.9), Vector3.new(sx * (W / 2 - 0.45), 0.4 + H / 2, -D / 2 + 0.6), NAVY, M.Metal)
-		mk("WallStripe", Vector3.new(0.9, 0.8, D - 4.7), Vector3.new(sx * (W / 2 - 0.4), 3.2, 1.6), RED, M.SmoothPlastic, { collide = false })
+		mk("WallStripe", Vector3.new(1.0, 0.8, D - 4.6), Vector3.new(sx * (W / 2 - 0.4), 3.2, 1.6), RED, M.SmoothPlastic, { collide = false })
 	end
 	mk("Roof", Vector3.new(W + 1.4, 0.6, D + 1), Vector3.new(0, 0.4 + H + 0.3, -0.3), NAVY)
-	local sign = mk("TonySign", Vector3.new(W - 1, 2.6, 0.5), Vector3.new(0, 0.4 + H + 1.95, -D / 2 + 0.2), NAVY)
+	local sign = mk("TonySign", Vector3.new(W - 1, 2.6, 0.5), Vector3.new(0, 0.4 + H + 2.2, -D / 2 + 0.2), NAVY)
 	Label(sign, Enum.NormalId.Front, "BIG TONY'S TUNING", YEL)
 	Label(sign, Enum.NormalId.Back, "BIG TONY'S TUNING", YEL)
 	mk("SignTrim", Vector3.new(W - 0.6, 0.3, 0.7), Vector3.new(0, 0.4 + H + 0.75, -D / 2 + 0.2), YEL, M.SmoothPlastic, { collide = false })
@@ -625,7 +625,7 @@ local function buildTonyGarage(ctx)
 	local LX = -4.2
 	for _, dx in ipairs({ -3.4, 3.4 }) do
 		mk("LiftPost", Vector3.new(0.9, 8.6, 0.9), Vector3.new(LX + dx, 0.4 + 4.3, 1.5), RED, M.Metal)
-		mk("LiftArm", Vector3.new(0.4, 0.4, 4.4), Vector3.new(LX + dx * 0.72, 2.6, -0.4), STEEL, M.Metal, { collide = false })
+		mk("LiftArm", Vector3.new(0.4, 0.4, 4.4), Vector3.new(LX + dx * 0.84, 2.6, -0.4), STEEL, M.Metal, { collide = false })
 	end
 	mk("LiftBeam", Vector3.new(7.7, 0.6, 0.7), Vector3.new(LX, 0.4 + 8.9, 1.5), RED, M.Metal)
 	mk("LiftPad", Vector3.new(6, 0.12, 8), Vector3.new(LX, 0.47, -0.6), C(70, 74, 82), M.DiamondPlate, { collide = false, cast = false })
@@ -644,9 +644,9 @@ local function buildTonyGarage(ctx)
 		end
 	end)
 	kit("G_TireRack", 1.0, 1.4, function(x)
-		mk("RackFrame", Vector3.new(5, 0.3, 2), Vector3.new(x, 0.4 + 3.4, backZ - 1), STEEL, M.Metal)
+		mk("RackFrame", Vector3.new(5, 0.3, 2), Vector3.new(x, 0.4 + 3.25, backZ - 1), STEEL, M.Metal)
 		for k = -1, 1 do
-			Part(m, "RackTire", Vector3.new(1.1, 3, 3), cf * CFrame.new(x + k * 1.5, 0.4 + 1.6, backZ - 1) * CFrame.Angles(0, math.pi / 2, 0), C(32, 32, 36), M.SmoothPlastic, { shape = CYL })
+			Part(m, "RackTire", Vector3.new(1.1, 3, 3), cf * CFrame.new(x + k * 1.5, 0.4 + 1.6, backZ - 1), C(32, 32, 36), M.SmoothPlastic, { shape = CYL })
 		end
 	end)
 	mk("Jack", Vector3.new(2.4, 0.5, 1), Vector3.new(6.2, 0.65, -3.2), C(220, 222, 228), M.Metal, { refl = 0.3, collide = false })
@@ -684,7 +684,7 @@ local function buildJobBoard(ctx)
 	local head = sp("BoardHeader", Vector3.new(24, 2.6, 1.4), Vector3.new(0, 13.4, 1), ORANGE, M.SmoothPlastic)
 	Label(head, Enum.NormalId.Front, "JOB BOARD", C(255, 255, 255))
 	Label(head, Enum.NormalId.Back, "JOB BOARD", C(255, 255, 255))
-	sp("HeaderTrim", Vector3.new(24.4, 0.35, 1.6), Vector3.new(0, 12, 1), STEEL, M.Metal)
+	sp("HeaderTrim", Vector3.new(24.4, 0.35, 1.6), Vector3.new(0, 11.925, 1), STEEL, M.Metal)
 	for i, x in ipairs({ -8.4, -4.2, 0, 4.2, 8.4 }) do -- one card per job (Contracts.Active = 5)
 		local card = sp("ContractCard" .. i, Vector3.new(3.8, 7.4, 0.2), Vector3.new(x, 7.1, 0.45), CREAM2, M.SmoothPlastic)
 		card:SetAttribute("Index", i)
@@ -752,8 +752,9 @@ local function buildHub(ctx, deco)
 		local off = deg % 90
 		if off > 12 and off < 78 then
 			local a = math.rad(deg)
-			Part(f.Ground, "HubCurb", Vector3.new(1, 0.35, 2 * math.pi * (R - 0.6) / N + 0.1),
-				CFrame.new(HX + (R - 0.6) * math.cos(a), 0.32 + 0.17, HZ + (R - 0.6) * math.sin(a)) * CFrame.Angles(0, -a, 0),
+			local curbH = (k % 2 == 0) and 0.35 or 0.43 -- alternate heights: neighbours never share a top face
+			Part(f.Ground, "HubCurb", Vector3.new(1, curbH, 2 * math.pi * (R - 0.6) / N + 0.1),
+				CFrame.new(HX + (R - 0.6) * math.cos(a), 0.315 + curbH / 2, HZ + (R - 0.6) * math.sin(a)) * CFrame.Angles(0, -a, 0),
 				C(232, 226, 214), M.Slate, { collide = false, cast = false })
 		end
 	end
@@ -769,7 +770,7 @@ local function buildHub(ctx, deco)
 	for _, axis in ipairs({ 0, 90, 180, 270 }) do
 		for _, d in ipairs({ -9, 9 }) do
 			local a = math.rad(axis + d)
-			deco.lamp(HX + (R - 1.6) * math.cos(a), HZ + (R - 1.6) * math.sin(a), math.pi - a, hub.top)
+			deco.lamp(HX + (R - 2.4) * math.cos(a), HZ + (R - 2.4) * math.sin(a), math.pi - a, hub.top)
 		end
 	end
 	-- benches round the fountain, looking out at the stands
@@ -958,6 +959,10 @@ local function buildSpeedLanes(ctx)
 		local y = (cz < MapConfig.EntryZ and math.abs(cx) < MapConfig.PromenadeHalfWidth) and 0.26 or 0.14
 		local lane = Part(f.StreetProps, "RunLane", Vector3.new(w, 0.12, l), CFrame.new(cx, y, cz), LANE, M.SmoothPlastic, { collide = false, cast = false })
 		CollectionService:AddTag(lane, "RunLane")
+		if r[7] then
+			-- bed under the two-way lane where the plaza paving stops (z 70..82), so the lane never floats
+			Part(f.StreetProps, "RunLaneBed", Vector3.new(w, 0.26, 12.06), CFrame.new(cx, 0.07, 76), LANE, M.SmoothPlastic, { collide = false, cast = false })
+		end
 		-- white edge lines
 		for _, s in ipairs({ -1, 1 }) do
 			local size = alongZ and Vector3.new(0.3, 0.1, l) or Vector3.new(w, 0.1, 0.3)
@@ -979,13 +984,13 @@ local function buildSpeedLanes(ctx)
 				for _, e in ipairs({ -1, 1 }) do
 					local ecf = acf * CFrame.Angles(0, e > 0 and 0 or math.pi, 0)
 					for _, s in ipairs({ -1, 1 }) do
-						Part(f.StreetProps, "ArrowHead", Vector3.new(0.7, 0.1, 2.4), ecf * CFrame.new(s * 0.75, 0, -2.2) * CFrame.Angles(0, s * math.rad(40), 0), WHITE, M.SmoothPlastic, { collide = false, cast = false })
+						Part(f.StreetProps, "ArrowHead", Vector3.new(0.7, s < 0 and 0.16 or 0.22, 2.4), ecf * CFrame.new(s * 0.75, s < 0 and 0.03 or 0.06, -2.2) * CFrame.Angles(0, s * math.rad(40), 0), WHITE, M.SmoothPlastic, { collide = false, cast = false })
 					end
 				end
 			else
 				Part(f.StreetProps, "Arrow", Vector3.new(0.7, 0.1, 4), acf * CFrame.new(0, 0, 0.6), WHITE, M.SmoothPlastic, { collide = false, cast = false })
 				for _, s in ipairs({ -1, 1 }) do
-					Part(f.StreetProps, "ArrowHead", Vector3.new(0.7, 0.1, 2.4), acf * CFrame.new(s * 0.75, 0, -1.6) * CFrame.Angles(0, s * math.rad(40), 0), WHITE, M.SmoothPlastic, { collide = false, cast = false })
+					Part(f.StreetProps, "ArrowHead", Vector3.new(0.7, s < 0 and 0.16 or 0.22, 2.4), acf * CFrame.new(s * 0.75, s < 0 and 0.03 or 0.06, -1.6) * CFrame.Angles(0, s * math.rad(40), 0), WHITE, M.SmoothPlastic, { collide = false, cast = false })
 				end
 			end
 		end

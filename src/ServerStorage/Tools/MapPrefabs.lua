@@ -216,8 +216,8 @@ end
 
 function Prefabs.DistrictSign(parent, pos, text, color, yaw)
 	local cf = CFrame.new(pos) * CFrame.Angles(0, yaw or 0, 0)
-	Part(parent, "SignPostL", Vector3.new(0.8, 13.4, 0.8), cf * CFrame.new(-9.3, 6.7, 0), DARK, M.Metal)
-	Part(parent, "SignPostR", Vector3.new(0.8, 13.4, 0.8), cf * CFrame.new(9.3, 6.7, 0), DARK, M.Metal)
+	Part(parent, "SignPostL", Vector3.new(0.8, 13.4, 0.8), cf * CFrame.new(-9.4, 6.7, 0), DARK, M.Metal)
+	Part(parent, "SignPostR", Vector3.new(0.8, 13.4, 0.8), cf * CFrame.new(9.4, 6.7, 0), DARK, M.Metal)
 	local b = Part(parent, "SignBoard", Vector3.new(18, 5, 0.6), cf * CFrame.new(0, 11, 0), color, M.SmoothPlastic)
 	Label(b, Enum.NormalId.Front, text, C(255, 255, 255))
 	Label(b, Enum.NormalId.Back, text, C(255, 255, 255))
