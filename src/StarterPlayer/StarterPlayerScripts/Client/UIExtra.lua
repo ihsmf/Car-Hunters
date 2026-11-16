@@ -20,7 +20,8 @@ task.spawn(function()
 end)
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
-local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
+local GearConfig = require(Shared:WaitForChild("GearConfig"))
+local Icons = require(Shared:WaitForChild("Icons"))
 local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local SkinConfig = require(Shared:WaitForChild("SkinConfig"))
 local CollectionService = game:GetService("CollectionService")
@@ -34,7 +35,6 @@ local w = {}
 local hot = nil -- current hot drop info
 local donateTab = "boost"
 local shopTab = "perks"
-local tuneUid = nil
 local TONY = C(72, 96, 156) -- v23: steel blue (the old near-black navy swallowed the panel's ink outline)
 local GOLD = C(232, 178, 50)
 local TEAL = C(40, 150, 140) -- rebirth teal (no purple in this UI)
@@ -196,38 +196,8 @@ local function refreshDonate(st, open)
 	end
 end
 
----------------------------------------------------------------- Big Tony's Tuning: car parts + money -> tuning parts
+---------------------------------------------------------------- Big Tony's Gears: timed boosts, new stock every 5 minutes
 local GREEN_TXT, RED_TXT = C(30, 158, 64), C(214, 52, 44)
-
--- every ingredient of a recipe as { label, have, need }, in a fixed order: car parts, tuning parts, money
-local function ingredients(r, st)
-	local out = {}
-	for _, part in ipairs(PartConfig.Order) do
-		local n = r.parts and r.parts[part]
-		local def = PartConfig.Parts[part]
-		if n and def then
-			table.insert(out, { label = def.emoji .. " " .. def.name, have = (st.parts or {})[part] or 0, need = n })
-		end
-	end
-	for _, item in ipairs(TuningConfig.Order) do
-		local n = r.tune and r.tune[item]
-		local it = TuningConfig.Items[item]
-		if n and it then
-			table.insert(out, { label = it.icon .. " " .. it.name, have = (st.tuning or {})[item] or 0, need = n, tune = true })
-		end
-	end
-	if (r.money or 0) > 0 then
-		table.insert(out, { money = true, have = K.store.Money or 0, need = r.money })
-	end
-	return out
-end
-
-local function buildTony()
-	local p = K.panelShell("tony", T("tony_title"), 920, 600, TONY)
-	K.text(p.content, { Text = T("tony_hint"), Font = K.BODY, TextSize = 16, TextColor3 = P.muted, Size = UDim2.new(1, 0, 0, 24), ZIndex = 23,
-		TextXAlignment = Enum.TextXAlignment.Center })
-	w.tonyList = K.scroller(p.content, UDim2.fromOffset(0, 32), UDim2.new(1, 0, 1, -32))
-end
 
 -- v23: a list row is a white card (ink outline + shadow slab); the state colour is its left band (tan = nothing yet)
 local ROW_IDLE = C(214, 204, 180)
@@ -235,69 +205,400 @@ local function row(parent, order, h, accent)
 	return (K.card(parent, { Size = UDim2.new(1, 0, 0, h), Accent = accent or ROW_IDLE, Radius = 18, LayoutOrder = order, ZIndex = 23 }))
 end
 
--- which recipes the wallet covers, e.g. "1101..." (the list is only rebuilt on money ticks when this changes)
-local function tonyMoneySig()
-	local bits, money = {}, K.store.Money or 0
-	for i, r in ipairs(TuningConfig.Recipes) do
-		bits[i] = money >= (r.money or 0) and "1" or "0"
+-- the state carries seconds-left values as of the push; count down locally from when it arrived
+local pushedState, pushClock = nil, os.clock()
+local function sincePush()
+	local st = K.store.State
+	if st ~= pushedState then
+		pushedState, pushClock = st, os.clock()
 	end
-	return table.concat(bits)
+	return os.clock() - pushClock
 end
 
-local TONY_ROW_H = 112
+-- server time in the server's own clock (os.time) when the state has it, else the replicated server time
+local function serverNow()
+	local st = K.store.State
+	local el = sincePush()
+	if st and tonumber(st.serverTime) then
+		return st.serverTime + el
+	end
+	return Workspace:GetServerTimeNow()
+end
+
+-- seconds left on a car's gear right now (0 = none / run out)
+local function gearLeft(car)
+	local g = car and car.gear
+	if type(g) ~= "table" or not GearConfig.ById[g.id] then
+		return 0
+	end
+	if tonumber(g.left) then
+		return math.max(0, g.left - sincePush())
+	elseif tonumber(g.exp) then
+		return math.max(0, g.exp - serverNow())
+	end
+	return 0
+end
+
+local function fmtMult(m)
+	if m % 1 == 0 then
+		return string.format("x%d", m)
+	end
+	return (string.format("x%.2f", m):gsub("0+$", ""))
+end
+
+-- "x2 4:12" for the garage GEAR button (nil without a running gear)
+local function gearTag(car)
+	local left = gearLeft(car)
+	local def = left > 0 and GearConfig.ById[car.gear.id]
+	if not def then
+		return nil
+	end
+	local best = 1
+	for _, m in pairs(def.effects) do
+		best = math.max(best, m)
+	end
+	return fmtMult(best) .. " " .. fmtTime(left)
+end
+
+local function gearMinutes(def)
+	return T("gears_minutes", math.floor(def.seconds / 60 + 0.5))
+end
+
+local stockCache = {}
+-- this window's stock for the local player minus what they already bought in it
+local function shopInfo(st)
+	local now = serverNow()
+	local window = GearConfig.WindowAt(now)
+	if stockCache.window ~= window then
+		stockCache.window = window
+		stockCache.stock = GearConfig.Stock(game:GetService("Players").LocalPlayer.UserId, window)
+	end
+	local bought = (st.gearShop and st.gearShop.window == window and st.gearShop.bought) or {}
+	local left = {}
+	for id, n in pairs(stockCache.stock) do
+		left[id] = math.max(0, n - (tonumber(bought[id]) or 0))
+	end
+	return left, (window + 1) * GearConfig.Window - now
+end
+
+local function gearPrice(def, st)
+	return GearConfig.Price(def, math.max(tonumber(st.peakIncome) or 0, K.store.Income or 0))
+end
+
+local function gearIcon(parent, def, size, pos, z)
+	local img = Icons.Get("gear_" .. def.id)
+	if img then
+		return K.new("ImageLabel", { Image = img, BackgroundTransparency = 1, Size = UDim2.fromOffset(size, size), Position = pos, ScaleType = Enum.ScaleType.Fit, ZIndex = z }, parent)
+	end
+	return K.text(parent, { Text = def.icon, Font = K.BODY, TextSize = math.floor(size * 0.66), Size = UDim2.fromOffset(size, size), Position = pos,
+		TextXAlignment = Enum.TextXAlignment.Center, ZIndex = z })
+end
+
+local function stars(tier)
+	return string.rep("★", tier) .. string.rep("☆", 5 - tier)
+end
+
+local function nearTony()
+	local char = game:GetService("Players").LocalPlayer.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	local t = MapConfig.Tony
+	return hrp ~= nil and t ~= nil and Vector3.new(hrp.Position.X - t.x, 0, hrp.Position.Z - t.z).Magnitude <= 26
+end
+
+local openPicker -- (opts) car picker / gear chooser, defined below
+
+local TONY_ROW_H = 122
+local function buildTony()
+	local p = K.panelShell("tony", T("gears_title"), 920, 600, TONY)
+	local head = K.inset(p.content, { Size = UDim2.new(1, 0, 0, 46), ZIndex = 22 })
+	w.tonyTimer = K.text(head, { Text = "", TextSize = 22, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(14, 0), Size = UDim2.fromOffset(300, 46), ZIndex = 23 })
+	w.tonyHint = K.text(head, { Text = T("gears_hint"), Font = K.BODY, TextSize = 15, TextColor3 = P.muted, TextWrapped = true, AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -14, 0, 0), Size = UDim2.new(1, -334, 1, 0), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 23 })
+	local list = K.scroller(p.content, UDim2.fromOffset(0, 54), UDim2.new(1, 0, 1, -54))
+	w.tonyRows = {}
+	for i, def in ipairs(GearConfig.List) do
+		local fr = row(list, i, TONY_ROW_H, def.color)
+		local disc = K.new("Frame", { Position = UDim2.fromOffset(10, 13), Size = UDim2.fromOffset(96, 96), BackgroundColor3 = def.color:Lerp(P.white, 0.7), ZIndex = 24 }, fr)
+		K.corner(disc, 48)
+		K.stroke(disc, P.ink, 2)
+		gearIcon(disc, def, 84, UDim2.fromOffset(6, 6), 25)
+		K.text(fr, { Text = string.upper(def.name), TextSize = 24, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(120, 8), Size = UDim2.new(1, -470, 0, 30), ZIndex = 24 })
+		K.text(fr, { Text = GearConfig.Label(def) .. "  ·  " .. gearMinutes(def), TextSize = 18, TextColor3 = K.lift(def.color, -0.4), Outline = false, Position = UDim2.fromOffset(120, 40),
+			Size = UDim2.new(1, -470, 0, 24), ZIndex = 24 })
+		K.text(fr, { Text = T("gears_aura") .. " " .. stars(def.tier), Font = K.BODY, TextSize = 16, TextColor3 = C(196, 140, 20), Position = UDim2.fromOffset(120, 66),
+			Size = UDim2.new(1, -470, 0, 20), ZIndex = 24 })
+		K.text(fr, { Text = def.desc, Font = K.BODY, TextSize = 14, TextColor3 = P.muted, Position = UDim2.fromOffset(120, 88), Size = UDim2.new(1, -470, 0, 20), ZIndex = 24 })
+		local r = { def = def }
+		-- right: stock + price above BUY, owned above APPLY
+		r.stock = K.text(fr, { Text = "", Font = K.BODY, TextSize = 16, TextColor3 = P.ink, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -176, 0, 6), Size = UDim2.fromOffset(150, 22),
+			TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
+		r.price = K.text(fr, { Text = "", TextSize = 22, TextColor3 = GREEN_TXT, Outline = false, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -176, 0, 28), Size = UDim2.fromOffset(150, 28),
+			TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
+		r.buy = K.toy(fr, { Text = T("gears_buy"), Color = P.grey, Size = UDim2.fromOffset(150, 58), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -176, 0, 58), ZIndex = 25, TextSize = 22,
+			OnClick = function()
+				local st = K.store.State
+				if not st then
+					return
+				end
+				local stock = shopInfo(st)
+				if (stock[def.id] or 0) <= 0 then
+					UI.Toast(T("gears_soldoutToast"), "warn")
+				elseif (K.store.Money or 0) < gearPrice(def, st) then
+					UI.Toast(T("gears_noMoney"), "warn")
+				else
+					K.actions.BuyGear(def.id)
+				end
+			end })
+		r.own = K.text(fr, { Text = "", Font = K.BODY, TextSize = 16, TextColor3 = P.ink, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 6), Size = UDim2.fromOffset(150, 22),
+			TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
+		r.ownSub = K.text(fr, { Text = def.effects.income and T("gears_oneCar") or T("gears_whileParked"), Font = K.BODY, TextSize = 13, TextColor3 = P.muted, AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -12, 0, 30), Size = UDim2.fromOffset(150, 22), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 24 })
+		r.apply = K.toy(fr, { Text = T("gears_apply"), Color = P.grey, Size = UDim2.fromOffset(150, 58), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 58), ZIndex = 25, TextSize = 22,
+			OnClick = function()
+				local st = K.store.State
+				if st and ((st.gears or {})[def.id] or 0) > 0 then
+					openPicker({ gear = def.id })
+				else
+					UI.Toast(T("gears_buyFirst"), "warn")
+				end
+			end })
+		w.tonyRows[def.id] = r
+	end
+end
+
+-- text-only refresh (no rebuild): runs on state pushes, money ticks and every second while the panel is open
 local function refreshTony(st, open)
-	if open ~= "tony" then
+	if open ~= "tony" or not w.tonyRows then
 		return
 	end
-	w.tonySig = tonyMoneySig()
-	K.clear(w.tonyList)
-	for i, r in ipairs(TuningConfig.Recipes) do
-		local it = TuningConfig.Items[r.out]
-		if it then
-			local lines = ingredients(r, st)
-			local partsOk, moneyOk = true, true
-			for _, e in ipairs(lines) do
-				if e.have < e.need then
-					if e.money then
-						moneyOk = false
-					else
-						partsOk = false
-					end
-				end
+	local stock, restock = shopInfo(st)
+	w.tonyTimer.Text = T("gears_restock", fmtTime(restock))
+	w.tonyHint.Text = nearTony() and T("gears_hint") or T("gears_far")
+	local money = K.store.Money or 0
+	for id, r in pairs(w.tonyRows) do
+		local n = stock[id] or 0
+		local price = gearPrice(r.def, st)
+		local own = (st.gears or {})[id] or 0
+		r.stock.Text = n > 0 and T("gears_stock", n) or T("gears_soldout")
+		r.stock.TextColor3 = n > 0 and P.ink or RED_TXT
+		r.price.Text = "$" .. Util.FormatNumber(price)
+		r.price.TextColor3 = money >= price and GREEN_TXT or RED_TXT
+		r.buy.SetText(n > 0 and T("gears_buy") or T("gears_soldoutBtn"), nil)
+		r.buy.SetColor((n > 0 and money >= price) and P.green or P.grey)
+		r.own.Text = T("gears_own", own)
+		r.own.TextColor3 = own > 0 and GREEN_TXT or P.muted
+		r.apply.SetColor(own > 0 and P.blue or P.grey)
+	end
+end
+
+---------------------------------------------------------------- gear picker: which car gets a gear / which gear goes on a car
+local picker -- { dim, mode, gear, uid, st, labels = { { label, car } }, head }
+
+local function closePicker()
+	if picker then
+		local dim = picker.dim
+		picker = nil
+		dim:Destroy()
+	end
+end
+
+local function findCar(st, uid)
+	for _, c in ipairs(st.cars or {}) do
+		if c.uid == uid then
+			return c
+		end
+	end
+	return nil
+end
+
+-- "💨 x1.5 SPEED · 3:12" or "No gear"
+local function gearStatus(car)
+	local left = gearLeft(car)
+	local def = left > 0 and GearConfig.ById[car.gear.id]
+	if not def then
+		return T("gears_noGear"), P.muted
+	end
+	return string.format("%s %s  ·  %s", def.icon, GearConfig.Label(def), fmtTime(left)), K.lift(def.color, -0.4)
+end
+
+local function applyGear(car, gearId)
+	local def = GearConfig.ById[gearId]
+	local left = gearLeft(car)
+	local cur = left > 0 and GearConfig.ById[car.gear.id]
+	local function go()
+		K.actions.ApplyGear(car.uid, gearId)
+		UI.Sfx("cash")
+		closePicker()
+	end
+	if cur then
+		-- the confirm sits above the picker; KEEP leaves the picker open
+		K.confirm(T("gears_replaceTitle"), T("gears_replaceBody", cur.name, fmtTime(left), def.name), T("gears_replaceOk"), P.orange, go)
+	else
+		go()
+	end
+end
+
+local PICK_ROW_H = 84
+local MAX_PICK_CARS = 60
+local function fillPicker()
+	local st = K.store.State
+	if not picker or not st then
+		return
+	end
+	picker.st = st
+	picker.labels = {}
+	K.clear(picker.list)
+	if picker.mode == "gear" then
+		-- every car you own, parked first (speed / luck gears only work while the car is parked)
+		local cars = table.clone(st.cars or {})
+		table.sort(cars, function(a, b)
+			if (a.slot ~= nil) ~= (b.slot ~= nil) then
+				return a.slot ~= nil
 			end
-			local can = partsOk and moneyOk
-			local fr = row(w.tonyList, i, TONY_ROW_H, can and P.green or nil)
-			-- left: the tuning part you get
-			K.text(fr, { Text = it.icon, Font = K.BODY, TextSize = 40, Position = UDim2.fromOffset(10, 0), Size = UDim2.fromOffset(64, TONY_ROW_H), ZIndex = 24,
+			local ia, ib = CarConfig.CarIncome(a), CarConfig.CarIncome(b)
+			if ia ~= ib then
+				return ia > ib
+			end
+			return a.uid < b.uid
+		end)
+		if #cars == 0 then
+			K.text(picker.list, { Text = T("garage_empty"), Font = K.BODY, TextSize = 18, TextColor3 = P.muted, Size = UDim2.new(1, 0, 0, 40), ZIndex = 74, TextXAlignment = Enum.TextXAlignment.Center })
+		end
+		for i, car in ipairs(cars) do
+			if i > MAX_PICK_CARS then
+				break
+			end
+			local def = CarConfig.ById[car.typeId]
+			if def then
+				local rc = CarConfig.Rarities[def.rarity].color
+				local fr = K.card(picker.list, { Size = UDim2.new(1, 0, 0, PICK_ROW_H), Accent = rc, Radius = 16, LayoutOrder = i, ZIndex = 73 })
+				K.text(fr, { Text = def.name, TextSize = 20, TextColor3 = P.ink, Outline = false, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(14, 6), Size = UDim2.new(1, -200, 0, 26), ZIndex = 75 })
+				K.text(fr, { Text = string.format("%s · Lv %d · +%s/s", car.slot and ("Bay " .. car.slot) or "Storage", car.level or 1, Util.FormatNumber(CarConfig.CarIncome(car))), Font = K.BODY,
+					TextSize = 14, TextColor3 = P.muted, Position = UDim2.fromOffset(14, 32), Size = UDim2.new(1, -200, 0, 20), ZIndex = 75 })
+				local status = K.text(fr, { Text = "", Font = K.BODY, TextSize = 15, TextColor3 = P.muted, Position = UDim2.fromOffset(14, 54), Size = UDim2.new(1, -200, 0, 20), ZIndex = 75 })
+				table.insert(picker.labels, { label = status, car = car })
+				local active = gearLeft(car) > 0
+				K.toy(fr, { Text = active and T("gears_replace") or T("gears_apply"), Sub = (not car.slot) and T("gears_storage") or nil, SubSize = 11, Color = active and P.orange or P.green,
+					Size = UDim2.fromOffset(150, 62), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), ZIndex = 76, TextSize = 20,
+					OnClick = function()
+						applyGear(car, picker and picker.gear)
+					end })
+			end
+		end
+	else
+		-- one car: the gears you own
+		local car = findCar(st, picker.uid)
+		if not car then
+			closePicker()
+			return
+		end
+		local any = false
+		for i, def in ipairs(GearConfig.List) do
+			local own = (st.gears or {})[def.id] or 0
+			if own > 0 then
+				any = true
+				local fr = K.card(picker.list, { Size = UDim2.new(1, 0, 0, PICK_ROW_H), Accent = def.color, Radius = 16, LayoutOrder = i, ZIndex = 73 })
+				gearIcon(fr, def, 64, UDim2.fromOffset(10, 10), 75)
+				K.text(fr, { Text = string.upper(def.name) .. "  x" .. own, TextSize = 20, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(84, 10), Size = UDim2.new(1, -250, 0, 26), ZIndex = 75 })
+				K.text(fr, { Text = GearConfig.Label(def) .. "  ·  " .. gearMinutes(def), Font = K.BODY, TextSize = 15, TextColor3 = K.lift(def.color, -0.4), Position = UDim2.fromOffset(84, 40),
+					Size = UDim2.new(1, -250, 0, 22), ZIndex = 75 })
+				K.toy(fr, { Text = T("gears_apply"), Color = P.green, Size = UDim2.fromOffset(150, 62), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), ZIndex = 76, TextSize = 20,
+					OnClick = function()
+						applyGear(car, def.id)
+					end })
+			end
+		end
+		if not any then
+			K.text(picker.list, { Text = T("gears_noneOwned"), Font = K.BODY, TextSize = 19, TextColor3 = P.muted, TextWrapped = true, Size = UDim2.new(1, 0, 0, 56), LayoutOrder = 1, ZIndex = 74,
 				TextXAlignment = Enum.TextXAlignment.Center })
-			K.text(fr, { Text = string.upper(it.name), TextSize = 22, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(82, 14), Size = UDim2.fromOffset(262, 30), ZIndex = 24 })
-			K.text(fr, { Text = string.format("+%d%% car income", math.floor(it.bonus * 100 + 0.5)), Font = K.BODY, TextSize = 17, TextColor3 = GREEN_TXT,
-				Position = UDim2.fromOffset(82, 48), Size = UDim2.fromOffset(262, 22), ZIndex = 24 })
-			K.text(fr, { Text = T("tony_have", (st.tuning or {})[r.out] or 0), Font = K.BODY, TextSize = 15, TextColor3 = P.muted, Position = UDim2.fromOffset(82, 76),
-				Size = UDim2.fromOffset(262, 20), ZIndex = 24 })
-			-- right: everything it costs, one line per ingredient, green = you have enough
-			local col = K.new("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -196, 0.5, 0), Size = UDim2.fromOffset(300, TONY_ROW_H - 16),
-				BackgroundTransparency = 1, ZIndex = 24 }, fr)
-			K.list(col, Enum.FillDirection.Vertical, 2, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center)
-			K.text(col, { Text = T("tony_needs"), TextSize = 14, TextColor3 = P.muted, Outline = false, Size = UDim2.new(1, 0, 0, 16), LayoutOrder = 0, ZIndex = 25 })
-			for k, e in ipairs(lines) do
-				local label
-				if e.money then
-					label = "💵 $" .. Util.FormatNumber(e.need)
-				else
-					label = string.format("%s   %s/%s", e.label, Util.FormatNumber(e.have), Util.FormatNumber(e.need))
-				end
-				K.text(col, { Text = label, Font = K.BODY, TextSize = 18, TextColor3 = e.have >= e.need and GREEN_TXT or RED_TXT, Size = UDim2.new(1, 0, 0, 24),
-					LayoutOrder = k, ZIndex = 25 })
-			end
-			local btnText = can and T("tony_build") or (partsOk and T("tony_needMoney") or T("tony_needParts"))
-			K.toy(fr, { Text = btnText, Color = can and P.orange or P.grey, Size = UDim2.fromOffset(170, 60), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0),
-				ZIndex = 25, TextSize = can and 22 or 18, OnClick = function()
-					if can then
-						K.actions.Craft(r.id)
+			local holder = K.new("Frame", { Size = UDim2.new(1, 0, 0, 70), BackgroundTransparency = 1, LayoutOrder = 2, ZIndex = 74 }, picker.list)
+			K.toy(holder, { Text = T("gears_goTony"), Color = TONY, Size = UDim2.fromOffset(280, 64), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), ZIndex = 75, TextSize = 22,
+				OnClick = function()
+					closePicker()
+					if K.state.open ~= "tony" then
+						UI.TogglePanel("tony")
 					end
 				end })
 		end
+	end
+end
+
+-- countdowns in the picker (no rebuild)
+local function tickPicker()
+	if not picker then
+		return
+	end
+	local st = K.store.State
+	if picker.mode == "car" then
+		local car = st and findCar(st, picker.uid)
+		if car then
+			local txt, col = gearStatus(car)
+			picker.head.Text = T("gears_now") .. " " .. txt
+			picker.head.TextColor3 = col
+		end
+	end
+	for _, e in ipairs(picker.labels) do
+		local txt, col = gearStatus(e.car)
+		e.label.Text = txt
+		e.label.TextColor3 = col
+	end
+end
+
+-- opts: { gear = id } -> pick a car for that gear; { uid = carUid } -> pick a gear for that car
+openPicker = function(opts)
+	closePicker()
+	local st = K.store.State
+	if not st or K.state.cine then
+		return
+	end
+	local title, color, sub
+	if opts.gear then
+		local def = GearConfig.ById[opts.gear]
+		if not def then
+			return
+		end
+		title, color = T("gears_pickCar", string.upper(def.name)), def.color
+		sub = GearConfig.Label(def) .. "  ·  " .. gearMinutes(def) .. "  ·  " .. (def.effects.income and T("gears_oneCar") or T("gears_whileParked"))
+	else
+		local car = findCar(st, opts.uid)
+		local cdef = car and CarConfig.ById[car.typeId]
+		if not cdef then
+			return
+		end
+		title, color, sub = T("gears_pickGear", string.upper(cdef.name)), TONY, ""
+	end
+	local dim = K.new("TextButton", { Name = "GearPicker", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.45, ZIndex = 70 },
+		K.overlay)
+	local box, shell = K.dialogShell(dim, { Class = "TextButton", Size = UDim2.fromOffset(660, 520), ZIndex = 71, Color = color, HeadH = 60, Title = title, TitleSize = 28 })
+	local sc = K.new("UIScale", { Scale = 0.6 }, shell)
+	K.tween(sc, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
+	K.toy(box, { Text = "X", Color = P.red, Size = UDim2.fromOffset(56, 60), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 12, 0, -16), ZIndex = 76, OnClick = closePicker })
+	local head = K.text(box, { Text = sub, Font = K.BODY, TextSize = 17, TextColor3 = P.ink, Position = UDim2.fromOffset(24, 68), Size = UDim2.new(1, -48, 0, 26), ZIndex = 73,
+		TextXAlignment = Enum.TextXAlignment.Center })
+	local list = K.scroller(box, UDim2.fromOffset(16, 100), UDim2.new(1, -32, 1, -112))
+	list.ZIndex = 72
+	dim.Activated:Connect(closePicker)
+	picker = { dim = dim, mode = opts.gear and "gear" or "car", gear = opts.gear, uid = opts.uid, head = head, list = list, labels = {}, panel = K.state.open }
+	UI.SetDialog(true)
+	dim.Destroying:Connect(function()
+		UI.SetDialog(false)
+		if picker and picker.dim == dim then
+			picker = nil
+		end
+	end)
+	fillPicker()
+	tickPicker()
+end
+
+local function refreshPicker(st, open)
+	if not picker then
+		return
+	end
+	if open ~= picker.panel or K.state.cine then
+		closePicker() -- the panel it came from closed (or another one opened)
+	elseif st ~= picker.st then
+		fillPicker() -- new state: owned gears / cars changed
+		tickPicker()
 	end
 end
 
@@ -377,60 +678,6 @@ local function refreshJobs(st, open)
 					K.actions.Claim(c.id)
 				end
 			end })
-	end
-end
-
----------------------------------------------------------------- Tuning a car
-local function buildTune()
-	local p = K.panelShell("tune", T("tune_title"), 900, 600, P.yellow)
-	w.tuneHead = K.text(p.content, { Text = "", TextSize = 22, TextColor3 = P.ink, Outline = false, Size = UDim2.new(1, 0, 0, 30), RichText = true, ZIndex = 23 })
-	w.tuneList = K.scroller(p.content, UDim2.fromOffset(0, 38), UDim2.new(1, 0, 1, -38))
-end
-
-local function refreshTune(st, open)
-	if open ~= "tune" then
-		return
-	end
-	local car
-	for _, c in ipairs(st.cars) do
-		if c.uid == tuneUid then
-			car = c
-		end
-	end
-	K.clear(w.tuneList)
-	if not car then
-		w.tuneHead.Text = ""
-		return
-	end
-	local def = CarConfig.ById[car.typeId]
-	local mult = TuningConfig.CarMult(car.tune)
-	w.tuneHead.Text = string.format('%s   <font color="#1E9E40">+%s/s  (x%.2f)</font>', def.name, Util.FormatNumber(CarConfig.CarIncome(car)), mult)
-	for i, cat in ipairs(TuningConfig.Categories) do
-		local cur = car.tune and car.tune[cat.id]
-		local curIt = cur and TuningConfig.Items[cur]
-		local fr = row(w.tuneList, i, 76, curIt and P.green or nil)
-		K.text(fr, { Text = cat.icon, Font = K.BODY, TextSize = 30, Position = UDim2.fromOffset(10, 0), Size = UDim2.fromOffset(46, 76), ZIndex = 24, TextXAlignment = Enum.TextXAlignment.Center })
-		K.text(fr, { Text = string.upper(cat.name), TextSize = 18, TextColor3 = P.muted, Outline = false, Position = UDim2.fromOffset(62, 6), Size = UDim2.fromOffset(160, 22), ZIndex = 24 })
-		K.text(fr, { Text = curIt and string.format("%s +%d%%", curIt.name, math.floor(curIt.bonus * 100 + 0.5)) or T("tune_empty"), TextSize = 18,
-			TextColor3 = curIt and P.ink or P.muted, Outline = false, Position = UDim2.fromOffset(62, 32), Size = UDim2.fromOffset(220, 30), ZIndex = 24 })
-		local opts = K.new("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(540, 60), BackgroundTransparency = 1, ZIndex = 24 }, fr)
-		K.list(opts, Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center)
-		local any = false
-		for _, id in ipairs(TuningConfig.Order) do
-			local it = TuningConfig.Items[id]
-			local have = (st.tuning or {})[id] or 0
-			if it.cat == cat.id and have > 0 then
-				any = true
-				K.toy(opts, { Text = it.icon .. " " .. string.rep("I", it.stage), Sub = "x" .. have, SubSize = 12, TextSize = 16, Color = P.blue, Size = UDim2.fromOffset(96, 54),
-					LayoutOrder = it.stage, ZIndex = 25, OnClick = function() K.actions.Tune(car.uid, cat.id, id) end })
-			end
-		end
-		if curIt then
-			K.toy(opts, { Text = T("tune_remove"), Color = P.red, Size = UDim2.fromOffset(110, 54), TextSize = 16, LayoutOrder = 9, ZIndex = 25,
-				OnClick = function() K.actions.Tune(car.uid, cat.id, nil) end })
-		elseif not any then
-			K.text(opts, { Text = T("tune_none"), Font = K.BODY, TextSize = 14, TextColor3 = P.muted, Size = UDim2.fromOffset(260, 30), ZIndex = 25, TextXAlignment = Enum.TextXAlignment.Right })
-		end
 	end
 end
 
@@ -559,6 +806,51 @@ local function refreshBoard(st)
 	end
 end
 
+---------------------------------------------------------------- Tony's GEARS board: this player's stock, prices and the restock timer
+local function refreshGearBoard(st)
+	local stock, restock = shopInfo(st)
+	for _, board in ipairs(CollectionService:GetTagged("GearBoard")) do
+		local gui = board:FindFirstChild("BoardGui")
+		if not gui then
+			gui = K.new("SurfaceGui", { Name = "BoardGui", Face = Enum.NormalId.Front, SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud, PixelsPerStud = 40, LightInfluence = 0.1 }, board)
+			K.new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(36, 44, 70), BorderSizePixel = 0 }, gui)
+			local head = K.new("Frame", { Size = UDim2.new(1, 0, 0, 68), BackgroundColor3 = C(22, 26, 42), BorderSizePixel = 0, ZIndex = 2 }, gui)
+			K.text(head, { Text = T("gears_board"), TextSize = 56, TextColor3 = C(255, 205, 60), Outline = 3, Position = UDim2.fromOffset(18, 4), Size = UDim2.new(0.4, 0, 1, -8), ZIndex = 3 })
+			K.text(head, { Name = "Timer", Text = "", TextSize = 30, TextColor3 = P.white, Outline = 2.5, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -18, 0, 10),
+				Size = UDim2.new(0.58, 0, 1, -20), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 3 })
+		end
+		local timer = gui:FindFirstChild("Timer", true)
+		if timer then
+			timer.Text = T("gears_restock", fmtTime(restock))
+		end
+	end
+	for _, slot in ipairs(CollectionService:GetTagged("GearSlot")) do
+		local def = GearConfig.List[slot:GetAttribute("Index") or 0]
+		if def then
+			local gui = slot:FindFirstChild("SlotGui")
+			if not gui then
+				gui = K.new("SurfaceGui", { Name = "SlotGui", Face = Enum.NormalId.Front, SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud, PixelsPerStud = 50, LightInfluence = 0.1 }, slot)
+				local bg = K.new("Frame", { Name = "Bg", Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(255, 248, 228), BorderSizePixel = 0 }, gui)
+				K.new("Frame", { Size = UDim2.new(1, 0, 0, 10), BackgroundColor3 = def.color, BorderSizePixel = 0, ZIndex = 2 }, bg)
+				gearIcon(bg, def, 84, UDim2.fromOffset(8, 16), 2)
+				K.text(bg, { Text = string.upper(def.name), TextSize = 22, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(98, 16), Size = UDim2.new(1, -104, 0, 26), ZIndex = 2 })
+				K.text(bg, { Text = GearConfig.Label(def), TextSize = 17, TextColor3 = K.lift(def.color, -0.45), Outline = false, Position = UDim2.fromOffset(98, 44), Size = UDim2.new(1, -104, 0, 22), ZIndex = 2 })
+				K.text(bg, { Name = "Stock", Text = "", Font = K.BODY, TextSize = 18, TextColor3 = P.ink, Position = UDim2.fromOffset(98, 70), Size = UDim2.new(1, -104, 0, 24), ZIndex = 2 })
+				K.text(bg, { Name = "Price", Text = "", TextSize = 32, TextColor3 = GREEN_TXT, Outline = false, Position = UDim2.fromOffset(8, 104), Size = UDim2.new(1, -16, 0, 38),
+					TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 2 })
+			end
+			local n = stock[def.id] or 0
+			local price = gearPrice(def, st)
+			local bg = gui.Bg
+			bg.Stock.Text = n > 0 and T("gears_stock", n) or T("gears_soldout")
+			bg.Stock.TextColor3 = n > 0 and P.ink or RED_TXT
+			bg.Price.Text = "$" .. Util.FormatNumber(price)
+			bg.Price.TextColor3 = (K.store.Money or 0) >= price and GREEN_TXT or RED_TXT
+			bg.BackgroundColor3 = n > 0 and C(255, 248, 228) or C(214, 210, 202)
+		end
+	end
+end
+
 ---------------------------------------------------------------- HUD widgets
 local function buildHud()
 	local root = K.root
@@ -586,7 +878,7 @@ local function buildHud()
 	K.corner(w.jobsDot, 9)
 	K.stroke(w.jobsDot, P.white, 2)
 	-- active boosts strip to the right of the wallet card
-	w.boosts = K.new("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 310, 1, -24 - (K.hud.leftLift or 0)), Size = UDim2.fromOffset(240, 40), BackgroundTransparency = 1 }, root)
+	w.boosts = K.new("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 310, 1, -24 - (K.hud.leftLift or 0)), Size = UDim2.fromOffset(560, 40), BackgroundTransparency = 1 }, root)
 	K.list(w.boosts, Enum.FillDirection.Horizontal, 6)
 	-- combo: one compact text line above THROW ("COMBO x1.5" + small speed-bonus timer), no card
 	local combo = K.new("Frame", { Name = "Combo", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -138), Size = UDim2.fromOffset(360, 30), BackgroundTransparency = 1, Visible = false }, root)
@@ -636,8 +928,27 @@ contractText = function(c)
 	return T("c_hotdrop")
 end
 
-local function refreshHud(st)
-	-- boosts
+-- player-wide gear effect: time left = the longest running parked car giving it, colour of the strongest gear
+local function gearKind(st, kind)
+	local left, col, best = 0, nil, 0
+	for _, c in ipairs(st.cars or {}) do
+		local g = c.slot and c.gear
+		local def = g and GearConfig.ById[g.id]
+		local m = def and def.effects[kind]
+		if m then
+			local l = gearLeft(c)
+			if l > 0 then
+				left = math.max(left, l)
+				if m > best then
+					best, col = m, def.color
+				end
+			end
+		end
+	end
+	return left, col
+end
+
+local function refreshPills(st)
 	K.clear(w.boosts)
 	for _, b in ipairs({ { "income", "2X CASH" }, { "luck", "LUCK" } }) do
 		local left = st.boosts and st.boosts[b[1]] or 0
@@ -645,9 +956,24 @@ local function refreshHud(st)
 			K.pill(w.boosts, b[2] .. " " .. fmtTime(left), GOLD, { H = 34, TextSize = 18 })
 		end
 	end
+	-- gears: SPEED x2 4:12, LUCK x1.5 9:40
+	for _, kind in ipairs({ "speed", "luck" }) do
+		local m = st.gearMults and tonumber(st.gearMults[kind]) or 1
+		if m > 1 then
+			local left, col = gearKind(st, kind)
+			if left > 0 then
+				K.pill(w.boosts, string.upper(kind) .. " " .. fmtMult(m) .. " " .. fmtTime(left), col and K.lift(col, -0.15) or P.blue, { H = 34, TextSize = 18 })
+			end
+		end
+	end
 	if st.passes and st.passes.vip then
 		K.pill(w.boosts, "VIP", GOLD, { H = 34, TextSize = 18 })
 	end
+end
+
+local function refreshHud(st)
+	-- boosts + gear effects
+	refreshPills(st)
 	-- contracts
 	for _, r in ipairs(w.contractRows) do
 		r:Destroy()
@@ -750,29 +1076,30 @@ function X.Init(ui)
 	buildDonate()
 	buildTony()
 	buildJobs()
-	buildTune()
 	buildRebirth()
 	buildHud()
-	UI.OnTune = function(uid)
-		tuneUid = uid
-		UI.TogglePanel("tune")
+	-- garage GEAR button (UI.lua): its "x2 4:12" text and the gear chooser for that car
+	UI.GearTag = gearTag
+	UI.OnGear = function(uid)
+		openPicker({ uid = uid })
 	end
 	table.insert(UI.Hooks, function(st, open)
 		refreshShop(st, open)
 		refreshDonate(st, open)
 		refreshTony(st, open)
 		refreshJobs(st, open)
-		refreshTune(st, open)
 		refreshRebirth(st, open)
 		refreshHud(st)
 		refreshBoard(st)
+		refreshGearBoard(st)
+		refreshPicker(st, open)
 	end)
 	K.store.MoneyChanged.Event:Connect(function()
 		local st = K.store.State
 		if st and K.state.open == "shop" then
 			refreshShop(st, "shop")
-		elseif st and K.state.open == "tony" and tonyMoneySig() ~= w.tonySig then
-			refreshTony(st, "tony") -- money lines + BUILD buttons follow the wallet
+		elseif st and K.state.open == "tony" then
+			refreshTony(st, "tony") -- prices + BUY buttons follow the wallet (text-only update)
 		end
 	end)
 	require(Shared:WaitForChild("Net")).Get("OfflineEarnings").OnClientEvent:Connect(showOffline)
@@ -813,18 +1140,26 @@ function X.Init(ui)
 			tick()
 		end
 	end)
-	-- boost timers count down locally between state pushes
+	-- boost + gear timers count down locally between state pushes (text updates only)
 	task.spawn(function()
 		while true do
 			task.wait(1)
 			local st = K.store.State
-			if st and st.boosts then
-				for k, v in pairs(st.boosts) do
-					st.boosts[k] = math.max(0, v - 1)
+			if st then
+				if st.boosts then
+					for k, v in pairs(st.boosts) do
+						st.boosts[k] = math.max(0, v - 1)
+					end
+					if K.state.open == "donate" then
+						refreshDonate(st, "donate")
+					end
 				end
-				refreshHud(st)
-				if K.state.open == "donate" then
-					refreshDonate(st, "donate")
+				refreshPills(st)
+				refreshTony(st, K.state.open)
+				refreshGearBoard(st)
+				tickPicker()
+				if K.state.open == "garage" and UI.TickGarageGears then
+					UI.TickGarageGears()
 				end
 			end
 		end

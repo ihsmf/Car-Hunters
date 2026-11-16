@@ -223,6 +223,13 @@ function TrapVisuals.Start(ui, storeModule, cine)
 	RunService.RenderStepped:Connect(step)
 	store.Changed.Event:Connect(refreshPrompt)
 	refreshPrompt()
+	-- money ticks only refresh the HUD: keep the throw menu's UPGRADE button colour live too
+	store.MoneyChanged.Event:Connect(function()
+		local K = UI.Kit()
+		if K.state.open == "throw" and K.panels.trapRefresh then
+			K.panels.trapRefresh()
+		end
+	end)
 	Net.Get("TrapUpgraded").OnClientEvent:Connect(function(level, baseIndex)
 		TrapVisuals.Burst(level, baseIndex)
 	end)

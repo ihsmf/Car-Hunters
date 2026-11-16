@@ -29,7 +29,6 @@ local CULL = 220
 local HL_DIST, HL_MAX = 60, 10
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 local FIRE = "rbxasset://textures/particles/fire_main.dds"
-local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 local TAU = math.pi * 2
 
 local entries = {} -- [car model] = entry

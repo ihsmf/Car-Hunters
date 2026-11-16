@@ -270,7 +270,7 @@ local function applyTrapLevel(b, level)
 	end
 	if level >= 5 then -- hologram ring floating round the deck (spun by the client)
 		local cf = O * CFrame.new(0, 4.4, 0)
-		local ring = trapRing(f, "TrapUpRing", cf, 11.2, 28, 0.35, 0.18, glow, 0.35)
+		local ring = trapRing(f, "TrapUpRing", cf, 11.2, 28, 0.5, 0.3, glow, 0.3)
 		for i = 0, 3 do
 			trapPart(ring, "TrapUpRingGem", Vector3.new(0.7, 0.7, 0.7), cf * CFrame.Angles(0, i * math.pi / 2, 0) * CFrame.new(11.2, 0, 0) * CFrame.Angles(math.pi / 4, 0, math.pi / 4), TRAP_WHITE, NEON, { t = 0.1 })
 		end
@@ -294,7 +294,7 @@ local function applyTrapLevel(b, level)
 		trapPart(f, "TrapUpEmitter", Vector3.new(0.4, 2.6, 2.6), O * CFrame.new(0, 15.08, 0) * UPRIGHT, TRAP_DARK, METAL, { shape = Enum.PartType.Cylinder })
 		trapPart(f, "TrapUpEmitter", Vector3.new(0.2, 1.6, 1.6), O * CFrame.new(0, 15.38, 0) * UPRIGHT, glow, NEON, { shape = Enum.PartType.Cylinder })
 		trapPart(f, "TrapUpBeam", Vector3.new(70, 1.3, 1.3), O * CFrame.new(0, 15.5 + 35, 0) * UPRIGHT, glow, NEON, { shape = Enum.PartType.Cylinder, t = 0.55 })
-		trapPart(f, "TrapUpBeam", Vector3.new(70, 2.6, 2.6), O * CFrame.new(0, 15.5 + 35, 0) * UPRIGHT, glow, NEON, { shape = Enum.PartType.Cylinder, t = 0.85 })
+		trapPart(f, "TrapUpBeam", Vector3.new(69.6, 2.6, 2.6), O * CFrame.new(0, 15.5 + 35, 0) * UPRIGHT, glow, NEON, { shape = Enum.PartType.Cylinder, t = 0.85 }) -- caps off the inner beam's planes
 	end
 	if level >= 8 then -- holo floor: two neon rings + a cross-hair, flat on the deck (pad top 1.6), slowly turning
 		local cf = O * CFrame.new(0, 1.71, 0)

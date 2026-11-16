@@ -16,6 +16,7 @@ local Icons = require(Shared:WaitForChild("Icons"))
 local PartVisual = require(Shared:WaitForChild("PartVisual"))
 local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
+local TrapConfig = require(Shared:WaitForChild("TrapConfig"))
 local VehicleFactory = require(Shared:WaitForChild("VehicleFactory"))
 local RevealFx = require(script.Parent:WaitForChild("RevealFx"))
 
@@ -678,10 +679,48 @@ end
 local function buildThrow()
 	local p = panelShell("throw", T("throw_title"), 940, 600, P.yellow)
 	local c = p.content
-	local rows = scroller(c, UDim2.new(), UDim2.fromOffset(570, 410)) -- 10 parts: scrolling list
+	local rows = scroller(c, UDim2.new(), UDim2.fromOffset(570, 340)) -- 10 parts: scrolling list
 	panels.throwRows = {}
 	-- rarity points of the pick + cars per throw (1 at the start, up to 4 with "Multi Catch")
-	panels.catchInfo = text(c, { Text = "", Font = BODY, TextSize = 17, TextColor3 = P.ink, RichText = true, Position = UDim2.fromOffset(0, 420), Size = UDim2.fromOffset(560, 26), ZIndex = 23 })
+	panels.catchInfo = text(c, { Text = "", Font = BODY, TextSize = 17, TextColor3 = P.ink, RichText = true, Position = UDim2.fromOffset(0, 346), Size = UDim2.fromOffset(560, 26), ZIndex = 23 })
+	-- v24: the throw PLATFORM upgrade (luck per level, a cooler look per level; TrapService)
+	local tp = card(c, { Position = UDim2.fromOffset(8, 380), Size = UDim2.fromOffset(540, 96), Accent = P.cyan, Radius = 18, ZIndex = 23 })
+	local tpTitle = text(tp, { Text = "", TextSize = 22, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(14, 8), Size = UDim2.fromOffset(300, 26), ZIndex = 24 })
+	local tpLuck = text(tp, { Text = "", Font = BODY, TextSize = 16, TextColor3 = P.ink, RichText = true, Position = UDim2.fromOffset(14, 38), Size = UDim2.fromOffset(300, 22), ZIndex = 24 })
+	local tpNext = text(tp, { Text = "", Font = BODY, TextSize = 14, TextColor3 = P.muted, RichText = true, Position = UDim2.fromOffset(14, 62), Size = UDim2.fromOffset(300, 20), ZIndex = 24 })
+	local tpBtn = toy(tp, { Text = "UPGRADE", Sub = "", SubSize = 17, TextSize = 22, Color = P.green, Size = UDim2.fromOffset(200, 74), Position = UDim2.fromOffset(318, 8), ZIndex = 25,
+		OnClick = function()
+			local st = store.State
+			local cost = TrapConfig.NextCost(st and st.trapLevel or 1)
+			if not cost then
+				UI.Toast(T("n_maxLevel"), "warn")
+			elseif store.Money < cost then
+				UI.Toast(T("n_noMoney"), "error")
+			elseif actions.UpgradeTrap then
+				actions.UpgradeTrap()
+			end
+		end })
+	-- also called on money ticks (TrapVisuals) so the button turns green the moment you can pay
+	function panels.trapRefresh()
+		local st = store.State
+		if not st then
+			return
+		end
+		local lvl = TrapConfig.Clamp(st.trapLevel or 1)
+		local cost = TrapConfig.NextCost(lvl)
+		local maxed = cost == nil
+		tpTitle.Text = string.format("PLATFORM Lv %d", lvl)
+		tpLuck.Text = string.format("<b>LUCK x%.2f</b>  <font color=\"#606674\">·  Lv %d/%d</font>", TrapConfig.LuckMult(lvl), lvl, TrapConfig.MaxLevel)
+		if maxed then
+			tpNext.Text = "Fully upgraded - the golden platform!"
+			tpBtn.SetText("MAX", "Lv " .. lvl)
+			tpBtn.SetColor(P.yellow)
+		else
+			tpNext.Text = string.format("Next: <b>%s</b>  ·  <font color=\"#2EA8FF\">+%d%% luck</font>", TrapConfig.Names[lvl + 1], math.floor(TrapConfig.LuckPerLevel * 100 + 0.5))
+			tpBtn.SetText("UPGRADE", "$" .. Util.FormatNumber(cost))
+			tpBtn.SetColor(store.Money >= cost and P.green or P.grey)
+		end
+	end
 	for i, id in ipairs(PartConfig.Order) do
 		local rc = rarityColor(PartConfig.Parts[id].rarity)
 		-- v23: white card with ink outline + shadow; the rarity is the left band (faded while none is picked)
@@ -764,7 +803,9 @@ local function buildThrow()
 		UI.Refresh()
 	end })
 	local odds = card(right, { Position = UDim2.fromOffset(0, 58), Size = UDim2.fromOffset(312, 196), Radius = 18, ZIndex = 23 })
-	text(odds, { Text = "CHANCE PER CAR", TextSize = 18, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(14, 10), Size = UDim2.fromOffset(280, 22), ZIndex = 24 })
+	text(odds, { Text = "CHANCE PER CAR", TextSize = 18, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(14, 10), Size = UDim2.fromOffset(180, 22), ZIndex = 24 })
+	-- all luck (Pit Stop, tokens, boosts, platform, gears) already applied to the odds below
+	panels.oddsLuck = text(odds, { Text = "", TextSize = 16, TextColor3 = P.blue, Outline = false, Position = UDim2.fromOffset(158, 11), Size = UDim2.fromOffset(140, 22), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 24 })
 	-- recessed track; the coloured shares live in an inner strip (refresh clears that one, the track keeps its rim)
 	local track = inset(odds, { Position = UDim2.fromOffset(14, 38), Size = UDim2.fromOffset(284, 16), Radius = 4, ZIndex = 24 })
 	local bar = new("Frame", { Position = UDim2.fromOffset(2, 2), Size = UDim2.new(1, -4, 1, -4), BackgroundTransparency = 1, ClipsDescendants = true, ZIndex = 24 }, track)
@@ -888,6 +929,12 @@ local function refreshThrow()
 		cars < lim and string.format(" with <b>x%s</b> points each", (lim / cars) % 1 == 0 and tostring(lim // cars) or string.format("%.1f", lim / cars)) or "",
 		lim < EconomyConfig.MaxCatch and "  ·  more with <b>Multi Catch</b>" or "")
 	local chances = CarConfig.ChancesForPoints(math.max(perCar, 1))
+	local luck = tonumber(st.luckMult) or 1
+	if CarConfig.ApplyLuck then
+		chances = CarConfig.ApplyLuck(chances, luck)
+	end
+	panels.oddsLuck.Text = string.format("LUCK x%.2f", luck)
+	panels.oddsLuck.TextColor3 = luck > 1.001 and P.blue or P.grey
 	local expected = {}
 	for _, r in ipairs(CarConfig.RarityOrder) do
 		expected[r] = total > 0 and cars * chances[r] / 100 or 0
@@ -907,6 +954,7 @@ local function refreshThrow()
 	panels.mergeKnob.Position = UDim2.fromOffset(state.merge and 25 or 3, 4)
 	panels.throwGo.SetText(total > 0 and string.format("THROW %d PARTS", total) or T("btn_throw"), nil)
 	panels.throwGo.SetColor(total > 0 and P.green or P.grey)
+	panels.trapRefresh()
 end
 
 -- TELEPORT (also unlocks districts)
@@ -1135,6 +1183,7 @@ local function refreshGarage()
 		b.holder.Visible = tab == "storage"
 	end
 	clear(panels.carList)
+	panels.gearBtns = {}
 	local cars = {}
 	for _, car in ipairs(sortedCars(st)) do
 		if (tab == "parked") == (car.slot ~= nil) then
@@ -1174,16 +1223,14 @@ local function refreshGarage()
 			toy(btns, { Text = T("btn_upgrade"), Sub = string.format("$%s + %d %s", Util.FormatNumber(ucost), amount, T("part_" .. partId)), SubSize = 12, TextSize = 17,
 				Color = ok and P.blue or P.grey, Size = UDim2.fromOffset(140, 56), LayoutOrder = 2, ZIndex = 25, OnClick = function() actions.Upgrade(c.uid, c.level) end })
 		end
-		local tuned = 0
-		for _ in pairs(c.tune or {}) do
-			tuned = tuned + 1
-		end
-		toy(btns, { Text = T("btn_tune"), Sub = tuned > 0 and (tuned .. "/7") or nil, SubSize = 12, TextSize = 17, Color = P.yellow, Size = UDim2.fromOffset(84, 56),
-			LayoutOrder = 3, ZIndex = 25, OnClick = function()
-				if UI.OnTune then
-					UI.OnTune(c.uid)
+		-- v24 gears: "x2 4:12" while a gear runs (ticked every second by UI.TickGarageGears); opens the gear chooser
+		local gearTag = UI.GearTag and UI.GearTag(c)
+		panels.gearBtns[c.uid] = { car = c, btn = toy(btns, { Text = T("gears_btn"), Sub = gearTag or T("gears_none"), SubSize = 12, TextSize = 17, Color = gearTag and P.cyan or P.yellow,
+			Size = UDim2.fromOffset(92, 56), LayoutOrder = 3, ZIndex = 25, OnClick = function()
+				if UI.OnGear then
+					UI.OnGear(c.uid)
 				end
-			end })
+			end }) }
 		local price = CarConfig.SellPrice(def, c.level)
 		toy(btns, { Text = T("btn_sell"), Sub = "$" .. Util.FormatNumber(price), SubSize = 12, TextSize = 17, Color = P.red, Size = UDim2.fromOffset(96, 56), LayoutOrder = 4, ZIndex = 25,
 			OnClick = function()
@@ -1191,6 +1238,18 @@ local function refreshGarage()
 					actions.Sell(c.uid)
 				end, def)
 			end })
+	end
+end
+
+-- v24: the GEAR buttons' countdowns, every second while the garage is open (no list rebuild)
+function UI.TickGarageGears()
+	if state.open ~= "garage" or not panels.gearBtns then
+		return
+	end
+	for _, e in pairs(panels.gearBtns) do
+		local tag = UI.GearTag and UI.GearTag(e.car)
+		e.btn.SetText(T("gears_btn"), tag or T("gears_none"))
+		e.btn.SetColor(tag and P.cyan or P.yellow)
 	end
 end
 
