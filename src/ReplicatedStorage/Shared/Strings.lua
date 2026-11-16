@@ -72,7 +72,7 @@ local en = {
 	n_tuneAtBase = "Tune your cars at your garage.",
 	tony_title = "BIG TONY'S TUNING", tony_hint = "Bring car parts + cash and Tony builds tuning parts. Install them at your garage (TUNE).",
 	tony_build = "BUILD", tony_have = "Have: %d", tony_needParts = "NEED PARTS", tony_needMoney = "NEED $", tony_needs = "NEEDS",
-	jobs_title = "JOBS", jobs_claim = "CLAIM", jobs_claimAll = "CLAIM ALL", jobs_working = "IN PROGRESS", jobs_reward = "Reward:",
+	jobs_title = "JOBS", jobs_claim = "CLAIM", jobs_claimAll = "CLAIM ALL", jobs_working = "IN PROGRESS", jobs_goSafe = "CLAIM IN SAFE ZONE", jobs_reward = "Reward:",
 	jobs_hint = "Finish jobs on the road, then claim them in the safe zone.", jobs_none = "No jobs right now - new ones arrive soon.",
 	jobs_ready = "READY - claim in the safe zone", jobs_hud = "JOBS - claim in the safe zone", btn_jobs = "JOBS",
 	tune_title = "TUNING", btn_tune = "TUNE", tune_empty = "empty", tune_remove = "REMOVE", tune_none = "No parts - buy at Big Tony's Tuning",

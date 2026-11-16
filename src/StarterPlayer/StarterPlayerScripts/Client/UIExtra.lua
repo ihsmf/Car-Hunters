@@ -339,11 +339,18 @@ local function buildJobs()
 end
 
 local JOB_ROW_H = 104
+local function inSafeZone()
+	local char = game:GetService("Players").LocalPlayer.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	return hrp ~= nil and MapConfig.ZoneAt(hrp.Position.Z) == "plaza"
+end
+
 local function refreshJobs(st, open)
 	if open ~= "jobs" then
 		return
 	end
-	w.jobsAll.holder.Visible = anyReady(st)
+	local here = inSafeZone() -- claiming only works in the safe zone: outside, the buttons say where to go
+	w.jobsAll.holder.Visible = anyReady(st) and here
 	K.clear(w.jobsList)
 	local list = st.contracts or {}
 	if #list == 0 then
@@ -362,9 +369,11 @@ local function refreshJobs(st, open)
 			Size = UDim2.fromOffset(60, 26), ZIndex = 24, TextXAlignment = Enum.TextXAlignment.Center })
 		K.text(r, { Text = T("jobs_reward") .. "  " .. rewardText(c, st), Font = K.BODY, TextSize = 17, TextColor3 = GREEN_TXT, Position = UDim2.fromOffset(18, 72),
 			Size = UDim2.new(1, -250, 0, 24), ZIndex = 24 })
-		K.toy(r, { Text = c.ready and T("jobs_claim") or T("jobs_working"), Color = c.ready and P.green or P.grey, Size = UDim2.fromOffset(200, 60), AnchorPoint = Vector2.new(1, 0.5),
-			Position = UDim2.new(1, -12, 0.5, 0), ZIndex = 25, TextSize = c.ready and 24 or 16, OnClick = function()
-				if c.ready then
+		local canClaim = c.ready and here
+		K.toy(r, { Text = canClaim and T("jobs_claim") or (c.ready and T("jobs_goSafe") or T("jobs_working")), Color = canClaim and P.green or P.grey,
+			Size = UDim2.fromOffset(200, 60), AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -12, 0.5, 0), ZIndex = 25, TextSize = canClaim and 24 or 16, OnClick = function()
+				if c.ready and inSafeZone() then
 					K.actions.Claim(c.id)
 				end
 			end })
