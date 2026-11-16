@@ -18,7 +18,10 @@ local DataService = {}
 local S
 
 local STORE_NAME = "CarHunters_Profiles_v1"
-local SCHEMA_VERSION = 6 -- v5: tutorial has 8 steps (unlock the Highway); v6: tuning parts -> gears (refunded)
+local SCHEMA_VERSION = 7 -- v5: tutorial has 8 steps (unlock the Highway); v6: tuning parts -> gears (refunded);
+-- v7: tutorial has 10 steps (platform upgrade, Big Tony, Job Board)
+local TUTORIAL_STEPS = 10
+local TUTORIAL_DONE = TUTORIAL_STEPS + 1
 
 -- v6 migration: money refunded per old tuning part (Big Tony's stage 1 recipe cost; stage 2 = 8x, stage 3 = 16x)
 local TUNE_REFUND_BASE = {
@@ -81,6 +84,11 @@ local function newProfile(isNew)
 	if isNew then
 		for id, n in pairs(EconomyConfig.StarterParts) do
 			p.parts[id] = n
+		end
+		-- a free Cash Turbo for every new player (older profiles got theirs from the v6 migration): the tutorial's
+		-- Big Tony step always has a gear to apply
+		if GearConfig.ById.cashturbo then
+			p.gears.cashturbo = 1
 		end
 	end
 	return p
@@ -272,9 +280,19 @@ local function sanitize(raw)
 	end
 	p.saveCount = toCount(raw.saveCount, 1e12)
 	p.lastSeen = toCount(raw.lastSeen, 4e9)
-	p.tutorial = toCount(raw.tutorial, 9)
-	if (tonumber(raw.schemaVersion) or 0) < 5 and p.tutorial >= 8 then
+	local rawVersion = tonumber(raw.schemaVersion) or 0
+	p.tutorial = toCount(raw.tutorial, TUTORIAL_DONE)
+	if rawVersion < 5 and p.tutorial >= 8 then
 		p.tutorial = 9 -- finished the old 7-step tutorial: no new step, no second reward
+	end
+	if rawVersion < 7 then
+		-- v7: the 8-step tutorial (done = 9) became 10 steps. Finished stays finished (no second reward); old step 7
+		-- (checkpoint) / 8 (Highway) are the new steps 9 / 10; steps 1-6 keep their number
+		if p.tutorial >= 9 then
+			p.tutorial = TUTORIAL_DONE
+		elseif p.tutorial >= 7 then
+			p.tutorial = p.tutorial + 2
+		end
 	end
 	p.settings = DataService.SanitizeSettings(raw.settings)
 	if type(raw.play) == "table" then
@@ -291,7 +309,7 @@ local function sanitize(raw)
 		p.daily = { day = math.clamp(toCount(raw.daily.day, 7), 0, 7), last = toCount(raw.daily.last, 1e6) }
 	end
 	if raw.tutorial == nil and p.stats.throws > 0 then
-		p.tutorial = 9 -- players from before the tutorial existed
+		p.tutorial = TUTORIAL_DONE -- players from before the tutorial existed
 	end
 	return p
 end
@@ -627,7 +645,7 @@ function DataService.SaveSettings(player, t)
 end
 
 -- tutorial progress: only moves forward; finishing (not skipping) pays a small reward once
-DataService.TutorialSteps = 8
+DataService.TutorialSteps = TUTORIAL_STEPS
 function DataService.Tutorial(player, step)
 	local s = sessions[player]
 	if not s or not s.ready or not DataService.RateLimit(player, "tut", 0.3) then

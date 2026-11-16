@@ -1,5 +1,12 @@
--- First-time tutorial (7 steps) and, afterwards, the "next goal" card. One objective card at the top,
--- a guide beam + marker in the world, and a pulse on the button you need. Progress is saved on the server.
+-- First-time tutorial (10 steps) and, afterwards, the "next goal" line. One objective card at the top,
+-- a guide beam + marker in the world, and a pulse on the button you need. Progress is saved on the server
+-- (DataService.TutorialSteps must match DONE - 1).
+--   1 run to the City (speed lane, arch)      6 upgrade your platform (skipped if it can't be paid)
+--   2 grab 3 glowing parts                    7 Big Tony: apply your free gear to a car
+--   3 run home: the safe zone banks the loot  8 check the Job Board
+--   4 throw parts at your platform            9 reach a checkpoint
+--   5 open your garage                       10 unlock the Highway
+-- Every step is a check on the client state, so a player who already did something passes that step at once.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -7,24 +14,43 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
-local CarConfig = require(Shared:WaitForChild("CarConfig"))
+local TrapConfig = require(Shared:WaitForChild("TrapConfig"))
 local Util = require(Shared:WaitForChild("Util"))
-local PartConfig = require(Shared:WaitForChild("PartConfig"))
 
 local Tut = {}
 local K, UI, Cine, Guide
 local P
 local C = Color3.fromRGB
 local w = {}
-local DONE = 9
+local DONE = 11 -- 10 steps; DataService.TutorialSteps = 10
 local localStep -- optimistic step while the server confirms
-local events = { banked = false, checkpoint = false }
+local skippedLocal = false
+local lastSent = 0
+local events = { banked = false, checkpoint = false, gearUsed = false }
 local stepSince = {} -- step -> os.clock() when it was first shown
+local lastGearTotal
 
 local function trapPad(st)
 	local map = Workspace:FindFirstChild("GeneratedMap")
 	local base = st.baseIndex and map and map:FindFirstChild("Bases") and map.Bases:FindFirstChild(string.format("Base%02d", st.baseIndex), true)
 	return base and base:FindFirstChild("TrapPad")
+end
+
+-- a named part inside a map model (TonyGarage.TonySpot, JobBoard.JobSpot); cached, falls back to the MapConfig spot
+local found = {}
+local function mapSpot(model, spot, cfg)
+	local hit = found[spot]
+	if hit and hit.Parent then
+		return hit
+	end
+	local map = Workspace:FindFirstChild("GeneratedMap")
+	local m = map and map:FindFirstChild(model, true)
+	hit = m and m:FindFirstChild(spot, true)
+	if hit then
+		found[spot] = hit
+		return hit
+	end
+	return cfg and Vector3.new(cfg.x, 3, cfg.z) or nil
 end
 
 local function nearestDrop(hrp)
@@ -42,58 +68,107 @@ local function nearestDrop(hrp)
 	return target
 end
 
--- cheapest upgrade; .ok = the player can pay for it right now
-local function cheapestUpgrade(st)
-	local best
-	for _, c in ipairs(st.cars) do
-		local def = CarConfig.ById[c.typeId]
-		if def and c.level < def.maxLevel then
-			local cost = CarConfig.UpgradeCost(def, c.level)
-			if not best or cost < best.cost then
-				local part, n = CarConfig.UpgradeParts(def, c.level)
-				best = { cost = cost, part = part, n = n, ok = K.store.Money >= cost and K.store.Banked(part) >= n }
-			end
-		end
-	end
-	return best
+-- the speed lane on the player's side of the plaza, `dz` studs from the arch
+local function lanePoint(hrp, dz)
+	local lx = MapConfig.PlazaLaneX or 0
+	return Vector3.new((hrp and hrp.Position.X < 0) and -lx or lx, 2, MapConfig.EntryZ + dz)
 end
 
--- step definitions: title, body, colour, target(st, hrp), done(st, hrp) -> bool, progress(st) -> 0..1, text
+local function gearTotal(st)
+	local n = 0
+	for _, v in pairs(st.gears or {}) do
+		n = n + (tonumber(v) or 0)
+	end
+	return n
+end
+
+local function anyCarGeared(st)
+	for _, c in ipairs(st.cars or {}) do
+		if c.gear then
+			return true
+		end
+	end
+	return false
+end
+
+local function mixPicked()
+	for _, v in pairs(K.state.mix or {}) do
+		if (tonumber(v) or 0) > 0 then
+			return true
+		end
+	end
+	return false
+end
+
+-- platform upgrade: next cost (nil at max) and whether the player can pay it now
+local function platformCost(st)
+	local cost = TrapConfig.NextCost(st.trapLevel or 1)
+	return cost, cost ~= nil and (K.store.Money or 0) >= cost
+end
+
+local function since(step)
+	return os.clock() - (stepSince[step] or os.clock())
+end
+
+-- step definitions: title, body, colour, target(st, hrp), done(st, hrp) -> bool, progress(st) -> 0..1, text,
+-- pulse(st) -> toy button (or nil)
 local STEPS = {
-	{ "GO HUNTING", "Walk out through the big arch into the City", P and P.yellow,
-		function() return Vector3.new(0, 2, MapConfig.EntryZ + 22) end,
+	{ "RUN TO THE CITY", "Use the speed lane beside your garage, then run through the big arch", nil,
+		function(_, hrp) return lanePoint(hrp, 12) end,
 		function(_, hrp) return hrp.Position.Z > MapConfig.EntryZ + 6 end },
-	{ "GRAB 3 GLOWING PARTS", "Cars are deadly: one hit and you lose what you carry", nil,
+	{ "GRAB 3 GLOWING PARTS", "One hit by a car and you lose what you carry", nil,
 		function(_, hrp) return nearestDrop(hrp) end,
 		function() return K.store.CarriedTotal() >= 3 end,
 		function() return math.min(K.store.CarriedTotal(), 3) / 3, string.format("%d / 3", math.min(K.store.CarriedTotal(), 3)) end },
-	{ "RUN HOME TO BANK THEM", "Back through the arch to the plaza - the dark lanes beside the garages make you faster", nil,
+	{ "RUN HOME TO BANK THEM", "Back through the arch: the safe zone banks your loot automatically", nil,
 		-- a point on the speed lane on the player's side, just inside the arch
-		function(_, hrp)
-			local lx = MapConfig.PlazaLaneX or 0
-			return Vector3.new((hrp and hrp.Position.X < 0) and -lx or lx, 2, MapConfig.EntryZ - 30)
-		end,
+		function(_, hrp) return lanePoint(hrp, -30) end,
 		function() return events.banked end },
-	{ "THROW PARTS INTO YOUR TRAP", "Go to the lift in your garage, press THROW, then ALL", nil,
+	{ "THROW PARTS AT YOUR PLATFORM", "At your platform open THROW, press ALL, then THROW", nil,
 		function(st) return trapPad(st) end,
-		function(st) return (st.stats and st.stats.throws or 0) > 0 end, nil, "throw" },
-	{ "OPEN YOUR GARAGE", "Your car is parked and earning money every second", nil,
+		function(st) return (st.stats and st.stats.throws or 0) > 0 end, nil,
+		function()
+			if K.state.open == "throw" then
+				return mixPicked() and K.panels.throwGo or K.panels.throwAll
+			end
+			return K.hud.throw
+		end },
+	{ "YOUR GARAGE", "Open GARAGE: every parked car earns money every second", nil,
 		function() return nil end,
-		function() return K.state.open == "garage" end, nil, "garage" },
-	{ "UPGRADE A CAR", "Press UPGRADE on a car: more levels = more money", nil,
-		function() return nil end,
-		-- also passes when nothing is affordable yet (after a short look), so a broke player never gets stuck here
+		function() return K.state.open == "garage" end, nil,
+		function() return K.hud.garageBtn end },
+	{ "UPGRADE YOUR PLATFORM", "Open THROW at your platform and press UPGRADE: more luck for rarer cars", nil,
+		function(st) return K.state.open == nil and trapPad(st) or nil end,
+		-- also passes when the upgrade can't be paid (after a short look), so a broke player never gets stuck here
 		function(st)
-			local up = cheapestUpgrade(st)
-			return (st.stats and st.stats.upgrades or 0) > 0 or ((not up or not up.ok) and os.clock() - (stepSince[6] or os.clock()) > 6)
-		end, nil, "garage" },
+			local cost, ok = platformCost(st)
+			return (st.trapLevel or 1) >= 2 or cost == nil or (not ok and since(6) > 8)
+		end, nil,
+		function()
+			if K.state.open == "throw" then
+				return K.panels.trapUpgradeBtn
+			end
+			return K.state.open == nil and K.hud.throw or nil
+		end },
+	{ "VISIT BIG TONY", "Walk up to Big Tony and APPLY your free gear to a car", nil,
+		function() return K.state.open == nil and mapSpot("TonyGarage", "TonySpot", MapConfig.Tony) or nil end,
+		-- done when a car runs a gear or a gear was used up; no gear and no car to put one on = nothing to do here
+		function(st)
+			return anyCarGeared(st) or events.gearUsed or #(st.cars or {}) == 0 or (gearTotal(st) == 0 and since(7) > 12)
+		end },
+	{ "CHECK THE JOB BOARD", "Jobs pay cash - claim the rewards in the safe zone", nil,
+		function() return K.state.open == nil and mapSpot("JobBoard", "JobSpot", MapConfig.JobBoard) or nil end,
+		function() return K.state.open == "jobs" end, nil,
+		function() return K.state.open == nil and K.hud.jobsBtn or nil end },
 	{ "REACH A CHECKPOINT", "Carry parts to the yellow arch at the far end of the City, then SAVE or RISK", nil,
 		function() return Vector3.new(0, 2, MapConfig.Zones.city.zMax - 5) end,
 		function() return events.checkpoint end },
 	{ "UNLOCK THE HIGHWAY", "Open TELEPORT and unlock the Highway: better parts live there", nil,
 		function() return nil end,
-		function(st) return st.zones and st.zones.highway == true end, nil, "teleport" },
+		function(st) return st.zones and st.zones.highway == true end, nil,
+		function() return K.hud.teleportBtn end },
 }
+assert(#STEPS == DONE - 1, "Tutorial: STEPS / DONE mismatch")
 
 local function build()
 	w.goal = K.text(K.root, { Text = "", TextSize = 15, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.fromOffset(760, 18),
@@ -109,14 +184,14 @@ local function build()
 	w.badge = K.new("Frame", { Size = UDim2.fromOffset(108, 108), BackgroundColor3 = P.yellow, BorderSizePixel = 0 }, card)
 	K.corner(w.badge, 20)
 	w.badgeFill = K.new("Frame", { Position = UDim2.fromOffset(54, 0), Size = UDim2.fromOffset(54, 108), BackgroundColor3 = P.yellow, BorderSizePixel = 0 }, w.badge)
-	w.badgeText = K.text(w.badge, { Text = "1/8", TextSize = 32, ZIndex = 2, Position = UDim2.fromOffset(0, 16), Size = UDim2.new(1, 0, 0, 38), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 })
+	w.badgeText = K.text(w.badge, { Text = "1/10", TextSize = 32, ZIndex = 2, Position = UDim2.fromOffset(0, 16), Size = UDim2.new(1, 0, 0, 38), TextXAlignment = Enum.TextXAlignment.Center, Outline = 2.5 })
 	w.badgeSub = K.text(w.badge, { Text = "STEP", Font = K.BODY, TextSize = 13, ZIndex = 2, Position = UDim2.fromOffset(0, 56), Size = UDim2.new(1, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Center })
-	-- one dot per step: done = white, current = big, to do = faded
+	-- one dot per step: done = white, current = big, to do = faded (10 dots fit the 88 px row: 6 px + 2 px gaps)
 	local dots = K.new("Frame", { Position = UDim2.fromOffset(10, 82), Size = UDim2.new(1, -20, 0, 12), BackgroundTransparency = 1, ZIndex = 2 }, w.badge)
-	K.list(dots, Enum.FillDirection.Horizontal, 3, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center)
+	K.list(dots, Enum.FillDirection.Horizontal, 2, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center)
 	w.dots = {}
 	for i = 1, DONE - 1 do
-		local d = K.new("Frame", { Size = UDim2.fromOffset(8, 8), BackgroundColor3 = P.white, LayoutOrder = i, ZIndex = 3 }, dots)
+		local d = K.new("Frame", { Size = UDim2.fromOffset(6, 6), BackgroundColor3 = P.white, LayoutOrder = i, ZIndex = 3 }, dots)
 		K.corner(d, 4)
 		w.dots[i] = d
 	end
@@ -142,7 +217,7 @@ local function pulse(button)
 			sc.Scale = 1
 		end
 	end
-	if not button then
+	if not button or not button.holder then
 		return
 	end
 	local holder = button.holder
@@ -180,6 +255,12 @@ local function show(key, badge, sub, color, title, body, prog, progText, canSkip
 	end
 end
 
+-- the server rate-limits TutorialStep: re-send the optimistic step until the saved state catches up
+local function sendStep()
+	lastSent = os.clock()
+	Net.Get("TutorialStep"):FireServer(skippedLocal and "skip" or localStep)
+end
+
 local function tick()
 	local st = K.store.State
 	local char = Players.LocalPlayer.Character
@@ -187,7 +268,16 @@ local function tick()
 	if not st or not hrp then
 		return
 	end
+	if localStep and (st.tutorial or 0) < localStep and os.clock() - lastSent > 1.5 then
+		sendStep()
+	end
 	local step = math.max(st.tutorial or 0, localStep or 0, 1)
+	-- a gear left the inventory (applied to a car) while Big Tony's step is up
+	local gears = gearTotal(st)
+	if step == 7 and lastGearTotal and gears < lastGearTotal then
+		events.gearUsed = true
+	end
+	lastGearTotal = gears
 	w.goal.Visible = false
 	if step >= DONE then
 		Guide.Point(nil)
@@ -208,15 +298,23 @@ local function tick()
 	if lostLoot then
 		def = STEPS[2]
 	end
-	local color = ({ P.yellow, P.orange, P.green, P.yellow, P.blue, P.blue, P.red, P.green })[step]
+	local color = ({ P.yellow, P.orange, P.green, P.yellow, P.blue, P.cyan or P.blue, P.orange, P.orange, P.red, P.green })[step]
 	local body = lostLoot and "You lost your parts - grab 3 more, then run home" or def[2]
-	if step == 6 then
-		local up = cheapestUpgrade(st)
-		if up and up.ok then
-			body = string.format("Press UPGRADE on a car  ·  needs $%s + %d %s", Util.FormatNumber(up.cost), up.n, PartConfig.Parts[up.part].name)
-		elseif up then
-			body = string.format("Upgrades need $%s + %d %s - you'll do it later, moving on...", Util.FormatNumber(up.cost), up.n, PartConfig.Parts[up.part].name)
+	local target = def[4](st, hrp)
+	if step == 4 and K.store.BankedTotal() == 0 and K.store.CarriedTotal() == 0 and (st.stats and st.stats.throws or 0) == 0 then
+		-- nothing to throw: fetch parts first
+		body = "No parts to throw - grab some in the City and run home"
+		target = nearestDrop(hrp)
+	elseif step == 6 then
+		local cost, ok = platformCost(st)
+		if cost and ok then
+			body = string.format("Open THROW at your platform and press UPGRADE ($%s): more luck for rarer cars", Util.FormatNumber(cost))
+		elseif cost then
+			body = string.format("The upgrade costs $%s - you'll do it later, moving on...", Util.FormatNumber(cost))
+			target = nil
 		end
+	elseif step == 7 and gears == 0 and not anyCarGeared(st) then
+		body = "Big Tony sells GEARS: buy one, then APPLY it to a car"
 	end
 	local prog, progText
 	if def[6] then
@@ -225,20 +323,20 @@ local function tick()
 	stepSince[step] = stepSince[step] or os.clock()
 	for i, d in ipairs(w.dots) do
 		d.BackgroundTransparency = i <= step and 0 or 0.6
-		d.Size = UDim2.fromOffset(i == step and 11 or 7, i == step and 11 or 7)
+		d.Size = UDim2.fromOffset(i == step and 9 or 6, i == step and 9 or 6)
 	end
 	show("step" .. step .. def[1], step .. "/" .. (DONE - 1), "STEP", color, def[1], body, prog, progText, true)
-	-- steps that happen inside a panel (garage, upgrade): the card goes on top of the panel's dim, at the very top
+	-- steps that happen inside a panel (garage, throw, Tony, jobs): the card goes on top of the panel's dim, at the very top
 	local inPanel = K.state.open ~= nil
 	w.card.ZIndex = inPanel and 30 or 1
 	K.hud.tutInPanel = inPanel
 	w.card.Position = UDim2.new(0.5, 0, 0, inPanel and 4 or 118)
-	Guide.Point(def[4](st, hrp))
-	pulse(def[8] == "throw" and K.hud.throw or (def[8] == "garage" and K.hud.garageBtn) or (def[8] == "teleport" and K.hud.teleportBtn) or nil)
+	Guide.Point(target)
+	pulse(def[7] and def[7](st) or nil)
 	if def == STEPS[step] and def[5](st, hrp) then
 		localStep = step + 1
-		events.banked = step >= 3 and events.banked
-		Net.Get("TutorialStep"):FireServer(step + 1)
+		events.banked = step >= 3 and events.banked -- step 3 needs a bank after the parts were grabbed
+		sendStep()
 		UI.Sfx("step")
 		if step + 1 == DONE then
 			Cine.Title("TUTORIAL COMPLETE!", P.yellow, 1.6, 90, 0.35)
@@ -262,7 +360,8 @@ end
 -- skip the whole tutorial (SKIP button, or SKIP on the join question)
 function Tut.Skip()
 	localStep = DONE
-	Net.Get("TutorialStep"):FireServer("skip")
+	skippedLocal = true
+	sendStep()
 end
 
 function Tut.Start(ui, cine, guide)

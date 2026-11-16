@@ -60,7 +60,7 @@ local function ask()
 		Title = "WELCOME TO CAR HUNTERS!", TitleSize = 26 })
 	K.text(card, { Text = "NEED A TUTORIAL?", TextSize = 46, Position = UDim2.fromOffset(0, 66), Size = UDim2.new(1, 0, 0, 54), TextXAlignment = Enum.TextXAlignment.Center,
 		ZIndex = 86, Outline = 3 })
-	K.text(card, { Text = "A short video shows how to grab parts, catch cars and earn money.", Font = K.BODY, TextSize = 17, TextColor3 = P.muted, TextWrapped = true,
+	K.text(card, { Text = "A short video shows how to grab parts, catch cars, use gears and earn money.", Font = K.BODY, TextSize = 17, TextColor3 = P.muted, TextWrapped = true,
 		Position = UDim2.fromOffset(40, 124), Size = UDim2.new(1, -80, 0, 44), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 86 })
 	K.toy(card, { Text = "YES", Color = P.green, Size = UDim2.fromOffset(220, 74), AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(0.5, -12, 1, -22), TextSize = 32,
 		ZIndex = 86, OnClick = function() choice = true end })

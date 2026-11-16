@@ -874,6 +874,7 @@ local function buildHud()
 	local jobsBtn = iconButton("jobs", T("btn_jobs"), C(170, 120, 70), 2, function()
 		UI.TogglePanel("jobs")
 	end)
+	K.hud.jobsBtn = jobsBtn -- (the tutorial pulses it)
 	-- red dot while a finished job waits to be claimed
 	w.jobsDot = K.new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(60, 4), Size = UDim2.fromOffset(18, 18), BackgroundColor3 = P.red, ZIndex = 30,
 		Visible = false }, jobsBtn.holder.Parent)

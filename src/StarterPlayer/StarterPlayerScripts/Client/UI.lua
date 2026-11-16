@@ -700,6 +700,7 @@ local function buildThrow()
 				actions.UpgradeTrap()
 			end
 		end })
+	panels.trapUpgradeBtn = tpBtn -- (the tutorial pulses it)
 	-- also called on money ticks (TrapVisuals) so the button turns green the moment you can pay
 	function panels.trapRefresh()
 		local st = store.State
@@ -771,7 +772,7 @@ local function buildThrow()
 	end
 	-- right column: quick picks, expected cars, merge toggle, throw
 	local right = new("Frame", { Position = UDim2.fromOffset(582, 0), Size = UDim2.fromOffset(312, 480), BackgroundTransparency = 1, ZIndex = 22 }, c)
-	toy(right, { Text = "ALL", Color = P.orange, Size = UDim2.fromOffset(98, 46), Position = UDim2.fromOffset(0, 0), TextSize = 20, ZIndex = 23, OnClick = function()
+	panels.throwAll = toy(right, { Text = "ALL", Color = P.orange, Size = UDim2.fromOffset(98, 46), Position = UDim2.fromOffset(0, 0), TextSize = 20, ZIndex = 23, OnClick = function()
 		-- every part you have (more parts = more rarity points)
 		state.mix = {}
 		local left = EconomyConfig.MaxBatch
