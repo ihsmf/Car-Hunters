@@ -74,7 +74,8 @@ local function newProfile(isNew)
 		gears = {}, -- owned, not yet applied gears: { [gearId] = count }
 		gearShop = { window = 0, bought = {} }, -- Big Tony's stock window + what was bought in it
 		trapLevel = 1, -- throw platform level (TrapService)
-		peakIncome = 0, -- best gear-less income so far: gear prices (reset on rebirth)
+		peakIncome = 0, -- best gear-less garage income so far (reset on rebirth)
+		peakCarIncome = 0, -- best gear-less single parked car income so far: gear prices (reset on rebirth)
 		rebirths = 0,
 		tokens = 0,
 		tokenPerks = {},
@@ -243,6 +244,7 @@ local function sanitize(raw)
 	end
 	p.trapLevel = math.clamp(toCount(raw.trapLevel, 10), 1, 10)
 	p.peakIncome = toCount(raw.peakIncome, 1e15)
+	p.peakCarIncome = toCount(raw.peakCarIncome, 1e15)
 	if type(raw.pendingNotice) == "table" and (raw.pendingNotice.key == "tuneRefund" or raw.pendingNotice.key == "gearWelcome") then
 		p.pendingNotice = { key = raw.pendingNotice.key, amount = toCount(raw.pendingNotice.amount, 1e12) }
 	end
@@ -597,6 +599,7 @@ function DataService.BuildState(s)
 		gears = Util.CopyTable(d.gears),
 		gearShop = { window = shop.window, bought = Util.CopyTable(shop.bought) },
 		peakIncome = d.peakIncome,
+		peakCarIncome = d.peakCarIncome,
 		trapLevel = d.trapLevel,
 		luckMult = S.Shop.LuckMult(s),
 		gearMults = { speed = S.Gears.PlayerMult(s, "speed"), luck = S.Gears.PlayerMult(s, "luck") },

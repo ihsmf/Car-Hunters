@@ -100,7 +100,7 @@ function Inv.Bank(player)
 		local secs = run.firstClock and (os.clock() - run.firstClock) or 999
 		local cash = 0
 		if secs <= Inv.SpeedBonusSeconds then
-			cash = math.max(200, math.floor((s.income or 0) * 15))
+			cash = math.max(200, math.floor((s.baseIncome or s.income or 0) * 15)) -- gear-less income
 			s.data.money = math.min(s.data.money + cash, EconomyConfig.MaxMoney)
 		end
 		S.Data.Notify(player, "banked2", { moved, bonus, mult, cash }, "good")

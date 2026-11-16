@@ -109,7 +109,7 @@ class Player:
         self.parts = {k: 0 for k in ORDER}
         self.parts["bolts"] = 2 if first else 3
         self.cars = []  # [income, level, rarity, gear mult, pool index, gear expiry time]
-        self.peak = 0.0  # v24 GearConfig.Price follows the best gear-less income of this run (reset on rebirth)
+        self.peak = 0.0  # v24 GearConfig.Price follows the best gear-less single parked car income of this run (reset on rebirth)
         if first:  # v18: a rebirth keeps districts, floors and bays
             self.zones = {"city"}
             self.slots = Eco.StartSlots
@@ -142,7 +142,8 @@ class Player:
 
     def use_gears(self):
         """v24: every gear_every seconds put an income gear on the best parked car if it is cheap enough"""
-        self.peak = max(self.peak, self.income(False))
+        if self.cars:  # IncomeService.Recalc: data.peakCarIncome = best parked car, no gear, x shared mults
+            self.peak = max(self.peak, self.car_income(self.parked()[0], False) * self.shared_mult())
         if not P["gears"] or self.t < self.next_gear or not self.cars:
             return
         self.next_gear = self.t + P["gear_every"]

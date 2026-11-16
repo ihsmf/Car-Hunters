@@ -42,8 +42,8 @@ function Rebirth.Do(player)
 		return
 	end
 	local d = s.data
-	-- remember the income before the reset (without a running x2 boost): rewards stay meaningful afterwards
-	d.stats.peakIncome = math.max(d.stats.peakIncome or 0, math.floor((s.income or 0) / (S.Shop.BoostActive(s, "income") and 2 or 1)))
+	-- remember the income before the reset (gear-less, without a running x2 boost): rewards stay meaningful afterwards
+	d.stats.peakIncome = math.max(d.stats.peakIncome or 0, math.floor(s.baseIncome or 0))
 	local tokens = math.min(5, math.floor(d.money / money)) -- 1 token, more for overshooting the target
 	d.rebirths = (d.rebirths or 0) + 1
 	d.tokens = (d.tokens or 0) + tokens
@@ -63,7 +63,8 @@ function Rebirth.Do(player)
 	end
 	d.parts.bolts = 3
 	d.garageSlotCount = math.max(d.garageSlotCount, EconomyConfig.StartSlots + Rebirth.PerkLevel(s, "startSlot"))
-	d.peakIncome = 0 -- gear prices follow the new run's income (owned gears are kept)
+	d.peakIncome = 0 -- peaks follow the new run's income (owned gears are kept)
+	d.peakCarIncome = 0 -- gear prices follow the new run's best car
 	d.contracts = {}
 	d.pity = 0
 	s.carried = {}

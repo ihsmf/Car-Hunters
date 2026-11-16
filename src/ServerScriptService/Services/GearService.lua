@@ -89,7 +89,7 @@ function Gears.Buy(player, id)
 		S.Data.Notify(player, "noStock", { def.name }, "warn")
 		return
 	end
-	local price = GearConfig.Price(def, d.peakIncome)
+	local price = GearConfig.Price(def, d.peakCarIncome)
 	if d.money < price then
 		S.Data.Notify(player, "noMoney", nil, "error")
 		return

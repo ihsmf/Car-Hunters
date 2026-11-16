@@ -282,7 +282,7 @@ local function shopInfo(st)
 end
 
 local function gearPrice(def, st)
-	return GearConfig.Price(def, tonumber(st.peakIncome) or 0) -- same formula as the server (GearService.Buy)
+	return GearConfig.Price(def, tonumber(st.peakCarIncome) or 0) -- same formula as the server (GearService.Buy)
 end
 
 local function gearIcon(parent, def, size, pos, z)

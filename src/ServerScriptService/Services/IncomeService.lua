@@ -27,10 +27,11 @@ function Income.CreateLeaderstats(player)
 	ls.Parent = player
 end
 
--- income used to size rewards and cash packs: the current one, but at least half of the income the player had
+-- income used to size rewards and cash packs: the current gear-less one (s.baseIncome: no gears, no running x2 boost,
+-- so timed boosts cannot inflate chests/daily/contracts/cash packs), but at least half of the income the player had
 -- before the last rebirth (stats.peakIncome, set by RebirthService only, so borrowed cars cannot inflate it)
 function Income.RefIncome(s)
-	return math.max(s.income or 0, 0.5 * (s.data and s.data.stats and s.data.stats.peakIncome or 0))
+	return math.max(s.baseIncome or 0, 0.5 * (s.data and s.data.stats and s.data.stats.peakIncome or 0))
 end
 
 function Income.Recalc(player)
@@ -38,14 +39,16 @@ function Income.Recalc(player)
 	if not s or not s.data then
 		return
 	end
-	local inc, value, plain = 0, 0, 0
+	local inc, value, plain, bestCar = 0, 0, 0, 0
 	for _, c in ipairs(s.data.cars) do
 		local def = CarConfig.ById[c.typeId]
 		if def then
 			value = value + CarConfig.ValueAt(def, c.level)
 			if c.parkedSlot then
 				inc = inc + CarConfig.CarIncome(c)
-				plain = plain + CarConfig.IncomeAt(def, c.level) -- without gears
+				local carPlain = CarConfig.IncomeAt(def, c.level) -- without gears
+				plain = plain + carPlain
+				bestCar = math.max(bestCar, carPlain)
 			end
 		end
 	end
@@ -53,9 +56,14 @@ function Income.Recalc(player)
 	s.indexMult = mult
 	local shared = mult * S.Shop.IncomeMult(s) * S.Rebirth.IncomeMult(s)
 	s.income = math.floor(inc * shared + 0.5)
-	-- gear prices follow the best income so far (no gears, no running x2 boost): un-parking does not make them cheaper
-	local peak = math.floor(plain * shared / (S.Shop.BoostActive(s, "income") and 2 or 1) + 0.5)
+	-- gear-less income (no gears, no running x2 boost): reward sizing (RefIncome) and the peaks below
+	local boostDiv = S.Shop.BoostActive(s, "income") and 2 or 1
+	local peak = math.floor(plain * shared / boostDiv + 0.5)
+	s.baseIncome = peak
 	s.data.peakIncome = math.max(s.data.peakIncome or 0, math.min(peak, 1e15))
+	-- gear prices follow the best single parked car so far (a gear boosts one car): un-parking does not make them cheaper
+	local carPeak = math.floor(bestCar * shared / boostDiv + 0.5)
+	s.data.peakCarIncome = math.max(s.data.peakCarIncome or 0, math.min(carPeak, 1e15))
 	s.collectionValue = value
 	local ls = player:FindFirstChild("leaderstats")
 	if ls then

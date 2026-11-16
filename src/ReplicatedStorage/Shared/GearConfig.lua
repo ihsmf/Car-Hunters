@@ -9,32 +9,32 @@ GearConfig.List = {
 	{
 		id = "nitro", name = "Nitro Can", icon = "💨", desc = "Run faster while this car is parked.",
 		effects = { speed = 1.5 }, seconds = 300, tier = 1, color = Color3.fromRGB(80, 170, 255),
-		k = 25, minPrice = 300, stock = { chance = 0.9, min = 1, max = 3 },
+		k = 60, minPrice = 300, stock = { chance = 0.9, min = 1, max = 3 },
 	},
 	{
 		id = "clover", name = "Lucky Clover", icon = "🍀", desc = "Better car odds while this car is parked.",
 		effects = { luck = 1.5 }, seconds = 600, tier = 2, color = Color3.fromRGB(80, 220, 110),
-		k = 60, minPrice = 800, stock = { chance = 0.7, min = 1, max = 2 },
+		k = 180, minPrice = 800, stock = { chance = 0.7, min = 1, max = 2 },
 	},
 	{
 		id = "cashturbo", name = "Cash Turbo", icon = "💵", desc = "This car earns more money.",
 		effects = { income = 1.5 }, seconds = 600, tier = 2, color = Color3.fromRGB(120, 230, 90),
-		k = 27, minPrice = 600, stock = { chance = 0.75, min = 1, max = 3 },
+		k = 200, minPrice = 600, stock = { chance = 0.75, min = 1, max = 3 },
 	},
 	{
 		id = "rocket", name = "Rocket Boots", icon = "🚀", desc = "Run MUCH faster while this car is parked.",
 		effects = { speed = 2 }, seconds = 300, tier = 3, color = Color3.fromRGB(60, 230, 255),
-		k = 50, minPrice = 1200, stock = { chance = 0.55, min = 1, max = 2 },
+		k = 120, minPrice = 1200, stock = { chance = 0.55, min = 1, max = 2 },
 	},
 	{
 		id = "moneystorm", name = "Money Storm", icon = "💰", desc = "This car earns double money.",
 		effects = { income = 2 }, seconds = 600, tier = 4, color = Color3.fromRGB(255, 200, 50),
-		k = 65, minPrice = 2500, stock = { chance = 0.4, min = 1, max = 1 },
+		k = 420, minPrice = 2500, stock = { chance = 0.4, min = 1, max = 1 },
 	},
 	{
 		id = "goldengine", name = "Golden Engine", icon = "👑", desc = "Double money on this car + better car odds while parked.",
 		effects = { income = 2, luck = 1.5 }, seconds = 900, tier = 5, color = Color3.fromRGB(255, 215, 0),
-		k = 150, minPrice = 5000, stock = { chance = 0.15, min = 1, max = 1 },
+		k = 700, minPrice = 5000, stock = { chance = 0.15, min = 1, max = 1 },
 	},
 }
 
@@ -66,9 +66,11 @@ function GearConfig.Stock(userId, window)
 	return out
 end
 
--- price follows the highest income the player has had (un-parking cars does not make gears cheaper)
-function GearConfig.Price(def, peakIncome)
-	return math.floor(math.max(def.minPrice, (tonumber(peakIncome) or 0) * def.k) + 0.5)
+-- price follows the best single parked car income of this run (gear-less, data.peakCarIncome): a gear boosts ONE car,
+-- so k is "seconds of that car's income" (cashturbo 200 vs +300c, moneystorm 420 vs +600c, goldengine 700 vs +900c).
+-- Un-parking cars does not make gears cheaper. Same call on server (GearService.Buy) and client (UIExtra).
+function GearConfig.Price(def, peakCarIncome)
+	return math.floor(math.max(def.minPrice, (tonumber(peakCarIncome) or 0) * def.k) + 0.5)
 end
 
 local function fmt(m)
