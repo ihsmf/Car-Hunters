@@ -20,7 +20,8 @@ CarConfig.ValueMultiplier = 100 -- v19: worth / sell / upgrade 2.5x too, so upgr
 CarConfig.UpgradeCostBase = 0.5
 CarConfig.UpgradeCostGrowth = 1.35
 -- v22: rarer cars earn proportionally more (base income in the list x this); value / upgrade / sell scale with it
-CarConfig.RarityIncomeMult = { Common = 1, Uncommon = 1.3, Rare = 1.7, Epic = 2.2, Legendary = 3 }
+-- v24: Epic 2.2 -> 2.4, Legendary 3 -> 3.5 (late game lost permanent tuning; late costs re-tuned with tools/econ_sim.py)
+CarConfig.RarityIncomeMult = { Common = 1, Uncommon = 1.3, Rare = 1.7, Epic = 2.4, Legendary = 3.5 }
 
 -- Fictional parody cars: inspired by familiar body styles, no real names, logos or badges.
 local list = {

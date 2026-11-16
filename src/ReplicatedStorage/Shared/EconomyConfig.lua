@@ -23,22 +23,22 @@ do
 end
 
 -- tuned with tools/econ_sim.py (see docs/ECONOMY.md). minValue = collection value gate (keeps players from rushing)
-EconomyConfig.ZoneUnlock = { -- v22: tier 2-3 x1.8 after the income boost; v18: each district ~10-60 min of income away; minValue is a soft check
+EconomyConfig.ZoneUnlock = { -- v24: neon, canyon, Tier 3 re-tuned for Epic/Legendary x2.4/x3.5; v22: tier 2-3 x1.8 after the income boost; v18: each district ~10-60 min of income away; minValue is a soft check
 	highway = { cost = 18000, minValue = 3000 },
 	industrial = { cost = 200000, minValue = 30000 },
-	neon = { cost = 1200000, minValue = 100000 },
+	neon = { cost = 1500000, minValue = 100000 },
 	scrapyard = { cost = 3000000, minValue = 150000 },
 	-- Tier 2 needs a rebirth, Tier 3 three rebirths (RebirthService); rebirths keep unlocked districts
 	docks = { cost = 27000000, minValue = 250000, rebirths = 1 },
 	desert = { cost = 72000000, minValue = 350000, rebirths = 1 },
 	bridge = { cost = 160000000, minValue = 450000, rebirths = 1 },
 	airport = { cost = 360000000, minValue = 550000, rebirths = 1 },
-	canyon = { cost = 720000000, minValue = 650000, rebirths = 2 },
-	circuit = { cost = 1.5e+09, minValue = 750000, rebirths = 3 },
-	drift = { cost = 2.8e+09, minValue = 900000, rebirths = 3 },
-	storm = { cost = 4.5e+09, minValue = 1050000, rebirths = 3 },
-	rush = { cost = 8.5e+09, minValue = 1200000, rebirths = 3 },
-	colosseum = { cost = 1.5e+10, minValue = 1400000, rebirths = 3 },
+	canyon = { cost = 1e+09, minValue = 650000, rebirths = 2 },
+	circuit = { cost = 2e+09, minValue = 750000, rebirths = 3 },
+	drift = { cost = 3.5e+09, minValue = 900000, rebirths = 3 },
+	storm = { cost = 6e+09, minValue = 1050000, rebirths = 3 },
+	rush = { cost = 1e+10, minValue = 1200000, rebirths = 3 },
+	colosseum = { cost = 1.6e+10, minValue = 1400000, rebirths = 3 },
 }
 
 EconomyConfig.SellFraction = 0.35

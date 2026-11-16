@@ -49,7 +49,7 @@ end
 SkinConfig.Rebirth = {
 	needZone = { [0] = "scrapyard", [1] = "airport", [2] = "canyon" }, -- beat the arena of your tier; later: "rush"
 	lateZone = "rush",
-	costs = { 8e6, 4.5e8, 1.25e9 }, lateGrowth = 2, -- v22 x1.3 / x1.8 after the income boost -- rebirth n+1 costs costs[n+1], later x2 each
+	costs = { 1e7, 7e8, 3.5e9 }, lateGrowth = 2, -- v24 (Epic/Legendary earn more); v22 x1.3 / x1.8 after the income boost -- rebirth n+1 costs costs[n+1], later x2 each
 	incomePer = 1.0, startMoney = 50000, -- income x(1 + rebirths); start cash x rebirths
 }
 function SkinConfig.RebirthNeeds(n)

@@ -19,7 +19,7 @@ GearConfig.List = {
 	{
 		id = "cashturbo", name = "Cash Turbo", icon = "💵", desc = "This car earns more money.",
 		effects = { income = 1.5 }, seconds = 600, tier = 2, color = Color3.fromRGB(120, 230, 90),
-		k = 45, minPrice = 600, stock = { chance = 0.75, min = 1, max = 3 },
+		k = 27, minPrice = 600, stock = { chance = 0.75, min = 1, max = 3 },
 	},
 	{
 		id = "rocket", name = "Rocket Boots", icon = "🚀", desc = "Run MUCH faster while this car is parked.",
@@ -29,12 +29,12 @@ GearConfig.List = {
 	{
 		id = "moneystorm", name = "Money Storm", icon = "💰", desc = "This car earns double money.",
 		effects = { income = 2 }, seconds = 600, tier = 4, color = Color3.fromRGB(255, 200, 50),
-		k = 110, minPrice = 2500, stock = { chance = 0.4, min = 1, max = 1 },
+		k = 65, minPrice = 2500, stock = { chance = 0.4, min = 1, max = 1 },
 	},
 	{
 		id = "goldengine", name = "Golden Engine", icon = "👑", desc = "Double money on this car + better car odds while parked.",
 		effects = { income = 2, luck = 1.5 }, seconds = 900, tier = 5, color = Color3.fromRGB(255, 215, 0),
-		k = 220, minPrice = 5000, stock = { chance = 0.15, min = 1, max = 1 },
+		k = 150, minPrice = 5000, stock = { chance = 0.15, min = 1, max = 1 },
 	},
 }
 
