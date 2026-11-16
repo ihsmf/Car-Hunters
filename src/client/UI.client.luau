@@ -252,7 +252,9 @@ local fill = new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Col
 })
 local throwBtn = button({ Size = UDim2.fromScale(0.16, 0.09), Position = UDim2.fromScale(0.42, 0.86), Text = "🎱 УДАР!" }, Color3.fromRGB(255, 90, 90))
 throwBtn.Parent = gui
-throwBtn.MouseButton1Down:Connect(function() charging, power, t0 = true, 0, 0 end)
+throwBtn.MouseButton1Down:Connect(function()
+	if not _G.ThrowBusy then charging, power, t0 = true, 0, 0 end
+end)
 game:GetService("UserInputService").InputEnded:Connect(function(input)
 	if not charging or (input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch) then return end
 	charging = false

@@ -194,6 +194,11 @@ function Map.Build()
 		local beam = part({ Size = Vector3.new(T.Width + 12, 4, 1), CFrame = CFrame.new(0, 17, z0), Color = rgb(40, 25, 60), Material = M.SmoothPlastic }, long)
 		table.insert(neon, part({ Size = Vector3.new(T.Width + 12, 0.5, 1.2), CFrame = CFrame.new(0, 15, z0), Material = M.Neon }, long))
 		light(beam, Color3.new(1, 1, 1), 30, 1)
+		for _, sx in { -1, 1 } do -- лузы зоны по обоим бортам (координаты совпадают с Balls.client)
+			local pc = CFrame.new(sx * T.Width / 2, 3.32, z0 + zoneLen / 2)
+			ycyl(4.4, 0.2, pc, rgb(5, 5, 5), M.SmoothPlastic, long)
+			table.insert(neon, ycyl(5.4, 0.15, pc * CFrame.new(0, -0.05, 0), Color3.new(1, 1, 1), M.Neon, long))
+		end
 		Map.Zones[i] = { felt = felt, neon = neon, text = label(beam, Enum.NormalId.Front, "", nil, 20) }
 		label(beam, Enum.NormalId.Back, "Зона " .. i, nil, 20)
 	end
@@ -262,6 +267,25 @@ function Map.Build()
 		for _, s in { -1, 1 } do
 			ycyl(1, 14, CFrame.new(s * 40, 7, z), rgb(60, 60, 70), M.Metal, world)
 			light(part({ Shape = BALL, Size = Vector3.one * 2.5, CFrame = CFrame.new(s * 40, 15, z), Color = rgb(255, 240, 180), Material = M.Neon }, world), rgb(255, 230, 170), 30)
+		end
+	end
+
+	-- Ограждение по периметру: каменная стена, неоновый кант, светящийся барьер и невидимая стена
+	local X0, Z0, Z1 = 330, -75, endZ + 75
+	local sides = {
+		{ CFrame.new(-X0, 0, (Z0 + Z1) / 2), Z1 - Z0 }, { CFrame.new(X0, 0, (Z0 + Z1) / 2), Z1 - Z0 },
+		{ CFrame.new(0, 0, Z0) * CFrame.Angles(0, math.pi / 2, 0), 2 * X0 }, { CFrame.new(0, 0, Z1) * CFrame.Angles(0, math.pi / 2, 0), 2 * X0 },
+	}
+	for _, sd in sides do
+		local cf, len = sd[1], sd[2]
+		part({ Size = Vector3.new(4, 7, len), CFrame = cf * CFrame.new(0, 3.5, 0), Color = rgb(235, 225, 210), Material = M.Cobblestone }, world)
+		part({ Size = Vector3.new(4.6, 0.8, len), CFrame = cf * CFrame.new(0, 7.2, 0), Color = rgb(255, 120, 200), Material = M.Neon }, world)
+		part({ Size = Vector3.new(0.4, 40, len), CFrame = cf * CFrame.new(0, 27, 0), Color = rgb(150, 200, 255), Material = M.ForceField, Transparency = 0.3, CanCollide = false, CastShadow = false }, world)
+		part({ Size = Vector3.new(2, 400, len), CFrame = cf * CFrame.new(0, 200, 0), Transparency = 1 }, world)
+		for k = 0, math.floor(len / 40) do
+			local pc = cf * CFrame.new(0, 0, -len / 2 + k * len / math.floor(len / 40))
+			part({ Size = Vector3.new(6, 11, 6), CFrame = pc * CFrame.new(0, 5.5, 0), Color = rgb(250, 240, 225), Material = M.Cobblestone }, world)
+			light(part({ Shape = BALL, Size = Vector3.one * 4, CFrame = pc * CFrame.new(0, 13, 0), Color = ballColors[k % #ballColors + 1], Material = M.Neon }, world), ballColors[k % #ballColors + 1], 25)
 		end
 	end
 

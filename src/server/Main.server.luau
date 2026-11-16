@@ -131,10 +131,10 @@ end
 local actions = {}
 
 function actions.Throw(plr, s, power)
-	if type(power) ~= "number" or os.clock() - s.lastThrow < C.ThrowCooldown then return end
+	if type(power) ~= "number" or os.clock() < s.nextThrow then return end
 	if #s.d.inv >= C.MaxInventory then return false, "Инвентарь полон!" end
-	s.lastThrow = os.clock()
 	local dist = C.Distance(math.clamp(power, 0, 1), s.d)
+	s.nextThrow = os.clock() + C.ThrowTime(dist) + C.ThrowCooldown
 	local zone = math.clamp(math.ceil(dist / (C.Table.Length / N)), 1, N)
 	local rarity = math.min(zone + luckShift + ((s.passes.Luck2x and rng:NextNumber() < 0.5) and 1 or 0), N)
 	local pool = {}
@@ -142,7 +142,7 @@ function actions.Throw(plr, s, power)
 	local id = pool[rng:NextInteger(1, #pool)]
 	table.insert(s.d.inv, { id = id, eq = equippedCount(s.d) < C.MaxEquipped })
 	Fx:FireAllClients("Throw", s.slot, dist, id)
-	task.delay(2 + dist / 140, refreshBase, plr)
+	task.delay(C.ThrowTime(dist), refreshBase, plr)
 	return true
 end
 
@@ -256,7 +256,7 @@ Players.PlayerAdded:Connect(function(plr)
 		end
 	end
 	if not plr.Parent then taken[slot] = nil return end
-	sessions[plr] = { d = d, slot = slot, passes = passes, join = os.time(), claimed = {}, lastThrow = 0, lastLift = 0, loaded = ok }
+	sessions[plr] = { d = d, slot = slot, passes = passes, join = os.time(), claimed = {}, nextThrow = 0, lastLift = 0, loaded = ok }
 
 	local ls = Instance.new("Folder")
 	ls.Name = "leaderstats"

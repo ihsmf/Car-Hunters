@@ -59,7 +59,10 @@ end
 C.Table = { Length = 900, Width = 48, StartZ = 70, Lanes = 4 }
 C.LuckCycle = 45 -- каждые N секунд стол сдвигает редкости вверх
 C.MaxLuckShift = 4
-C.ThrowCooldown = 2
+C.ThrowCooldown = 1
+C.Anim = { Windup = 0.9, Slide = 0.7 }
+function C.RollTime(dist) return 1.2 + dist / 130 end
+function C.ThrowTime(dist) return C.Anim.Windup + C.RollTime(dist) + C.Anim.Slide end -- до падения в лузу
 C.MaxEquipped = 8
 C.MaxInventory = 100
 
