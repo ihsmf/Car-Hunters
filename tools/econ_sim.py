@@ -13,7 +13,7 @@ import argparse, math, os, random, statistics
 import lupa
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SHARED = os.path.join(ROOT, "src", "ReplicatedStorage", "Shared")
+SHARED = os.environ.get("ECON_SHARED") or os.path.join(ROOT, "src", "ReplicatedStorage", "Shared")  # override: try configs in a copy
 
 L = lupa.LuaRuntime(unpack_returned_tuples=True)
 L.execute("""
@@ -49,6 +49,8 @@ def lt(t):
 
 
 Car, Eco, Map, Part, Shop, Skin = (req(n) for n in ("CarConfig", "EconomyConfig", "MapConfig", "PartConfig", "ShopConfig", "SkinConfig"))
+Trap, Gear = req("TrapConfig"), req("GearConfig")
+GEAR = {g["id"]: g for g in lt(Gear.List)}
 RAR = lt(Car.RarityOrder)
 POOL = {r: [d["income"] for d in lt(Car.ByRarity[r])] for r in RAR}
 DROP = lt(Car.DropChances)
@@ -76,6 +78,10 @@ P = dict(
     session_h=2, away_h=10,  # play 2 h, then away 10 h (offline earnings, capped by the game)
     think=20,                # seconds per cycle spent in menus / walking in the garage
     risk_mix=(0.55, 0.35, 0.10),  # share of safe / risky / road pickups
+    gear_every=600,          # v24: tries to put a Cash Turbo on its best car every 10 min ...
+    gear_budget=0.10,        # ... when the price is below 10% of its money (and Tony has one in stock)
+    gear_id="cashturbo",
+    gears=True, trap=True,   # --no-gears / --no-trap switch the v24 models off
 )
 
 
@@ -92,12 +98,18 @@ class Player:
         self.skins = {"classic"}
         self.log = []
         self.seen = set()
+        self.inc_at = {}  # milestone -> gear-less income/s at that moment
+        self.trap = 1  # v24 throw platform level (kept on rebirth)
+        self.next_gear = 0.0
+        self.gear_log = []  # (hour, gain / price) of every gear bought
+        self.gear_spent = 0.0
 
     def reset(self, first=False):
         self.money = 0 if first else REB["startMoney"] * self.rebirths
         self.parts = {k: 0 for k in ORDER}
         self.parts["bolts"] = 2 if first else 3
-        self.cars = []  # [income, level, rarity, mult] (mult stays 1: v24 gears are timed, not modelled yet)
+        self.cars = []  # [income, level, rarity, gear mult, pool index, gear expiry time]
+        self.peak = 0.0  # v24 GearConfig.Price follows the best gear-less income of this run (reset on rebirth)
         if first:  # v18: a rebirth keeps districts, floors and bays
             self.zones = {"city"}
             self.slots = Eco.StartSlots
@@ -105,22 +117,57 @@ class Player:
         self.pity = 0
 
     # ---------------------------------------------------------------- economy formulas (mirror the Luau code)
-    def car_income(self, c):
-        return c[0] * INC_MULT * (1 + GROWTH * (c[1] - 1)) * c[3]
+    def car_income(self, c, gears=True):
+        m = c[3] if gears and c[5] > self.t else 1
+        return c[0] * INC_MULT * (1 + GROWTH * (c[1] - 1)) * m
 
-    def income(self):
-        best = sorted((self.car_income(c) for c in self.cars), reverse=True)[: self.slots]
-        found = len(self.discovered)
+    def shared_mult(self):
         tiers = sum(1 for r in RAR if all((r, i) in self.discovered for i in range(len(POOL[r]))))
         idx = 1 + tiers * Eco.IndexTierBonus + (Eco.IndexFullBonus if tiers == len(RAR) else 0)
         perk = 1 + 0.08 * self.perks.get("turbo", 0)
         reb = (1 + REB["incomePer"] * self.rebirths) * (1 + self.skin_bonus)
-        return sum(best) * idx * perk * reb
+        return idx * perk * reb
+
+    def parked(self):
+        # the game parks by plain income (a geared car stays parked: it is the best one anyway)
+        return sorted(self.cars, key=lambda c: self.car_income(c, False), reverse=True)[: self.slots]
+
+    def income(self, gears=True):
+        return sum(self.car_income(c, gears) for c in self.parked()) * self.shared_mult()
+
+    def luck(self):
+        # v24 Shop.LuckMult: x(1 + 2 * shift of the old sources) x platform level (real TrapConfig.LuckMult), cap x3
+        m = (1 + 2 * PERKS["lucky"]["per"] * self.perks.get("lucky", 0)) * Trap.LuckMult(self.trap)
+        return min(m, 3.0)
+
+    def use_gears(self):
+        """v24: every gear_every seconds put an income gear on the best parked car if it is cheap enough"""
+        self.peak = max(self.peak, self.income(False))
+        if not P["gears"] or self.t < self.next_gear or not self.cars:
+            return
+        self.next_gear = self.t + P["gear_every"]
+        g = GEAR[P["gear_id"]]
+        # Tony's stock rolls every Window s; over gear_every s the bot sees gear_every / Window windows
+        windows = max(1, int(P["gear_every"] // Gear.Window))
+        if all(self.rng.random() >= g["stock"]["chance"] for _ in range(windows)):
+            return
+        price = Gear.Price(Gear.ById[g["id"]], self.peak)
+        if price > P["gear_budget"] * self.money:
+            return
+        best = self.parked()[0]
+        if best[5] > self.t:
+            return
+        self.money -= price
+        self.gear_spent += price
+        best[3], best[5] = g["effects"]["income"], self.t + g["seconds"]
+        gain = (g["effects"]["income"] - 1) * self.car_income(best, False) * self.shared_mult() * g["seconds"]
+        self.gear_log.append((self.t / 3600, gain / price, self.slots))
 
     def mark(self, name):
         if name not in self.seen:
             self.seen.add(name)
             self.log.append((name, self.t))
+            self.inc_at[name] = self.income(False)
 
     def wait(self, sec):
         self.t += sec
@@ -193,9 +240,8 @@ class Player:
         if self.pity >= Eco.PityThreshold - 1:
             leg = min(row["Legendary"] * 3, 20)
             row = {"Common": 0, "Uncommon": 0, "Rare": 0, "Epic": 100 - leg, "Legendary": leg}
-        # v24 luck multiplier (Shop.LuckMult / CarConfig.ApplyLuck): Lucky perk only, x(1 + 2 * shift), capped x3
-        luck = min(3.0, 1 + 2 * PERKS["lucky"]["per"] * self.perks.get("lucky", 0))
-        row = {r: v * (luck if r in ("Rare", "Epic", "Legendary") else 1) for r, v in row.items()}
+        # v24 luck multiplier through the real CarConfig.ApplyLuck (Lucky perk x platform level, capped x3)
+        row = lt(Car.ApplyLuck(L.table_from(row), self.luck()))
         tot = sum(row.values())
         r1 = self.rng.random()
         x, acc, rar = r1 * tot, 0, "Legendary"
@@ -216,9 +262,9 @@ class Player:
         if copy and copy[1] < Eco.MergeMaxLevel:
             copy[1] += 1  # merge duplicate
             return
-        self.cars.append([POOL[rar][i], 1, rar, 1.0, i])
+        self.cars.append([POOL[rar][i], 1, rar, 1.0, i, 0.0])
         if len(self.cars) > 60:  # sell junk
-            self.cars.sort(key=self.car_income)
+            self.cars.sort(key=lambda c: self.car_income(c, False))
             junk = self.cars.pop(0)
             self.money += junk[0] * VALUE_MULT * Eco.SellFraction
         self.mark("first car")
@@ -236,18 +282,19 @@ class Player:
             nxt = self.slots + 1
             if nxt <= 24:
                 if nxt > self.floors * 6:
-                    opts.append((FLOOR_COST[self.floors + 1], "floor", None, 0.5))
+                    # a floor is worth the car it lets you park (ranked with the price of its first bay)
+                    fc = FLOOR_COST[self.floors + 1]
+                    opts.append((fc, "floor", None, self.gain_from_slot() * fc / (fc + SLOT_COST[nxt])))
                 else:
                     gain = self.gain_from_slot()
                     opts.append((SLOT_COST[nxt], "slot", None, gain))
             # upgrade parked cars
-            parked = sorted(self.cars, key=self.car_income, reverse=True)[: self.slots]
-            for c in parked:
+            for c in self.parked():
                 if c[1] < MAXLV:
                     cost = c[0] * VALUE_MULT * UP_BASE * UP_GROW ** (c[1] - 1)
                     need = 1 + (c[1] - 1) // 3
                     if self.parts[PART_OF[c[2]]] >= need:
-                        opts.append((cost, "up", c, c[0] * GROWTH * c[3]))
+                        opts.append((cost, "up", c, c[0] * GROWTH))  # (unit kept from v19 so the ROI order is unchanged)
             # Pit Stop income perk
             lv = self.perks.get("turbo", 0)
             if lv < 5:
@@ -256,6 +303,11 @@ class Player:
                 lv = self.perks.get(pid, 0)
                 if lv < PERKS[pid]["max"]:
                     opts.append((PERKS[pid]["costs"][lv], "perk", pid, inc * 0.04))
+            # v24 throw platform: +LuckPerLevel on the multiplier; valued like the Lucky perk
+            # (Lucky Lv = +3% luck mult ~ inc x 0.04), scaled by the relative luck gain of the level
+            if P["trap"] and self.trap < Trap.MaxLevel and self.luck() < 3.0:
+                rel = Trap.LuckPerLevel / Trap.LuckMult(self.trap)
+                opts.append((Trap.NextCost(self.trap), "trap", None, inc * 0.04 * rel / 0.03))
             # skins
             for s in SKINS:
                 if s["id"] not in self.skins and s.get("money"):
@@ -287,6 +339,9 @@ class Player:
                 self.parts[PART_OF[arg[2]]] -= 1 + (arg[1] - 2) // 3
             elif kind == "perk":
                 self.perks[arg] = self.perks.get(arg, 0) + 1
+            elif kind == "trap":
+                self.trap += 1
+                self.mark(f"platform Lv{self.trap}")
             elif kind == "skin":
                 self.skins.add(arg["id"])
                 self.skin_bonus = max(self.skin_bonus, arg["bonus"])
@@ -295,7 +350,7 @@ class Player:
                 self.mark(("R%d " % self.rebirths if self.rebirths else "") + "unlock " + arg)
 
     def gain_from_slot(self):
-        incs = sorted((self.car_income(c) for c in self.cars), reverse=True)
+        incs = sorted((self.car_income(c, False) for c in self.cars), reverse=True)
         return incs[self.slots] if len(incs) > self.slots else 0.01
 
     def maybe_rebirth(self):
@@ -303,19 +358,22 @@ class Player:
         if self.rebirths >= 3 and "colosseum" not in self.zones:
             return  # finish the final boss first
         if zone in self.zones and self.money >= money:
+            before = self.income(False)
             self.tokens += min(5, int(self.money // money))
             self.rebirths += 1
             self.reset()
             self.mark(f"rebirth {self.rebirths}")
+            self.inc_at[f"rebirth {self.rebirths}"] = before  # income just before the reset
 
     def cycle(self):
         # offline earnings after each play session
         if self.t >= getattr(self, "next_away", P["session_h"] * 3600):
             self.next_away = self.t + P["session_h"] * 3600
-            self.money += min(P["away_h"], 8) * 3600 * self.income() * 0.15
+            self.money += min(P["away_h"], 8) * 3600 * self.income(False) * 0.15  # gears run out while away
         self.do_run()
         self.throw_all()
         self.wait(P["think"])
+        self.use_gears()
         self.spend()
         self.maybe_rebirth()
         if len(self.discovered) == sum(len(v) for v in POOL.values()):
@@ -340,14 +398,32 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--runs", type=int, default=1)
     ap.add_argument("--hours", type=float, default=200)
+    ap.add_argument("--no-gears", action="store_true")
+    ap.add_argument("--no-trap", action="store_true")
+    ap.add_argument("--quiet", action="store_true", help="milestones only")
     a = ap.parse_args()
-    results = {}
+    P["gears"], P["trap"] = not a.no_gears, not a.no_trap
+    if not a.quiet:
+        print("income per car (CarConfig.IncomeAt, per second, before index/perk/rebirth multipliers)")
+        print(f"{'rarity':10s} {'min Lv1':>8s} {'avg Lv1':>8s} {'max Lv1':>8s} {'avg Lv10':>9s} {'max Lv10':>9s}")
+        for r in RAR:
+            defs = list(Car.ByRarity[r].values())
+            l1 = [Car.IncomeAt(d, 1) for d in defs]
+            l10 = [Car.IncomeAt(d, 10) for d in defs]
+            print(f"{r:10s} {min(l1):8.0f} {statistics.mean(l1):8.0f} {max(l1):8.0f} {statistics.mean(l10):9.0f} {max(l10):9.0f}")
+        gm = Car.ById["golden_magnat_gt"]
+        print(f"{'Golden GT':10s} {Car.IncomeAt(gm, 1):8.0f} {'':8s} {'':8s} {Car.IncomeAt(gm, 10):9.0f}")
+        print()
+    results, incs, gears, spent = {}, {}, [], []
     for s in range(a.runs):
         p = simulate(s + 1, a.hours)
         for name, t in p.log:
             results.setdefault(name, []).append(t / 3600)
+            incs.setdefault(name, []).append(p.inc_at.get(name, 0))
+        gears += p.gear_log
+        spent.append(p.gear_spent)
     order = sorted(results, key=lambda k: statistics.median(results[k]))
-    print(f"{'milestone':32s} {'median h':>9s}   target")
+    print(f"{'milestone':32s} {'median h':>9s} {'income/s':>9s}   target")
     tmap = {n: (lo, hi) for n, lo, hi in TARGETS}
     for k in order:
         med = statistics.median(results[k])
@@ -355,10 +431,24 @@ def main():
         flag = ""
         if tgt:
             flag = f"{tgt[0]:>5.1f}-{tgt[1]:<5.1f} " + ("ok" if tgt[0] <= med <= tgt[1] else "OFF")
-        print(f"{k:32s} {med:9.2f}   {flag}")
+        print(f"{k:32s} {med:9.2f} {fmt(statistics.median(incs[k])):>9s}   {flag}")
     for n, _, _ in TARGETS:
         if n not in results:
             print(f"{n:32s}   never reached")
+    if gears and not a.quiet:
+        print(f"\n{P['gear_id']} bought {len(gears) / a.runs:.0f}x per run, {fmt(statistics.median(spent))} spent; "
+              "payback = extra income over its timer / price (1.0 = break-even):")
+        for lo, hi in ((0, 1), (1, 3), (3, 6), (6, 10), (10, 1e9)):
+            g = [x for h, x, _ in gears if lo <= h < hi]
+            if g:
+                print(f"  {lo:>4.0f}-{hi if hi < 1e9 else 'end':>4} h: median x{statistics.median(g):.2f}  (n={len(g)})")
+
+
+def fmt(x):
+    for d, u in ((1e12, "T"), (1e9, "B"), (1e6, "M"), (1e3, "K")):
+        if x >= d:
+            return f"{x / d:.1f}{u}"
+    return f"{x:.0f}"
 
 
 if __name__ == "__main__":
