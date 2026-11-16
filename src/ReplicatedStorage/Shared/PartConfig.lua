@@ -49,14 +49,17 @@ for zi, zone in ipairs(ZONES) do
 	PartConfig.PointCounts[zone] = ARENAS[zone] and { safe = 18, risky = 10, road = 0 } or { safe = zi == 1 and 14 or 12, risky = 8, road = 4 }
 end
 
--- chance that a pickup in this zone is a tuning part instead, and which stages can drop
-PartConfig.TuningDrops = {
-	scrapyard = { chance = 0.015, stages = { 1 } },
-	canyon = { chance = 0.025, stages = { 1, 2 } },
-	circuit = { chance = 0.03, stages = { 2 } }, drift = { chance = 0.03, stages = { 2 } },
-	storm = { chance = 0.035, stages = { 2, 3 } }, rush = { chance = 0.04, stages = { 2, 3 } },
-	colosseum = { chance = 0.06, stages = { 2, 3 } },
+-- chance that a pickup in this zone also drops a gear (GearConfig) into the player's gear box.
+-- Arena bosses in these zones reward every helper with a gear too (BossService).
+PartConfig.GearDrops = {
+	scrapyard = { chance = 0.015 },
+	canyon = { chance = 0.025 },
+	circuit = { chance = 0.03 }, drift = { chance = 0.03 },
+	storm = { chance = 0.035 }, rush = { chance = 0.04 },
+	colosseum = { chance = 0.06 },
 }
+PartConfig.RoadGearDrops = { "nitro", "clover" } -- the gears a pickup can drop
+PartConfig.BossGearDrops = { "cashturbo", "rocket" } -- the gears a scared boss gives
 
 PartConfig.Cooldowns = { safe = { 45, 70 }, risky = { 60, 95 }, road = { 50, 80 } }
 PartConfig.CrateAmount = { road = 2 } -- road crates hold several parts

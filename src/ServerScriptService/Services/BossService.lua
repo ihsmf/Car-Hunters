@@ -197,14 +197,14 @@ function Boss.Throw(player)
 	if b.hits >= Boss.HitsToScare then
 		setMode(b, "flee", Boss.FleeTime)
 		Net.Get("BossFx"):FireAllClients({ event = "flee", boss = b.id, pos = b.pos })
-		-- everyone who helped gets a tuning part from this arena's drop table
-		local td = PartConfig.TuningDrops[b.zone]
+		-- everyone who helped gets a gear (arena zones, see PartConfig.GearDrops)
+		local gd = PartConfig.GearDrops[b.zone]
 		for p in pairs(b.helpers) do
-			if p.Parent and td then
-				local fams = { "ecu", "turbo", "super", "exhaust", "intake", "nitro", "tires", "aero" }
-				local item = fams[math.random(1, #fams)] .. td.stages[math.random(1, #td.stages)]
-				S.Tuning.Give(p, item, 1)
-				S.Data.Notify(p, "bossScared", { require(Shared:WaitForChild("TuningConfig")).Items[item].name }, "good")
+			if p.Parent and gd then
+				local gear = S.Gears.GiveRandom(p, PartConfig.BossGearDrops)
+				if gear then
+					S.Data.Notify(p, "bossScared", { gear.name }, "good")
+				end
 			end
 		end
 		b.helpers = {}

@@ -45,6 +45,13 @@ MODEL = {
     "mursides_maibah": ["maybach", "s class"], "bugati_veiron": ["veyron"], "konigseg_jesko": ["jesko"], "ferarri_sf90": ["sf90"],
     "lamborgini_sian": ["sian"], "maklaren_senna": ["senna"], "astin_valkyry": ["valkyrie"], "pagany_huayrar": ["huayra"],
     "rimak_nevara": ["nevera"], "golden_magnat_gt": ["supercar"],
+    "toyoda_priuz": ["prius"], "hunda_odysee": ["odyssey", "minivan"], "furd_fokus": ["focus rs", "focus"],
+    "toyoda_kamry": ["camry"], "toyoda_rav4": ["rav4", "rav 4"], "furd_eksplorer": ["explorer"],
+    "hunda_s2000": ["s2000", "s2k"], "kia_stingar": ["stinger"], "dodje_chardjer": ["charger", "charger srt"],
+    "mazta_rx7": ["rx7", "rx-7", "fd rx7"], "nisan_skylain": ["skyline r34", "skyline", "r34"], "hunda_nsx": ["nsx"],
+    "mursides_sls": ["sls amg", "sls"], "lexxus_lfa": ["lfa"], "dodje_vipur": ["viper", "viper acr"], "ferarri_f40": ["f40"],
+    "porshe_918": ["918 spyder", "918"], "ferarri_enzo": ["enzo"], "lamborgini_revuelto": ["revuelto"],
+    "konigseg_regera": ["regera"],
 }
 CLASS = {
     "compact": "hatchback", "sedan": "sedan", "sport": "sports car", "supercar": "supercar", "proto": "hypercar",

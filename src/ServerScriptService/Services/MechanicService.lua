@@ -1,11 +1,7 @@
--- Big Tony's Tuning: the rich mechanic in his own garage on the plaza. He only sells tuning parts,
--- built from banked car parts + money (jobs are claimed at the Job Board, see ContractService).
+-- Big Tony's Gears: the rich mechanic in his own garage on the plaza. He sells timed gears (GearService buys them;
+-- this module only places Tony + his prompt). Jobs are claimed at the Job Board, see ContractService.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local Shared = ReplicatedStorage:WaitForChild("Shared")
-local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
 
 local Mechanic = {}
 local S
@@ -20,6 +16,7 @@ local function nearTony(player)
 	local hrp = S.Data.GetRoot(player)
 	return hrp and spotPos and (hrp.Position - spotPos).Magnitude <= 24
 end
+Mechanic.NearTony = nearTony
 
 local function gesture()
 	if anims and anims.point then
@@ -28,49 +25,7 @@ local function gesture()
 		anims.wave:Play()
 	end
 end
-
-function Mechanic.Craft(player, recipeId)
-	local s = S.Data.Get(player)
-	local r = type(recipeId) == "string" and TuningConfig.RecipeById[recipeId]
-	if not s or not s.ready or not r or not S.Data.RateLimit(player, "craft", 0.3) then
-		return
-	end
-	if not nearTony(player) then
-		S.Data.Notify(player, "seeTony", nil, "warn")
-		return
-	end
-	local d = s.data
-	if d.money < r.money then
-		S.Data.Notify(player, "noMoney", nil, "error")
-		return
-	end
-	for part, n in pairs(r.parts or {}) do
-		if (d.parts[part] or 0) < n then
-			S.Data.Notify(player, "noParts", nil, "error")
-			return
-		end
-	end
-	for item, n in pairs(r.tune or {}) do
-		if (d.tuning[item] or 0) < n then
-			S.Data.Notify(player, "noTuneParts", nil, "error")
-			return
-		end
-	end
-	d.money = d.money - r.money
-	for part, n in pairs(r.parts or {}) do
-		d.parts[part] = d.parts[part] - n
-	end
-	for item, n in pairs(r.tune or {}) do
-		d.tuning[item] = d.tuning[item] - n
-		if d.tuning[item] <= 0 then
-			d.tuning[item] = nil
-		end
-	end
-	d.tuning[r.out] = math.min((d.tuning[r.out] or 0) + 1, 999)
-	S.Data.Notify(player, "crafted", { TuningConfig.Items[r.out].name }, "good")
-	gesture()
-	S.Data.Push(player)
-end
+Mechanic.Gesture = gesture
 
 local function dressTony(n)
 	local A = S.Shop.Attach
@@ -111,6 +66,7 @@ local function findSpot(map)
 	end
 	return garage, spot
 end
+Mechanic.FindSpot = findSpot
 
 -- MakeNpc turns the NPC by the spot's Yaw attribute; without one, follow the spot's own facing
 local function faceLikeSpot(npc, spot)
@@ -137,7 +93,7 @@ function Mechanic.Start()
 		local prompt = garage:FindFirstChild("TonyPrompt", true)
 		if prompt and prompt:IsA("BasePart") then
 			local pp = Instance.new("ProximityPrompt")
-			pp.ActionText = "Tuning Shop"
+			pp.ActionText = "Gear Shop"
 			pp.ObjectText = "Big Tony"
 			pp.HoldDuration = 0
 			pp.MaxActivationDistance = 14

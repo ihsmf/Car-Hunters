@@ -127,7 +127,7 @@ local function refresh(st, open)
 	for i, e in ipairs(R.Chests) do
 		local got = st.chests and st.chests[i]
 		local left = e.minutes * 60 - now
-		local body = "$" .. Util.FormatNumber(R.Money(e, K.store.Income)) .. "\n" .. partsText(e.parts) .. (e.tuning and "\n+ tuning part" or "")
+		local body = "$" .. Util.FormatNumber(R.Money(e, K.store.Income)) .. "\n" .. partsText(e.parts) .. (e.gear and "\n+ gear" or "")
 		w.chestBtns[i] = card(w.chests, nil, P.green, e.minutes .. " MIN", body, got and "OPENED" or (left <= 0 and "OPEN" or fmt(left)), got and P.grey or (left <= 0 and P.green or P.grey),
 			function()
 				if not got and sessionNow() >= e.minutes * 60 then

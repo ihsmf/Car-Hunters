@@ -123,7 +123,7 @@ local S = {}
 local names = { Data = "DataService", Inventory = "InventoryService", Base = "BaseService", PartSpawn = "PartSpawnService",
 	Traffic = "TrafficService", Capture = "CaptureService", Cars = "CarCollectionService", Income = "IncomeService",
 	Upgrade = "UpgradeService", Zone = "ZoneService", Warp = "WarpService", Shop = "ShopService", Donate = "DonateService",
-	HotDrop = "HotDropService", Contracts = "ContractService", Tuning = "TuningService", Mechanic = "MechanicService", Boss = "BossService", Rebirth = "RebirthService", Leaderboard = "LeaderboardService", Checkpoint = "CheckpointService", Rewards = "RewardsService", Trade = "TradeService" }
+	HotDrop = "HotDropService", Contracts = "ContractService", Gears = "GearService", Mechanic = "MechanicService", Boss = "BossService", Rebirth = "RebirthService", Leaderboard = "LeaderboardService", Checkpoint = "CheckpointService", Rewards = "RewardsService", Trade = "TradeService", Trap = "TrapService" }
 for key, moduleName in pairs(names) do
 	S[key] = require(Services:WaitForChild(moduleName))
 end
@@ -159,12 +159,13 @@ Net.Get("Teleport").OnServerEvent:Connect(function(p, dest) S.Warp.Go(p, dest) e
 Net.Get("BuyPerk").OnServerEvent:Connect(function(p, id) S.Shop.Buy(p, id) end)
 Net.Get("Donate").OnServerEvent:Connect(function(p, id) S.Donate.Request(p, id) end)
 Net.Get("ClaimContract").OnServerEvent:Connect(function(p, id) S.Contracts.Claim(p, id) end)
-Net.Get("CraftTuning").OnServerEvent:Connect(function(p, id) S.Mechanic.Craft(p, id) end)
+Net.Get("BuyGear").OnServerEvent:Connect(function(p, id) S.Gears.Buy(p, id) end)
 Net.Get("Rebirth").OnServerEvent:Connect(function(p) S.Rebirth.Do(p) end)
 Net.Get("SetSkin").OnServerEvent:Connect(function(p, id) S.Rebirth.Skin(p, id) end)
 Net.Get("TokenPerk").OnServerEvent:Connect(function(p, id) S.Rebirth.TokenPerk(p, id) end)
 Net.Get("BossThrow").OnServerEvent:Connect(function(p) S.Boss.Throw(p) end)
-Net.Get("TuneCar").OnServerEvent:Connect(function(p, uid, cat, item) S.Tuning.Set(p, uid, cat, item) end)
+Net.Get("UpgradeTrap").OnServerEvent:Connect(function(p) S.Trap.Upgrade(p) end)
+Net.Get("ApplyGear").OnServerEvent:Connect(function(p, uid, id) S.Gears.Apply(p, uid, id) end)
 
 local function hookCharacter(player, char)
 	local hum = char:WaitForChild("Humanoid", 10)

@@ -3,7 +3,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local R = require(Shared:WaitForChild("RewardConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
-local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
 
 local Rewards = {}
 local S
@@ -22,11 +21,11 @@ local function give(player, s, entry)
 	if entry.pity then
 		d.pity = math.max(d.pity, EconomyConfig.PityThreshold - 1)
 	end
-	if entry.tuning then
-		local fams = { "ecu", "exhaust", "intake", "tires", "aero" }
-		local item = fams[math.random(1, #fams)] .. "1"
-		d.tuning[item] = (d.tuning[item] or 0) + 1
-		S.Data.Notify(player, "tuneDrop", { TuningConfig.Items[item].name }, "good")
+	if entry.gear then
+		local gear = S.Gears.GiveRandom(player, S.Gears.IdsUpToTier(3))
+		if gear then
+			S.Data.Notify(player, "gearDrop", { gear.name }, "good")
+		end
 	end
 	return cash
 end

@@ -35,6 +35,7 @@ local PhotoMode = require(Client:WaitForChild("PhotoMode"))
 local Rewards = require(Client:WaitForChild("Rewards"))
 local Trade = require(Client:WaitForChild("Trade"))
 local CarPreload = require(Client:WaitForChild("CarPreload"))
+local TrapVisuals = require(Client:WaitForChild("TrapVisuals"))
 
 local player = Players.LocalPlayer
 -- keep the camera close: no flying out over the map edge
@@ -56,11 +57,12 @@ local actions = {
 	BuyPerk = function(id) Net.Get("BuyPerk"):FireServer(id) end,
 	Donate = function(id) Net.Get("Donate"):FireServer(id) end,
 	Claim = function(id) Net.Get("ClaimContract"):FireServer(id) end,
-	Craft = function(id) Net.Get("CraftTuning"):FireServer(id) end,
-	Tune = function(uid, cat, item) Net.Get("TuneCar"):FireServer(uid, cat, item) end,
+	BuyGear = function(id) Net.Get("BuyGear"):FireServer(id) end,
+	ApplyGear = function(carUid, id) Net.Get("ApplyGear"):FireServer(carUid, id) end,
 	Rebirth = function() Net.Get("Rebirth"):FireServer() end,
 	SetSkin = function(id) Net.Get("SetSkin"):FireServer(id) end,
 	TokenPerk = function(id) Net.Get("TokenPerk"):FireServer(id) end,
+	UpgradeTrap = function() Net.Get("UpgradeTrap"):FireServer() end,
 	Teleport = function(dest)
 		Net.Get("Teleport"):FireServer(dest)
 		if dest == "home" and Store.CarriedTotal() > 0 then
@@ -101,6 +103,7 @@ PhotoMode.Start(UI, CineFx)
 ClientFx.Init(UI)
 Markers.Start(UI.Kit(), UIExtra)
 GaragePrompts.Start(UI.Kit(), CineFx)
+TrapVisuals.Start(UI, Store, CineFx)
 UI.Refresh()
 CarPreload.Start() -- background: car meshes + templates (owned and likely cars first), so reveals never pop in
 

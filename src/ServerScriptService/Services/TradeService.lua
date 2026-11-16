@@ -41,7 +41,8 @@ local function describe(player, offer)
 	for uid in pairs(offer.cars) do
 		for _, c in ipairs(s and s.data.cars or {}) do
 			if c.uid == uid then
-				table.insert(cars, { uid = uid, typeId = c.typeId, level = c.level })
+				local g = c.gear and c.gear.exp and c.gear.exp > os.time() and { id = c.gear.id, left = c.gear.exp - os.time() } or nil
+				table.insert(cars, { uid = uid, typeId = c.typeId, level = c.level, gear = g }) -- an active gear moves with the car
 			end
 		end
 	end

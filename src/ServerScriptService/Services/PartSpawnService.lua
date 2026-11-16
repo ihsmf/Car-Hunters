@@ -8,7 +8,6 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Util = require(Shared:WaitForChild("Util"))
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local MapConfig = require(Shared:WaitForChild("MapConfig"))
-local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
 local PartVisual = require(Shared:WaitForChild("PartVisual"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 local Net = require(Shared:WaitForChild("Net"))
@@ -146,13 +145,13 @@ function PartSpawn.Start()
 										pt.model = nil
 									end
 									pt.readyAt = t + cooldownFor(pt.risk)
-									local td = PartConfig.TuningDrops[pt.zone]
-									if td and math.random() < td.chance then
-										-- bonus: a tuning part goes straight to the player's tuning box
-										local fams = { "ecu", "turbo", "super", "exhaust", "intake", "nitro", "tires", "aero" }
-										local item = fams[math.random(1, #fams)] .. td.stages[math.random(1, #td.stages)]
-										S.Tuning.Give(player, item, 1)
-										S.Data.Notify(player, "tuneDrop", { TuningConfig.Items[item].name }, "good")
+									local gd = PartConfig.GearDrops[pt.zone]
+									if gd and math.random() < gd.chance then
+										-- bonus: a gear goes straight to the player's gear box
+										local gear = S.Gears.GiveRandom(player, PartConfig.RoadGearDrops)
+										if gear then
+											S.Data.Notify(player, "gearDrop", { gear.name }, "good")
+										end
 									end
 									if S.Inventory.AddCarried(player, partId, amount, pt.zone) then
 										S.Data.Notify(player, "picked", { partId }, "pickup")

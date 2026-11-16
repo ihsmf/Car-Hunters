@@ -27,8 +27,8 @@ Net.Names = {
 	"PickupFx",
 	"BuyFloor",
 	"ClaimContract",
-	"CraftTuning",
-	"TuneCar",
+	"BuyGear",
+	"ApplyGear",
 	"BossThrow",
 	"BossFx",
 	"Rebirth",
@@ -51,6 +51,8 @@ Net.Names = {
 	"TradeReady",
 	"TradeCancel",
 	"TradeEvent",
+	"UpgradeTrap",
+	"TrapUpgraded",
 }
 
 function Net.Folder()

@@ -33,7 +33,8 @@ Shop.BoostActive = boostActive
 
 ---------------------------------------------------------------- effects
 function Shop.WalkSpeed(s)
-	return MapConfig.WalkSpeed * (1 + ShopConfig.ById.sneakers.per * lvl(s, "sneakers"))
+	local gear = S.Gears and S.Gears.PlayerMult(s, "speed") or 1 -- Nitro Can / Rocket Boots on a parked car
+	return MapConfig.WalkSpeed * (1 + ShopConfig.ById.sneakers.per * lvl(s, "sneakers")) * gear
 end
 
 function Shop.CarryCap(s)
@@ -60,13 +61,32 @@ function Shop.IncomeMult(s)
 	return m
 end
 
--- 0..1 shift towards rarer cars (applied to the roll's random number)
-function Shop.LuckShift(s)
+-- the old additive luck sources (Lucky perk, luck tokens, Lucky Hour), uncapped
+local function luckShiftRaw(s)
 	local shift = ShopConfig.ById.lucky.per * lvl(s, "lucky") + 0.02 * S.Rebirth.PerkLevel(s, "luck")
 	if boostActive(s, "luck") then
 		shift = shift + 0.08
 	end
-	return math.min(shift, EconomyConfig.MaxLuckShift)
+	return shift
+end
+
+-- legacy 0..1 shift towards rarer cars (kept for compatibility; rolls use Shop.LuckMult)
+function Shop.LuckShift(s)
+	return math.min(luckShiftRaw(s), EconomyConfig.MaxLuckShift)
+end
+
+Shop.MaxLuck = 3
+-- luck multiplier on the Rare/Epic/Legendary odds (CarConfig.ApplyLuck):
+-- old sources (x(1 + 2 * shift)) x platform level (TrapService) x the best luck gear on a parked car; capped at x3
+function Shop.LuckMult(s)
+	local m = 1 + 2 * luckShiftRaw(s)
+	if S.Trap and S.Trap.LuckMult then
+		m = m * (S.Trap.LuckMult(s) or 1)
+	end
+	if S.Gears and S.Gears.PlayerMult then
+		m = m * S.Gears.PlayerMult(s, "luck")
+	end
+	return math.min(m, Shop.MaxLuck)
 end
 
 function Shop.RespawnTime(s)

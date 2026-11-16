@@ -106,6 +106,27 @@ local list = {
 	{ id = "astin_valkyry", name = "Albion Valkyra", rarity = "Legendary", style = "proto", income = 1300, body = C(30, 90, 70), accent = C(20, 20, 24), neon = C(90, 255, 180), tag = "A fighter jet with plates." },
 	{ id = "pagany_huayrar", name = "Zephyr Storm", rarity = "Legendary", style = "proto", income = 1150, body = C(40, 40, 44), accent = C(220, 180, 60), chrome = true, neon = C(255, 200, 80), tag = "Carbon art at 850 hp." },
 	{ id = "rimak_nevara", name = "Volta Nevra", rarity = "Legendary", style = "supercar", income = 1250, body = C(80, 90, 110), accent = C(20, 20, 24), neon = C(80, 220, 255), tag = "Electric thunder." },
+	-- ---- wave 4: 4 more per rarity (100 cars)
+	{ id = "toyoda_priuz", name = "Sakura Pious", rarity = "Common", style = "compact", income = 2, body = C(200, 210, 220), accent = C(30, 30, 36), tag = "Saves the planet at 40 mph." },
+	{ id = "hunda_odysee", name = "Kazemo Odessa", rarity = "Common", style = "van", income = 3, body = C(110, 116, 126), accent = C(30, 30, 36), tag = "Soccer practice, full send." },
+	{ id = "furd_fokus", name = "Zippa Focal", rarity = "Common", style = "compact", income = 4, body = C(220, 120, 30), accent = C(30, 30, 36), tag = "Sharp, sensible, secretly fun." },
+	{ id = "toyoda_kamry", name = "Sakura Calmry", rarity = "Common", style = "sedan", income = 5, body = C(150, 20, 30), accent = C(200, 200, 210), tag = "Calm in every lane." },
+	{ id = "toyoda_rav4", name = "Sakura Ravine", rarity = "Uncommon", style = "suv", income = 9, body = C(90, 120, 90), accent = C(30, 30, 36), tag = "Weekend trail, weekday mall." },
+	{ id = "furd_eksplorer", name = "Haulmax Trekker", rarity = "Uncommon", style = "suv", income = 11, body = C(30, 40, 60), accent = C(200, 200, 210), tag = "Maps are for quitters." },
+	{ id = "hunda_s2000", name = "Kazemo S-Twin", rarity = "Uncommon", style = "sport", income = 12, body = C(240, 200, 20), accent = C(20, 20, 24), tag = "Nine thousand rpm of joy." },
+	{ id = "kia_stingar", name = "Boxy Stinga", rarity = "Uncommon", style = "sedan", income = 14, body = C(200, 30, 30), accent = C(20, 20, 24), tag = "Bites harder than it looks." },
+	{ id = "dodje_chardjer", name = "Brawler Charja", rarity = "Rare", style = "muscle", income = 27, body = C(20, 20, 24), accent = C(200, 200, 210), tag = "Four doors, zero manners." },
+	{ id = "mazta_rx7", name = "Breezer Rotary-7", rarity = "Rare", style = "sport", income = 35, body = C(220, 20, 30), accent = C(20, 20, 24), spoiler = true, tag = "Brap brap goes the triangle." },
+	{ id = "nisan_skylain", name = "Raijin Skyrunner", rarity = "Rare", style = "sport", income = 42, body = C(40, 90, 200), accent = C(20, 20, 24), spoiler = true, tag = "Street legend, midnight runs." },
+	{ id = "hunda_nsx", name = "Kazemo N-Ess-X", rarity = "Rare", style = "sport", income = 49, body = C(236, 236, 240), accent = C(20, 20, 24), tag = "Tuned by a racing legend." },
+	{ id = "mursides_sls", name = "Stellar Gullwing", rarity = "Epic", style = "sport", income = 110, body = C(200, 204, 210), accent = C(20, 20, 24), chrome = true, tag = "Doors that wave hello." },
+	{ id = "lexxus_lfa", name = "Luxor El-Fa", rarity = "Epic", style = "supercar", income = 145, body = C(240, 240, 244), accent = C(20, 20, 24), tag = "Sounds like a choir of angels." },
+	{ id = "dodje_vipur", name = "Brawler Venom", rarity = "Epic", style = "sport", income = 170, body = C(30, 60, 160), accent = C(240, 240, 240), tag = "Ten cylinders of bad mood." },
+	{ id = "ferarri_f40", name = "Cavallo F-Forty", rarity = "Epic", style = "supercar", income = 195, body = C(220, 16, 20), accent = C(20, 20, 24), spoiler = true, tag = "Turbo lag, then chaos." },
+	{ id = "porshe_918", name = "Swabia Nine-Eighteen", rarity = "Legendary", style = "proto", income = 600, body = C(220, 224, 230), accent = C(20, 20, 24), neon = C(120, 255, 120), tag = "Hybrid with a racing soul." },
+	{ id = "ferarri_enzo", name = "Cavallo Enzio", rarity = "Legendary", style = "proto", income = 900, body = C(200, 10, 20), accent = C(20, 20, 24), neon = C(255, 60, 40), tag = "Named after the boss himself." },
+	{ id = "lamborgini_revuelto", name = "Taurio Revolto", rarity = "Legendary", style = "supercar", income = 1100, body = C(255, 120, 0), accent = C(20, 20, 24), neon = C(255, 170, 40), tag = "A bull with a battery." },
+	{ id = "konigseg_regera", name = "Nordik Regal", rarity = "Legendary", style = "proto", income = 1300, body = C(30, 30, 34), accent = C(220, 180, 60), neon = C(255, 210, 90), tag = "One gear. All the speed." },
 }
 do -- show order: rarity, then income
 	local idx = { Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5 }
@@ -192,13 +213,13 @@ function CarConfig.IncomeAt(def, level)
 	return math.floor(def.income * CarConfig.IncomeMult * (1 + CarConfig.IncomeGrowth * (level - 1)) + 0.5)
 end
 
--- income of one owned car incl. its tuning parts
+-- income of one owned car incl. its active income gear (GearConfig)
 function CarConfig.CarIncome(car)
 	local def = CarConfig.ById[car.typeId]
 	if not def then
 		return 0
 	end
-	return math.floor(CarConfig.IncomeAt(def, car.level) * require(script.Parent.TuningConfig).CarMult(car.tune) + 0.5)
+	return math.floor(CarConfig.IncomeAt(def, car.level) * require(script.Parent.GearConfig).CarMult(car) + 0.5)
 end
 
 function CarConfig.ValueAt(def, level)
@@ -231,12 +252,35 @@ function CarConfig.PityRow(row)
 	return { Common = 0, Uncommon = 0, Rare = 0, Epic = 100 - l, Legendary = l }
 end
 
--- one car from a throw worth `points` rarity points
-function CarConfig.RollPoints(points, pity, r1, r2)
+-- luck as a multiplier: Rare/Epic/Legendary weights x mult, renormalised to 100 (mult <= 1: an unchanged copy)
+local LUCKY = { Rare = true, Epic = true, Legendary = true }
+function CarConfig.ApplyLuck(chances, mult)
+	local out = table.clone(chances)
+	mult = tonumber(mult) or 1
+	if mult <= 1 or mult ~= mult then
+		return out
+	end
+	local total = 0
+	for _, r in ipairs(CarConfig.RarityOrder) do
+		local v = (out[r] or 0) * (LUCKY[r] and mult or 1)
+		out[r] = v
+		total = total + v
+	end
+	if total > 0 then
+		for _, r in ipairs(CarConfig.RarityOrder) do
+			out[r] = out[r] * 100 / total
+		end
+	end
+	return out
+end
+
+-- one car from a throw worth `points` rarity points (luck = optional multiplier, see ApplyLuck)
+function CarConfig.RollPoints(points, pity, r1, r2, luck)
 	local row = CarConfig.ChancesForPoints(points)
 	if pity and pity >= EconomyConfig.PityThreshold - 1 then
 		row = CarConfig.PityRow(row)
 	end
+	row = CarConfig.ApplyLuck(row, luck)
 	local total = 0
 	for _, r in ipairs(CarConfig.RarityOrder) do
 		total = total + row[r]

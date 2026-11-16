@@ -16,17 +16,16 @@ function Capture.Init(hub)
 	S = hub
 end
 
-function Capture.Roll(points, r1, r2, pity)
-	return CarConfig.RollPoints(points, pity or 0, r1, r2)
+function Capture.Roll(points, r1, r2, pity, luck)
+	return CarConfig.RollPoints(points, pity or 0, r1, r2, luck)
 end
 
 -- one car from a throw worth `points`, with pity + luck; records discovery. Returns rarity, def, isNew, bonus, pityUsed
 local function rollOne(s, points)
 	local d = s.data
 	local pityUsed = d.pity >= EconomyConfig.PityThreshold - 1
-	local shift = S.Shop.LuckShift(s)
-	local r1 = 1 - (1 - rng:NextNumber()) * (1 - shift) -- luck pushes the roll towards rarer cars
-	local rarity, def = Capture.Roll(points, r1, rng:NextNumber(), d.pity)
+	-- luck multiplies the Rare/Epic/Legendary odds (perks, tokens, Lucky Hour, platform, gears; capped x3)
+	local rarity, def = Capture.Roll(points, rng:NextNumber(), rng:NextNumber(), d.pity, S.Shop.LuckMult(s))
 	if CarConfig.IsHighTier(rarity) then
 		d.pity = 0
 	else

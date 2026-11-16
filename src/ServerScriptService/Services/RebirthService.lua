@@ -47,7 +47,7 @@ function Rebirth.Do(player)
 	local tokens = math.min(5, math.floor(d.money / money)) -- 1 token, more for overshooting the target
 	d.rebirths = (d.rebirths or 0) + 1
 	d.tokens = (d.tokens or 0) + tokens
-	-- what burns: money, cars (exclusive ones stay), parts, tuning box, jobs. Districts, floors and bays are kept
+	-- what burns: money, cars (exclusive ones stay), parts, jobs. Gears, districts, floors and bays are kept
 	d.money = SkinConfig.Rebirth.startMoney * d.rebirths
 	local kept = {}
 	for _, c in ipairs(d.cars) do
@@ -63,7 +63,7 @@ function Rebirth.Do(player)
 	end
 	d.parts.bolts = 3
 	d.garageSlotCount = math.max(d.garageSlotCount, EconomyConfig.StartSlots + Rebirth.PerkLevel(s, "startSlot"))
-	d.tuning = {}
+	d.peakIncome = 0 -- gear prices follow the new run's income (owned gears are kept)
 	d.contracts = {}
 	d.pity = 0
 	s.carried = {}

@@ -38,19 +38,24 @@ function Income.Recalc(player)
 	if not s or not s.data then
 		return
 	end
-	local inc, value = 0, 0
+	local inc, value, plain = 0, 0, 0
 	for _, c in ipairs(s.data.cars) do
 		local def = CarConfig.ById[c.typeId]
 		if def then
 			value = value + CarConfig.ValueAt(def, c.level)
 			if c.parkedSlot then
 				inc = inc + CarConfig.CarIncome(c)
+				plain = plain + CarConfig.IncomeAt(def, c.level) -- without gears
 			end
 		end
 	end
 	local _, _, _, mult = CarConfig.IndexStats(s.data.discovered or {})
 	s.indexMult = mult
-	s.income = math.floor(inc * mult * S.Shop.IncomeMult(s) * S.Rebirth.IncomeMult(s) + 0.5)
+	local shared = mult * S.Shop.IncomeMult(s) * S.Rebirth.IncomeMult(s)
+	s.income = math.floor(inc * shared + 0.5)
+	-- gear prices follow the best income so far (no gears, no running x2 boost): un-parking does not make them cheaper
+	local peak = math.floor(plain * shared / (S.Shop.BoostActive(s, "income") and 2 or 1) + 0.5)
+	s.data.peakIncome = math.max(s.data.peakIncome or 0, math.min(peak, 1e15))
 	s.collectionValue = value
 	local ls = player:FindFirstChild("leaderstats")
 	if ls then

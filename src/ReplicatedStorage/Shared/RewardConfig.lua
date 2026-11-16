@@ -17,7 +17,7 @@ R.Chests = {
 	{ minutes = 15, secs = 120, min = 800, parts = { tire = 4 } },
 	{ minutes = 30, secs = 240, min = 1500, parts = { engine = 3 } },
 	{ minutes = 60, secs = 480, min = 3000, parts = { turbo = 2 } },
-	{ minutes = 120, secs = 900, min = 6000, parts = { core = 1 }, tuning = true },
+	{ minutes = 120, secs = 900, min = 6000, parts = { core = 1 }, gear = true },
 }
 
 function R.Money(entry, income)

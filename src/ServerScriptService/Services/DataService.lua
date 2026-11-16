@@ -11,14 +11,29 @@ local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 local ShopConfig = require(Shared:WaitForChild("ShopConfig"))
-local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
+local GearConfig = require(Shared:WaitForChild("GearConfig"))
 local SkinConfig = require(Shared:WaitForChild("SkinConfig"))
 
 local DataService = {}
 local S
 
 local STORE_NAME = "CarHunters_Profiles_v1"
-local SCHEMA_VERSION = 5 -- v5: tutorial has 8 steps (unlock the Highway)
+local SCHEMA_VERSION = 6 -- v5: tutorial has 8 steps (unlock the Highway); v6: tuning parts -> gears (refunded)
+
+-- v6 migration: money refunded per old tuning part (Big Tony's stage 1 recipe cost; stage 2 = 8x, stage 3 = 16x)
+local TUNE_REFUND_BASE = {
+	ecu = 2000, intake = 1500, exhaust = 3000, tires = 2500, aero = 4000, nitro = 10000, turbo = 15000, super = 20000,
+}
+local TUNE_REFUND_STAGE = { 1, 8, 16 }
+local function tuneRefund(itemId)
+	if type(itemId) ~= "string" then
+		return 0
+	end
+	local fam, stage = string.match(itemId, "^(%a+)(%d)$")
+	local base = fam and TUNE_REFUND_BASE[fam]
+	local k = stage and TUNE_REFUND_STAGE[tonumber(stage)]
+	return (base and k) and base * k or 0
+end
 local LOCK_TIMEOUT = 120
 local SERVER_ID = (game.JobId ~= "" and game.JobId) or ("studio-" .. HttpService:GenerateGUID(false))
 
@@ -53,7 +68,10 @@ local function newProfile(isNew)
 		boosts = {},
 		receipts = {},
 		contracts = {},
-		tuning = {},
+		gears = {}, -- owned, not yet applied gears: { [gearId] = count }
+		gearShop = { window = 0, bought = {} }, -- Big Tony's stock window + what was bought in it
+		trapLevel = 1, -- throw platform level (TrapService)
+		peakIncome = 0, -- best gear-less income so far: gear prices (reset on rebirth)
 		rebirths = 0,
 		tokens = 0,
 		tokenPerks = {},
@@ -101,7 +119,10 @@ local function sanitize(raw)
 	local floors = toCount(raw.floors, EconomyConfig.MaxFloors)
 	p.floors = Util.Clamp(math.max(floors, math.ceil(p.garageSlotCount / 6)), 1, EconomyConfig.MaxFloors)
 
+	local migrate = (tonumber(raw.schemaVersion) or 0) < 6
+	local refund = 0
 	local seenUid, seenSlot = {}, {}
+	local now = os.time()
 	if type(raw.cars) == "table" then
 		for _, c in ipairs(raw.cars) do
 			if #p.cars >= EconomyConfig.MaxCars then
@@ -119,16 +140,17 @@ local function sanitize(raw)
 					slot = c.parkedSlot
 					seenSlot[slot] = true
 				end
-				local tune = {}
-				if type(c.tune) == "table" then
-					for cat, itemId in pairs(c.tune) do
-						local it = TuningConfig.Items[itemId]
-						if it and it.cat == cat then
-							tune[cat] = itemId
-						end
+				if migrate and type(c.tune) == "table" then
+					for _, itemId in pairs(c.tune) do
+						refund = refund + tuneRefund(itemId)
 					end
 				end
-				table.insert(p.cars, { uid = c.uid, typeId = c.typeId, level = level, parkedSlot = slot, tune = tune, benched = c.benched == true or nil })
+				local gear = nil
+				if type(c.gear) == "table" and GearConfig.ById[c.gear.id] and type(c.gear.exp) == "number" and c.gear.exp == c.gear.exp
+					and c.gear.exp > now and c.gear.exp <= now + 86400 then
+					gear = { id = c.gear.id, exp = math.floor(c.gear.exp) }
+				end
+				table.insert(p.cars, { uid = c.uid, typeId = c.typeId, level = level, parkedSlot = slot, gear = gear, benched = c.benched == true or nil })
 			end
 		end
 	end
@@ -191,15 +213,42 @@ local function sanitize(raw)
 			end
 		end
 	end
-	if type(raw.tuning) == "table" then
-		for id, n in pairs(raw.tuning) do
-			if TuningConfig.Items[id] then
-				local v = toCount(n, 999)
+	if type(raw.gears) == "table" then
+		for _, def in ipairs(GearConfig.List) do
+			local v = toCount(raw.gears[def.id], 999)
+			if v > 0 then
+				p.gears[def.id] = v
+			end
+		end
+	end
+	if type(raw.gearShop) == "table" and type(raw.gearShop.bought) == "table" then
+		local w = toCount(raw.gearShop.window, 1e9)
+		if w == GearConfig.WindowAt(now) then -- an old window is reset anyway
+			p.gearShop.window = w
+			for _, def in ipairs(GearConfig.List) do
+				local v = toCount(raw.gearShop.bought[def.id], 99)
 				if v > 0 then
-					p.tuning[id] = v
+					p.gearShop.bought[def.id] = v
 				end
 			end
 		end
+	end
+	p.trapLevel = math.clamp(toCount(raw.trapLevel, 10), 1, 10)
+	p.peakIncome = toCount(raw.peakIncome, 1e15)
+	if type(raw.pendingNotice) == "table" and (raw.pendingNotice.key == "tuneRefund" or raw.pendingNotice.key == "gearWelcome") then
+		p.pendingNotice = { key = raw.pendingNotice.key, amount = toCount(raw.pendingNotice.amount, 1e12) }
+	end
+	-- v6: tuning is gone. Every owned / installed tuning part is refunded as money, plus one free Cash Turbo gear
+	if migrate then
+		if type(raw.tuning) == "table" then
+			for id, n in pairs(raw.tuning) do
+				refund = refund + tuneRefund(id) * toCount(n, 999)
+			end
+		end
+		refund = math.min(refund, EconomyConfig.MaxMoney)
+		p.money = math.min(p.money + refund, EconomyConfig.MaxMoney)
+		p.gears.cashturbo = math.min((p.gears.cashturbo or 0) + 1, 999)
+		p.pendingNotice = { key = refund > 0 and "tuneRefund" or "gearWelcome", amount = refund }
 	end
 	p.rebirths = toCount(raw.rebirths, 1000)
 	p.tokens = toCount(raw.tokens, 1e6)
@@ -496,10 +545,16 @@ end
 
 function DataService.BuildState(s)
 	local d = s.data
+	local now = os.time()
 	local cars = {}
 	for _, c in ipairs(d.cars) do
-		table.insert(cars, { uid = c.uid, typeId = c.typeId, level = c.level, slot = c.parkedSlot, tune = Util.CopyTable(c.tune or {}) })
+		local g = GearConfig.Active(c.gear, now) and c.gear
+		table.insert(cars, {
+			uid = c.uid, typeId = c.typeId, level = c.level, slot = c.parkedSlot,
+			gear = g and { id = g.id, exp = g.exp, left = g.exp - now } or nil,
+		})
 	end
+	local shop = S.Gears.ShopWindow(d)
 	return {
 		money = d.money,
 		parts = Util.CopyTable(d.parts),
@@ -521,7 +576,13 @@ function DataService.BuildState(s)
 		boosts = { income = math.max(0, (d.boosts.income or 0) - os.time()), luck = math.max(0, (d.boosts.luck or 0) - os.time()) },
 		passes = Util.CopyTable(s.passes or {}),
 		contracts = Util.CopyTable(d.contracts),
-		tuning = Util.CopyTable(d.tuning),
+		gears = Util.CopyTable(d.gears),
+		gearShop = { window = shop.window, bought = Util.CopyTable(shop.bought) },
+		peakIncome = d.peakIncome,
+		trapLevel = d.trapLevel,
+		luckMult = S.Shop.LuckMult(s),
+		gearMults = { speed = S.Gears.PlayerMult(s, "speed"), luck = S.Gears.PlayerMult(s, "luck") },
+		serverTime = now,
 		tutorial = d.tutorial,
 		settings = Util.CopyTable(d.settings or DataService.SanitizeSettings(nil)),
 		daily = { day = d.daily.day, last = d.daily.last, today = math.floor(os.time() / 86400) },

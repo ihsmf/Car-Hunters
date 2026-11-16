@@ -48,7 +48,7 @@ def lt(t):
     return {k: lt(v) for k, v in t.items()}
 
 
-Car, Eco, Map, Part, Shop, Skin, Tun = (req(n) for n in ("CarConfig", "EconomyConfig", "MapConfig", "PartConfig", "ShopConfig", "SkinConfig", "TuningConfig"))
+Car, Eco, Map, Part, Shop, Skin = (req(n) for n in ("CarConfig", "EconomyConfig", "MapConfig", "PartConfig", "ShopConfig", "SkinConfig"))
 RAR = lt(Car.RarityOrder)
 POOL = {r: [d["income"] for d in lt(Car.ByRarity[r])] for r in RAR}
 DROP = lt(Car.DropChances)
@@ -76,11 +76,7 @@ P = dict(
     session_h=2, away_h=10,  # play 2 h, then away 10 h (offline earnings, capped by the game)
     think=20,                # seconds per cycle spent in menus / walking in the garage
     risk_mix=(0.55, 0.35, 0.10),  # share of safe / risky / road pickups
-    tuning_rate={},  # filled from PartConfig.TuningDrops below
 )
-
-
-P["tuning_rate"] = {z: v["chance"] for z, v in lt(Part.TuningDrops).items()}
 
 
 class Player:
@@ -101,13 +97,12 @@ class Player:
         self.money = 0 if first else REB["startMoney"] * self.rebirths
         self.parts = {k: 0 for k in ORDER}
         self.parts["bolts"] = 2 if first else 3
-        self.cars = []  # [income, level, rarity, tune_mult]
+        self.cars = []  # [income, level, rarity, mult] (mult stays 1: v24 gears are timed, not modelled yet)
         if first:  # v18: a rebirth keeps districts, floors and bays
             self.zones = {"city"}
             self.slots = Eco.StartSlots
             self.floors = 1
         self.pity = 0
-        self.tune = 0  # tuning parts in the box (each worth ~ +25% on one car)
 
     # ---------------------------------------------------------------- economy formulas (mirror the Luau code)
     def car_income(self, c):
@@ -161,8 +156,6 @@ class Player:
             table = SPAWN[z].get(risk) or SPAWN[z]["safe"]
             tot = sum(w for _, w in table)
             ev += share * sum(w / tot * self.part_value(p) for p, w in table)
-        best = max((self.car_income(c) for c in self.cars), default=0)
-        ev += P["tuning_rate"].get(z, 0) * 0.25 * best * 3  # a tuning part keeps paying on your best car
         return ev * cap * (1 - pd) / dur
 
     def part_value(self, part):
@@ -182,8 +175,6 @@ class Player:
             table = SPAWN[z].get(table_risk) or SPAWN[z]["safe"]
             p = self.rng.choices([a for a, _ in table], [w for _, w in table])[0]
             self.parts[p] += 1
-            if self.rng.random() < P["tuning_rate"].get(z, 0):
-                self.tune += 1
 
     def throw_all(self):
         # keep a few parts of each kind for upgrades
@@ -199,12 +190,14 @@ class Player:
 
     def throw(self, part):
         row = dict(DROP[part])
-        luck = min(Eco.MaxLuckShift, 0.015 * self.perks.get("lucky", 0))
         if self.pity >= Eco.PityThreshold - 1:
             leg = min(row["Legendary"] * 3, 20)
             row = {"Common": 0, "Uncommon": 0, "Rare": 0, "Epic": 100 - leg, "Legendary": leg}
+        # v24 luck multiplier (Shop.LuckMult / CarConfig.ApplyLuck): Lucky perk only, x(1 + 2 * shift), capped x3
+        luck = min(3.0, 1 + 2 * PERKS["lucky"]["per"] * self.perks.get("lucky", 0))
+        row = {r: v * (luck if r in ("Rare", "Epic", "Legendary") else 1) for r, v in row.items()}
         tot = sum(row.values())
-        r1 = 1 - (1 - self.rng.random()) * (1 - luck)
+        r1 = self.rng.random()
         x, acc, rar = r1 * tot, 0, "Legendary"
         for r in RAR:
             acc += row[r]
@@ -305,13 +298,6 @@ class Player:
         incs = sorted((self.car_income(c) for c in self.cars), reverse=True)
         return incs[self.slots] if len(incs) > self.slots else 0.01
 
-    def use_tuning(self):
-        # 7 slots per car, ~+25% average per part; best parked cars first
-        for c in sorted(self.cars, key=self.car_income, reverse=True)[: self.slots]:
-            while self.tune > 0 and c[3] < 1 + 7 * 0.25:
-                c[3] += 0.25
-                self.tune -= 1
-
     def maybe_rebirth(self):
         zone, money = Skin.RebirthNeeds(self.rebirths)
         if self.rebirths >= 3 and "colosseum" not in self.zones:
@@ -329,7 +315,6 @@ class Player:
             self.money += min(P["away_h"], 8) * 3600 * self.income() * 0.15
         self.do_run()
         self.throw_all()
-        self.use_tuning()
         self.wait(P["think"])
         self.spend()
         self.maybe_rebirth()

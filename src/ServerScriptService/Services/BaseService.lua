@@ -13,7 +13,7 @@ local ExhaustFx = require(Shared:WaitForChild("ExhaustFx"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 local Util = require(Shared:WaitForChild("Util"))
 local GarageKit = require(Shared:WaitForChild("GarageKit"))
-local TuningConfig = require(Shared:WaitForChild("TuningConfig"))
+local GearConfig = require(Shared:WaitForChild("GearConfig"))
 local SkinConfig = require(Shared:WaitForChild("SkinConfig"))
 local PartVisual = require(Shared:WaitForChild("PartVisual"))
 
@@ -168,53 +168,17 @@ function Base.IsNearOwnBase(player)
 	return (hrp.Position - center).Magnitude <= EconomyConfig.BaseActionDistance
 end
 
--- visible tuning: aero adds a wing, boost/nitro make the exhaust spit flames
-local function applyTuneVisuals(model, def, tune)
-	local root = model.PrimaryPart
-	if not root or type(tune) ~= "table" then
-		return
-	end
-	if tune.boost or tune.nitro then
-		for _, att in ipairs(root:GetChildren()) do
-			if att:IsA("Attachment") and att.Name == "Exhaust" then
-				CollectionService:AddTag(att, "Backfire")
-				att:SetAttribute("Color", tune.nitro and Color3.fromRGB(90, 170, 255) or Color3.fromRGB(255, 140, 40))
-			end
-		end
-	end
-	if tune.aero then
-		local ext = model:GetExtentsSize()
-		local stage = TuningConfig.Items[tune.aero].stage
-		local back = root.CFrame * CFrame.new(-ext.X / 2 + 0.9, ext.Y / 2 + 0.3 + stage * 0.15, 0)
-		local function wingPart(size, cf)
-			local p = Instance.new("Part")
-			p.Name = "Wing"
-			p.Size = size
-			p.CFrame = cf
-			p.Color = stage == 3 and Color3.fromRGB(30, 30, 34) or def.body or Color3.fromRGB(30, 30, 34)
-			p.Material = stage == 3 and Enum.Material.Metal or Enum.Material.SmoothPlastic -- (Material.Carbon does not exist)
-			p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.Massless = true, false, false, false, true
-			p.Parent = model
-		end
-		local wing = PartVisual.BuildTuning("aero", ext.Z * 0.85)
-		if wing then
-			-- Blender wing: its span lies along Y in Blender = along Z here, uprights point down
-			wing:PivotTo(back * CFrame.new(0, -0.6, 0))
-			wing.Parent = model
-		else
-			wingPart(Vector3.new(1.1, 0.14, ext.Z * 0.9), back)
-			for _, z in ipairs({ -1, 1 }) do
-				wingPart(Vector3.new(0.5, 0.8, 0.14), back * CFrame.new(0.1, -0.45, z * ext.Z * 0.3))
-			end
-		end
-	end
-end
-
 local function buildCarModel(def, level, slotCF, car)
 	local model = VehicleFactory.BuildCar(def)
 	model:PivotTo(slotCF)
 	ExhaustFx.Attach(model, def, CarConfig.Rarities[def.rarity].index)
-	applyTuneVisuals(model, def, car and car.tune)
+	-- an active gear: the client's GearFx builds the aura + countdown billboard from these attributes
+	local gearDef = car and GearConfig.Active(car.gear)
+	if gearDef then
+		model:SetAttribute("GearId", gearDef.id)
+		model:SetAttribute("GearExp", car.gear.exp)
+		model:SetAttribute("GearSlot", car.parkedSlot)
+	end
 	local rarity = CarConfig.Rarities[def.rarity]
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Tag"
@@ -276,7 +240,8 @@ function Base.RefreshAll(player)
 		else
 			setPad(pad, "free")
 		end
-		local want = (car and not hidden) and (car.uid .. ":" .. car.level .. ":" .. TuningConfig.CarMult(car.tune)) or nil
+		local gear = car and GearConfig.Active(car.gear) and car.gear
+		local want = (car and not hidden) and (car.uid .. ":" .. car.level .. ":" .. (gear and (gear.id .. "@" .. gear.exp) or "-")) or nil
 		if b.sig[slot] ~= want then
 			if b.carModels[slot] then
 				b.carModels[slot]:Destroy()
