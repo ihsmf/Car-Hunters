@@ -288,6 +288,134 @@ g["Gold"].append(slab([(-0.68, 1.75), (0.92, 2.15), (0.92, 2.42), (-0.68, 2.02)]
 roots["music"] = finish("music", g)
 face_camera(roots["music"], 0.7)
 
+# ---------------------------------------------------------------- gear icons (v24, Big Tony's Gears): gear_<id>
+P["LOOK"].update({
+    "NitroBlue": ((0.04, 0.4, 1.0, 1), 0.35, 0.22), "Cyan": ((0.02, 0.75, 0.95, 1), 0.1, 0.28),
+    "Leaf": ((0.05, 0.62, 0.12, 1), 0.0, 0.4), "LeafDeep": ((0.02, 0.32, 0.06, 1), 0.0, 0.5),
+    "Bag": ((0.55, 0.32, 0.1, 1), 0.0, 0.65), "Storm": ((0.3, 0.33, 0.45, 1), 0.0, 0.55),
+    "Bolt": ((1.0, 0.86, 0.08, 1), 0.0, 0.25),
+})
+
+
+def dollar(loc, size, rot, extrude=0.08):
+    """bold "$" (real font) converted to a mesh; unrotated it lies in XY facing +Z"""
+    cu = bpy.data.curves.new("dollar", "FONT")
+    cu.body = "$"
+    if os.path.exists(FONT_FILE):
+        cu.font = bpy.data.fonts.load(FONT_FILE)
+    cu.size = size
+    cu.extrude = extrude
+    cu.bevel_depth = 0.02
+    cu.align_x, cu.align_y = "CENTER", "CENTER"
+    t = bpy.data.objects.new("dollar", cu)
+    bpy.context.collection.objects.link(t)
+    t.rotation_euler = rot
+    t.location = loc
+    for x in bpy.context.selected_objects:
+        x.select_set(False)
+    bpy.context.view_layer.objects.active = t
+    t.select_set(True)
+    bpy.ops.object.convert(target="MESH")
+    return bpy.context.active_object
+
+
+# nitro: blue spray can with a white band, a yellow lightning bolt, chrome nozzle and red cap
+g = {"NitroBlue": [], "White": [], "Chrome": [], "Accent": [], "Bolt": []}
+can = cyl((0, 0, 1.3), 0.78, 2.6, verts=64)
+mc.bevel(can, 0.1, 3)
+g["NitroBlue"].append(can)
+g["White"].append(cyl((0, 0, 1.35), 0.8, 1.1, verts=64))
+g["NitroBlue"].append(cone((0, 0, 2.85), 0.74, 0.32, 0.5, verts=64))
+g["Chrome"].append(cyl((0, 0, 3.22), 0.3, 0.36, verts=32))
+g["Accent"].append(cyl((0, 0, 3.47), 0.2, 0.22, verts=32))
+g["Chrome"].append(torus((0, 0, 0.1), 0.74, 0.07, seg=64, minor=10))
+bolt = [(-0.12, 0.5), (0.3, 0.5), (0.06, 0.06), (0.32, 0.06), (-0.22, -0.5), (-0.02, -0.04), (-0.28, -0.04)]
+g["Bolt"].append(slab([(x, z + 1.35) for x, z in bolt], -0.86, 0.2))
+roots["gear_nitro"] = finish("gear_nitro", g)
+roots["gear_nitro"].rotation_euler = (0, 0, HW)
+
+# clover: four heart-shaped leaves with dark veins and a curved stem
+g = {"Leaf": [], "LeafDeep": []}
+for k in range(4):
+    a = math.radians(45 + 90 * k)
+    d = Vector((math.cos(a), 0, math.sin(a)))
+    n = Vector((-math.sin(a), 0, math.cos(a)))
+    for s_ in (-1, 1):
+        g["Leaf"].append(sphere(tuple(d * 1.05 + n * (s_ * 0.3)), 0.47, scale=(1, 0.32, 1)))
+    g["Leaf"].append(sphere(tuple(d * 0.62), 0.36, scale=(1, 0.32, 1)))
+    g["LeafDeep"].append(box(tuple(d * 0.8 + Vector((0, -0.17, 0))), (1.05, 0.06, 0.08), rot=(0, -a, 0)))
+g["LeafDeep"].append(sphere((0, -0.06, 0), 0.24, scale=(1, 0.6, 1)))
+g["LeafDeep"].append(cyl((0.17, 0.1, -1.05), 0.11, 1.6, rot=(0, -0.228, 0), verts=16))  # stem behind the leaves
+roots["gear_clover"] = finish("gear_clover", g)
+face_camera(roots["gear_clover"], 0.85)
+
+# cash turbo: a stack of gold coins ($ on top) with a turbo snail leaning on it
+g = {"Gold": [], "GoldDeep": [], "GoldShine": [], "Chrome": [], "Dark": [], "Metal": [], "Copper": []}
+for k in range(5):
+    j = 0.06 if k % 2 else -0.06
+    c = cyl((j, -j, 0.16 + k * 0.32), 0.95, 0.3, verts=64)
+    mc.bevel(c, 0.05, 2)
+    g["Gold"].append(c)
+    g["GoldDeep"].append(cyl((j, -j, 0.16 + k * 0.32), 0.965, 0.1, verts=64))
+g["GoldShine"].append(dollar((0.06, -0.06, 1.62), 1.25, (0, 0, HW)))
+P["turbo"](g, x=1.55, y=0.35, z=0.95, s=0.85)
+roots["gear_cashturbo"] = finish("gear_cashturbo", g)
+roots["gear_cashturbo"].rotation_euler = (0, 0, -0.35)
+
+# rocket boots: cyan sneaker with a white sole, red stripe, chrome booster on the heel and a flame
+g = {"Cyan": [], "White": [], "Accent": [], "Chrome": [], "Dark": [], "Orange": [], "Gold": []}
+sole = slab([(-1.5, 0.0), (1.35, 0.0), (1.68, 0.24), (1.62, 0.52), (-1.56, 0.52)], -0.6, 1.2)
+mc.bevel(sole, 0.05, 2)
+g["White"].append(sole)
+g["Dark"].append(slab([(-1.45, -0.1), (1.3, -0.1), (1.5, 0.06), (-1.5, 0.06)], -0.56, 1.12))  # tread
+upper = slab([(-1.45, 0.5), (1.5, 0.5), (1.6, 0.76), (1.4, 1.04), (0.6, 1.18), (0.0, 1.36), (-0.45, 1.62), (-0.38, 2.2), (-0.72, 2.08), (-1.35, 2.14), (-1.55, 1.66), (-1.55, 0.9)], -0.55, 1.1)
+mc.bevel(upper, 0.12, 3)
+g["Cyan"].append(upper)
+g["White"].append(slab([(0.95, 0.5), (1.5, 0.5), (1.6, 0.76), (1.4, 1.04), (1.0, 1.1)], -0.57, 1.14))  # toe cap
+g["Accent"].append(slab([(-1.2, 0.9), (0.7, 0.68), (0.9, 0.86), (-1.05, 1.22)], -0.62, 1.24))  # stripe, proud of both sides
+g["White"].append(box((-1.0, 0, 2.1), (0.7, 1.15, 0.16), bev=0.05))  # collar
+for x, z in ((0.35, 1.27), (0.0, 1.42), (-0.3, 1.56)):
+    g["White"].append(box((x, 0, z + 0.04), (0.14, 0.9, 0.1), bev=0.03, rot=(0, 0.5, 0)))  # laces
+g["Chrome"].append(cyl((-1.75, 0, 1.25), 0.36, 0.9, rot=X90, verts=32))
+g["Dark"].append(cone((-2.3, 0, 1.25), 0.3, 0.4, 0.3, rot=(0, -math.pi / 2, 0), verts=32))
+g["Orange"].append(cone((-3.2, 0, 1.25), 0.5, 0.0, 1.6, rot=(0, -math.pi / 2, 0), verts=32))
+g["Gold"].append(cone((-2.95, 0, 1.25), 0.3, 0.0, 1.1, rot=(0, -math.pi / 2, 0), verts=24))
+roots["gear_rocket"] = finish("gear_rocket", g)
+face_camera(roots["gear_rocket"], 0.9)  # side profile towards the camera ...
+roots["gear_rocket"].rotation_euler = (Quaternion(VIEW, 0.3) @ roots["gear_rocket"].rotation_euler.to_quaternion()).to_euler()  # ... nose up: taking off
+
+# money storm: money bag with a "$" under a storm cloud, a lightning bolt striking and coins flying
+g = {"Bag": [], "Gold": [], "GoldShine": [], "Storm": [], "Bolt": []}
+g["Bag"].append(sphere((0, 0, 1.1), 1.15, scale=(1, 0.9, 0.95)))
+g["Bag"].append(cone((0, 0, 2.25), 0.5, 0.32, 0.5, verts=48))
+g["Bag"].append(cone((0, 0, 2.62), 0.3, 0.62, 0.34, verts=48))
+g["Gold"].append(torus((0, 0, 2.42), 0.4, 0.1, seg=48, minor=12))
+g["Gold"].append(dollar((0, -1.06, 1.05), 1.35, (math.pi / 2, 0, 0), extrude=0.15))
+for x, z, r_ in ((-0.9, 3.45, 0.6), (-0.25, 3.7, 0.72), (0.45, 3.5, 0.58), (-0.45, 3.2, 0.55), (0.15, 3.22, 0.5)):
+    g["Storm"].append(sphere((x, 0.55, z), r_, scale=(1, 0.8, 0.85)))
+bolt = [(0.3, 3.25), (0.85, 3.25), (0.62, 2.6), (0.98, 2.6), (0.15, 1.35), (0.42, 2.2), (0.06, 2.2)]
+g["Bolt"].append(slab([(x + 0.25, z) for x, z in bolt], -0.35, 0.22))
+for loc, rot in (((1.35, -0.3, 0.55), (1.2, 0.3, 0)), ((-1.35, -0.2, 1.6), (0.9, -0.5, 0))):
+    c = cyl(loc, 0.32, 0.1, rot=rot, verts=32)
+    mc.bevel(c, 0.03, 2)
+    g["Gold"].append(c)
+roots["gear_moneystorm"] = finish("gear_moneystorm", g)
+roots["gear_moneystorm"].rotation_euler = (0, 0, HW)
+
+# golden engine: the engine block all in gold, red valve cover, a little crown on top
+ge = {"Metal": [], "Dark": [], "Accent": [], "Copper": [], "Chrome": [], "Rubber": []}
+P["engine"](ge, cover="Accent")
+g = {"Gold": ge["Metal"], "GoldShine": ge["Chrome"], "GoldDeep": ge["Dark"] + ge["Copper"], "Accent": ge["Accent"], "Dark": ge["Rubber"], "Blue": []}
+band = cyl((0, 0, 2.8), 0.66, 0.42, verts=48)
+mc.bevel(band, 0.04, 2)
+g["GoldShine"].append(band)
+for k in range(5):
+    a = k / 5 * 2 * math.pi + math.pi / 2
+    g["GoldShine"].append(cone((math.cos(a) * 0.55, math.sin(a) * 0.55, 3.25), 0.17, 0.0, 0.5, verts=16))
+    g["GoldShine"].append(sphere((math.cos(a) * 0.55, math.sin(a) * 0.55, 3.52), 0.09))
+g["Blue"].append(sphere((0.35, -0.55, 2.8), 0.13))
+roots["gear_goldengine"] = finish("gear_goldengine", g)
+
 # scene: transparent background, key + rim + fill
 sc = bpy.context.scene
 sc.render.engine = "CYCLES"

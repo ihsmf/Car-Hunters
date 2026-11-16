@@ -282,7 +282,7 @@ local function shopInfo(st)
 end
 
 local function gearPrice(def, st)
-	return GearConfig.Price(def, math.max(tonumber(st.peakIncome) or 0, K.store.Income or 0))
+	return GearConfig.Price(def, tonumber(st.peakIncome) or 0) -- same formula as the server (GearService.Buy)
 end
 
 local function gearIcon(parent, def, size, pos, z)
@@ -481,7 +481,9 @@ local function fillPicker()
 				K.toy(fr, { Text = active and T("gears_replace") or T("gears_apply"), Sub = (not car.slot) and T("gears_storage") or nil, SubSize = 11, Color = active and P.orange or P.green,
 					Size = UDim2.fromOffset(150, 62), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), ZIndex = 76, TextSize = 20,
 					OnClick = function()
-						applyGear(car, picker and picker.gear)
+						if picker and picker.gear then
+							applyGear(car, picker.gear)
+						end
 					end })
 			end
 		end

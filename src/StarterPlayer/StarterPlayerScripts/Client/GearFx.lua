@@ -289,7 +289,7 @@ local function billboard(e, def)
 	gui.Name = "GearTag"
 	gui.Adornee = e.core
 	gui.Size = UDim2.fromOffset(196, 52)
-	gui.StudsOffsetWorldSpace = Vector3.new(0, e.H + (e.crown and 5.2 or 3.6), 0)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, e.H + (e.crown and 6.4 or 5), 0) -- clear of the server name tag (height + 2)
 	gui.LightInfluence = 0
 	gui.MaxDistance = 90
 	local bg = Instance.new("Frame")

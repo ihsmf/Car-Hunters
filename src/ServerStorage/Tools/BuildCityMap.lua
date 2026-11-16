@@ -592,8 +592,13 @@ local function buildMagnatPodium(ctx)
 	Prefabs.Count = Prefabs.Count + 1
 end
 
--- Big Tony's Tuning: a small open tuning bay (lift, tool chest, tyre rack, workbench) under a sign. Tony himself is
--- spawned by MechanicService on TonySpot (its CFrame looks out at the visitors); TonyPrompt carries the talk prompt.
+-- Tony's Gears (v24): a gear shop under a "TONY'S GEARS" sign with a cog on top. Shop counter in front (Tony stands
+-- behind it), shelves of gear props along both side walls, and the big GEARS board on the back wall: GearBoard (header,
+-- the client draws "NEW GEARS IN m:ss") with six GearSlot cards (attribute Index = GearConfig.List order; the client
+-- draws each card's icon, boost, stock and price for the local player). Tony himself is spawned by MechanicService on
+-- TonySpot (Yaw = looks out at the visitors); TonyPrompt carries the talk prompt.
+-- Footprint (stand frame, local -Z = front towards the hub centre, centre on ring r 45): floor x -9..9, z -7..6, roof
+-- x -9.5..9.5, z -7.6..6.2 -> every corner stays inside the paving (r 52.5) and the front outside the brick ring (30.5).
 local function buildTonyGarage(ctx)
 	local f = ctx.f
 	local cfg = MapConfig.Tony
@@ -604,62 +609,146 @@ local function buildTonyGarage(ctx)
 		return Part(m, name, size, cf * CFrame.new(off), color, mat, o)
 	end
 	local NAVY, STEEL, RED, YEL, FLOOR, WALL = C(30, 36, 58), C(56, 60, 70), C(200, 30, 36), C(255, 196, 40), C(92, 96, 104), C(236, 232, 224)
-	local W, D, H = 18, 14, 10 -- bay x -9..9, z -7..7, walls up to H
-	mk("BayFloor", Vector3.new(W, 0.5, D), Vector3.new(0, 0.15, 0), FLOOR, M.SmoothPlastic)
+	local GOLDM, WOOD = C(232, 178, 50), C(150, 104, 62)
+	local W, H = 18, 12 -- floor x -9..9; walls up to H above the floor top (0.4)
+	local ZF, ZB = -7, 6 -- floor front / back edge
+	local FT = 0.4 -- floor top
+	mk("BayFloor", Vector3.new(W, 0.5, ZB - ZF), Vector3.new(0, 0.15, (ZF + ZB) / 2), FLOOR, M.SmoothPlastic)
 	-- hazard band on the floor's front SIDE face (never on a top face, so nothing shimmers)
 	for k = 0, 8 do
-		mk("BayHazard", Vector3.new(W / 9, 0.4, 0.12), Vector3.new(-W / 2 + (k + 0.5) * W / 9, 0.15, -D / 2 - 0.07), (k % 2 == 0) and YEL or C(28, 28, 30), M.SmoothPlastic, { collide = false, cast = false })
+		mk("BayHazard", Vector3.new(W / 9, 0.4, 0.12), Vector3.new(-W / 2 + (k + 0.5) * W / 9, 0.15, ZF - 0.05), (k % 2 == 0) and YEL or C(28, 28, 30), M.SmoothPlastic, { collide = false, cast = false })
 	end
-	mk("BackWall", Vector3.new(W, H, 0.8), Vector3.new(0, 0.4 + H / 2, D / 2 - 0.4), WALL)
+	mk("BackWall", Vector3.new(W, H, 0.8), Vector3.new(0, FT + H / 2, ZB - 0.4), WALL) -- inner face z 5.2
 	for _, sx in ipairs({ -1, 1 }) do
-		mk("SideWall", Vector3.new(0.8, H, D - 4.8), Vector3.new(sx * (W / 2 - 0.4), 0.4 + H / 2, 1.6), WALL) -- z -1.6..6.2: open front corners
-		mk("FrontPost", Vector3.new(0.9, H, 0.9), Vector3.new(sx * (W / 2 - 0.45), 0.4 + H / 2, -D / 2 + 0.6), NAVY, M.Metal)
-		mk("WallStripe", Vector3.new(1.0, 0.8, D - 4.6), Vector3.new(sx * (W / 2 - 0.4), 3.2, 1.6), RED, M.SmoothPlastic, { collide = false })
+		mk("SideWall", Vector3.new(0.8, H, 8), Vector3.new(sx * (W / 2 - 0.4), FT + H / 2, 1.6), WALL) -- z -2.4..5.6: open front corners
+		mk("FrontPost", Vector3.new(0.9, H, 0.9), Vector3.new(sx * (W / 2 - 0.45), FT + H / 2, ZF + 0.6), NAVY, M.Metal)
+		mk("WallStripe", Vector3.new(0.96, 0.8, 8.16), Vector3.new(sx * (W / 2 - 0.4), 6.2, 1.6), RED, M.SmoothPlastic, { collide = false }) -- 0.08 proud of both wall faces
 	end
-	mk("Roof", Vector3.new(W + 1.4, 0.6, D + 1), Vector3.new(0, 0.4 + H + 0.3, -0.3), NAVY)
-	local sign = mk("TonySign", Vector3.new(W - 1, 2.6, 0.5), Vector3.new(0, 0.4 + H + 2.2, -D / 2 + 0.2), NAVY)
-	Label(sign, Enum.NormalId.Front, "BIG TONY'S TUNING", YEL)
-	Label(sign, Enum.NormalId.Back, "BIG TONY'S TUNING", YEL)
-	mk("SignTrim", Vector3.new(W - 0.6, 0.3, 0.7), Vector3.new(0, 0.4 + H + 0.75, -D / 2 + 0.2), YEL, M.SmoothPlastic, { collide = false })
-	-- two-post car lift on the left side
-	local LX = -4.2
-	for _, dx in ipairs({ -3.4, 3.4 }) do
-		mk("LiftPost", Vector3.new(0.9, 8.6, 0.9), Vector3.new(LX + dx, 0.4 + 4.3, 1.5), RED, M.Metal)
-		mk("LiftArm", Vector3.new(0.4, 0.4, 4.4), Vector3.new(LX + dx * 0.84, 2.6, -0.4), STEEL, M.Metal, { collide = false })
+	mk("Roof", Vector3.new(W + 1, 0.6, 13.8), Vector3.new(0, FT + H + 0.3, -0.7), NAVY)
+	local signZ = ZF + 0.2
+	local sign = mk("TonySign", Vector3.new(W - 1, 2.6, 0.5), Vector3.new(0, FT + H + 2.2, signZ), NAVY)
+	Label(sign, Enum.NormalId.Front, "TONY'S GEARS", YEL)
+	Label(sign, Enum.NormalId.Back, "TONY'S GEARS", YEL)
+	mk("SignTrim", Vector3.new(W - 0.6, 0.3, 0.7), Vector3.new(0, FT + H + 0.75, signZ), YEL, M.SmoothPlastic, { collide = false })
+	-- a big cog standing on the sign (thicker than the sign, so no face lines up with it)
+	local cogY = FT + H + 3.5 + 1.0
+	local cogCF = cf * CFrame.new(0, cogY, signZ)
+	Part(m, "SignCog", Vector3.new(0.8, 3.2, 3.2), cogCF * CFrame.Angles(0, math.pi / 2, 0), GOLDM, M.Metal, { shape = CYL })
+	Part(m, "SignCogHub", Vector3.new(1.0, 1.2, 1.2), cogCF * CFrame.Angles(0, math.pi / 2, 0), NAVY, M.Metal, { shape = CYL })
+	for k = 0, 7 do
+		Part(m, "SignCogTooth", Vector3.new(0.7, 0.7, 0.6), cogCF * CFrame.Angles(0, 0, k * math.pi / 4) * CFrame.new(0, 1.75, 0), GOLDM, M.Metal)
 	end
-	mk("LiftBeam", Vector3.new(7.7, 0.6, 0.7), Vector3.new(LX, 0.4 + 8.9, 1.5), RED, M.Metal)
-	mk("LiftPad", Vector3.new(6, 0.12, 8), Vector3.new(LX, 0.47, -0.6), C(70, 74, 82), M.DiamondPlate, { collide = false, cast = false })
-	-- back wall kit (Blender garage props when imported: their front looks along local +X, so turn them to -Z)
-	local TURN = CFrame.Angles(0, math.pi / 2, 0)
-	local backZ = D / 2 - 0.8
-	local function kit(name, x, depth, fallback)
-		if not Prefabs.FromTemplate(name, m, cf * CFrame.new(x, 0.4, backZ - depth) * TURN) then
-			fallback(x)
+
+	-- the GEARS board on the back wall (back face 0.03 inside the wall), gold frame bars, six slot cards
+	local BZ = 5.2 - 0.12 -- board centre: z 4.93..5.23
+	local board = mk("GearBoard", Vector3.new(14.8, 8.5, 0.3), Vector3.new(0, 7.15, BZ), C(36, 44, 70), M.SmoothPlastic)
+	CollectionService:AddTag(board, "GearBoard")
+	local FZ = 5.03 -- frame bars z 4.83..5.23: 0.1 proud of the board face
+	mk("BoardFrame", Vector3.new(15.4, 0.3, 0.4), Vector3.new(0, 11.55, FZ), GOLDM, M.Metal)
+	mk("BoardFrame", Vector3.new(15.4, 0.3, 0.4), Vector3.new(0, 2.75, FZ), GOLDM, M.Metal)
+	for _, sx in ipairs({ -1, 1 }) do
+		mk("BoardFrame", Vector3.new(0.3, 8.5, 0.4), Vector3.new(sx * 7.55, 7.15, FZ), GOLDM, M.Metal)
+	end
+	-- slot order as the visitors read it (they look along +Z, so their left is +X): 1 2 3 on top, 4 5 6 below
+	local cols, rows = { 4.9, 0, -4.9 }, { 7.9, 4.6 }
+	for i = 1, 6 do
+		local x, y = cols[(i - 1) % 3 + 1], rows[math.floor((i - 1) / 3) + 1]
+		local slot = mk("GearSlot" .. i, Vector3.new(4.6, 3.0, 0.2), Vector3.new(x, y, 4.87), C(255, 248, 228), M.SmoothPlastic) -- face 0.16 proud of the board
+		slot:SetAttribute("Index", i)
+		CollectionService:AddTag(slot, "GearSlot")
+	end
+	local boardLamp = mk("BoardLight", Vector3.new(0.4, 0.4, 0.4), Vector3.new(0, 10.6, 3.2), C(255, 240, 210), M.SmoothPlastic, { collide = false, t = 1 })
+	local bl = Instance.new("PointLight")
+	bl.Range, bl.Brightness, bl.Color = 12, 1.1, C(255, 236, 200)
+	bl.Parent = boardLamp
+
+	-- shop counter across the front; Tony stands behind it
+	local CZ = -4.6
+	local counter = mk("ShopCounter", Vector3.new(9, 3.2, 1.6), Vector3.new(0, FT + 1.6, CZ), NAVY, M.SmoothPlastic)
+	Label(counter, Enum.NormalId.Front, "GEAR SHOP", YEL)
+	mk("CounterTop", Vector3.new(9.6, 0.3, 2.0), Vector3.new(0, FT + 3.35, CZ), WOOD, M.Wood)
+	local TOP = FT + 3.5 -- counter top surface
+
+	-- gear props (y0 = the surface they stand on; each one sinks 0.02 into it)
+	local UP = CFrame.Angles(0, 0, math.pi / 2) -- cylinders stand up
+	local function at(x, y, z)
+		return cf * CFrame.new(x, y, z)
+	end
+	local function nitroCan(x, y0, z)
+		Part(m, "PropNitroCan", Vector3.new(1.0, 0.55, 0.55), at(x, y0 + 0.48, z) * UP, C(40, 120, 230), M.Metal)
+		Part(m, "PropNitroBand", Vector3.new(0.3, 0.71, 0.71), at(x, y0 + 0.5, z) * UP, WALL, M.SmoothPlastic, { collide = false })
+		Part(m, "PropNitroCap", Vector3.new(0.2, 0.3, 0.3), at(x, y0 + 1.04, z) * UP, STEEL, M.Metal, { collide = false })
+	end
+	local function clover(x, y0, z)
+		Part(m, "PropCloverBase", Vector3.new(0.12, 0.7, 0.7), at(x, y0 + 0.04, z) * UP, C(60, 64, 72), M.SmoothPlastic, { collide = false })
+		Part(m, "PropCloverStem", Vector3.new(0.12, 0.62, 0.12), at(x, y0 + 0.4, z), C(40, 140, 60), M.SmoothPlastic, { collide = false })
+		for _, d in ipairs({ { 0.18, 0 }, { -0.18, 0 }, { 0, 0.18 }, { 0, -0.18 } }) do
+			Part(m, "PropCloverLeaf", Vector3.new(0.4, 0.4, 0.4), at(x, y0 + 0.78 + d[2], z + d[1]), C(60, 200, 90), M.SmoothPlastic, { shape = Enum.PartType.Ball, collide = false })
 		end
 	end
-	kit("G_ToolCabinet", 6.3, 1.1, function(x)
-		mk("ToolChest", Vector3.new(3, 4, 2), Vector3.new(x, 0.4 + 2, backZ - 1), RED, M.SmoothPlastic)
-		for k = 0, 3 do
-			mk("ChestHandle", Vector3.new(2, 0.15, 0.2), Vector3.new(x, 1.2 + k * 0.9, backZ - 2.07), C(240, 190, 60), M.Metal, { collide = false })
+	local function coinStack(x, y0, z, n)
+		for k = 0, n - 1 do
+			local j = (k % 2 == 0) and 0.04 or -0.04 -- a slightly messy stack: no side lines up
+			Part(m, "PropCoin", Vector3.new(0.14, 0.7 - k * 0.01, 0.7 - k * 0.01), at(x + j, y0 + 0.05 + k * 0.14, z - j) * UP, GOLDM, M.Metal, { collide = false })
 		end
-	end)
-	kit("G_TireRack", 1.0, 1.4, function(x)
-		mk("RackFrame", Vector3.new(5, 0.3, 2), Vector3.new(x, 0.4 + 3.25, backZ - 1), STEEL, M.Metal)
-		for k = -1, 1 do
-			Part(m, "RackTire", Vector3.new(1.1, 3, 3), cf * CFrame.new(x + k * 1.5, 0.4 + 1.6, backZ - 1), C(32, 32, 36), M.SmoothPlastic, { shape = CYL })
+	end
+	local function moneyBag(x, y0, z)
+		Part(m, "PropBag", Vector3.new(0.9, 0.9, 0.9), at(x, y0 + 0.42, z), C(214, 180, 110), M.Fabric, { shape = Enum.PartType.Ball })
+		Part(m, "PropBagNeck", Vector3.new(0.36, 0.38, 0.38), at(x, y0 + 0.93, z) * UP, C(214, 180, 110), M.Fabric, { collide = false })
+		Part(m, "PropBagTie", Vector3.new(0.12, 0.46, 0.46), at(x, y0 + 0.86, z) * UP, GOLDM, M.Metal, { collide = false })
+	end
+	local function rocket(x, y0, z)
+		Part(m, "PropRocket", Vector3.new(0.7, 0.5, 0.5), at(x, y0 + 0.6, z) * UP, WALL, M.SmoothPlastic, { collide = false })
+		Part(m, "PropRocketNose", Vector3.new(0.5, 0.5, 0.5), at(x, y0 + 0.95, z), RED, M.SmoothPlastic, { shape = Enum.PartType.Ball, collide = false })
+		for k = 0, 2 do -- three fins carry it (they stand on the shelf)
+			local a = k * math.pi * 2 / 3
+			Part(m, "PropRocketFin", Vector3.new(0.08, 0.62, 0.42), at(x, y0 + 0.29, z) * CFrame.Angles(0, a, 0) * CFrame.new(0, 0, 0.3), RED, M.SmoothPlastic, { collide = false })
 		end
-	end)
-	mk("Jack", Vector3.new(2.4, 0.5, 1), Vector3.new(6.2, 0.65, -3.2), C(220, 222, 228), M.Metal, { refl = 0.3, collide = false })
+	end
+	local function goldEngine(x, y0, z)
+		Part(m, "PropEngine", Vector3.new(0.9, 0.8, 1.3), at(x, y0 + 0.38, z), GOLDM, M.Metal, { refl = 0.2 })
+		for _, dz in ipairs({ -0.35, 0, 0.35 }) do
+			Part(m, "PropEngineHead", Vector3.new(0.5, 0.3, 0.22), at(x, y0 + 0.92, z + dz), C(255, 214, 90), M.Metal, { collide = false })
+		end
+	end
+	-- on the counter: nitro cans, a cash register, a golden engine on show
+	nitroCan(-3.75, TOP - 0.02, CZ - 0.35)
+	nitroCan(-2.95, TOP - 0.02, CZ - 0.35)
+	nitroCan(-3.35, TOP - 0.02, CZ + 0.35)
+	goldEngine(-1.6, TOP - 0.02, CZ)
+	mk("Register", Vector3.new(1.4, 0.9, 1.0), Vector3.new(3.4, TOP + 0.43, CZ + 0.2), STEEL, M.SmoothPlastic, { collide = false })
+	mk("RegisterScreen", Vector3.new(1.0, 0.5, 0.14), Vector3.new(3.4, TOP + 1.1, CZ + 0.55), C(80, 220, 120), M.SmoothPlastic, { collide = false })
+
+	-- shelves along both side walls (uprights at z -1.7 / 4.3, boards end inside them), stocked with gear props
+	local SX = 7.4 -- shelf centre x (uprights 6.7..8.1, clear of the wall stripe at 8.12)
+	local BOARDS = { 1.0, 2.4, 3.8 } -- board centres above the floor top
+	local stock = {
+		[1] = { function(x, y, z) nitroCan(x, y, z) end, function(x, y, z) clover(x, y, z) end, function(x, y, z) coinStack(x, y, z, 5) end },
+		[-1] = { function(x, y, z) moneyBag(x, y, z) end, function(x, y, z) rocket(x, y, z) end, function(x, y, z) goldEngine(x, y, z) end },
+	}
+	for _, sx in ipairs({ 1, -1 }) do
+		for _, z in ipairs({ -1.7, 4.3 }) do
+			mk("ShelfUpright", Vector3.new(1.4, 4.8, 0.2), Vector3.new(sx * SX, FT + 2.4, z), WOOD, M.Wood)
+		end
+		for b, by in ipairs(BOARDS) do
+			mk("ShelfBoard", Vector3.new(1.3, 0.15, 5.9), Vector3.new(sx * SX, FT + by, 1.3), WOOD, M.Wood)
+			local y0 = FT + by + 0.075 - 0.02
+			for _, z in ipairs({ -0.6, 1.3, 3.2 }) do
+				stock[sx][b](sx * SX, y0, z)
+			end
+		end
+	end
+
 	Prefabs.TireStack(m, cf:PointToWorldSpace(Vector3.new(W / 2 + 1.8, 0, -4.5)), ctx.rng)
 	local bulb = mk("BayLight", Vector3.new(0.4, 0.4, 0.4), Vector3.new(0, H - 0.4, 0.5), C(255, 240, 210), M.SmoothPlastic, { collide = false, t = 1 })
 	local l = Instance.new("PointLight")
-	l.Range, l.Brightness, l.Color = 16, 1.3, C(255, 232, 196)
+	l.Range, l.Brightness, l.Color = 18, 1.3, C(255, 232, 196)
 	l.Parent = bulb
-	-- Tony stands in the bay mouth, right of the lift, looking out at the visitors
-	local spotCF = cf * CFrame.new(2.8, 0.5, -2.2)
+	-- Tony stands behind the counter, looking out at the visitors
+	local spotCF = cf * CFrame.new(0, 0.5, -2.6)
 	local spot = Part(m, "TonySpot", Vector3.new(2, 0.2, 2), spotCF, WALL, M.SmoothPlastic, { t = 1, collide = false })
 	spot:SetAttribute("Yaw", cfg.yaw)
-	local tp = mk("TonyPrompt", Vector3.new(6, 6, 4), Vector3.new(2.8, 3.5, -6.2), WALL, M.SmoothPlastic, { t = 1, collide = false })
+	local tp = mk("TonyPrompt", Vector3.new(8, 6, 3), Vector3.new(0, 3.5, -7.6), WALL, M.SmoothPlastic, { t = 1, collide = false })
 	CollectionService:AddTag(tp, "TonyPrompt")
 	m.Parent = f.StreetProps
 end
