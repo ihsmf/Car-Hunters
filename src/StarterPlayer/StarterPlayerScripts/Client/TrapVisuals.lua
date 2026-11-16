@@ -26,11 +26,44 @@ local CYAN = Color3.fromRGB(70, 225, 255)
 local GOLD = Color3.fromRGB(255, 196, 54)
 
 ---------------------------------------------------------------- spin + sparks
+-- [model] = { parts = {BasePart}, offsets = {CFrame}, conns }: each part's CFrame relative to the ring centre
+-- (SpinCF) taken once as the server built it (unrotated); every frame they move together with one BulkMoveTo
 local spinners = {}
-local function addSpin(m)
-	if m:IsA("Model") then
-		spinners[m] = true
+
+local function dropSpin(m)
+	local e = spinners[m]
+	if e then
+		for _, c in ipairs(e.conns) do
+			c:Disconnect()
+		end
+		spinners[m] = nil
 	end
+end
+
+local function addSpin(m)
+	if not m:IsA("Model") or spinners[m] then
+		return
+	end
+	local e = { parts = {}, offsets = {}, conns = {} }
+	local function track(p)
+		local cf = m:GetAttribute("SpinCF")
+		if p:IsA("BasePart") and typeof(cf) == "CFrame" and not table.find(e.parts, p) then
+			table.insert(e.parts, p)
+			table.insert(e.offsets, cf:ToObjectSpace(p.CFrame))
+		end
+	end
+	for _, p in ipairs(m:GetDescendants()) do
+		track(p)
+	end
+	table.insert(e.conns, m.DescendantAdded:Connect(track)) -- streamed-in parts arrive unrotated
+	table.insert(e.conns, m.DescendantRemoving:Connect(function(p)
+		local i = table.find(e.parts, p)
+		if i then
+			table.remove(e.parts, i)
+			table.remove(e.offsets, i)
+		end
+	end))
+	spinners[m] = e
 end
 
 local function scaleSpark(e)
@@ -49,15 +82,23 @@ local function step()
 	local cam = Workspace.CurrentCamera
 	local camPos = cam and cam.CFrame.Position
 	local now = os.clock()
-	for m in pairs(spinners) do
+	local parts, cfs, n = {}, {}, 0
+	for m, e in pairs(spinners) do
 		if not m.Parent then
-			spinners[m] = nil
+			dropSpin(m)
 		else
 			local cf, speed = m:GetAttribute("SpinCF"), m:GetAttribute("SpinSpeed")
 			if typeof(cf) == "CFrame" and type(speed) == "number" and (not camPos or (cf.Position - camPos).Magnitude < SPIN_RADIUS) then
-				m:PivotTo(cf * CFrame.Angles(0, (now * speed) % (math.pi * 2), 0))
+				local rot = cf * CFrame.Angles(0, (now * speed) % (math.pi * 2), 0)
+				for i, p in ipairs(e.parts) do
+					n = n + 1
+					parts[n], cfs[n] = p, rot * e.offsets[i]
+				end
 			end
 		end
+	end
+	if n > 0 then
+		Workspace:BulkMoveTo(parts, cfs, Enum.BulkMoveMode.FireCFrameChanged)
 	end
 end
 
@@ -210,7 +251,7 @@ function TrapVisuals.Start(ui, storeModule, cine)
 		addSpin(m)
 	end
 	CollectionService:GetInstanceAddedSignal("TrapSpin"):Connect(addSpin)
-	CollectionService:GetInstanceRemovedSignal("TrapSpin"):Connect(function(m) spinners[m] = nil end)
+	CollectionService:GetInstanceRemovedSignal("TrapSpin"):Connect(dropSpin)
 	for _, e in ipairs(CollectionService:GetTagged("TrapSpark")) do
 		scaleSpark(e)
 	end

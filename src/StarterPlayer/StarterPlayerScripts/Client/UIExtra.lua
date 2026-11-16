@@ -298,11 +298,29 @@ local function stars(tier)
 	return string.rep("★", tier) .. string.rep("☆", 5 - tier)
 end
 
+-- same test as the server (MechanicService.nearTony): 3D distance to TonyGarage.TonySpot <= 24 (MapConfig.Tony fallback)
+local tonySpot
 local function nearTony()
 	local char = game:GetService("Players").LocalPlayer.Character
 	local hrp = char and char:FindFirstChild("HumanoidRootPart")
-	local t = MapConfig.Tony
-	return hrp ~= nil and t ~= nil and Vector3.new(hrp.Position.X - t.x, 0, hrp.Position.Z - t.z).Magnitude <= 26
+	if not hrp then
+		return false
+	end
+	if not (tonySpot and tonySpot.Parent) then
+		local map = Workspace:FindFirstChild("GeneratedMap")
+		local garage = map and map:FindFirstChild("TonyGarage", true)
+		local spot = garage and garage:FindFirstChild("TonySpot", true)
+		tonySpot = spot and spot:IsA("BasePart") and spot or nil
+	end
+	local pos
+	if tonySpot then
+		pos = tonySpot.Position
+	elseif MapConfig.Tony then
+		pos = Vector3.new(MapConfig.Tony.x, hrp.Position.Y, MapConfig.Tony.z)
+	else
+		return false
+	end
+	return (hrp.Position - pos).Magnitude <= 24
 end
 
 local openPicker -- (opts) car picker / gear chooser, defined below
@@ -341,7 +359,9 @@ local function buildTony()
 					return
 				end
 				local stock = shopInfo(st)
-				if (stock[def.id] or 0) <= 0 then
+				if ((st.gears or {})[def.id] or 0) >= GearConfig.MaxOwned then
+					UI.Toast(T("n_gearMax"), "warn")
+				elseif (stock[def.id] or 0) <= 0 then
 					UI.Toast(T("gears_soldoutToast"), "warn")
 				elseif (K.store.Money or 0) < gearPrice(def, st) then
 					UI.Toast(T("gears_noMoney"), "warn")
@@ -384,8 +404,8 @@ local function refreshTony(st, open)
 		r.price.Text = "$" .. Util.FormatNumber(price)
 		r.price.TextColor3 = money >= price and GREEN_TXT or RED_TXT
 		r.buy.SetText(n > 0 and T("gears_buy") or T("gears_soldoutBtn"), nil)
-		r.buy.SetColor((n > 0 and money >= price) and P.green or P.grey)
-		r.own.Text = T("gears_own", own)
+		r.buy.SetColor((n > 0 and money >= price and own < GearConfig.MaxOwned) and P.green or P.grey)
+		r.own.Text = T("gears_ownMax", own, GearConfig.MaxOwned)
 		r.own.TextColor3 = own > 0 and GREEN_TXT or P.muted
 		r.apply.SetColor(own > 0 and P.blue or P.grey)
 	end
@@ -451,11 +471,12 @@ local function fillPicker()
 	if picker.mode == "gear" then
 		-- every car you own, parked first (speed / luck gears only work while the car is parked)
 		local cars = table.clone(st.cars or {})
+		local now = serverNow()
 		table.sort(cars, function(a, b)
 			if (a.slot ~= nil) ~= (b.slot ~= nil) then
 				return a.slot ~= nil
 			end
-			local ia, ib = CarConfig.CarIncome(a), CarConfig.CarIncome(b)
+			local ia, ib = CarConfig.CarIncome(a, now), CarConfig.CarIncome(b, now)
 			if ia ~= ib then
 				return ia > ib
 			end
@@ -473,7 +494,7 @@ local function fillPicker()
 				local rc = CarConfig.Rarities[def.rarity].color
 				local fr = K.card(picker.list, { Size = UDim2.new(1, 0, 0, PICK_ROW_H), Accent = rc, Radius = 16, LayoutOrder = i, ZIndex = 73 })
 				K.text(fr, { Text = def.name, TextSize = 20, TextColor3 = P.ink, Outline = false, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(14, 6), Size = UDim2.new(1, -200, 0, 26), ZIndex = 75 })
-				K.text(fr, { Text = string.format("%s · Lv %d · +%s/s", car.slot and ("Bay " .. car.slot) or "Storage", car.level or 1, Util.FormatNumber(CarConfig.CarIncome(car))), Font = K.BODY,
+				K.text(fr, { Text = string.format("%s · Lv %d · +%s/s", car.slot and ("Bay " .. car.slot) or "Storage", car.level or 1, Util.FormatNumber(CarConfig.CarIncome(car, now))), Font = K.BODY,
 					TextSize = 14, TextColor3 = P.muted, Position = UDim2.fromOffset(14, 32), Size = UDim2.new(1, -200, 0, 20), ZIndex = 75 })
 				local status = K.text(fr, { Text = "", Font = K.BODY, TextSize = 15, TextColor3 = P.muted, Position = UDim2.fromOffset(14, 54), Size = UDim2.new(1, -200, 0, 20), ZIndex = 75 })
 				table.insert(picker.labels, { label = status, car = car })
@@ -951,27 +972,46 @@ local function gearKind(st, kind)
 	return left, col
 end
 
+-- the HUD pills are made once per kind (in display order) and only change text / colour / visibility
+local PILL_ORDER = { "boost_income", "boost_luck", "gear_speed", "gear_luck", "vip" }
+local function pillFor(key)
+	w.pills = w.pills or {}
+	local p = w.pills[key]
+	if not p or not p.frame.Parent then
+		local order = table.find(PILL_ORDER, key) or 0
+		local frame, label = K.pill(w.boosts, "", GOLD, { H = 34, TextSize = 18, LayoutOrder = order })
+		p = { frame = frame, label = label }
+		w.pills[key] = p
+	end
+	return p
+end
+local function setPill(key, txt, color)
+	local p = pillFor(key)
+	if txt then
+		p.label.Text = txt
+		p.frame.BackgroundColor3 = color
+	end
+	p.frame.Visible = txt ~= nil
+end
+
 local function refreshPills(st)
-	K.clear(w.boosts)
 	for _, b in ipairs({ { "income", "2X CASH" }, { "luck", "LUCK" } }) do
 		local left = st.boosts and st.boosts[b[1]] or 0
-		if left > 0 then
-			K.pill(w.boosts, b[2] .. " " .. fmtTime(left), GOLD, { H = 34, TextSize = 18 })
-		end
+		setPill("boost_" .. b[1], left > 0 and (b[2] .. " " .. fmtTime(left)) or nil, GOLD)
 	end
 	-- gears: SPEED x2 4:12, LUCK x1.5 9:40
 	for _, kind in ipairs({ "speed", "luck" }) do
 		local m = st.gearMults and tonumber(st.gearMults[kind]) or 1
+		local txt, col
 		if m > 1 then
-			local left, col = gearKind(st, kind)
+			local left, c = gearKind(st, kind)
 			if left > 0 then
-				K.pill(w.boosts, string.upper(kind) .. " " .. fmtMult(m) .. " " .. fmtTime(left), col and K.lift(col, -0.15) or P.blue, { H = 34, TextSize = 18 })
+				txt, col = string.upper(kind) .. " " .. fmtMult(m) .. " " .. fmtTime(left), c and K.lift(c, -0.15) or P.blue
 			end
 		end
+		setPill("gear_" .. kind, txt, col)
 	end
-	if st.passes and st.passes.vip then
-		K.pill(w.boosts, "VIP", GOLD, { H = 34, TextSize = 18 })
-	end
+	setPill("vip", (st.passes and st.passes.vip) and "VIP" or nil, GOLD)
 end
 
 local function refreshHud(st)

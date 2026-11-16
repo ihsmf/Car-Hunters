@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local CarConfig = require(Shared:WaitForChild("CarConfig"))
 local SkinConfig = require(Shared:WaitForChild("SkinConfig"))
+local GearConfig = require(Shared:WaitForChild("GearConfig"))
 local EconomyConfig = require(Shared:WaitForChild("EconomyConfig"))
 
 local Rebirth = {}
@@ -50,11 +51,15 @@ function Rebirth.Do(player)
 	-- what burns: money, cars (exclusive ones stay), parts, jobs. Gears, districts, floors and bays are kept
 	d.money = SkinConfig.Rebirth.startMoney * d.rebirths
 	local kept = {}
+	local now = os.time()
 	for _, c in ipairs(d.cars) do
 		local def = CarConfig.ById[c.typeId]
 		if def and def.exclusive then
 			c.parkedSlot = nil
 			table.insert(kept, c)
+		elseif GearConfig.Active(c.gear, now) then
+			-- a gear still running on a burned car goes back to the inventory (gears are kept)
+			d.gears[c.gear.id] = math.min((d.gears[c.gear.id] or 0) + 1, 999)
 		end
 	end
 	d.cars = kept

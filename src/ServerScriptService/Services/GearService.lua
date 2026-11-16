@@ -85,6 +85,10 @@ function Gears.Buy(player, id)
 		return
 	end
 	local d = s.data
+	if (d.gears[id] or 0) >= GearConfig.MaxOwned then
+		S.Data.Notify(player, "gearMax", nil, "warn")
+		return
+	end
 	if Gears.StockLeft(player, s, id) < 1 then
 		S.Data.Notify(player, "noStock", { def.name }, "warn")
 		return
@@ -97,7 +101,7 @@ function Gears.Buy(player, id)
 	d.money = d.money - price
 	local shop = d.gearShop
 	shop.bought[id] = (shop.bought[id] or 0) + 1
-	d.gears[id] = math.min((d.gears[id] or 0) + 1, 999)
+	d.gears[id] = (d.gears[id] or 0) + 1
 	S.Data.Notify(player, "gearBought", { def.name }, "good")
 	if S.Mechanic.Gesture then
 		S.Mechanic.Gesture()
@@ -117,6 +121,10 @@ function Gears.Apply(player, carUid, id)
 	if not car or (d.gears[id] or 0) < 1 then
 		return
 	end
+	if S.Trade.CarInOffer(player, carUid) then
+		S.Data.Notify(player, "gearInTrade", nil, "warn")
+		return
+	end
 	d.gears[id] = d.gears[id] - 1
 	if d.gears[id] <= 0 then
 		d.gears[id] = nil
@@ -126,11 +134,13 @@ function Gears.Apply(player, carUid, id)
 	refresh(player)
 end
 
--- grant gears (road drops, boss reward, playtime chest)
+-- grant gears (road drops, boss reward, playtime chest); the count is capped at GearConfig.MaxOwned
+-- (extra copies are lost, an older stock above the cap is left as it is)
 function Gears.Give(player, id, n)
 	local s = S.Data.Get(player)
 	if s and s.data and GearConfig.ById[id] then
-		s.data.gears[id] = math.min((s.data.gears[id] or 0) + (n or 1), 999)
+		local have = s.data.gears[id] or 0
+		s.data.gears[id] = math.max(have, math.min(have + (n or 1), GearConfig.MaxOwned))
 		S.Data.Push(player)
 		return true
 	end

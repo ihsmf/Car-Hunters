@@ -280,6 +280,13 @@ function Trade.Start()
 	end)
 end
 
+-- is this car in the player's offer of an open trade?
+function Trade.CarInOffer(player, uid)
+	local t = active[player]
+	local o = t and t.offers[player]
+	return o ~= nil and o.cars[uid] == true
+end
+
 Trade._active = active
 Trade._execute = execute
 return Trade

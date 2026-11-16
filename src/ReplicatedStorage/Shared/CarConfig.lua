@@ -215,12 +215,13 @@ function CarConfig.IncomeAt(def, level)
 end
 
 -- income of one owned car incl. its active income gear (GearConfig)
-function CarConfig.CarIncome(car)
+-- `now` (optional): the time gears are checked at; the client passes server time, the server leaves it out (os.time)
+function CarConfig.CarIncome(car, now)
 	local def = CarConfig.ById[car.typeId]
 	if not def then
 		return 0
 	end
-	return math.floor(CarConfig.IncomeAt(def, car.level) * require(script.Parent.GearConfig).CarMult(car) + 0.5)
+	return math.floor(CarConfig.IncomeAt(def, car.level) * require(script.Parent.GearConfig).CarMult(car, now) + 0.5)
 end
 
 function CarConfig.ValueAt(def, level)

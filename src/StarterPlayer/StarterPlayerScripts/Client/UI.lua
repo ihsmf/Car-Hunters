@@ -1118,9 +1118,10 @@ end
 
 local function sortedCars(st)
 	local out = table.clone(st.cars)
+	local now = store.ServerNow()
 	table.sort(out, function(a, b)
-		local ia = CarConfig.CarIncome(a)
-		local ib = CarConfig.CarIncome(b)
+		local ia = CarConfig.CarIncome(a, now)
+		local ib = CarConfig.CarIncome(b, now)
 		if ia ~= ib then
 			return ia > ib
 		end
@@ -1131,10 +1132,11 @@ end
 
 local function freeSlot(st)
 	local used, worst, worstInc = {}, nil, nil
+	local now = store.ServerNow()
 	for _, c in ipairs(st.cars) do
 		if c.slot then
 			used[c.slot] = true
-			local inc = CarConfig.CarIncome(c)
+			local inc = CarConfig.CarIncome(c, now)
 			if not worstInc or inc < worstInc then
 				worst, worstInc = c.slot, inc
 			end
@@ -1206,7 +1208,7 @@ local function refreshGarage()
 		text(row, { Text = def.name, TextSize = 22, TextColor3 = P.ink, Outline = false, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(136, 10), Size = UDim2.fromOffset(260, 28), ZIndex = 24 })
 		local where = c.slot and ("Bay " .. c.slot) or "Storage"
 		text(row, { Text = string.format('<font color="#%s">%s</font> · Lv %d · <font color="#1E9E40">+%s/s</font> · %s', lift(rc, -0.3):ToHex(), string.upper(T("rarity_" .. def.rarity)),
-			c.level, Util.FormatNumber(CarConfig.CarIncome(c)), where),
+			c.level, Util.FormatNumber(CarConfig.CarIncome(c, store.ServerNow())), where),
 			Font = BODY, TextSize = 14, TextColor3 = P.muted, RichText = true, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(136, 46), Size = UDim2.fromOffset(260, 24), ZIndex = 24 })
 		local btns = new("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(470, 60), BackgroundTransparency = 1, ZIndex = 24 }, row)
 		list(btns, Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center)

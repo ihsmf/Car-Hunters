@@ -66,6 +66,7 @@ local en = {
 	n_gearBought = "Bought %s!", n_gearApplied = "%s on! %s", n_gearExpired = "%s ran out.", n_noStock = "%s is sold out - new gears soon!",
 	n_gearNearTony = "Walk up to Big Tony to buy gears.", n_tuneRefund = "Tuning is now GEARS: refunded $%s + a free gear!",
 	n_gearWelcome = "NEW: Gears at Big Tony! Here's a free Cash Turbo.",
+	n_gearInTrade = "That car is in a trade", n_gearMax = "You can hold at most 5 of each gear", gears_ownMax = "You own: %d/%d",
 	gears_title = "BIG TONY'S GEARS", gears_hint = "Gears boost one car for a while. Buy here, then APPLY them to any car you own.",
 	gears_far = "Walk up to Big Tony on the plaza to buy gears.", gears_restock = "NEW GEARS IN %s", gears_minutes = "%d MIN", gears_aura = "Aura",
 	gears_buy = "BUY", gears_soldout = "SOLD OUT", gears_soldoutBtn = "SOLD OUT", gears_soldoutToast = "Sold out - new gears soon!",

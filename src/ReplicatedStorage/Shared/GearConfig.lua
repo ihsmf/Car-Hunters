@@ -4,6 +4,7 @@
 local GearConfig = {}
 
 GearConfig.Window = 300
+GearConfig.MaxOwned = 5 -- most of one gear a player can hold (Buy refuses, drops are capped)
 
 GearConfig.List = {
 	{

@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
 local CarConfig = require(Shared:WaitForChild("CarConfig"))
+local GearConfig = require(Shared:WaitForChild("GearConfig"))
 local PartConfig = require(Shared:WaitForChild("PartConfig"))
 local Util = require(Shared:WaitForChild("Util"))
 local Icons = require(Shared:WaitForChild("Icons"))
@@ -83,7 +84,17 @@ local function requestCard(msg)
 end
 
 ---------------------------------------------------------------- trade window
-local function carRow(parent, car, order, selected, onClick)
+-- "  ·  x2 INCOME 4:59" for a running gear as TradeService.describe sends it ({ id, left }), else ""
+local function gearSuffix(g)
+	local gdef = type(g) == "table" and GearConfig.ById[g.id]
+	local left = gdef and math.floor(tonumber(g.left) or 0)
+	if not gdef or left <= 0 then
+		return ""
+	end
+	return string.format("  ·  %s %d:%02d", GearConfig.Label(gdef), left // 60, left % 60)
+end
+
+local function carRow(parent, car, order, selected, onClick, gear)
 	local def = CarConfig.ById[car.typeId]
 	if not def then
 		return
@@ -91,7 +102,8 @@ local function carRow(parent, car, order, selected, onClick)
 	-- v23: white card (ink outline, rarity band on the left, small shadow); offered = green fill + green outline
 	local body, _, b = K.card(parent, { Class = "TextButton", Size = UDim2.new(1, 0, 0, 44), Color = selected and C(220, 250, 226) or P.card, Accent = rc(def.rarity),
 		AccentSize = 6, StrokeColor = selected and C(30, 158, 64) or P.ink, Stroke = selected and 4 or 2, Shadow = 3, Radius = 12, LayoutOrder = order, ZIndex = 24 })
-	K.text(body, { Text = string.format("%s  Lv%d", def.name, car.level), Font = K.BODY, TextSize = 15, TextColor3 = P.ink, Position = UDim2.fromOffset(8, 0), Size = UDim2.new(1, -60, 1, 0), ZIndex = 25 })
+	K.text(body, { Text = string.format("%s  Lv%d", def.name, car.level) .. gearSuffix(gear), Font = K.BODY, TextSize = 15, TextColor3 = P.ink, TextTruncate = Enum.TextTruncate.AtEnd,
+		Position = UDim2.fromOffset(8, 0), Size = UDim2.new(1, -60, 1, 0), ZIndex = 25 })
 	K.text(body, { Text = string.upper(string.sub(def.rarity, 1, 4)), Font = K.BODY, TextSize = 12, TextColor3 = K.lift(rc(def.rarity), -0.3), AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -8, 0, 0), Size = UDim2.fromOffset(46, 44), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 25 })
 	if onClick then
@@ -190,8 +202,10 @@ local function renderState(msg)
 	end
 	-- my cars: every car I own, offered ones highlighted
 	offer.cars = {}
+	local myGear = {} -- running gears of my offered cars (they move with the car)
 	for _, c in ipairs(msg.mine.cars) do
 		offer.cars[c.uid] = true
+		myGear[c.uid] = c.gear
 	end
 	offer.money = msg.mine.money or 0
 	offer.parts = msg.mine.parts or {}
@@ -214,7 +228,7 @@ local function renderState(msg)
 				offer.cars[car.uid] = true
 			end
 			send()
-		end)
+		end, myGear[car.uid])
 	end
 	w.moneyBox.Text = tostring(offer.money)
 	for id, n in pairs(w.partRows) do
@@ -223,7 +237,7 @@ local function renderState(msg)
 	w.theirTitle.Text = string.upper(msg.partner) .. " OFFERS"
 	K.clear(w.theirCars)
 	for i, car in ipairs(msg.theirs.cars) do
-		carRow(w.theirCars, car, i, false)
+		carRow(w.theirCars, car, i, false, nil, car.gear)
 	end
 	if #msg.theirs.cars == 0 then
 		K.text(w.theirCars, { Text = "No cars", Font = K.BODY, TextSize = 15, TextColor3 = P.muted, Size = UDim2.new(1, 0, 0, 30), ZIndex = 24 })

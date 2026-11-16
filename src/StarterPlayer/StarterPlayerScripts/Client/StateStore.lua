@@ -7,8 +7,11 @@ Store.CollectionValue = 0
 Store.Changed = Instance.new("BindableEvent")
 Store.MoneyChanged = Instance.new("BindableEvent")
 
+local setState, setClock = nil, os.clock()
+
 function Store.Set(state)
 	Store.State = state
+	setState, setClock = state, os.clock()
 	Store.Money = state.money
 	Store.Income = state.income or 0
 	Store.CollectionValue = state.collectionValue or 0
@@ -24,6 +27,18 @@ function Store.SetMoney(money, income, value)
 		Store.State.income = income
 	end
 	Store.MoneyChanged:Fire()
+end
+
+-- the server's os.time() right now (state.serverTime + time since the push); used for gear timers / CarIncome
+function Store.ServerNow()
+	local st = Store.State
+	if st and tonumber(st.serverTime) then
+		if st ~= setState then
+			setState, setClock = st, os.clock()
+		end
+		return st.serverTime + (os.clock() - setClock)
+	end
+	return workspace:GetServerTimeNow()
 end
 
 function Store.Banked(partId)

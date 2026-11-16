@@ -23,11 +23,12 @@ local SCHEMA_VERSION = 7 -- v5: tutorial has 8 steps (unlock the Highway); v6: t
 local TUTORIAL_STEPS = 10
 local TUTORIAL_DONE = TUTORIAL_STEPS + 1
 
--- v6 migration: money refunded per old tuning part (Big Tony's stage 1 recipe cost; stage 2 = 8x, stage 3 = 16x)
+-- v6 migration: money refunded per old tuning part (Big Tony's stage 1 recipe cost; stage 2 = 10x: two stage 1
+-- parts + 8x money; stage 3 was a free drop and is refunded like stage 2)
 local TUNE_REFUND_BASE = {
 	ecu = 2000, intake = 1500, exhaust = 3000, tires = 2500, aero = 4000, nitro = 10000, turbo = 15000, super = 20000,
 }
-local TUNE_REFUND_STAGE = { 1, 8, 16 }
+local TUNE_REFUND_STAGE = { 1, 10, 10 }
 local function tuneRefund(itemId)
 	if type(itemId) ~= "string" then
 		return 0
