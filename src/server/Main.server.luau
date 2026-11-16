@@ -45,6 +45,8 @@ local function makeNPC(id, cf, gold)
 	local desc = Instance.new("HumanoidDescription")
 	desc.TorsoColor, desc.LeftArmColor, desc.RightArmColor = info.shirt, info.shirt, info.shirt
 	desc.HeadColor, desc.LeftLegColor, desc.RightLegColor = Color3.fromRGB(255, 210, 170), Color3.fromRGB(255, 210, 170), r[2]:Lerp(Color3.new(0, 0, 0), 0.4)
+	local k = 1 + info.rarity * 0.012
+	desc.HeightScale, desc.WidthScale, desc.DepthScale, desc.HeadScale = k, k, k, k
 	local m = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
 	m.Name = info.name
 	m.Humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
@@ -71,6 +73,26 @@ local function makeNPC(id, cf, gold)
 	local light = Instance.new("PointLight")
 	light.Color, light.Range, light.Brightness = r[2], 8 + info.rarity, 1.5
 	light.Parent = m.HumanoidRootPart
+
+	-- корона с 8-й редкости, нимб с 15-й
+	local function attach(p)
+		p.Anchored, p.CanCollide, p.Massless = false, false, true
+		local wc = Instance.new("WeldConstraint")
+		wc.Part0, wc.Part1, wc.Parent = m.Head, p, p
+		p.Parent = m
+	end
+	if info.rarity >= 8 then
+		local crown = Instance.new("Part")
+		crown.Shape, crown.Size, crown.Color, crown.Material = Enum.PartType.Cylinder, Vector3.new(0.5, 1.3, 1.3), Color3.fromRGB(255, 200, 40), Enum.Material.Metal
+		crown.CFrame = m.Head.CFrame * CFrame.new(0, 0.8, 0) * CFrame.Angles(0, 0, math.pi / 2)
+		attach(crown)
+	end
+	if info.rarity >= 15 then
+		local halo = Instance.new("Part")
+		halo.Shape, halo.Size, halo.Color, halo.Material = Enum.PartType.Cylinder, Vector3.new(0.15, 2, 2), r[2], Enum.Material.Neon
+		halo.CFrame = m.Head.CFrame * CFrame.new(0, 1.6, 0) * CFrame.Angles(0, 0, math.pi / 2)
+		attach(halo)
+	end
 
 	local bb = Instance.new("BillboardGui")
 	bb.Size, bb.StudsOffset, bb.AlwaysOnTop, bb.MaxDistance = UDim2.fromOffset(180, 60), Vector3.new(0, 3.5, 0), true, 80
@@ -120,7 +142,7 @@ function actions.Throw(plr, s, power)
 	local id = pool[rng:NextInteger(1, #pool)]
 	table.insert(s.d.inv, { id = id, eq = equippedCount(s.d) < C.MaxEquipped })
 	Fx:FireAllClients("Throw", s.slot, dist, id)
-	task.delay(3, refreshBase, plr)
+	task.delay(2 + dist / 140, refreshBase, plr)
 	return true
 end
 
@@ -307,6 +329,7 @@ local function paintZones()
 		local r = C.Rarities[math.min(i + luckShift, N)]
 		z.felt.Color = r[2]:Lerp(Color3.fromRGB(20, 120, 60), 0.35)
 		z.text.Text, z.text.TextColor3 = r[1], r[2]
+		for _, n in z.neon do n.Color = r[2] end
 	end
 end
 paintZones()
