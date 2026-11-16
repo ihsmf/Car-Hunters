@@ -55,7 +55,7 @@ icon.convert("RGB").resize((512, 512), Image.LANCZOS).save(os.path.join(D, "icon
 t1 = Image.open(os.path.join(D, "thumb_1_raw.png")).convert("RGBA")
 vignette(t1, 0.4)
 title(t1, "CAR HUNTERS", 960, 170, 190)
-title(t1, "80 CARS TO COLLECT", 960, 930, 84, top=(255, 255, 255), bottom=(160, 220, 255), angle=0)
+title(t1, "100 CARS TO COLLECT", 960, 930, 84, top=(255, 255, 255), bottom=(160, 220, 255), angle=0)
 t1.convert("RGB").save(os.path.join(D, "thumb_1.png"))
 
 t2 = Image.open(os.path.join(D, "thumb_2_raw.png")).convert("RGBA")

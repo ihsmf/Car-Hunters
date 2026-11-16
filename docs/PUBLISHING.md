@@ -39,10 +39,10 @@
 ### Описание (EN)
 
 > **CAR HUNTERS** — run into busy city districts, grab glowing car parts and dodge the traffic! Carry your loot home,
-> throw it into your garage trap and catch one of **80 cars** from Common to Legendary. Park your best cars to earn
+> throw it into your garage trap and catch one of **100 cars** from Common to Legendary. Park your best cars to earn
 > cash, upgrade and tune them, unlock deeper districts with better parts and beat the monster-truck bosses.
 >
-> ⭐ 80 cars, 5 rarities · 🏁 12 districts and 3 boss arenas · 🔧 upgrades and tuning · 🔁 rebirths ·
+> ⭐ 100 cars, 5 rarities · 🏁 12 districts and 3 boss arenas · 🔧 upgrades and tuning · 🔁 rebirths ·
 > 🎁 daily streak and playtime gifts · 🤝 trade cars, cash and parts with friends
 
 ## Текущая игра

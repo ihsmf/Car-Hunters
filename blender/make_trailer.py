@@ -17,7 +17,7 @@ STORE = os.path.join(ROOT, "docs", "store")
 TMP = os.path.abspath(os.environ.get("TRAILER_TMP") or os.path.join(tempfile.gettempdir(), "car_hunters_trailer"))
 FPS, SHOT_LEN, NSHOTS = 30, 135, 6
 RX, RY = 960, 540
-TEXT = {1: "GRAB CAR PARTS", 2: "DODGE THE TRAFFIC", 3: "CATCH 80 CARS", 4: "COMMON TO LEGENDARY", 5: "BEAT THE BOSSES"}
+TEXT = {1: "GRAB CAR PARTS", 2: "DODGE THE TRAFFIC", 3: "CATCH 100 CARS", 4: "COMMON TO LEGENDARY", 5: "BEAT THE BOSSES"}
 STILLS = {1: (1, 80), 2: (4, 120), 3: (6, 100)}  # still n -> (shot, frame in shot)
 
 
