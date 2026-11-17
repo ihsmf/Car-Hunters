@@ -583,8 +583,8 @@ def acc_cape():  # back item
 
 # ---------- Player base stage and the cue shop (recoloured per base: Rim / Felt / Accent) ----------
 def base_platform():
-    M = {k: mat(k, v, 1 if k == "Trim" else 0, 0.35) for k, v in dict(Rim=(255, 110, 120), Deck=(236, 214, 178), Groove=(170, 128, 86),
-                                                                    Felt=(150, 40, 60), Trim=(235, 185, 70), Inset=(250, 236, 205)).items()}
+    M = {k: mat(k, v, 1 if k == "Trim" else 0, 0.35) for k, v in dict(Rim=(255, 110, 120), Deck=(214, 176, 124), Groove=(150, 108, 66),
+                                                                    Felt=(28, 118, 62), Trim=(235, 185, 70), Inset=(232, 210, 170)).items()}
     rot = (0, 0, math.pi / 8)  # flat side to the front
     bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=31, depth=1.2, location=rb(0, 0.6, 0), rotation=rot)
     finish(bpy.context.object, M["Rim"], 0.3, 3)

@@ -38,6 +38,7 @@ class Inst:
         if parent is not None: parent.kids.append(s)
 
 def part(parent, size, m, color, mat="Smooth", shape="Block", name="Part", cls="Part", **kw):
+    assert max(size) <= 2048, f"{name}: Roblox clamps parts to 2048 studs per axis, got {size}"
     return Inst(cls, name, parent, size=size, cf=m, color=color, mat=mat, shape=shape, **kw)
 def ycyl(parent, d, h, m, color, mat="Smooth", **kw):  # cylinder along Y
     return part(parent, (h, d, d), m @ rz(math.pi / 2), color, mat, "Cyl", **kw)
@@ -228,42 +229,44 @@ WALL_H = 56
 WALL_MAT = dict(Grass="Fabric", Sand="Sandstone", Snow="Ice", Slate="Slate", Marble="Marble", Smooth="Smooth", Concrete="Concrete")
 
 
-def club_wall(par, a, b, inward, wood, panel, panel_mat, trim, art):
-    """Solid billiard-club wall from a to b: wood wainscot, themed upper panel, brass rails,
-    pilasters with sconces and framed felt panels. Collides, plus an invisible extension upwards."""
+TABLE_COLORS = [tuple(map(int, c)) for c in re.findall(r'\{ "[^"]+", rgb\((\d+), (\d+), (\d+)\) \}', cfg[cfg.index("C.Tables = {"):])][:N]
+
+
+def mix(c, d, f):
+    return tuple(int(a * (1 - f) + b * f) for a, b in zip(c, d))
+
+
+def club_wall(par, a, b, inward, band, panel, panel_mat, accent, dot):
+    """Cartoon wall from a to b: bright panel, darker band, chunky white trims, a round rail on top,
+    candy-striped columns with balls and big polka dots. Collides, plus an invisible extension upwards."""
     (x0, z0), (x1, z1) = a, b
     ln = math.hypot(x1 - x0, z1 - z0)
     ang_ = math.atan2(x1 - x0, z1 - z0)
     if math.cos(ang_) * inward[0] - math.sin(ang_) * inward[1] < 0:
         ang_ += math.pi  # make local +X point into the playable area
     m = cf((x0 + x1) / 2, 0, (z0 + z1) / 2) @ ry(ang_)
-    part(par, (3.4, 9, ln), m @ cf(-1.7, 4.5, 0), wood, "Wood")
-    part(par, (3, WALL_H - 9.4, ln), m @ cf(-1.9, 9.4 + (WALL_H - 9.4) / 2, 0), panel, panel_mat)
-    part(par, (3.9, 0.8, ln), m @ cf(-1.55, 9.3, 0), trim, "Metal")
-    part(par, (3.9, 1.4, ln), m @ cf(-1.55, WALL_H, 0), trim, "Metal")
-    part(par, (3.6, 0.6, ln), m @ cf(-1.6, 0.3, 0), shade(wood, 0.7), "Wood")
+    part(par, (3, WALL_H, ln), m @ cf(-1.5, WALL_H / 2, 0), panel, panel_mat)
+    part(par, (3.6, 11, ln), m @ cf(-1.4, 5.5, 0), band)
+    part(par, (4.4, 1.6, ln), m @ cf(-1.3, 11.2, 0), WHITE)
+    part(par, (4.4, 1.6, ln), m @ cf(-1.3, WALL_H - 0.8, 0), WHITE)
+    part(par, (ln, 5, 5), m @ cf(-1.5, WALL_H + 2, 0) @ ry(math.pi / 2), accent, shape="Cyl")  # round rail
     part(par, (2, 300, ln), m @ cf(-2, WALL_H + 150, 0), WHITE, Transparency=1, name="Wall")
     n = max(1, round(ln / 40))
-    for k in range(n + 1):  # pilasters with sconces
+    for k in range(n + 1):  # candy-striped columns
         z = -ln / 2 + k * ln / n
-        part(par, (1.4, WALL_H - 1, 3.2), m @ cf(0.5, (WALL_H - 1) / 2, z), shade(wood, 1.15), "Wood")
-        part(par, (1.8, 1.2, 3.8), m @ cf(0.7, WALL_H - 1.6, z), trim, "Metal")
-        part(par, (1.8, 1.2, 3.8), m @ cf(0.7, 0.6, z), trim, "Metal")
-        part(par, (0.8, 0.5, 1.2), m @ cf(1.4, 15.5, z), trim, "Metal")
-        light(ball(par, 1.4, m @ cf(1.9, 16.3, z), (255, 244, 214), "Glass", CanCollide=False), (255, 226, 170), 28, 1.4)
-    for k in range(n):  # framed felt panels between the pilasters
+        ycyl(par, 3.6, WALL_H, m @ cf(1, WALL_H / 2, z), WHITE)
+        for y in range(4, int(WALL_H) - 2, 7):
+            ycyl(par, 3.9, 2.4, m @ cf(1, y, z), accent)
+        ball(par, 5.6, m @ cf(1, WALL_H + 2.6, z), accent)
+    for k in range(n):  # polka dots
         z = -ln / 2 + (k + 0.5) * ln / n
-        w = ln / n - 8
-        part(par, (0.5, 12, w * 0.7 + 1.2), m @ cf(0.15, 28, z), trim, "Metal")
-        part(par, (0.6, 10.8, w * 0.7), m @ cf(0.2, 28, z), tuple(int(c * 0.6 + 236 * 0.4) for c in art), "Fabric")
+        for dz, y, d in ((-8, 30, 9), (7, 40, 6), (2, 22, 4)):
+            part(par, (0.4, d, d), m @ cf(0.1, y, z + dz), dot, shape="Cyl")
 
 
 def wall_theme(i):
-    th = THEMES[min(i, N - 1)]
-    wood, rail, felt, trim = th["t"]
-    gcol, gmat = th["g"]
-    panel = tuple(int(c * 0.45 + d * 0.55) for c, d in zip(gcol, (236, 226, 206)))  # soft theme tint on a cream wall
-    return shade(wood, 0.8), panel, WALL_MAT.get(gmat, "Smooth"), trim, felt
+    c = TABLE_COLORS[min(i, N - 1)]
+    return mix(c, (0, 0, 0), 0.18), mix(c, WHITE, 0.45), "Smooth", c, mix(c, WHITE, 0.8)
 
 
 def long_table(world):
@@ -296,7 +299,7 @@ def long_table(world):
 def player_base(world, i, o, col):
     b = Inst("Model", f"Base{i + 1}", world)
     stage = Inst("Model", "Stage", b)  # Blender octagonal stage; part twin = collisions + fallback
-    pivot(stage, o, "BasePlatform", Rim=col, Felt=shade(col, 0.6))
+    pivot(stage, o, "BasePlatform", Rim=col)
     ycyl(stage, 62, 1.2, o @ cf(0, 0.6, 0), col)
     ycyl(stage, 60, 0.16, o @ cf(0, 1.29, 0), (236, 214, 178), "Planks", name="Floor")
     part(stage, (15, 0.7, 2.6), o @ cf(0, 0.35, 31.6), col)
@@ -306,7 +309,8 @@ def player_base(world, i, o, col):
     for s_ in range(SLOTS):  # invisible markers: the brass spots are part of the stage mesh
         a = math.radians(-150 + s_ * 300 / (SLOTS - 1))
         part(slots, (1, 0.2, 1), top @ cf(math.sin(a) * 17, 0.1, -math.cos(a) * 17), WHITE, Transparency=1, CanCollide=False, name=f"Slot{s_ + 1}")
-    sign = part(b, (18, 2.4, 0.2), top @ cf(0, 1.8, 30.6), WHITE, Transparency=1, CanCollide=False, name="Sign")
+    sign = part(b, (20, 3.4, 0.2), top @ cf(0, 7, -29), WHITE, Transparency=1, CanCollide=False, name="Sign")  # name floats over the back edge
+    part(b, (2, 0.2, 2), top @ cf(0, 0.1, 24), WHITE, Transparency=1, CanCollide=False, name="RevealSpot")
     label(sign, FACE["Back"], "Free Base")
     part(b, (4, 1, 4), top @ cf(0, 0.5, 23), WHITE, Transparency=1, CanCollide=False, name="SpawnPoint")
     Inst("Folder", "Chars", b)
@@ -344,15 +348,40 @@ def cue_shop(b, o, col):
     light(part(m, (0.4, 0.4, 0.4), o @ cf(0, 9.6, 0.8), WHITE, Transparency=1, CanCollide=False), (255, 228, 180), 18, 2)
 
 
+def tiles(par, x0, x1, z0, z1, top, thick, color, mat, name="Floor", step=512):
+    """Floor made of tiles no larger than `step` (Roblox clamps any part axis to 2048)."""
+    nx, nz = max(1, math.ceil((x1 - x0) / step)), max(1, math.ceil((z1 - z0) / step))
+    w, d = (x1 - x0) / nx, (z1 - z0) / nz
+    for i in range(nx):
+        for k in range(nz):
+            part(par, (w, thick, d), cf(x0 + (i + 0.5) * w, top - thick / 2, z0 + (k + 0.5) * d), color, mat, name=name)
+
+
+WALNUT, RUNNER = (92, 56, 34), (32, 84, 54)
+
+
 def build():
     ws = Inst("Workspace", "Workspace")
     world = Inst("Folder", "World", ws)
     env = Inst("Folder", "Environment", world)
+    far = TSZ + (N + EXTRA) * ZL
 
-    part(env, (1400, 4, END + EXTRA * ZL + 600), cf(0, -2, (END + EXTRA * ZL) / 2), (105, 200, 85), "Grass", name="Ground")
-    part(env, (450, 0.4, 30), cf(0, 0.2, 63), (250, 228, 185), "Pebble", name="Plaza")
-    for sx in (-1, 1):  # walkways along the long table
-        part(env, (25, 0.3, TL + EXTRA * ZL), cf(sx * (TW / 2 + RAIL_W + 12.5), 0.15, TSZ + (TL + EXTRA * ZL) / 2), (250, 228, 185), "Pebble")
+    # floor: big bright checker tiles in the hall, striped runners in each table's colour along the corridor
+    for gx in range(-230, 230, 20):
+        for gz in range(-92, 78, 20):
+            light_tile = ((gx + gz) // 20) % 2 == 0
+            part(env, (20, 2, 20), cf(gx + 10, -1, gz + 10), (255, 246, 222) if light_tile else (255, 222, 170), name="Floor")
+    tiles(env, -50, 50, 78, far + 4, 0, 2, (255, 236, 200), "Smooth")
+    tiles(env, -46, 46, 48, 78, 0.06, 0.12, (255, 200, 60), "Fabric", name="Aisle")  # sunny carpet to the table
+    for x in (-47, 47):
+        tiles(env, x - 1, x + 1, 48, 78, 0.08, 0.16, WHITE, "Smooth", name="AisleEdge")
+    for i_ in range(N + EXTRA):
+        c = TABLE_COLORS[min(i_, N - 1)]
+        z0 = TSZ + i_ * ZL
+        for sx in (-1, 1):
+            xc = sx * (TW / 2 + RAIL_W + 12.5)
+            for k in range(8):  # alternating stripes, 10 studs each
+                part(env, (24, 0.12, 10), cf(xc, 0.06, z0 + 5 + k * 10), mix(c, WHITE, 0.55) if k % 2 == 0 else WHITE, name="Runner")
 
     long_table(world)
 
@@ -365,7 +394,10 @@ def build():
 
     bcol = [(255, 110, 120), (110, 170, 255), (110, 225, 140), (255, 190, 80)]
     for i in range(4):
-        player_base(world, i, cf((i - 1.5) * 105, 0, -20), bcol[i])
+        x = (i - 1.5) * 105
+        part(world, (93, 0.14, 115), cf(x, 0.07, -6), WHITE, name="RugBorder")  # each base sits on its own bright rug
+        part(world, (88, 0.16, 110), cf(x, 0.09, -6), mix(bcol[i], WHITE, 0.25), "Fabric", name="Rug")
+        player_base(world, i, cf(x, 0.17, -20), bcol[i])
     part(world, (6, 1, 6), cf(0, 0.6, 66), WHITE, cls="SpawnLocation", name="Spawn", Transparency=1, CanCollide=False, Neutral=True)
     return ws
 
@@ -428,11 +460,11 @@ def services(ws):
     cl = Inst("Folder", "Client", Inst("StarterPlayerScripts", "StarterPlayerScripts", sp))
     for n in ("UI", "Throw", "Visuals"):
         Inst("LocalScript", n, cl, Source=src(f"src/client/{n}.client.luau"))
-    lt = Inst("Lighting", "Lighting", ClockTime=14.6, Brightness=3, EnvironmentDiffuseScale=1, EnvironmentSpecularScale=1, OutdoorAmbient=(150, 140, 170), Ambient=(90, 80, 110))
+    lt = Inst("Lighting", "Lighting", ClockTime=13.2, Brightness=3.2, EnvironmentDiffuseScale=1, EnvironmentSpecularScale=0.6, OutdoorAmbient=(190, 185, 200), Ambient=(130, 125, 140))
     Inst("Sky", "Sky", lt)
-    Inst("Atmosphere", "Atmosphere", lt, Density=0.38, Haze=1.6, Color=(215, 225, 240), Decay=(150, 165, 200))  # far end of the table fades out
+    Inst("Atmosphere", "Atmosphere", lt, Density=0.34, Haze=1.2, Color=(235, 240, 255), Decay=(200, 215, 255))  # bright haze: the table end fades out
     Inst("BloomEffect", "Bloom", lt, Intensity=0.7, Size=28, Threshold=1.4)
-    Inst("ColorCorrectionEffect", "Grade", lt, Saturation=0.22, Contrast=0.06)
+    Inst("ColorCorrectionEffect", "Grade", lt, Saturation=0.32, Contrast=0.08, Brightness=0.03)
     Inst("SunRaysEffect", "SunRays", lt, Intensity=0.06)
     return [ws, rs, sss, sp, lt]
 

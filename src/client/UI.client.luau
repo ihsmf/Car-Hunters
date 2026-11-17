@@ -338,6 +338,43 @@ RunService.RenderStepped:Connect(function(dt)
 	fill.Size = UDim2.new(power, -8, 1, -8)
 end)
 
+-- ===== Dumbbell lift: the dumbbell goes up and down, the player raises the arms, "+N" floats up =====
+local lifting = false
+local function liftAnimation(gain)
+	if lifting or not state then return end
+	local base = workspace.World:FindFirstChild("Base" .. state.slot)
+	local db = base and base:FindFirstChild("Dumbbell")
+	if not db then return end
+	lifting = true
+	local char = plr.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	local animator = hum and hum:FindFirstChildOfClass("Animator")
+	if animator then
+		local a = Instance.new("Animation")
+		a.AnimationId = "rbxassetid://507770677"
+		local ok, track = pcall(animator.LoadAnimation, animator, a)
+		if ok and track then track:Play(0.1, 1, 2.2) end
+	end
+	local bb = new("BillboardGui", { Size = UDim2.fromOffset(140, 60), StudsOffset = Vector3.new(0, 4, 0), AlwaysOnTop = true, Parent = db.PrimaryPart or db:FindFirstChildWhichIsA("BasePart") })
+	local l = text("+" .. gain .. " 💪", 40, Color3.fromRGB(255, 120, 120), { Size = UDim2.fromScale(1, 1), Parent = bb })
+	TweenService:Create(bb, TweenInfo.new(0.8), { StudsOffset = Vector3.new(0, 8, 0) }):Play()
+	TweenService:Create(l, TweenInfo.new(0.8), { TextTransparency = 1 }):Play()
+	TweenService:Create(l.UIStroke, TweenInfo.new(0.8), { Transparency = 1 }):Play()
+	task.delay(0.9, bb.Destroy, bb)
+	local cf0 = db:GetPivot()
+	local t0 = os.clock()
+	local conn
+	conn = RunService.RenderStepped:Connect(function()
+		local t = math.min((os.clock() - t0) / 0.4, 1)
+		db:PivotTo(cf0 * CFrame.new(0, math.sin(t * math.pi) * 2.6, 0))
+		if t >= 1 then
+			conn:Disconnect()
+			db:PivotTo(cf0)
+			lifting = false
+		end
+	end)
+end
+
 -- ===== Server events =====
 local luckIn = C.LuckCycle
 local function renderStats()
@@ -383,7 +420,7 @@ Fx.OnClientEvent:Connect(function(kind, a, b)
 	elseif kind == "Lift" then
 		if Request:InvokeServer("Lift") and state then
 			_G.PlaySfx("Click")
-			toast("+" .. state.d.dumbLevel .. " 💪", Color3.fromRGB(255, 120, 120))
+			liftAnimation(state.d.dumbLevel)
 		end
 	end
 end)

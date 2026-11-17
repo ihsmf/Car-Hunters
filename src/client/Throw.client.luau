@@ -109,7 +109,7 @@ local function nearestPocket(pos)
 end
 
 -- ===== A rack on every lane =====
-local RACK_Z = T.StartZ + 16
+local RACK_Z = T.StartZ + 24
 local rackColors = { Color3.fromRGB(255, 220, 40), Color3.fromRGB(40, 90, 255), Color3.fromRGB(255, 50, 50), Color3.fromRGB(140, 40, 200), Color3.fromRGB(255, 130, 20), Color3.fromRGB(30, 160, 60), Color3.fromRGB(130, 30, 30), Color3.fromRGB(20, 20, 20), Color3.fromRGB(255, 120, 200), Color3.fromRGB(0, 200, 200) }
 local racks = {}
 
@@ -352,7 +352,7 @@ local function cueCF(tip, pitch, k)
 end
 
 local function windup(b, start, mine, power, cueColor)
-	local k = 1.5
+	local k = 1.15
 	local cue = MeshBuilder.Create("Cue", CFrame.new(start), { Shaft = cueColor }, k)
 	if not cue then
 		cue = Instance.new("Part")
@@ -371,13 +371,14 @@ local function windup(b, start, mine, power, cueColor)
 	local W = C.Anim.Windup
 	local t0 = os.clock()
 	if mine then
-		camFn = function()
+		camFn = function() -- from behind-right and above to straight behind the ball, never into walls/cushion
 			local t = math.clamp((os.clock() - t0) / W, 0, 1)
 			local e = 1 - (1 - t) ^ 2
-			local a = math.rad(75 * (1 - e)) -- orbit from the side to straight behind
-			local rad, h = 11 - 4 * e, 4.5 - 1.8 * e
+			local a = math.rad(35 * (1 - e))
+			local rad, h = 12 - 3 * e, 6 - 2 * e
 			local pos = start + Vector3.new(math.sin(a) * rad, h, -math.cos(a) * rad)
-			return CFrame.lookAt(pos, start + Vector3.new(0, 0.6, 5))
+			pos = Vector3.new(math.clamp(pos.X, -40, 40), pos.Y, math.max(pos.Z, start.Z - 10))
+			return CFrame.lookAt(pos, start + Vector3.new(0, 0.5, 8))
 		end
 		cam.FieldOfView = 62
 		tween(cam, W, { FieldOfView = 38 }, Enum.EasingStyle.Sine)
@@ -452,29 +453,59 @@ local function setHidden(model, hidden)
 	end
 end
 
+local ANIM_CHEER, ANIM_IDLE = "rbxassetid://507770677", "rbxassetid://507766666"
+
+local function playAnim(model, id, looped)
+	local hum = model:FindFirstChildOfClass("Humanoid")
+	if not hum then return end
+	local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator")
+	animator.Parent = hum
+	local a = Instance.new("Animation")
+	a.AnimationId = id
+	local ok, track = pcall(animator.LoadAnimation, animator, a)
+	if ok and track then
+		track.Looped = looped
+		track:Play()
+		return track
+	end
+end
+
+-- The new character is shown on the front of the stage (RevealSpot), facing the hall: a local copy is used
+-- so the camera can frame it cleanly with the table behind; the real NPC appears on its spot afterwards.
 local function revealOnBase(slot, tid, ch, bonus)
 	local r = C.Rarities[ch.rarity]
 	local npc = findNpc(slot, tid)
-	local close
-	if not npc then -- nothing to show on the base (inventory full / not equipped): just the card
+	local base = workspace.World:FindFirstChild("Base" .. slot)
+	local spot = base and base:FindFirstChild("RevealSpot")
+	local copy
+	if npc and spot then
+		npc.Archivable = true
+		copy = npc:Clone()
+	end
+	if not copy then -- nothing to show on the base (inventory full / not equipped): just the card
 		tween(dim, 0.3, { BackgroundTransparency = 0.35 })
-		close = revealCard(ch, bonus)
+		local close = revealCard(ch, bonus)
 		task.wait(3)
 		close()
 		return
 	end
 	local hrp = npc.HumanoidRootPart
-	local center = hrp.Position
-	local front = hrp.CFrame.LookVector
-	local floor = center - Vector3.new(0, hrp.Size.Y / 2 + npc.Humanoid.HipHeight, 0)
-	local hide = RunService.RenderStepped:Connect(function() setHidden(npc, true) end)
+	local stand = hrp.Size.Y / 2 + npc.Humanoid.HipHeight
+	local floor = spot.Position - Vector3.new(0, spot.Size.Y / 2, 0)
+	local center = floor + Vector3.new(0, stand, 0)
+	local front = Vector3.zAxis -- the stage front faces the hall (+Z)
+	copy:SetAttribute("ThrowId", nil)
+	copy:PivotTo(CFrame.lookAt(center, center + front))
+	copy.Parent = workspace
+	local hideReal = RunService.RenderStepped:Connect(function() setHidden(npc, true) end)
+	local hideCopy = RunService.RenderStepped:Connect(function() setHidden(copy, true) end)
 
-	-- A: dark scene, beam slams down, energy gathers, rumble
+	-- A: dark scene, beam slams down, energy gathers, rumble; the camera pushes in from the hall
 	local camStart = os.clock()
 	camFn = function()
 		local t = os.clock() - camStart
 		local push = math.min(t / 1.1, 1)
-		local pos = center + front * (17 - 5 * push) + Vector3.new(0, 7 - 2 * push, 0)
+		local pos = center + front * (16 - 4 * push) + Vector3.new(0, 5.5 - 2 * push, 0)
 		return CFrame.lookAt(pos, center + Vector3.new(0, 0.5, 0)), t < 0.05
 	end
 	cam.FieldOfView = 55
@@ -503,15 +534,19 @@ local function revealOnBase(slot, tid, ch, bonus)
 		RunService.RenderStepped:Wait()
 	end
 
-	-- B: BOOM
+	-- B: BOOM, the character appears and cheers
 	gather.Rate = 0
-	hide:Disconnect()
-	setHidden(npc, false)
+	hideCopy:Disconnect()
+	setHidden(copy, false)
+	for _, p in copy:GetDescendants() do -- keep the part-built cue hidden where the Blender cue mesh is shown
+		if p.Name == "Stick" and p:FindFirstChild("MeshVisual") then p.LocalTransparencyModifier = 1 end
+	end
+	playAnim(copy, ANIM_CHEER, false)
 	sfx("Reward")
 	doFlash(r[2]:Lerp(WHITE, 0.3), 1, 0.7)
 	hardShake(1.8 + ch.rarity * 0.08)
-	shockwave(floor + Vector3.new(0, 0.3, 0), r[2], 46, 0.8)
-	shockwave(floor + Vector3.new(0, 0.6, 0), WHITE, 28, 0.5)
+	shockwave(floor + Vector3.new(0, 0.3, 0), r[2], 40, 0.8)
+	shockwave(floor + Vector3.new(0, 0.6, 0), WHITE, 24, 0.5)
 	burst(core, r[2], 120, 30)
 	local confetti = emitter(core, {
 		Speed = NumberRange.new(20, 32), SpreadAngle = Vector2.new(50, 50), Lifetime = NumberRange.new(2, 3),
@@ -524,21 +559,24 @@ local function revealOnBase(slot, tid, ch, bonus)
 	tween(dim, 0.3, { BackgroundTransparency = 0.8 })
 	tween(cc, 0.3, { Brightness = 0.08, Saturation = 0.45, TintColor = r[2]:Lerp(WHITE, 0.7) })
 
-	-- C: orbit + zoom on the face, reveal card
+	-- C: slow orbit in front of the character and zoom on the face, reveal card
 	local orbit0 = os.clock()
 	camFn = function()
 		local t = math.min((os.clock() - orbit0) / 3.4, 1)
 		local e = 1 - (1 - t) ^ 3
-		local a = math.rad(-35 + 80 * e)
-		local dir = (CFrame.fromAxisAngle(Vector3.yAxis, a) * front)
-		local pos = center + dir * (12 - 5.5 * e) + Vector3.new(0, 4 - 1.5 * e, 0)
+		local a = math.rad(-30 + 60 * e)
+		local dir = CFrame.fromAxisAngle(Vector3.yAxis, a) * front
+		local pos = center + dir * (12 - 5 * e) + Vector3.new(0, 3.5 - 1.7 * e, 0)
 		return CFrame.lookAt(pos, center + Vector3.new(0, 1.2 * e, 0))
 	end
 	tween(cam, 3.4, { FieldOfView = 40 }, Enum.EasingStyle.Sine)
-	close = revealCard(ch, bonus)
+	local close = revealCard(ch, bonus)
 	task.wait(3.4)
 	close()
 	beam:Destroy()
+	copy:Destroy()
+	hideReal:Disconnect()
+	setHidden(npc, false)
 	task.delay(2, core.Destroy, core)
 end
 
@@ -549,7 +587,7 @@ Fx.OnClientEvent:Connect(function(kind, slot, dist, id, luck, tid)
 	local rcol = C.Rarities[ch.rarity][2]
 	local mine = slot == _G.MySlot
 	local x = laneX(slot)
-	local start = Vector3.new(x, FELT_Y + R, T.StartZ + 3)
+	local start = Vector3.new(x, FELT_Y + R, T.StartZ + 10) -- room behind the ball for the cue and the camera
 	local b = ball(WHITE, R * 2, CFrame.new(start))
 	local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
 	a0.Position, a1.Position, a0.Parent, a1.Parent = Vector3.new(0, 0.7, 0), Vector3.new(0, -0.7, 0), b, b
@@ -582,7 +620,7 @@ Fx.OnClientEvent:Connect(function(kind, slot, dist, id, luck, tid)
 	-- 2. Flight over the tables
 	local roll = C.RollTime(dist)
 	local zone = math.clamp(math.ceil(dist / zoneLen), 1, N)
-	local endZ = math.min(T.StartZ + 3 + dist, T.StartZ + T.Length - R)
+	local endZ = math.clamp(T.StartZ + dist, start.Z + 4, T.StartZ + T.Length - R) -- same zone as the server picked
 	local broke, lastZone = false, 1
 	local rot, lastZ = CFrame.new(), start.Z
 	if mine then
