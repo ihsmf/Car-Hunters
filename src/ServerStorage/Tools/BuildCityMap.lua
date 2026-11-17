@@ -753,61 +753,12 @@ local function buildTonyGarage(ctx)
 	m.Parent = f.StreetProps
 end
 
--- Job Board: lit board with five job cards on two posts; the dispatcher NPC (ContractService) stands on JobSpot
-local function buildJobBoard(ctx)
-	local f = ctx.f
-	local cfg = MapConfig.JobBoard
-	local bcf = hubCF(cfg) -- front faces the hub centre (-Z)
-	local st = Instance.new("Model")
-	st.Name = "JobBoard"
-	local function sp(name, size, off, color, mat, o)
-		return Part(st, name, size, bcf * CFrame.new(off), color, mat, o)
-	end
-	local STEEL, WOODD, CREAM2, ORANGE = C(40, 44, 52), C(96, 62, 36), C(250, 240, 214), C(240, 120, 30)
-	sp("StandBase", Vector3.new(27.4, 0.5, 7.5), Vector3.new(-2, 0.25, 0.25), C(196, 194, 188), M.SmoothPlastic)
-	for _, x in ipairs({ -11, 11 }) do
-		sp("StandPost", Vector3.new(1.2, 13.5, 1.2), Vector3.new(x, 0.5 + 6.75, 1), STEEL, M.Metal)
-	end
-	local panel = sp("ContractBoard", Vector3.new(21, 9.5, 0.8), Vector3.new(0, 7.3, 1), WOODD, M.Wood)
-	CollectionService:AddTag(panel, "ContractBoard")
-	local head = sp("BoardHeader", Vector3.new(24, 2.6, 1.4), Vector3.new(0, 13.4, 1), ORANGE, M.SmoothPlastic)
-	Label(head, Enum.NormalId.Front, "JOB BOARD", C(255, 255, 255))
-	Label(head, Enum.NormalId.Back, "JOB BOARD", C(255, 255, 255))
-	sp("HeaderTrim", Vector3.new(24.4, 0.35, 1.6), Vector3.new(0, 11.925, 1), STEEL, M.Metal)
-	for i, x in ipairs({ -8.4, -4.2, 0, 4.2, 8.4 }) do -- one card per job (Contracts.Active = 5)
-		local card = sp("ContractCard" .. i, Vector3.new(3.8, 7.4, 0.2), Vector3.new(x, 7.1, 0.45), CREAM2, M.SmoothPlastic)
-		card:SetAttribute("Index", i)
-		CollectionService:AddTag(card, "ContractCard")
-		sp("CardPin", Vector3.new(0.35, 0.5, 0.5), Vector3.new(x, 10.5, 0.2), C(214, 52, 44), M.SmoothPlastic, { shape = CYL, collide = false })
-	end
-	for _, x in ipairs({ -6, 6 }) do -- two arm lamps light the cards
-		sp("LampArm", Vector3.new(0.3, 0.3, 2.6), Vector3.new(x, 12, -0.6), STEEL, M.Metal, { collide = false })
-		local shade = sp("LampShade", Vector3.new(1.4, 0.6, 1), Vector3.new(x, 11.7, -1.9), STEEL, M.Metal, { collide = false })
-		local sl = Instance.new("SpotLight")
-		sl.Face = Enum.NormalId.Bottom
-		sl.Angle = 80
-		sl.Range = 14
-		sl.Brightness = 2.2
-		sl.Color = C(255, 236, 200)
-		sl.Parent = shade
-	end
-	-- dispatcher's corner beside the board: a little desk with a clipboard
-	local JX = -13.5
-	sp("JobDesk", Vector3.new(3.2, 3, 1.8), Vector3.new(JX, 0.5 + 1.5, 2.2), C(60, 110, 160), M.SmoothPlastic)
-	sp("DeskTop", Vector3.new(3.6, 0.25, 2.2), Vector3.new(JX, 0.5 + 3.12, 2.2), WOODD, M.Wood)
-	local spot = Part(st, "JobSpot", Vector3.new(2, 0.2, 2), bcf * CFrame.new(JX, 0.6, -0.6), CREAM2, M.SmoothPlastic, { t = 1, collide = false })
-	spot:SetAttribute("Yaw", cfg.yaw)
-	local jp = sp("JobPrompt", Vector3.new(8, 6, 3), Vector3.new(-3, 3.5, -3.5), CREAM2, M.SmoothPlastic, { t = 1, collide = false })
-	CollectionService:AddTag(jp, "JobPrompt")
-	st.Parent = f.StreetProps
-end
-
 -- facing helpers (yaw for CFrame.Angles(0, yaw, 0)): benches are sat looking along local +Z, stands look along -Z
 local function yawLookingPlusZ(dx, dz)
 	return math.atan2(dx, dz)
 end
 
--- the round hub: layered paving discs, a low ring curb, the fountain island, the six stands, decor between them
+-- the round hub: layered paving discs, a low ring curb, the fountain island, the stands, decor between them
 local function buildHub(ctx, deco)
 	local f = ctx.f
 	local hub = MapConfig.Hub
@@ -853,7 +804,6 @@ local function buildHub(ctx, deco)
 	buildLeaderboard(ctx)
 	buildMagnatPodium(ctx)
 	buildTonyGarage(ctx)
-	buildJobBoard(ctx)
 
 	-- lamps flank each passage, arm reaching inwards
 	for _, axis in ipairs({ 0, 90, 180, 270 }) do
@@ -867,7 +817,7 @@ local function buildHub(ctx, deco)
 		local a = math.rad(45 + k * 90)
 		deco.bench(HX + 18 * math.cos(a), HZ + 18 * math.sin(a), yawLookingPlusZ(math.cos(a), math.sin(a)), hub.top + 0.2)
 	end
-	-- the two free slots: a tree bed with a bench looking at the fountain
+	-- the free ring slots (v25: also the old Job Board slot): a tree bed with a bench looking at the fountain
 	for _, g in ipairs(MapConfig.HubGardens) do
 		local a = math.rad(g.angle)
 		local c = Vector3.new(g.x, 0, g.z)

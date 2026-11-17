@@ -1,5 +1,5 @@
 -- Big Tony's Gears: the rich mechanic in his own garage on the plaza. He sells timed gears (GearService buys them;
--- this module only places Tony + his prompt). Jobs are claimed at the Job Board, see ContractService.
+-- this module only places Tony + his prompt). Jobs are claimed in the safe zone (JOBS panel), see ContractService.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 

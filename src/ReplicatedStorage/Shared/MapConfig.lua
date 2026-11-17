@@ -3,7 +3,7 @@ local C = Color3.fromRGB
 local MapConfig = {}
 
 MapConfig.Seed = 12345
-MapConfig.Version = 20 -- bump when the map changes: a saved older GeneratedMap is rebuilt at server start
+MapConfig.Version = 21 -- bump when the map changes: a saved older GeneratedMap is rebuilt at server start
 MapConfig.MapHalfWidth = 190
 MapConfig.StartZ = -330
 MapConfig.EndZ = 1056 -- recomputed below once every district is placed
@@ -49,9 +49,8 @@ MapConfig.MagnatPodium = onRing(62, 42) -- Golden Magnat GT on its stand
 MapConfig.DonateStall = onRing(118, 45) -- Golden Magnate
 MapConfig.Leaderboard = onRing(152, 49) -- screen; the top-3 podium stands 11 studs towards the centre
 MapConfig.Tony = onRing(232, 45) -- Big Tony's Gears garage
-MapConfig.JobBoard = onRing(308, 46)
-MapConfig.ContractBoard = MapConfig.JobBoard -- old name (kept for older callers)
-MapConfig.HubGardens = { onRing(200, 46), onRing(340, 46) } -- tree beds with benches in the two free slots
+-- v25: the Job Board (308) is gone, jobs open from the JOBS HUD button; its slot is a garden now
+MapConfig.HubGardens = { onRing(200, 46), onRing(308, 46), onRing(340, 46) } -- tree beds with benches in the free slots
 
 MapConfig.NoNeon = true -- map decor uses lit materials only where something is a real light source
 
@@ -409,7 +408,7 @@ function MapConfig.Validate()
 			end
 		end
 	end
-	for _, key in ipairs({ "Shop", "DonateStall", "MagnatPodium", "Leaderboard", "Tony", "JobBoard" }) do
+	for _, key in ipairs({ "Shop", "DonateStall", "MagnatPodium", "Leaderboard", "Tony" }) do
 		local s = MapConfig[key]
 		if not s or math.sqrt((s.x - hub.x) ^ 2 + (s.z - hub.z) ^ 2) > hub.r - 4 then
 			table.insert(errors, key .. " is not on the hub ring")
