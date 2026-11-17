@@ -17,11 +17,11 @@ end
 -- price: money | tokens (rebirth) | pass (Golden Magnate game pass)
 SkinConfig.Skins = {
 	{ id = "classic", name = "Classic", icon = "🏁", bonus = 0, style = style({}) },
-	{ id = "street", name = "Street Garage", icon = "🧱", bonus = 0.03, money = 250000,
+	{ id = "street", name = "Street Garage", icon = "🧱", bonus = 0.03, money = 2500000,
 		style = style({ floor = C(150, 150, 154), wall = C(150, 70, 52), deck = C(196, 196, 200), accent = C(255, 140, 40), inlay = C(48, 48, 52) }) },
-	{ id = "racing", name = "Racing Team", icon = "🏎️", bonus = 0.06, money = 15000000,
+	{ id = "racing", name = "Racing Team", icon = "🏎️", bonus = 0.06, money = 150000000,
 		style = style({ floor = C(236, 236, 240), wall = C(214, 52, 44), deck = C(250, 250, 250), accent = C(255, 255, 255), accent2 = C(30, 30, 34), inlay = C(30, 30, 34), frame = C(20, 20, 24) }) },
-	{ id = "chrome", name = "Chrome Lux", icon = "💎", bonus = 0.10, money = 900000000,
+	{ id = "chrome", name = "Chrome Lux", icon = "💎", bonus = 0.10, money = 9000000000,
 		style = style({ floor = C(70, 74, 82), wall = C(196, 200, 208), deck = C(220, 224, 230), frame = C(150, 156, 166), accent = C(110, 200, 255), inlay = C(40, 44, 52), bay = C(56, 60, 68) }) },
 	{ id = "midnight", name = "Midnight Club", icon = "🌙", bonus = 0.15, tokens = 15,
 		style = style({ floor = C(30, 32, 44), wall = C(18, 20, 30), deck = C(40, 44, 60), frame = C(12, 12, 18), accent = C(150, 110, 255), accent2 = C(80, 200, 255), line = C(170, 150, 255), inlay = C(60, 50, 110), bay = C(44, 46, 62) }) },
@@ -49,8 +49,8 @@ end
 SkinConfig.Rebirth = {
 	needZone = { [0] = "scrapyard", [1] = "airport", [2] = "canyon" }, -- beat the arena of your tier; later: "rush"
 	lateZone = "rush",
-	costs = { 1e7, 7e8, 3.5e9 }, lateGrowth = 2, -- v24 (Epic/Legendary earn more); v22 x1.3 / x1.8 after the income boost -- rebirth n+1 costs costs[n+1], later x2 each
-	incomePer = 1.0, startMoney = 50000, -- income x(1 + rebirths); start cash x rebirths
+	costs = { 1e8, 7e9, 3.5e10 }, lateGrowth = 2, -- v25: x10 (all money); v24 (Epic/Legendary earn more); v22 x1.3 / x1.8 after the income boost -- rebirth n+1 costs costs[n+1], later x2 each
+	incomePer = 1.0, startMoney = 500000, -- income x(1 + rebirths); start cash x rebirths
 }
 function SkinConfig.RebirthNeeds(n)
 	local R = SkinConfig.Rebirth

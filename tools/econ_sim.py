@@ -78,7 +78,7 @@ P = dict(
     session_h=2, away_h=10,  # play 2 h, then away 10 h (offline earnings, capped by the game)
     think=20,                # seconds per cycle spent in menus / walking in the garage
     risk_mix=(0.55, 0.35, 0.10),  # share of safe / risky / road pickups
-    gear_every=600,          # v24: tries to put a Cash Turbo on its best car every 10 min ...
+    gear_every=600,          # v24: tries to put a Cash Turbo (v25: x2 for 5 min) on its best car every 10 min ...
     gear_budget=0.10,        # ... when the price is below 10% of its money (and Tony has one in stock)
     gear_id="cashturbo",
     gears=True, trap=True,   # --no-gears / --no-trap switch the v24 models off
@@ -109,7 +109,8 @@ class Player:
         self.parts = {k: 0 for k in ORDER}
         self.parts["bolts"] = 2 if first else 3
         self.cars = []  # [income, level, rarity, gear mult, pool index, gear expiry time]
-        self.peak = 0.0  # v24 GearConfig.Price follows the best gear-less single parked car income of this run (reset on rebirth)
+        # v24 GearConfig.Price follows the best gear-less single parked car income of this run; v25: a rebirth keeps 30%
+        self.peak = 0.0 if first else math.floor(self.peak * 0.3)
         if first:  # v18: a rebirth keeps districts, floors and bays
             self.zones = {"city"}
             self.slots = Eco.StartSlots
@@ -295,7 +296,8 @@ class Player:
                     cost = c[0] * VALUE_MULT * UP_BASE * UP_GROW ** (c[1] - 1)
                     need = 1 + (c[1] - 1) // 3
                     if self.parts[PART_OF[c[2]]] >= need:
-                        opts.append((cost, "up", c, c[0] * GROWTH))  # (unit kept from v19 so the ROI order is unchanged)
+                        # (unit kept from v19 so the ROI order is unchanged; v25: x10 income -> scaled with IncomeMult / 3.25)
+                        opts.append((cost, "up", c, c[0] * GROWTH * INC_MULT / 3.25))
             # Pit Stop income perk
             lv = self.perks.get("turbo", 0)
             if lv < 5:

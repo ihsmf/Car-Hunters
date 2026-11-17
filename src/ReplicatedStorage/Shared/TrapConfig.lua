@@ -9,17 +9,17 @@ local TrapConfig = {}
 TrapConfig.MaxLevel = 10
 TrapConfig.LuckPerLevel = 0.06
 
--- economy (v24, tools/econ_sim.py): Lv2-7 in the first hour, Lv8-9 in R1, Lv10 is an R2/R3 trophy
+-- economy (v25, tools/econ_sim.py): every level is a real goal (minutes to hours of income); all money is x10 since v25
 TrapConfig.Costs = {
-	[2] = 3000,
-	[3] = 12000,
-	[4] = 50000,
-	[5] = 200000,
-	[6] = 1000000,
-	[7] = 6000000,
-	[8] = 40000000,
-	[9] = 300000000,
-	[10] = 2500000000,
+	[2] = 150000,
+	[3] = 6000000,
+	[4] = 25000000,
+	[5] = 80000000,
+	[6] = 250000000,
+	[7] = 800000000,
+	[8] = 2500000000,
+	[9] = 8000000000,
+	[10] = 25000000000,
 }
 
 TrapConfig.Names = {

@@ -69,7 +69,9 @@ function Rebirth.Do(player)
 	d.parts.bolts = 3
 	d.garageSlotCount = math.max(d.garageSlotCount, EconomyConfig.StartSlots + Rebirth.PerkLevel(s, "startSlot"))
 	d.peakIncome = 0 -- peaks follow the new run's income (owned gears are kept)
-	d.peakCarIncome = 0 -- gear prices follow the new run's best car
+	-- gear prices follow the new run's best car, but keep 30% of the old peak (v25): cheap gears right after a rebirth
+	-- could otherwise be bought in bulk and stored for later
+	d.peakCarIncome = math.floor((d.peakCarIncome or 0) * 0.3)
 	d.contracts = {}
 	d.pity = 0
 	s.carried = {}

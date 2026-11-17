@@ -1,4 +1,4 @@
--- Pit Stop upgrades (in-game money). Effects are read on the server through ShopService.
+-- Pit Stop upgrades (in-game money; v25: all prices x10). Effects are read on the server through ShopService.
 local ShopConfig = {}
 
 local function curve(base, growth, max)
@@ -10,15 +10,15 @@ local function curve(base, growth, max)
 end
 
 ShopConfig.Perks = {
-	{ id = "sneakers", icon = "👟", name = "Sneakers", desc = "+6% run speed", max = 5, costs = curve(800, 2.4, 5), per = 0.06 },
-	{ id = "backpack", icon = "🎒", name = "Backpack", desc = "+5 loot capacity", max = 5, costs = curve(1500, 2.5, 5), per = 5 },
-	{ id = "magnet", icon = "🧲", name = "Magnet", desc = "+2.5 studs pickup radius", max = 4, costs = curve(2000, 2.6, 4), per = 2.5 },
-	{ id = "airbag", icon = "🛡️", name = "Airbag", desc = "Survive one car hit (recharges)", max = 3, costs = { 25000, 100000, 400000 }, cooldowns = { 180, 120, 60 } },
-	{ id = "scanner", icon = "📡", name = "Scanner", desc = "Lv1: rare parts on the map. Lv2: Hot Drop alert 15s early", max = 2, costs = { 15000, 120000 } },
-	{ id = "multi", icon = "🎰", name = "Multi Catch", desc = "+1 car per throw (up to 4)", max = 3, costs = { 6000, 60000, 600000 } },
-	{ id = "lucky", icon = "🍀", name = "Lucky Trap", desc = "+1.5% better car rarity", max = 5, costs = curve(5000, 3, 5), per = 0.015 },
-	{ id = "turbo", icon = "💰", name = "Turbo Garage", desc = "+8% garage income", max = 5, costs = curve(10000, 3, 5), per = 0.08 },
-	{ id = "quick", icon = "⏱️", name = "Quick Start", desc = "Faster respawn, longer spawn shield", max = 3, costs = curve(4000, 3, 3), respawn = { 2.4, 1.9, 1.4 } },
+	{ id = "sneakers", icon = "👟", name = "Sneakers", desc = "+6% run speed", max = 5, costs = curve(8000, 2.4, 5), per = 0.06 },
+	{ id = "backpack", icon = "🎒", name = "Backpack", desc = "+5 loot capacity", max = 5, costs = curve(15000, 2.5, 5), per = 5 },
+	{ id = "magnet", icon = "🧲", name = "Magnet", desc = "+2.5 studs pickup radius", max = 4, costs = curve(20000, 2.6, 4), per = 2.5 },
+	{ id = "airbag", icon = "🛡️", name = "Airbag", desc = "Survive one car hit (recharges)", max = 3, costs = { 250000, 1000000, 4000000 }, cooldowns = { 180, 120, 60 } },
+	{ id = "scanner", icon = "📡", name = "Scanner", desc = "Lv1: rare parts on the map. Lv2: Hot Drop alert 15s early", max = 2, costs = { 150000, 1200000 } },
+	{ id = "multi", icon = "🎰", name = "Multi Catch", desc = "+1 car per throw (up to 4)", max = 3, costs = { 60000, 600000, 6000000 } },
+	{ id = "lucky", icon = "🍀", name = "Lucky Trap", desc = "+1.5% better car rarity", max = 5, costs = curve(50000, 3, 5), per = 0.015 },
+	{ id = "turbo", icon = "💰", name = "Turbo Garage", desc = "+8% garage income", max = 5, costs = curve(100000, 3, 5), per = 0.08 },
+	{ id = "quick", icon = "⏱️", name = "Quick Start", desc = "Faster respawn, longer spawn shield", max = 3, costs = curve(40000, 3, 3), respawn = { 2.4, 1.9, 1.4 } },
 }
 
 ShopConfig.ById = {}

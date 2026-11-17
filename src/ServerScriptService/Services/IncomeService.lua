@@ -67,13 +67,15 @@ function Income.Recalc(player)
 	s.collectionValue = value
 	local ls = player:FindFirstChild("leaderstats")
 	if ls then
-		ls.Income.Value = math.min(inc, 2e9)
-		ls.Collection.Value = math.min(value, 2e9)
+		-- IntValue is 64-bit: clamp well below 2^63 (v25: money x10 pushed collections past the old 2e9 clamp)
+		ls.Income.Value = math.min(inc, 9e15)
+		ls.Collection.Value = math.min(value, 9e15)
 	end
 	S.Base.SetIncomeText(player, "+" .. Util.FormatNumber(s.income) .. "/s")
 end
 
--- offline earnings: a share of income for the time away (capped), paid once on join
+-- offline earnings: a share of the gear-less income (s.baseIncome: no gears, no running x2 boost) for the time
+-- away (capped), paid once on join
 Income.OfflineShare = 0.15
 Income.OfflineCap = 8 * 3600
 function Income.PayOffline(player)
@@ -87,7 +89,7 @@ function Income.PayOffline(player)
 		return
 	end
 	local secs = math.min(away, Income.OfflineCap)
-	local amount = math.floor(secs * (s.income or 0) * Income.OfflineShare)
+	local amount = math.floor(secs * (s.baseIncome or 0) * Income.OfflineShare)
 	if amount <= 0 then
 		return
 	end

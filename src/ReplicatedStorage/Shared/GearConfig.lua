@@ -1,4 +1,4 @@
--- Gears (v24): timed boosts bought for money at Big Tony. A gear is applied to one car (car.gear = { id, exp }):
+-- Gears (v24; v25: cheaper, x2/x3 income, all money x10): timed boosts bought for money at Big Tony. A gear is applied to one car (car.gear = { id, exp }):
 -- income gears boost that car, speed/luck gears boost the player while the geared car is parked (best one counts).
 -- Tony's stock changes every Window seconds; every player has their own stock, seeded by userId + window + gear.
 local GearConfig = {}
@@ -10,32 +10,32 @@ GearConfig.List = {
 	{
 		id = "nitro", name = "Nitro Can", icon = "💨", desc = "Run faster while this car is parked.",
 		effects = { speed = 1.5 }, seconds = 300, tier = 1, color = Color3.fromRGB(80, 170, 255),
-		k = 60, minPrice = 300, stock = { chance = 0.9, min = 1, max = 3 },
+		k = 20, minPrice = 3000, stock = { chance = 0.9, min = 1, max = 3 },
 	},
 	{
 		id = "clover", name = "Lucky Clover", icon = "🍀", desc = "Better car odds while this car is parked.",
 		effects = { luck = 1.5 }, seconds = 600, tier = 2, color = Color3.fromRGB(80, 220, 110),
-		k = 180, minPrice = 800, stock = { chance = 0.7, min = 1, max = 2 },
+		k = 60, minPrice = 5000, stock = { chance = 0.7, min = 1, max = 2 },
 	},
 	{
-		id = "cashturbo", name = "Cash Turbo", icon = "💵", desc = "This car earns more money.",
-		effects = { income = 1.5 }, seconds = 600, tier = 2, color = Color3.fromRGB(120, 230, 90),
-		k = 200, minPrice = 600, stock = { chance = 0.75, min = 1, max = 3 },
+		id = "cashturbo", name = "Cash Turbo", icon = "💵", desc = "Doubles this car's money for 5 min.",
+		effects = { income = 2 }, seconds = 300, tier = 2, color = Color3.fromRGB(120, 230, 90),
+		k = 100, minPrice = 5000, stock = { chance = 0.75, min = 1, max = 3 },
 	},
 	{
 		id = "rocket", name = "Rocket Boots", icon = "🚀", desc = "Run MUCH faster while this car is parked.",
 		effects = { speed = 2 }, seconds = 300, tier = 3, color = Color3.fromRGB(60, 230, 255),
-		k = 120, minPrice = 1200, stock = { chance = 0.55, min = 1, max = 2 },
+		k = 40, minPrice = 8000, stock = { chance = 0.55, min = 1, max = 2 },
 	},
 	{
-		id = "moneystorm", name = "Money Storm", icon = "💰", desc = "This car earns double money.",
-		effects = { income = 2 }, seconds = 600, tier = 4, color = Color3.fromRGB(255, 200, 50),
-		k = 420, minPrice = 2500, stock = { chance = 0.4, min = 1, max = 1 },
+		id = "moneystorm", name = "Money Storm", icon = "💰", desc = "Triples this car's money for 5 min.",
+		effects = { income = 3 }, seconds = 300, tier = 4, color = Color3.fromRGB(255, 200, 50),
+		k = 200, minPrice = 15000, stock = { chance = 0.4, min = 1, max = 1 },
 	},
 	{
-		id = "goldengine", name = "Golden Engine", icon = "👑", desc = "Double money on this car + better car odds while parked.",
-		effects = { income = 2, luck = 1.5 }, seconds = 900, tier = 5, color = Color3.fromRGB(255, 215, 0),
-		k = 700, minPrice = 5000, stock = { chance = 0.15, min = 1, max = 1 },
+		id = "goldengine", name = "Golden Engine", icon = "👑", desc = "Triples this car's money + better car odds for 10 min.",
+		effects = { income = 3, luck = 1.5 }, seconds = 600, tier = 5, color = Color3.fromRGB(255, 215, 0),
+		k = 400, minPrice = 30000, stock = { chance = 0.15, min = 1, max = 1 },
 	},
 }
 
@@ -68,7 +68,8 @@ function GearConfig.Stock(userId, window)
 end
 
 -- price follows the best single parked car income of this run (gear-less, data.peakCarIncome): a gear boosts ONE car,
--- so k is "seconds of that car's income" (cashturbo 200 vs +300c, moneystorm 420 vs +600c, goldengine 700 vs +900c).
+-- so k is "seconds of that car's income" (v25: cashturbo 100 vs +300c, moneystorm 200 vs +600c, goldengine 400 vs
+-- +1200c and luck: ~3x payback).
 -- Un-parking cars does not make gears cheaper. Same call on server (GearService.Buy) and client (UIExtra).
 function GearConfig.Price(def, peakCarIncome)
 	return math.floor(math.max(def.minPrice, (tonumber(peakCarIncome) or 0) * def.k) + 0.5)
@@ -81,7 +82,7 @@ local function fmt(m)
 	return "x" .. string.format("%.2f", m):gsub("0+$", "")
 end
 
--- "x2 INCOME" / "x1.5 LUCK" / "x2 SPEED" / "x2 INCOME + x1.5 LUCK"
+-- "x2 INCOME" / "x1.5 LUCK" / "x2 SPEED" / "x3 INCOME + x1.5 LUCK"
 function GearConfig.Label(def)
 	local parts = {}
 	for _, kind in ipairs({ "income", "luck", "speed" }) do

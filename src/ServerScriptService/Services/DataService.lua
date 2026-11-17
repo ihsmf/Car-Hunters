@@ -18,8 +18,8 @@ local DataService = {}
 local S
 
 local STORE_NAME = "CarHunters_Profiles_v1"
-local SCHEMA_VERSION = 7 -- v5: tutorial has 8 steps (unlock the Highway); v6: tuning parts -> gears (refunded);
--- v7: tutorial has 10 steps (platform upgrade, Big Tony, Job Board)
+local SCHEMA_VERSION = 8 -- v5: tutorial has 8 steps (unlock the Highway); v6: tuning parts -> gears (refunded);
+-- v7: tutorial has 10 steps (platform upgrade, Big Tony, Job Board); v8: all money x10 (v25 economy)
 local TUTORIAL_STEPS = 10
 local TUTORIAL_DONE = TUTORIAL_STEPS + 1
 
@@ -295,6 +295,20 @@ local function sanitize(raw)
 			p.tutorial = TUTORIAL_DONE
 		elseif p.tutorial >= 7 then
 			p.tutorial = p.tutorial + 2
+		end
+	end
+	if rawVersion < 8 then
+		-- v8 (v25 economy): car income, values and every price went x10, so saved money and income peaks follow once.
+		-- Runs only for saves older than v8; the next save stamps SCHEMA_VERSION, so it never runs twice
+		p.money = math.min(p.money * 10, EconomyConfig.MaxMoney)
+		p.peakIncome = math.min(p.peakIncome * 10, 1e15)
+		p.peakCarIncome = math.min(p.peakCarIncome * 10, 1e15)
+		p.stats.peakIncome = math.min(p.stats.peakIncome * 10, 1e15)
+		for _, c in ipairs(p.contracts) do
+			c.reward.money = math.min(c.reward.money * 10, 1e12)
+		end
+		if p.pendingNotice and p.pendingNotice.amount then
+			p.pendingNotice.amount = math.min(p.pendingNotice.amount * 10, 1e12) -- the v6 refund was added before the x10
 		end
 	end
 	p.settings = DataService.SanitizeSettings(raw.settings)
@@ -662,8 +676,8 @@ function DataService.Tutorial(player, step)
 		local finished = step == DataService.TutorialSteps + 1 and d.tutorial < step
 		d.tutorial = step
 		if finished then
-			d.money = math.min(d.money + 500, EconomyConfig.MaxMoney)
-			DataService.Notify(player, "tutDone", { 500 }, "good")
+			d.money = math.min(d.money + 5000, EconomyConfig.MaxMoney) -- v25: x10
+			DataService.Notify(player, "tutDone", { 5000 }, "good")
 		end
 	else
 		return

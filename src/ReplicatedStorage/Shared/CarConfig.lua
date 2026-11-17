@@ -15,8 +15,8 @@ CarConfig.Rarities = {
 
 CarConfig.MaxLevel = 10
 CarConfig.IncomeGrowth = 0.25
-CarConfig.IncomeMult = 3.25 -- v19: cars earn 2.5x more than v18 (progress felt too slow)
-CarConfig.ValueMultiplier = 100 -- v19: worth / sell / upgrade 2.5x too, so upgrades keep their payback
+CarConfig.IncomeMult = 32.5 -- v19: cars earn 2.5x more than v18 (progress felt too slow); v25: x10 ("pennies"), all money x10
+CarConfig.ValueMultiplier = 1000 -- v25: x10 with IncomeMult; v19: worth / sell / upgrade 2.5x too, so upgrades keep their payback
 CarConfig.UpgradeCostBase = 0.5
 CarConfig.UpgradeCostGrowth = 1.35
 -- v22: rarer cars earn proportionally more (base income in the list x this); value / upgrade / sell scale with it
