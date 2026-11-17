@@ -295,20 +295,23 @@ def long_table(world):
 # ---------- Player base: only the billiard table; the gym and the cue shop stand in front of it ----------
 def player_base(world, i, o, col):
     b = Inst("Model", f"Base{i + 1}", world)
-    ycyl(b, 62, 1.0, o @ cf(0, 0.5, 0), col)
-    ycyl(b, 60, 0.3, o @ cf(0, 1.1, 0), (240, 226, 200), "Planks", name="Floor")
-    top = o @ cf(0, 1.25, 0)
+    stage = Inst("Model", "Stage", b)  # Blender octagonal stage; part twin = collisions + fallback
+    pivot(stage, o, "BasePlatform", Rim=col, Felt=shade(col, 0.6))
+    ycyl(stage, 62, 1.2, o @ cf(0, 0.6, 0), col)
+    ycyl(stage, 60, 0.16, o @ cf(0, 1.29, 0), (236, 214, 178), "Planks", name="Floor")
+    part(stage, (15, 0.7, 2.6), o @ cf(0, 0.35, 31.6), col)
+    top = o @ cf(0, 1.37, 0)
     pool_table(b, top)
     slots = Inst("Folder", "Slots", b)
-    for s in range(SLOTS):  # where the characters stand around the table
-        a = math.radians(-150 + s * 300 / (SLOTS - 1))
-        ycyl(slots, 4.6, 0.2, top @ cf(math.sin(a) * 17, 0.1, -math.cos(a) * 17), GOLD, "Metal", name=f"Slot{s + 1}")
-    sign = part(b, (16, 2.6, 0.6), top @ cf(0, 1.3, 29), shade(col, 0.85), name="Sign")
+    for s_ in range(SLOTS):  # invisible markers: the brass spots are part of the stage mesh
+        a = math.radians(-150 + s_ * 300 / (SLOTS - 1))
+        part(slots, (1, 0.2, 1), top @ cf(math.sin(a) * 17, 0.1, -math.cos(a) * 17), WHITE, Transparency=1, CanCollide=False, name=f"Slot{s_ + 1}")
+    sign = part(b, (18, 2.4, 0.2), top @ cf(0, 1.8, 30.6), WHITE, Transparency=1, CanCollide=False, name="Sign")
     label(sign, FACE["Back"], "Free Base")
     part(b, (4, 1, 4), top @ cf(0, 0.5, 23), WHITE, Transparency=1, CanCollide=False, name="SpawnPoint")
     Inst("Folder", "Chars", b)
-    gym_station(b, o @ cf(-16, 0, 39))
-    cue_shop(b, o @ cf(16, 0, 39), col)
+    gym_station(b, o @ cf(-17, 0, 41))
+    cue_shop(b, o @ cf(17, 0, 41), col)
 
 
 def gym_station(b, o):
@@ -325,31 +328,20 @@ def gym_station(b, o):
 
 
 def cue_shop(b, o, col):
-    """Mini cue shop: counter, back wall with a 3-cue display (current / next / locked), awning, signs."""
-    part(b, (12, 0.3, 9), o @ cf(0, 0.15, -1), (150, 96, 54), "Planks")
-    shop = part(b, (10, 3.4, 2.6), o @ cf(0, 1.85, 0), (96, 52, 24), "Wood", name="CueShop")
-    label(shop, FACE["Back"], "🎱 CUE SHOP", (255, 230, 150))
+    """Blender kiosk (counter, arched cue display, curved canopy, sign) + invisible functional parts."""
+    m = Inst("Model", "Kiosk", b)
+    pivot(m, o, "CueShop", Accent=col)
+    part(m, (12.4, 0.5, 8.4), o @ cf(0, 0.25, -0.6), (92, 50, 24), "Wood")
+    part(m, (11, 8.2, 0.8), o @ cf(0, 4.6, -3.6), (92, 50, 24), "Wood")
+    for sx in (-1, 1): ycyl(m, 0.55, 9.9, o @ cf(sx * 5.6, 5.2, 3.2), (92, 50, 24), "Wood")
+    shop = part(b, (10, 3.2, 2.6), o @ cf(0, 2.1, 1.3), (92, 50, 24), "Wood", name="CueShop")  # counter: prompt lives here
     prompt(shop, "Open", "Cue Shop")
-    part(b, (10.4, 0.3, 3), o @ cf(0, 3.7, 0), (245, 240, 230), "Marble")
-    part(b, (10.6, 0.2, 3.2), o @ cf(0, 3.5, 0), GOLD, "Metal")
-    part(b, (11, 9, 0.6), o @ cf(0, 4.5, -4.2), (110, 60, 28), "Wood")
-    part(b, (11.4, 0.6, 0.8), o @ cf(0, 9.1, -4.2), GOLD, "Metal")
-    for y in (1.6, 7.6):
-        part(b, (9, 0.35, 0.35), o @ cf(0, y, -3.7), GOLD, "Metal", "Cyl")
+    label(part(b, (8.6, 2.1, 0.1), o @ cf(0, 2.1, 2.78), WHITE, Transparency=1, CanCollide=False), FACE["Back"], "🎱 CUE SHOP")
+    label(part(b, (8, 1.8, 0.1), o @ cf(0, 12.6, 3.55), WHITE, Transparency=1, CanCollide=False), FACE["Back"], "UPGRADE YOUR CUE")
     stands = Inst("Folder", "Stands", b)
-    for k, x in enumerate((-3, 0, 3), 1):  # server puts the owner's current / next / locked cue here
-        part(stands, (0.4, 0.4, 0.4), o @ cf(x, 4.9, -3.4), WHITE, Transparency=1, CanCollide=False, name=f"Stand{k}")
-        ycyl(b, 1, 0.3, o @ cf(x, 0.45, -3.4), GOLD, "Metal")
-    for sx in (-1, 1):
-        part(b, (0.5, 10, 0.5), o @ cf(sx * 5.4, 5, 2.4), WHITE, "Wood")
-    for k in range(6):  # striped awning
-        part(b, (2, 0.4, 7.6), o @ cf(-5 + k * 2, 10.2, -0.6) @ rx(-0.18), (230, 60, 70) if k % 2 == 0 else WHITE)
-    lamp = part(b, (1, 0.4, 1), o @ cf(0, 9.5, 0.5), (60, 60, 70), "Metal")
-    light(lamp, (255, 230, 180), 18, 2)
-    label(part(b, (9, 1.8, 0.4), o @ cf(0, 11.9, 3), shade(col, 0.9)), FACE["Back"], "UPGRADE YOUR CUE!")
-    for k in range(3):  # chalk cubes and a cue ball on the counter
-        part(b, (0.45, 0.45, 0.45), o @ cf(-3.8 + k * 0.6, 4.08, 0.4), (60, 140, 230))
-    mesh_ball(b, 0.8, o @ cf(3.6, 4.25, 0.3), WHITE)
+    for k, x in enumerate((-3, 0, 3), 1):  # the owner's current / next / locked cue hang here
+        part(stands, (0.4, 0.4, 0.4), o @ cf(x, 4.9, -2.7), WHITE, Transparency=1, CanCollide=False, name=f"Stand{k}")
+    light(part(m, (0.4, 0.4, 0.4), o @ cf(0, 9.6, 0.8), WHITE, Transparency=1, CanCollide=False), (255, 228, 180), 18, 2)
 
 
 def build():

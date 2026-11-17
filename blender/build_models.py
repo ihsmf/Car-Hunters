@@ -581,7 +581,83 @@ def acc_cape():  # back item
     sphere(0.3, (0, 0.85, -0.05), g, 8, 6)
 
 
-CORE = [("PoolTable", pool_table), ("Cue", cue), ("Ball", ball), ("Dumbbell", dumbbell), ("Fence", fence), ("TableSegment", table_segment)]
+# ---------- Player base stage and the cue shop (recoloured per base: Rim / Felt / Accent) ----------
+def base_platform():
+    M = {k: mat(k, v, 1 if k == "Trim" else 0, 0.35) for k, v in dict(Rim=(255, 110, 120), Deck=(236, 214, 178), Groove=(170, 128, 86),
+                                                                    Felt=(150, 40, 60), Trim=(235, 185, 70), Inset=(250, 236, 205)).items()}
+    rot = (0, 0, math.pi / 8)  # flat side to the front
+    bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=31, depth=1.2, location=rb(0, 0.6, 0), rotation=rot)
+    finish(bpy.context.object, M["Rim"], 0.3, 3)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=30.6, depth=0.12, location=rb(0, 1.25, 0), rotation=rot)
+    finish(bpy.context.object, M["Trim"], 0.04)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=29.9, depth=0.16, location=rb(0, 1.29, 0), rotation=rot)
+    finish(bpy.context.object, M["Deck"], 0.03)
+    for k in range(-12, 13):  # plank grooves, clipped to a circle inside the octagon
+        x = k * 2.2
+        half = math.sqrt(max(0, 27.2 ** 2 - x * x))
+        if half > 1:
+            box((0.1, 0.04, 2 * half), (x, 1.375, 0), M["Groove"], 0)
+    cyl(26, 0.06, (0, 1.39, 0), M["Felt"], verts=48, bevel=0)
+    torus(27, 0.35, (0, 1.42, 0), M["Trim"])
+    cyl(14.5, 0.08, (0, 1.4, 0), M["Inset"], verts=48, bevel=0)
+    for k in range(8):  # brass spots where the characters stand
+        a = math.radians(-150 + k * 300 / 7)
+        x, z = math.sin(a) * 17, -math.cos(a) * 17
+        cyl(4.4, 0.12, (x, 1.43, z), M["Trim"], verts=24, bevel=0.03)
+        cyl(3.4, 0.14, (x, 1.45, z), M["Inset"], verts=24, bevel=0)
+    box((15, 0.7, 2.6), (0, 0.35, 31.6), M["Rim"], 0.2)
+    box((15.2, 0.1, 2.8), (0, 0.72, 31.6), M["Trim"], 0)
+
+
+def cue_shop():
+    M = {k: mat(k, v, 1 if k == "Trim" else 0, 0.3) for k, v in dict(Wood=(92, 50, 24), Accent=(255, 110, 120), Trim=(235, 185, 70),
+                                                                   Marble=(246, 242, 234), Felt=(24, 110, 56), White=(250, 248, 242),
+                                                                   Lamp=(255, 236, 190)).items()}
+    box((12.4, 0.5, 8.4), (0, 0.25, -0.6), M["Wood"], 0.15)
+    box((10, 3.2, 2.6), (0, 2.1, 1.3), M["Wood"], 0.3)
+    box((8.6, 2.1, 0.2), (0, 2.1, 2.62), M["Accent"], 0.08)
+    box((10.3, 0.2, 2.9), (0, 3.62, 1.3), M["Trim"], 0.05)
+    box((10.6, 0.3, 3.2), (0, 3.85, 1.35), M["Marble"], 0.1)
+    box((11, 8.2, 0.8), (0, 4.6, -3.6), M["Wood"], 0.2)
+    o = cyl(11, 0.8, (0, 8.7, -3.6), M["Wood"], "Z", verts=32, bevel=0.1)  # arched top
+    o.scale = (1, 0.42, 1)  # squash vertically (local Y is up after the rotation)
+    box((9, 6.6, 0.25), (0, 4.9, -3.12), M["Felt"], 0.05)
+    for y in (2.2, 7.4):
+        cyl(0.32, 9.4, (0, y, -2.9), M["Trim"], "X", verts=12)
+    for sx in (-1, 1):
+        cyl(0.55, 9.9, (sx * 5.6, 5.2, 3.2), M["Wood"], verts=16)
+        sphere(0.7, (sx * 5.6, 10.2, 3.2), M["Trim"], 12, 8)
+        cyl(0.9, 0.3, (sx * 5.6, 0.65, 3.2), M["Trim"], verts=16)
+    # one smooth curved canopy (6 stripes) with a scalloped valance, built as a single sheet
+    bm = bmesh.new()
+    arc = [(-3.9 + 7.6 * t, 11.7 - 1.5 * t + 0.6 * math.sin(math.pi * t)) for t in [j / 12 for j in range(13)]]
+    faces_by_mat = {0: [], 1: []}
+    for k in range(6):
+        x0, x1 = -6 + k * 2, -4 + k * 2
+        col = [(bm.verts.new(rb(x0, y, z)), bm.verts.new(rb(x1, y, z))) for z, y in arc]
+        for j in range(12):
+            faces_by_mat[k % 2].append(bm.faces.new((col[j][0], col[j][1], col[j + 1][1], col[j + 1][0])))
+        zf, yf = arc[-1]
+        cx = (x0 + x1) / 2
+        fan = [bm.verts.new(rb(cx + math.cos(math.pi * i / 8), yf - math.sin(math.pi * i / 8) * 0.9, zf)) for i in range(9)]
+        centre = bm.verts.new(rb(cx, yf, zf))
+        for i in range(8):
+            faces_by_mat[k % 2].append(bm.faces.new((centre, fan[i], fan[i + 1])))
+    me = bpy.data.meshes.new("canopy"); bm.to_mesh(me); bm.free()
+    can = bpy.data.objects.new("canopy", me); bpy.context.scene.collection.objects.link(can)
+    can.data.materials.append(M["Accent"]); can.data.materials.append(M["White"])
+    for f in can.data.polygons:  # stripes alternate by x position
+        f.material_index = int((f.center.x + 6) // 2) % 2
+    box((12.4, 0.35, 0.35), (0, arc[-1][1] + 0.05, arc[-1][0]), M["Trim"], 0.1)
+    for sx in (-2.8, 2.8):  # the sign stands on the canopy
+        cyl(0.18, 1.6, (sx, arc[-1][1] + 0.8, arc[-1][0] - 0.3), M["Trim"], verts=8)
+    box((8.4, 2.2, 0.3), (0, arc[-1][1] + 2.4, arc[-1][0] - 0.4), M["Trim"], 0.1)
+    box((8, 1.8, 0.4), (0, arc[-1][1] + 2.4, arc[-1][0] - 0.3), M["Accent"], 0.12)
+    sphere(0.8, (0, 9.9, 0.8), M["Lamp"], 12, 8)
+    cyl(0.12, 1.2, (0, 10.8, 0.8), M["Trim"], verts=6)
+
+
+CORE = [("BasePlatform", base_platform), ("CueShop", cue_shop), ("PoolTable", pool_table), ("Cue", cue), ("Ball", ball), ("Dumbbell", dumbbell), ("Fence", fence), ("TableSegment", table_segment)]
 PROPS = [("Mountain", lambda: mountain(3)), ("Peak", lambda: mountain(11)), ("Pine", pine), ("Tree", tree), ("Palm", palm),
          ("Cactus", cactus), ("Rock", rock), ("Dune", dune), ("Crystal", crystal), ("Volcano", volcano), ("Tower", tower),
          ("Planet", planet), ("Torii", torii), ("Pyramid", pyramid), ("Column", column), ("Mushroom", mushroom),
