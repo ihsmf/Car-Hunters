@@ -510,7 +510,7 @@ def src(path): return open(os.path.join(ROOT, path), encoding="utf-8").read()
 def services(ws):
     rs = Inst("ReplicatedStorage", "ReplicatedStorage")
     shared = Inst("Folder", "Shared", rs)
-    for n in ("Config", "MeshBuilder"):
+    for n in ("Config", "MeshBuilder", "Avatars"):
         Inst("ModuleScript", n, shared, Source=src(f"src/shared/{n}.luau"))
     meshes = Inst("Folder", "Meshes", shared)
     for f in sorted(os.listdir(os.path.join(ROOT, "src/shared/Meshes"))):

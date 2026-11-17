@@ -4,6 +4,7 @@ local DataStoreService = game:GetService("DataStoreService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local RS = game:GetService("ReplicatedStorage")
 local C = require(RS.Shared.Config)
+local Avatars = require(RS.Shared.Avatars)
 local Map = require(script.Parent.Map).Build()
 
 -- In Studio without publishing / API Services the DataStore throws: keep playing, just don't save
@@ -59,7 +60,43 @@ local function sync(plr)
 	plr.leaderstats.Cash.Value = math.floor(s.d.cash)
 end
 
--- ===== Characters: R15 rig + Blender accessories + cue in hand + aura =====
+-- ===== Characters: Roblox avatars dressed in real catalog items (Shared/Avatars) + cue in hand + aura =====
+local SKIN = { Color3.fromRGB(255, 214, 170), Color3.fromRGB(234, 184, 146), Color3.fromRGB(198, 140, 100), Color3.fromRGB(124, 84, 62) }
+local ACCESSORY_TYPE = {
+	[8] = Enum.AccessoryType.Hat, [41] = Enum.AccessoryType.Hair, [42] = Enum.AccessoryType.Face, [43] = Enum.AccessoryType.Neck,
+	[44] = Enum.AccessoryType.Shoulder, [45] = Enum.AccessoryType.Front, [46] = Enum.AccessoryType.Back, [47] = Enum.AccessoryType.Waist,
+}
+
+local function describe(info, variant, level)
+	-- level 2: full outfit, 1: clothes only, 0: plain body (fallbacks if a catalog item fails to load)
+	local desc = Instance.new("HumanoidDescription")
+	local skin = SKIN[variant]
+	desc.HeadColor, desc.TorsoColor, desc.LeftArmColor, desc.RightArmColor, desc.LeftLegColor, desc.RightLegColor = skin, skin, skin, skin, skin, skin
+	local k = 1 + info.rarity * 0.012
+	desc.HeightScale, desc.WidthScale, desc.DepthScale, desc.HeadScale = k, k, k, 1
+	desc.BodyTypeScale, desc.ProportionScale = 0.15, 0
+	local look = Avatars[info.rarity][variant]
+	if level >= 1 then
+		desc.Shirt, desc.Pants = look.shirt, look.pants
+	end
+	if level >= 2 then
+		local list = {}
+		for i, a in look.accessories do
+			table.insert(list, { AssetId = a[1], AccessoryType = ACCESSORY_TYPE[a[2]], Order = i, IsLayered = false })
+		end
+		desc:SetAccessories(list, true) -- true = include rigid (non-layered) accessories
+	end
+	return desc
+end
+
+local function buildAvatar(info, variant)
+	for level = 2, 0, -1 do
+		local ok, m = pcall(Players.CreateHumanoidModelFromDescription, Players, describe(info, variant, level), Enum.HumanoidRigType.R15)
+		if ok and m then return m end
+		warn("[Avatar] level", level, "failed for", info.name, m)
+	end
+end
+
 local function weldTo(base, p)
 	p.Anchored, p.CanCollide, p.Massless = false, false, true
 	local w = Instance.new("WeldConstraint")
@@ -82,13 +119,7 @@ end
 local function makeNPC(id, cf, gold, fresh)
 	local info = C.Characters[id]
 	local r = C.Rarities[info.rarity]
-	local desc = Instance.new("HumanoidDescription")
-	desc.TorsoColor, desc.LeftArmColor, desc.RightArmColor = info.shirt, info.shirt, info.shirt
-	desc.HeadColor = Color3.fromRGB(255, 210, 170)
-	desc.LeftLegColor, desc.RightLegColor = r[2]:Lerp(Color3.new(0, 0, 0), 0.45), r[2]:Lerp(Color3.new(0, 0, 0), 0.45)
-	local k = 1 + info.rarity * 0.012
-	desc.HeightScale, desc.WidthScale, desc.DepthScale, desc.HeadScale = k, k, k, k
-	local m = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
+	local m = buildAvatar(info, (id - 1) % 4 + 1)
 	m.Name = info.name
 	local hum = m.Humanoid
 	hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
@@ -122,27 +153,6 @@ local function makeNPC(id, cf, gold, fresh)
 	ring.Shape, ring.Size, ring.Color, ring.Material = Enum.PartType.Cylinder, Vector3.new(0.1, 5.4, 5.4), r[2], Enum.Material.ForceField
 	ring.CFrame = cf * CFrame.new(0, 0.05, 0) * CFrame.Angles(0, 0, math.pi / 2)
 	ring.Anchored, ring.CanCollide, ring.CastShadow, ring.Parent = true, false, false, m
-
-	-- Blender accessories (rendered by Visuals.client from the "Mesh" tag on an invisible anchor)
-	local items = table.clone(C.Outfits[info.rarity])
-	if info.name:sub(1, 5) == "Grand" and not table.find(items, "AccCape") then table.insert(items, "AccCape") end
-	local accent = info.rarity >= 15 and Color3.fromRGB(255, 250, 235) or Color3.fromRGB(255, 205, 70)
-	for _, item in items do
-		local host = C.BackItems[item] and m.UpperTorso or m.Head
-		local anchor = Instance.new("Part")
-		anchor.Name, anchor.Size, anchor.Transparency = "Acc", Vector3.new(0.2, 0.2, 0.2), 1
-		anchor.CFrame = host.CFrame
-		local tag = Instance.new("StringValue")
-		tag.Name, tag.Value, tag.Parent = "Mesh", item, anchor
-		local sc = Instance.new("NumberValue")
-		sc.Name, sc.Value, sc.Parent = "Scale", k, anchor
-		for name, col in { Main = r[2], Accent = accent, Gem = r[2]:Lerp(Color3.new(1, 1, 1), 0.5) } do
-			local v = Instance.new("Color3Value")
-			v.Name, v.Value, v.Parent = name, col, anchor
-		end
-		weldTo(host, anchor)
-		anchor.Parent = m
-	end
 
 	local bb = Instance.new("BillboardGui")
 	bb.Size, bb.StudsOffset, bb.AlwaysOnTop, bb.MaxDistance = UDim2.fromOffset(200, 64), Vector3.new(0, 3.5, 0), true, 90

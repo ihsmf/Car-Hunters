@@ -590,7 +590,7 @@ ACCESSORIES = [("AccCap", acc_cap), ("AccFedora", acc_fedora), ("AccTopHat", acc
                ("AccHorns", acc_horns), ("AccHalo", acc_halo), ("AccVisor", acc_visor), ("AccShades", acc_shades),
                ("AccTricorne", acc_tricorne), ("AccKabuto", acc_kabuto), ("AccBubble", acc_bubble), ("AccHood", acc_hood),
                ("AccNemes", acc_nemes), ("AccWings", acc_wings), ("AccCape", acc_cape)]
-MODELS = CORE + PROPS + ACCESSORIES
+MODELS = CORE + PROPS  # characters now wear real Roblox catalog items (src/shared/Avatars.luau)
 
 
 def join_triangulate(name):
@@ -690,6 +690,5 @@ def main():
                      "-- Roblox axes, studs; vertices centred on bbox, `center` = offset from the model origin.\n" + text)
     render_group([n for n, _ in CORE], "models.png", 3)
     render_group([n for n, _ in PROPS], "props.png", 6)
-    render_group([n for n, _ in ACCESSORIES], "accessories.png", 5, 4.5, dummy=True)
 
 main()

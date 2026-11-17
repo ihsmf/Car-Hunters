@@ -91,16 +91,6 @@ C.Tables = {
 	{ "Absolute", rgb(255, 80, 170) },
 }
 
--- Blender accessories per rarity (head items sit on the Head, AccWings/AccCape on the UpperTorso)
-C.Outfits = {
-	{ "AccCap" }, { "AccCap", "AccShades" }, { "AccFedora" }, { "AccTopHat", "AccCape" }, { "AccCrown", "AccCape" },
-	{ "AccHorns", "AccWings" }, { "AccNemes" }, { "AccCrown", "AccCape" }, { "AccHorns", "AccWings" }, { "AccHood", "AccVisor" },
-	{ "AccVisor", "AccCape" }, { "AccTricorne", "AccCape" }, { "AccKabuto" }, { "AccHood" }, { "AccHalo", "AccWings" },
-	{ "AccHorns", "AccWings", "AccCape" }, { "AccCrown", "AccHalo", "AccWings" }, { "AccCrown", "AccHalo" }, { "AccBubble" },
-	{ "AccCrown", "AccCape", "AccWings" }, { "AccHalo", "AccWings", "AccCape" }, { "AccVisor", "AccHalo", "AccCape" },
-	{ "AccHood", "AccShades" }, { "AccVisor", "AccHorns" }, { "AccCrown", "AccHalo", "AccWings", "AccCape" },
-}
-C.BackItems = { AccWings = true, AccCape = true }
 
 C.Cues = { -- name, distance multiplier, price, colour
 	{ "Wooden", 1, 0, rgb(236, 196, 132) },

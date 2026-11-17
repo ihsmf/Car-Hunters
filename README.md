@@ -20,8 +20,9 @@
 |---|---|
 | **`BilliardHunters.rbxlx`** | готовый плейс: открыть в Studio и нажать Play |
 | Figma: [Billiard Hunters — UI](https://www.figma.com/design/mE9bTdXWf52Fk2fC8KF6dn) | дизайн интерфейса: HUD, компоненты MenuButton/Card, 5 окон (скриншоты в `docs/`) |
-| `blender/build_models.py` | 39 моделей: стол базы, секция длинного стола, кий, шар, гантеля, забор, 18 пропсов пейзажа, 15 аксессуаров персонажей → `src/shared/Meshes/*.luau` + FBX + рендер `docs/blender-models.png` |
+| `blender/build_models.py` | 24 модели: стол базы, секция длинного стола, кий, шар, гантеля, забор, 18 пропсов пейзажа → `src/shared/Meshes/*.luau` + FBX + рендер `docs/blender-models.png` |
 | `src/shared/MeshBuilder.luau` | собирает MeshPart из геометрии Blender через EditableMesh, без загрузки ассетов |
+| `src/shared/Avatars.luau` | образы 100 персонажей из настоящих вещей каталога Roblox (одежда, причёски, шляпы, крылья, плащи); генерирует `tools/catalog/` |
 | `src/shared/Config.luau` | 25 редкостей, 100 персонажей, кии, гейм-пассы, бонусы, UI-токены из Figma |
 | `src/server/Main.server.luau` | данные, базы, бросок, доход, прокачка, ежедневный бонус и бонус за время в игре, покупки |
 | `src/server/Map.luau` | объекты карты и их анимации |
