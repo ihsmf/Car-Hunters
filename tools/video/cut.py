@@ -21,7 +21,15 @@ def main():
         n = round(s["dur"] * fps)
         path = os.path.join(a.clips, s["clip"])
         t0, t1 = s["src"]
-        if s.get("freeze"):
+        if s.get("ramp"):
+            # speed ramp: pieces [src_a, src_b, speed] played back to back (slow-mo inside a shot)
+            parts, labels = [], []
+            for k, (pa, pb, sp) in enumerate(s["ramp"]):
+                parts.append(f"[0:v]trim=start={pa}:end={pb},setpts=(PTS-STARTPTS)/{sp}[p{k}]")
+                labels.append(f"[p{k}]")
+            fc = ";".join(parts) + ";" + "".join(labels) + f"concat=n={len(labels)}:v=1:a=0,fps={fps},tpad=stop_mode=clone:stop_duration=2{sharp}[v]"
+            args = ["-i", path, "-filter_complex", fc, "-map", "[v]"]
+        elif s.get("freeze"):
             args = ["-ss", f"{t0:.3f}", "-i", path, "-vf", f"trim=end_frame=1,loop={n}:1:0,fps={fps},setpts=N/{fps}/TB{sharp}"]
         else:
             lo, hi = min(t0, t1), max(t0, t1)
