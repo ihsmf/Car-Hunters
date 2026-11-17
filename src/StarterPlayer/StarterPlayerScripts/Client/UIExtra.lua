@@ -628,7 +628,7 @@ end
 ---------------------------------------------------------------- Jobs: active contracts, claimed anywhere in the safe zone
 local JOBS = C(170, 120, 70)
 
--- "+$1,200   ⚙️ Engine x2" (sep puts the part on its own line on the narrow board cards)
+-- "+$1,200   ⚙️ Engine x2" (sep: optional separator before the part)
 local function rewardText(c, st, sep)
 	local rw = c.reward
 	if type(rw) ~= "table" then
@@ -757,12 +757,7 @@ local function buildRebirth()
 	w.rbTokens = K.text(p.content, { Text = "", TextSize = 22, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(0, 240), Size = UDim2.new(1, 0, 0, 28), ZIndex = 23 })
 	w.rbShop = K.new("Frame", { Position = UDim2.fromOffset(0, 276), Size = UDim2.new(1, 0, 0, 200), BackgroundTransparency = 1, ZIndex = 23 }, p.content)
 	K.new("UIGridLayout", { CellSize = UDim2.fromOffset(256, 190), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center }, w.rbShop)
-	-- button in the garage panel
-	local gp = K.panels.garage
-	if gp then
-		K.toy(gp.content, { Text = T("btn_rebirth"), Icon = "♻️", Color = TEAL, Size = UDim2.fromOffset(150, 54), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -372, 0, -2),
-			ZIndex = 23, TextSize = 17, OnClick = function() UI.TogglePanel("rebirth") end })
-	end
+	-- v25: opened from the REBIRTH button in the HUD row (buildHud), no longer from the garage
 end
 
 local function refreshRebirth(st, open)
@@ -797,35 +792,6 @@ local function refreshRebirth(st, open)
 					K.actions.TokenPerk(def.id)
 				end
 			end })
-	end
-end
-
----------------------------------------------------------------- contract cards on the board (local player's jobs)
-local function refreshBoard(st)
-	for _, card in ipairs(CollectionService:GetTagged("ContractCard")) do
-		local idx = card:GetAttribute("Index")
-		local c = st.contracts and st.contracts[idx]
-		local gui = card:FindFirstChild("CardGui")
-		if not gui then
-			gui = K.new("SurfaceGui", { Name = "CardGui", Face = Enum.NormalId.Front, SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud, PixelsPerStud = 40, LightInfluence = 0.2 }, card)
-			K.new("Frame", { Name = "Bg", Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(255, 248, 228) }, gui)
-			K.text(gui, { Name = "Title", Text = "", TextSize = 30, TextColor3 = P.ink, Outline = false, Position = UDim2.new(0, 14, 0, 20), Size = UDim2.new(1, -28, 0.45, 0),
-				TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 2 })
-			K.text(gui, { Name = "Prog", Text = "", TextSize = 40, TextColor3 = P.ink, Outline = false, Position = UDim2.new(0, 0, 0.55, 0), Size = UDim2.new(1, 0, 0, 48),
-				TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 2 })
-			K.text(gui, { Name = "Reward", Text = "", Font = K.BODY, TextSize = 26, TextColor3 = C(30, 158, 64), Outline = false, Position = UDim2.new(0, 6, 0.74, 0),
-				Size = UDim2.new(1, -12, 0.24, 0), TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 2 })
-		end
-		if c then
-			gui.Title.Text = contractText(c)
-			gui.Prog.Text = c.ready and "✅ READY - CLAIM" or string.format("%d / %d", c.progress, c.n)
-			gui.Prog.TextColor3 = c.ready and C(30, 158, 64) or P.ink
-			gui.Reward.Text = rewardText(c, st, "\n")
-			gui.Bg.BackgroundColor3 = c.ready and C(220, 250, 226) or C(255, 248, 228)
-		else
-			gui.Title.Text, gui.Prog.Text, gui.Reward.Text = "NEW JOB SOON", "...", ""
-			gui.Bg.BackgroundColor3 = C(235, 230, 218)
-		end
 	end
 end
 
@@ -878,8 +844,9 @@ end
 local function buildHud()
 	local root = K.root
 	local colF = K.hud.leftCol
-	-- SHOP (+ GIFTS, SETTINGS added by their modules): square toy buttons with the 3D icons, label underneath
-	local brow = K.new("Frame", { Name = "Buttons", Size = UDim2.fromOffset(300, 94), BackgroundTransparency = 1, LayoutOrder = 2 }, colF)
+	-- SHOP, JOBS, REBIRTH (+ GIFTS 3, SETTINGS 4 added by their modules): square toy buttons with the 3D icons,
+	-- label underneath; 5 x 66 + 4 x 12 = 378 px
+	local brow = K.new("Frame", { Name = "Buttons", Size = UDim2.fromOffset(378, 94), BackgroundTransparency = 1, LayoutOrder = 2 }, colF)
 	K.list(brow, Enum.FillDirection.Horizontal, 12)
 	local function iconButton(name, label, color, order, onClick)
 		-- bigger 3D sticker (54 px) and a clear gap to the label below the button
@@ -901,8 +868,14 @@ local function buildHud()
 		Visible = false }, jobsBtn.holder.Parent)
 	K.corner(w.jobsDot, 9)
 	K.stroke(w.jobsDot, P.white, 2)
-	-- active boosts strip to the right of the wallet card
-	w.boosts = K.new("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 310, 1, -24 - (K.hud.leftLift or 0)), Size = UDim2.fromOffset(560, 40), BackgroundTransparency = 1 }, root)
+	-- v25: REBIRTH has its own button next to SETTINGS (it used to hide in the garage panel)
+	local _, rbLabel = iconButton("rebirth", T("btn_rebirth"), TEAL, 5, function()
+		UI.TogglePanel("rebirth")
+	end)
+	rbLabel.Position = UDim2.fromOffset(-6, 72) -- the 7-letter word gets the same overhang as SETTINGS
+	rbLabel.Size = UDim2.new(1, 12, 0, 20)
+	-- active boosts strip to the right of the wallet card (clear of the 378 px button row)
+	w.boosts = K.new("Frame", { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 400, 1, -24 - (K.hud.leftLift or 0)), Size = UDim2.fromOffset(560, 40), BackgroundTransparency = 1 }, root)
 	K.list(w.boosts, Enum.FillDirection.Horizontal, 6)
 	-- combo: one compact text line above THROW ("COMBO x1.5" + small speed-bonus timer), no card
 	local combo = K.new("Frame", { Name = "Combo", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -138), Size = UDim2.fromOffset(360, 30), BackgroundTransparency = 1, Visible = false }, root)
@@ -917,7 +890,7 @@ local function buildHud()
 	K.list(cw, Enum.FillDirection.Vertical, 7)
 	w.contracts = cw
 	w.contractRows = {}
-	-- the active jobs are always on screen; rewards are claimed anywhere in the safe zone (JOBS button / Job Board)
+	-- the active jobs are always on screen; rewards are claimed anywhere in the safe zone (JOBS button)
 	K.text(cw, { Text = T("jobs_hud"), TextSize = 16, TextColor3 = P.orange, Size = UDim2.new(1, 0, 0, 20), LayoutOrder = 0, Outline = 2.5 })
 	-- hot drop banner
 	-- top-right corner, same row as the zone banner: the very top, never under notifications or the objective card
@@ -1105,12 +1078,6 @@ function X.HotDrop()
 	return hot
 end
 
-local function inPlaza()
-	local char = game:GetService("Players").LocalPlayer.Character
-	local hrp = char and char:FindFirstChild("HumanoidRootPart")
-	return hrp ~= nil and MapConfig.ZoneAt(hrp.Position.Z) == "plaza"
-end
-
 function X.Init(ui)
 	UI = ui
 	K = UI.Kit()
@@ -1133,7 +1100,6 @@ function X.Init(ui)
 		refreshJobs(st, open)
 		refreshRebirth(st, open)
 		refreshHud(st)
-		refreshBoard(st)
 		refreshGearBoard(st)
 		refreshPicker(st, open)
 	end)
@@ -1164,14 +1130,6 @@ function X.Init(ui)
 		elseif n == "TonyPrompt" then
 			if K.state.open ~= "tony" then
 				UI.TogglePanel("tony")
-			end
-		elseif n == "JobPrompt" then
-			local st = K.store.State
-			if st and anyReady(st) and inPlaza() then
-				K.actions.Claim("all") -- walking up pays out everything that's done
-			end
-			if K.state.open ~= "jobs" then
-				UI.TogglePanel("jobs")
 			end
 		end
 	end)

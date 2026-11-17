@@ -1068,12 +1068,16 @@ function UI.Confirm(title, body, okText, okColor, onOk, def)
 end
 
 state.garageTab = "parked"
+-- v25 simpler garage: one clear header line + PARK BEST / BUY SLOT, big PARKED / STORAGE tabs, SELL COMMONS on the
+-- storage tab only. Rows are 100 px with a single main action (PARK or REMOVE) and UPGRADE with its price; tapping a
+-- row (or "...") opens the car's detail card with GEAR, SELL and the stats. No small sub-labels anywhere.
 local function buildGarage()
-	local p = panelShell("garage", T("garage_title"), 940, 600, P.orange)
+	local p = panelShell("garage", T("garage_title"), 940, 640, P.orange)
 	local c = p.content
-	panels.garageInfo = text(c, { Text = "", Font = BODY, TextSize = 18, TextColor3 = P.ink, Size = UDim2.new(1, -540, 0, 50), ZIndex = 22, RichText = true, TextWrapped = true })
-	panels.autoBtn = toy(c, { Text = T("btn_autopark"), Color = P.green, Size = UDim2.fromOffset(170, 54), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -190, 0, -2), ZIndex = 23, OnClick = function() actions.AutoPark() end })
-	panels.slotBtn = toy(c, { Text = T("btn_buyslot"), Sub = "", Color = P.blue, Size = UDim2.fromOffset(176, 54), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, -2), ZIndex = 23, SubSize = 14,
+	panels.garageInfo = text(c, { Text = "", TextSize = 30, TextColor3 = P.ink, Outline = false, Position = UDim2.fromOffset(4, 0), Size = UDim2.new(1, -456, 0, 60), ZIndex = 22, RichText = true })
+	panels.autoBtn = toy(c, { Text = T("btn_autopark"), Color = P.green, Size = UDim2.fromOffset(200, 64), TextSize = 24, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -236, 0, -2), ZIndex = 23,
+		OnClick = function() actions.AutoPark() end })
+	panels.slotBtn = toy(c, { Text = "BUY SLOT", Color = P.blue, Size = UDim2.fromOffset(226, 64), TextSize = 22, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, -2), ZIndex = 23,
 		OnClick = function()
 			local st = store.State
 			if st.slots + 1 > (st.floors or 1) * 6 then
@@ -1082,38 +1086,36 @@ local function buildGarage()
 				actions.BuySlot(st.slots)
 			end
 		end })
-	-- tabs + bulk sell
-	local tabs = new("Frame", { Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, 0, 0, 50), BackgroundTransparency = 1, ZIndex = 22 }, c)
-	list(tabs, Enum.FillDirection.Horizontal, 10)
+	-- tabs; the one bulk sell (Commons) sits on the right of the same row, storage tab only
+	local tabs = new("Frame", { Position = UDim2.fromOffset(0, 74), Size = UDim2.new(1, -260, 0, 62), BackgroundTransparency = 1, ZIndex = 22 }, c)
+	list(tabs, Enum.FillDirection.Horizontal, 12)
 	panels.garageTabs = {}
 	for i, tab in ipairs({ "parked", "storage" }) do
-		panels.garageTabs[tab] = toy(tabs, { Text = string.upper(tab), Color = P.grey, Size = UDim2.fromOffset(170, 48), TextSize = 20, LayoutOrder = i, ZIndex = 23, OnClick = function()
+		panels.garageTabs[tab] = toy(tabs, { Text = string.upper(tab), Color = P.grey, Size = UDim2.fromOffset(230, 60), TextSize = 26, LayoutOrder = i, ZIndex = 23, OnClick = function()
 			state.garageTab = tab
 			UI.Refresh()
 		end })
 	end
-	panels.bulk = {}
-	for i, r in ipairs({ "Common", "Uncommon" }) do
-		panels.bulk[r] = toy(tabs, { Text = "SELL ALL " .. string.upper(r), Color = P.red, Size = UDim2.fromOffset(250, 48), TextSize = 16, LayoutOrder = 10 + i, ZIndex = 23, OnClick = function()
+	panels.sellCommons = toy(c, { Text = "SELL COMMONS", Color = P.red, Size = UDim2.fromOffset(240, 60), TextSize = 22, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 74), ZIndex = 23,
+		OnClick = function()
 			local st = store.State
 			local uids, total = {}, 0
 			for _, car in ipairs(st.cars) do
 				local def = CarConfig.ById[car.typeId]
-				if not car.slot and def.rarity == r and #uids < 100 then
+				if not car.slot and def.rarity == "Common" and #uids < 100 then
 					table.insert(uids, car.uid)
 					total = total + CarConfig.SellPrice(def, car.level)
 				end
 			end
 			if #uids == 0 then
-				UI.Toast("No " .. r .. " cars in storage", "warn")
+				UI.Toast("No Common cars in storage", "warn")
 				return
 			end
-			UI.Confirm("SELL " .. #uids .. " CARS?", string.format("All %s cars in storage for <b>$%s</b>.\nParked cars are never sold.", r, Util.FormatNumber(total)), "SELL ALL", P.red, function()
+			UI.Confirm("SELL " .. #uids .. " CARS?", string.format("All Common cars in storage for <b>$%s</b>.\nParked cars are never sold.", Util.FormatNumber(total)), "SELL ALL", P.red, function()
 				actions.SellMany(uids)
 			end)
 		end })
-	end
-	panels.carList = scroller(c, UDim2.fromOffset(0, 120), UDim2.new(1, 0, 1, -120))
+	panels.carList = scroller(c, UDim2.fromOffset(0, 146), UDim2.new(1, 0, 1, -146))
 end
 
 local function sortedCars(st)
@@ -1150,9 +1152,142 @@ local function freeSlot(st)
 	return worst or 1
 end
 
+-- the car's upgrade: nil at max level, else cost, part id, part amount and whether it can be paid now
+local function upgradeInfo(st, def, c)
+	if c.level >= def.maxLevel then
+		return nil
+	end
+	local ucost = CarConfig.UpgradeCost(def, c.level)
+	local partId, amount = CarConfig.UpgradeParts(def, c.level)
+	return ucost, partId, amount, store.Money >= ucost and (st.parts[partId] or 0) >= amount
+end
+
+-- car detail card (GEAR / SELL / UPGRADE / PARK or REMOVE + stats); one at a time, updated in place by refreshGarage.
+-- It sits under the gear chooser (ZIndex 70) and the confirm dialog (85), which open on top of it.
+local detail
+local function closeDetail()
+	if detail then
+		local d = detail
+		detail = nil
+		d.dim:Destroy()
+	end
+end
+
+local function updateDetail(st)
+	if not detail then
+		return
+	end
+	local c
+	for _, car in ipairs(st.cars) do
+		if car.uid == detail.uid then
+			c = car
+			break
+		end
+	end
+	if not c then
+		closeDetail() -- sold
+		return
+	end
+	local def = CarConfig.ById[c.typeId]
+	detail.car = c
+	local rc = lift(rarityColor(def.rarity), -0.3):ToHex()
+	local gearTag = UI.GearTag and UI.GearTag(c)
+	detail.stats.Text = string.format(
+		'RARITY  <font color="#%s">%s</font>\nLEVEL  %d / %d\nINCOME  <font color="#1E9E40">+$%s/s</font>\nSELL VALUE  $%s\nWHERE  %s\nGEAR  %s',
+		rc, string.upper(T("rarity_" .. def.rarity)), c.level, def.maxLevel, Util.FormatNumber(CarConfig.CarIncome(c, store.ServerNow())),
+		Util.FormatNumber(CarConfig.SellPrice(def, c.level)), c.slot and ("Bay " .. c.slot) or "Storage", gearTag or "none")
+	local ucost, partId, amount, ok = upgradeInfo(st, def, c)
+	if ucost then
+		detail.upInfo.Text = string.format("Next level: $%s + %d %s", Util.FormatNumber(ucost), amount, T("part_" .. partId))
+		detail.upBtn.SetText(T("btn_upgrade"), nil)
+		detail.upBtn.SetColor(ok and P.blue or P.grey)
+	else
+		detail.upInfo.Text = "Max level reached"
+		detail.upBtn.SetText(T("btn_max"), nil)
+		detail.upBtn.SetColor(P.grey)
+	end
+	detail.mainBtn.SetText(c.slot and T("btn_remove") or T("btn_place"), nil)
+	detail.mainBtn.SetColor(c.slot and P.orange or P.green)
+	detail.gearBtn.SetColor(gearTag and P.cyan or P.yellow)
+end
+
+local function openDetail(uid)
+	closeDetail()
+	local st = store.State
+	if not st or state.cine then
+		return
+	end
+	local car
+	for _, c in ipairs(st.cars) do
+		if c.uid == uid then
+			car = c
+			break
+		end
+	end
+	local def = car and CarConfig.ById[car.typeId]
+	if not def then
+		return
+	end
+	local dim = new("TextButton", { Name = "CarDetail", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = C(0, 0, 0), BackgroundTransparency = 0.45, ZIndex = 62 }, overlay)
+	local box, shell = dialogShell(dim, { Class = "TextButton", Size = UDim2.fromOffset(580, 540), ZIndex = 63, Color = rarityColor(def.rarity), HeadH = 60, Title = string.upper(def.name), TitleSize = 28 })
+	local sc = new("UIScale", { Scale = 0.6 }, shell)
+	tween(sc, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
+	toy(box, { Text = "X", Color = P.red, Size = UDim2.fromOffset(56, 60), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 12, 0, -16), ZIndex = 67, OnClick = closeDetail })
+	local stage = card(box, { Position = UDim2.fromOffset(24, 76), Size = UDim2.fromOffset(250, 190), Radius = 18, ZIndex = 65 })
+	carViewport(stage, def, { Size = UDim2.fromScale(1, 1), ZIndex = 67 })
+	local stats = text(box, { Text = "", Font = BODY, TextSize = 19, TextColor3 = P.ink, RichText = true, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top,
+		LineHeight = 1.15, Position = UDim2.fromOffset(292, 78), Size = UDim2.fromOffset(268, 196), ZIndex = 66 })
+	local upInfo = text(box, { Text = "", Font = BODY, TextSize = 18, TextColor3 = P.muted, Position = UDim2.fromOffset(24, 300), Size = UDim2.new(1, -48, 0, 26),
+		TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 66 })
+	local btns = new("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -22), Size = UDim2.fromOffset(532, 160), BackgroundTransparency = 1, ZIndex = 66 }, box)
+	new("UIGridLayout", { CellSize = UDim2.fromOffset(260, 70), CellPadding = UDim2.fromOffset(12, 14), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }, btns)
+	local function cell(order)
+		return new("Frame", { BackgroundTransparency = 1, LayoutOrder = order, ZIndex = 66 }, btns)
+	end
+	local d = { dim = dim, uid = uid, car = car, stats = stats, upInfo = upInfo }
+	d.mainBtn = toy(cell(1), { Text = T("btn_place"), Color = P.green, Size = UDim2.fromOffset(260, 66), TextSize = 26, ZIndex = 67, OnClick = function()
+		local s = store.State
+		if d.car.slot then
+			actions.Remove(d.car.uid)
+		elseif s then
+			actions.Place(d.car.uid, freeSlot(s))
+		end
+	end })
+	d.upBtn = toy(cell(2), { Text = T("btn_upgrade"), Color = P.blue, Size = UDim2.fromOffset(260, 66), TextSize = 26, ZIndex = 67, OnClick = function()
+		local cdef = CarConfig.ById[d.car.typeId]
+		if cdef and d.car.level < cdef.maxLevel then
+			actions.Upgrade(d.car.uid, d.car.level)
+		end
+	end })
+	d.gearBtn = toy(cell(3), { Text = T("gears_btn"), Color = P.yellow, Size = UDim2.fromOffset(260, 66), TextSize = 26, ZIndex = 67, OnClick = function()
+		if UI.OnGear then
+			UI.OnGear(d.car.uid) -- the gear chooser opens on top of this card
+		end
+	end })
+	toy(cell(4), { Text = T("btn_sell"), Color = P.red, Size = UDim2.fromOffset(260, 66), TextSize = 26, ZIndex = 67, OnClick = function()
+		local c = d.car
+		local cdef = CarConfig.ById[c.typeId]
+		local price = CarConfig.SellPrice(cdef, c.level)
+		UI.Confirm("SELL THIS CAR?", string.format("<b>%s</b>  Lv %d\nfor <b>$%s</b>", cdef.name, c.level, Util.FormatNumber(price)), "SELL $" .. Util.FormatNumber(price), P.red, function()
+			actions.Sell(c.uid)
+		end, cdef)
+	end })
+	dim.Activated:Connect(closeDetail)
+	detail = d
+	UI.SetDialog(true)
+	dim.Destroying:Connect(function()
+		UI.SetDialog(false)
+		if detail and detail.dim == dim then
+			detail = nil
+		end
+	end)
+	updateDetail(st)
+end
+
 local function refreshGarage()
 	local st = store.State
 	if not st or state.open ~= "garage" then
+		closeDetail()
 		return
 	end
 	local parked, stored = 0, 0
@@ -1163,18 +1298,18 @@ local function refreshGarage()
 			stored = stored + 1
 		end
 	end
-	panels.garageInfo.Text = string.format('<font color="#1E9E40">+%s/s</font>   Bays %d/%d   Cars %d', Util.FormatNumber(store.Income), parked, st.slots, #st.cars)
+	panels.garageInfo.Text = string.format('<font color="#1E9E40">+$%s/s</font>  ·  Bays %d/%d  ·  Cars %d', Util.FormatNumber(store.Income), parked, st.slots, #st.cars)
 	local cost = EconomyConfig.SlotCosts[st.slots + 1]
 	local floors = st.floors or 1
 	if cost and st.slots + 1 > floors * 6 then
 		local fc = EconomyConfig.FloorCosts[floors + 1]
-		panels.slotBtn.SetText("+ LEVEL " .. (floors + 1), "$" .. Util.FormatNumber(fc))
+		panels.slotBtn.SetText("LEVEL " .. (floors + 1) .. "  $" .. Util.FormatNumber(fc), nil)
 		panels.slotBtn.SetColor(store.Money >= fc and P.orange or P.grey)
 	elseif cost then
-		panels.slotBtn.SetText(T("btn_buyslot"), "$" .. Util.FormatNumber(cost))
+		panels.slotBtn.SetText("BUY SLOT  $" .. Util.FormatNumber(cost), nil)
 		panels.slotBtn.SetColor(store.Money >= cost and P.blue or P.grey)
 	else
-		panels.slotBtn.SetText(T("btn_max"), "")
+		panels.slotBtn.SetText("SLOTS " .. T("btn_max"), nil)
 		panels.slotBtn.SetColor(P.grey)
 	end
 	local tab = state.garageTab
@@ -1182,9 +1317,8 @@ local function refreshGarage()
 	panels.garageTabs.storage.SetText(string.format("STORAGE %d", stored), nil)
 	panels.garageTabs.parked.SetColor(tab == "parked" and P.orange or P.grey)
 	panels.garageTabs.storage.SetColor(tab == "storage" and P.orange or P.grey)
-	for _, b in pairs(panels.bulk) do
-		b.holder.Visible = tab == "storage"
-	end
+	panels.sellCommons.holder.Visible = tab == "storage"
+	updateDetail(st)
 	clear(panels.carList)
 	panels.gearBtns = {}
 	local cars = {}
@@ -1198,61 +1332,61 @@ local function refreshGarage()
 		text(panels.carList, { Text = msg, Font = BODY, TextSize = 20, TextColor3 = P.muted, TextWrapped = true, Size = UDim2.new(1, 0, 0, 60), ZIndex = 23 })
 		return
 	end
+	local now = store.ServerNow()
 	for i, c in ipairs(cars) do
 		local def = CarConfig.ById[c.typeId]
 		local rc = rarityColor(def.rarity)
-		local row = card(panels.carList, { Size = UDim2.new(1, 0, 0, 88), Accent = rc, Radius = 18, LayoutOrder = i, ZIndex = 23 })
+		-- the whole row is a button: a tap opens the detail card (the toy buttons on it take their own taps)
+		local row, _, face = card(panels.carList, { Class = "TextButton", Size = UDim2.new(1, 0, 0, 100), Accent = rc, Radius = 18, LayoutOrder = i, ZIndex = 23 })
+		face.Activated:Connect(function()
+			UI.Sfx("click")
+			openDetail(c.uid)
+		end)
 		if i <= 24 then
-			carViewport(row, def, { Position = UDim2.fromOffset(8, 6), Size = UDim2.fromOffset(120, 76), ZIndex = 24 })
+			carViewport(row, def, { Position = UDim2.fromOffset(8, 6), Size = UDim2.fromOffset(136, 88), ZIndex = 24 })
 		end
-		text(row, { Text = def.name, TextSize = 22, TextColor3 = P.ink, Outline = false, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(136, 10), Size = UDim2.fromOffset(260, 28), ZIndex = 24 })
-		local where = c.slot and ("Bay " .. c.slot) or "Storage"
-		text(row, { Text = string.format('<font color="#%s">%s</font> · Lv %d · <font color="#1E9E40">+%s/s</font> · %s', lift(rc, -0.3):ToHex(), string.upper(T("rarity_" .. def.rarity)),
-			c.level, Util.FormatNumber(CarConfig.CarIncome(c, store.ServerNow())), where),
-			Font = BODY, TextSize = 14, TextColor3 = P.muted, RichText = true, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(136, 46), Size = UDim2.fromOffset(260, 24), ZIndex = 24 })
-		local btns = new("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(470, 60), BackgroundTransparency = 1, ZIndex = 24 }, row)
+		text(row, { Text = def.name, TextSize = 24, TextColor3 = P.ink, Outline = false, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(154, 6), Size = UDim2.fromOffset(300, 30), ZIndex = 24 })
+		local chips = new("Frame", { Position = UDim2.fromOffset(154, 39), Size = UDim2.fromOffset(300, 28), BackgroundTransparency = 1, ZIndex = 24 }, row)
+		list(chips, Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center)
+		pill(chips, string.upper(T("rarity_" .. def.rarity)), lift(rc, -0.15), { H = 26, TextSize = 17, LayoutOrder = 1 })
+		pill(chips, "Lv " .. c.level, P.blue, { H = 26, TextSize = 17, LayoutOrder = 2 })
+		-- v24 gears: a small "x2 4:12" chip while a gear runs (ticked every second by UI.TickGarageGears)
+		local gearTag = UI.GearTag and UI.GearTag(c)
+		local gearChip, gearLabel = pill(chips, gearTag or "", P.cyan, { H = 26, TextSize = 17, LayoutOrder = 3 })
+		gearChip.Visible = gearTag ~= nil
+		panels.gearBtns[c.uid] = { car = c, chip = gearChip, label = gearLabel }
+		text(row, { Text = "+$" .. Util.FormatNumber(CarConfig.CarIncome(c, now)) .. "/s", Font = BODY, TextSize = 20, TextColor3 = C(30, 158, 64), Position = UDim2.fromOffset(154, 70),
+			Size = UDim2.fromOffset(300, 26), ZIndex = 24 })
+		local btns = new("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(420, 70), BackgroundTransparency = 1, ZIndex = 24 }, row)
 		list(btns, Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center)
 		if c.slot then
-			toy(btns, { Text = T("btn_remove"), Sub = "to storage", SubSize = 12, Color = P.orange, Size = UDim2.fromOffset(104, 56), TextSize = 17, LayoutOrder = 1, ZIndex = 25, OnClick = function() actions.Remove(c.uid) end })
+			toy(btns, { Text = T("btn_remove"), Color = P.orange, Size = UDim2.fromOffset(120, 64), TextSize = 20, LayoutOrder = 1, ZIndex = 25, OnClick = function() actions.Remove(c.uid) end })
 		else
-			toy(btns, { Text = T("btn_place"), Sub = "in a bay", SubSize = 12, Color = P.green, Size = UDim2.fromOffset(104, 56), TextSize = 18, LayoutOrder = 1, ZIndex = 25, OnClick = function() actions.Place(c.uid, freeSlot(st)) end })
+			toy(btns, { Text = T("btn_place"), Color = P.green, Size = UDim2.fromOffset(120, 64), TextSize = 22, LayoutOrder = 1, ZIndex = 25, OnClick = function() actions.Place(c.uid, freeSlot(st)) end })
 		end
-		if c.level >= def.maxLevel then
-			toy(btns, { Text = T("btn_max"), Color = P.grey, Size = UDim2.fromOffset(140, 56), LayoutOrder = 2, ZIndex = 25 })
+		local ucost, _, _, ok = upgradeInfo(st, def, c)
+		if ucost then
+			toy(btns, { Text = T("btn_upgrade") .. "  $" .. Util.FormatNumber(ucost), Color = ok and P.blue or P.grey, Size = UDim2.fromOffset(212, 64), TextSize = 18, LayoutOrder = 2, ZIndex = 25,
+				OnClick = function() actions.Upgrade(c.uid, c.level) end })
 		else
-			local ucost = CarConfig.UpgradeCost(def, c.level)
-			local partId, amount = CarConfig.UpgradeParts(def, c.level)
-			local ok = store.Money >= ucost and (st.parts[partId] or 0) >= amount
-			toy(btns, { Text = T("btn_upgrade"), Sub = string.format("$%s + %d %s", Util.FormatNumber(ucost), amount, T("part_" .. partId)), SubSize = 12, TextSize = 17,
-				Color = ok and P.blue or P.grey, Size = UDim2.fromOffset(140, 56), LayoutOrder = 2, ZIndex = 25, OnClick = function() actions.Upgrade(c.uid, c.level) end })
+			toy(btns, { Text = T("btn_max"), Color = P.grey, Size = UDim2.fromOffset(212, 64), TextSize = 22, LayoutOrder = 2, ZIndex = 25 })
 		end
-		-- v24 gears: "x2 4:12" while a gear runs (ticked every second by UI.TickGarageGears); opens the gear chooser
-		local gearTag = UI.GearTag and UI.GearTag(c)
-		panels.gearBtns[c.uid] = { car = c, btn = toy(btns, { Text = T("gears_btn"), Sub = gearTag or T("gears_none"), SubSize = 12, TextSize = 17, Color = gearTag and P.cyan or P.yellow,
-			Size = UDim2.fromOffset(92, 56), LayoutOrder = 3, ZIndex = 25, OnClick = function()
-				if UI.OnGear then
-					UI.OnGear(c.uid)
-				end
-			end }) }
-		local price = CarConfig.SellPrice(def, c.level)
-		toy(btns, { Text = T("btn_sell"), Sub = "$" .. Util.FormatNumber(price), SubSize = 12, TextSize = 17, Color = P.red, Size = UDim2.fromOffset(96, 56), LayoutOrder = 4, ZIndex = 25,
-			OnClick = function()
-				UI.Confirm("SELL THIS CAR?", string.format("<b>%s</b>  Lv %d\nfor <b>$%s</b>", def.name, c.level, Util.FormatNumber(price)), "SELL $" .. Util.FormatNumber(price), P.red, function()
-					actions.Sell(c.uid)
-				end, def)
-			end })
+		toy(btns, { Name = "More", Text = "...", Color = P.yellow, Size = UDim2.fromOffset(64, 64), TextSize = 26, LayoutOrder = 3, ZIndex = 25, OnClick = function() openDetail(c.uid) end })
 	end
 end
 
--- v24: the GEAR buttons' countdowns, every second while the garage is open (no list rebuild)
+-- v24: the gear chips' countdowns, every second while the garage is open (no list rebuild)
 function UI.TickGarageGears()
 	if state.open ~= "garage" or not panels.gearBtns then
 		return
 	end
 	for _, e in pairs(panels.gearBtns) do
 		local tag = UI.GearTag and UI.GearTag(e.car)
-		e.btn.SetText(T("gears_btn"), tag or T("gears_none"))
-		e.btn.SetColor(tag and P.cyan or P.yellow)
+		e.chip.Visible = tag ~= nil
+		e.label.Text = tag or ""
+	end
+	if detail and store.State then
+		updateDetail(store.State)
 	end
 end
 
@@ -1372,7 +1506,7 @@ function UI.IsCinematic()
 end
 
 -- other modules register closers for their own pop-ups (trade request card, confirm dialogs, ...)
-UI.Overlays = { closeConfirm }
+UI.Overlays = { closeConfirm, closeDetail }
 function UI.CloseOverlays()
 	for _, fn in ipairs(UI.Overlays) do
 		pcall(fn)

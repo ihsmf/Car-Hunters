@@ -55,7 +55,7 @@ local function bestZoneIndex(d)
 end
 
 local function rewardFor(s, weight)
-	local base = math.max(300, S.Income.RefIncome(s) * 40) * weight
+	local base = math.max(3000, S.Income.RefIncome(s) * 40) * weight
 	local d = s.data
 	local partPool = { "tire", "engine", "turbo", "core" }
 	local tier = math.clamp(bestZoneIndex(d), 1, 4) -- core is the top reward from the Night district on

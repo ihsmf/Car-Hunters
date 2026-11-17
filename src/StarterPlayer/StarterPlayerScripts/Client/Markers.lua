@@ -123,10 +123,6 @@ function Markers.Start(kit, extraModule)
 	folder.Parent = Workspace
 	makeMark("shop", "🔧", T("map_shop"), K.P.red, Vector3.new(MapConfig.Shop.x, 18, MapConfig.Shop.z), 260)
 	makeMark("donate", "👑", T("map_donate"), C(232, 178, 50), Vector3.new(MapConfig.DonateStall.x, 16, MapConfig.DonateStall.z), 260)
-	local jobs = MapConfig.JobBoard or MapConfig.ContractBoard
-	if jobs then
-		makeMark("contracts", "📜", T("map_contracts"), C(170, 120, 70), Vector3.new(jobs.x, 12, jobs.z), 160)
-	end
 	if MapConfig.Tony then
 		makeMark("tony", "🔧", T("map_tony"), C(30, 36, 58), Vector3.new(MapConfig.Tony.x, 12, MapConfig.Tony.z), 160)
 	end

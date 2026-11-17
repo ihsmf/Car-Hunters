@@ -1,6 +1,6 @@
 -- Intro cinematic for new players (before the step-by-step tutorial), with SKIP. Six scenes on the real map, a copy of
 -- the player's avatar acts them out:
---   1 a tour of the hub (Pit Stop, Leaderboard, Big Tony's Gears, Job Board)
+--   1 a tour of the hub (Pit Stop, Leaderboard, Big Tony's Gears)
 --   2 crossing a city road between the cars and grabbing a glowing part
 --   3 throwing it at the platform: flash, a car drives into the garage
 --   4 Big Tony's GEARS: timed boosts, a geared car gets a glowing aura
@@ -177,7 +177,6 @@ local function sceneHub()
 		{ MapConfig.Shop, "PIT STOP  -  perks: run faster, carry more, catch more cars" },
 		{ MapConfig.Leaderboard, "LEADERBOARD  -  the top hunters on this server" },
 		{ MapConfig.Tony, "BIG TONY'S GEARS  -  huge timed boosts for your cars" },
-		{ MapConfig.JobBoard, "JOB BOARD  -  jobs pay cash, claim them in the safe zone" },
 	}) do
 		if stop[1] and stop[1].angle then
 			table.insert(tour, stop)

@@ -3,7 +3,7 @@
 -- (DataService.TutorialSteps must match DONE - 1).
 --   1 run to the City (speed lane, arch)      6 upgrade your platform (skipped if it can't be paid)
 --   2 grab 3 glowing parts                    7 Big Tony: apply your free gear to a car
---   3 run home: the safe zone banks the loot  8 check the Job Board
+--   3 run home: the safe zone banks the loot  8 open JOBS (HUD button)
 --   4 throw parts at your platform            9 reach a checkpoint
 --   5 open your garage                       10 unlock the Highway
 -- Every step is a check on the client state, so a player who already did something passes that step at once.
@@ -36,7 +36,7 @@ local function trapPad(st)
 	return base and base:FindFirstChild("TrapPad")
 end
 
--- a named part inside a map model (TonyGarage.TonySpot, JobBoard.JobSpot); cached, falls back to the MapConfig spot
+-- a named part inside a map model (TonyGarage.TonySpot); cached, falls back to the MapConfig spot
 local found = {}
 local function mapSpot(model, spot, cfg)
 	local hit = found[spot]
@@ -156,8 +156,8 @@ local STEPS = {
 		function(st)
 			return anyCarGeared(st) or events.gearUsed or #(st.cars or {}) == 0 or (gearTotal(st) == 0 and since(7) > 12)
 		end },
-	{ "CHECK THE JOB BOARD", "Jobs pay cash - claim the rewards in the safe zone", nil,
-		function() return K.state.open == nil and mapSpot("JobBoard", "JobSpot", MapConfig.JobBoard) or nil end,
+	{ "OPEN JOBS", "Tap JOBS to see jobs that pay cash. Claim them in the safe zone.", nil,
+		function() return nil end,
 		function() return K.state.open == "jobs" end, nil,
 		function() return K.state.open == nil and K.hud.jobsBtn or nil end },
 	{ "REACH A CHECKPOINT", "Carry parts to the yellow arch at the far end of the City, then SAVE or RISK", nil,
