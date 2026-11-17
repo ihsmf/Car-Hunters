@@ -1,294 +1,379 @@
+-- HUD + panels. Layout follows the Figma file "Billiard Hunters — UI" (1920x1080 frame, scaled to screen).
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local RS = game:GetService("ReplicatedStorage")
 local C = require(RS.Shared.Config)
-local Remotes = RS:WaitForChild("Remotes")
-local Request, Fx = Remotes.Request, Remotes.Fx
-local plr = Players.LocalPlayer
 local U = C.UI
+local plr = Players.LocalPlayer
 
-local state
-local panels = {}
-local renderers = {}
-
--- Звук
-local function sound(id, group)
-	local s = Instance.new("Sound")
-	s.SoundId, s.SoundGroup, s.Parent = id, group, SoundService
-	return s
-end
+-- ===== Sound =====
 local groups = {}
 for _, n in { "Music", "SFX" } do
-	groups[n] = Instance.new("SoundGroup")
-	groups[n].Name, groups[n].Volume, groups[n].Parent = n, 0.5, SoundService
+	local g = Instance.new("SoundGroup")
+	g.Name, g.Volume, g.Parent = n, 0.5, SoundService
+	groups[n] = g
 end
-local music = sound(C.Sounds.Music, groups.Music)
-music.Looped = true
-music:Play()
-local sfx = {}
+local sounds = {}
 for k, id in C.Sounds do
-	if k ~= "Music" then sfx[k] = sound(id, groups.SFX) end
+	local s = Instance.new("Sound")
+	s.SoundId, s.SoundGroup, s.Parent = id, k == "Music" and groups.Music or groups.SFX, SoundService
+	sounds[k] = s
 end
-_G.PlaySfx = function(k) if sfx[k] then sfx[k]:Play() end end
+sounds.Music.Looped = true
+sounds.Music:Play()
+_G.PlaySfx = function(k)
+	if sounds[k] and k ~= "Music" then sounds[k]:Play() end
+end
 
--- UI-хелперы
+-- ===== Building blocks =====
 local function new(class, props, children)
 	local o = Instance.new(class)
-	for k, v in props do o[k] = v end
+	for k, v in props do
+		if k ~= "Parent" then o[k] = v end
+	end
 	for _, c in children or {} do c.Parent = o end
+	if props.Parent then o.Parent = props.Parent end
 	return o
 end
-local function corner(r) return new("UICorner", { CornerRadius = UDim.new(r or 0.25, 0) }) end
-local function stroke(t) return new("UIStroke", { Color = U.Stroke, Thickness = t or 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }) end
-local function grad(c) return new("UIGradient", { Rotation = 90, Color = ColorSequence.new(c:Lerp(Color3.new(1, 1, 1), 0.35), c) }) end
+local function corner(px) return new("UICorner", { CornerRadius = UDim.new(0, px) }) end
+local function stroke(t) return new("UIStroke", { Color = U.Ink, Thickness = t, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }) end
+local function grad(a, b) return new("UIGradient", { Rotation = 90, Color = ColorSequence.new(a, b) }) end
 
-local function text(props)
-	props.BackgroundTransparency = 1
-	props.FontFace, props.TextScaled = U.Font, true
-	props.TextColor3 = props.TextColor3 or Color3.new(1, 1, 1)
-	return new("TextLabel", props, { new("UIStroke", { Color = U.Stroke, Thickness = 2.5 }) })
+local function text(str, size, color, props)
+	props = props or {}
+	props.BackgroundTransparency, props.FontFace, props.Text = 1, U.Font, str
+	props.TextSize, props.TextColor3 = size, color or Color3.new(1, 1, 1)
+	props.Size = props.Size or UDim2.new(1, 0, 0, size * 1.2)
+	return new("TextLabel", props, { new("UIStroke", { Color = U.Ink, Thickness = math.max(2, size / 11) }) })
 end
 
-local function button(props, color, onClick)
-	local b = new("TextButton", {
-		Size = props.Size, Position = props.Position, AnchorPoint = props.AnchorPoint or Vector2.zero,
-		BackgroundColor3 = Color3.new(1, 1, 1), AutoButtonColor = false, Text = "", LayoutOrder = props.LayoutOrder or 0,
-	}, { corner(), stroke(3), grad(color), new("UIScale", {}),
-		text({ Size = UDim2.fromScale(0.9, 0.8), Position = UDim2.fromScale(0.05, 0.1), Text = props.Text, Name = "Label" }) })
-	local scale = b.UIScale
-	b.MouseEnter:Connect(function() TweenService:Create(scale, TweenInfo.new(0.15, Enum.EasingStyle.Back), { Scale = 1.08 }):Play() end)
-	b.MouseLeave:Connect(function() TweenService:Create(scale, TweenInfo.new(0.15), { Scale = 1 }):Play() end)
-	b.Activated:Connect(function()
+-- Cartoon box with a hard ink drop-shadow (Figma: drop shadow 0/6, radius 0)
+local function box(props, top, bottom, radius, strokeW)
+	local holder = new("Frame", { Size = props.Size, Position = props.Position or UDim2.new(), AnchorPoint = props.AnchorPoint or Vector2.zero, BackgroundTransparency = 1, LayoutOrder = props.LayoutOrder or 0, Name = props.Name or "Box", Parent = props.Parent })
+	new("Frame", { Name = "Shadow", Size = UDim2.fromScale(1, 1), Position = UDim2.fromOffset(0, 6), BackgroundColor3 = U.Ink, Parent = holder }, { corner(radius) })
+	local body = new("Frame", { Name = "Body", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), Parent = holder }, { corner(radius), stroke(strokeW or 4), grad(top, bottom) })
+	return holder, body
+end
+
+local function button(props, colors, label, size, onClick)
+	local holder, body = box(props, colors[1], colors[2], props.Radius or 16, 3)
+	local hit = new("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 5, Parent = holder })
+	local scale = new("UIScale", { Parent = holder })
+	if label then text(label, size or 22, nil, { Size = UDim2.fromScale(1, 1), Parent = body, TextScaled = false }) end
+	hit.MouseEnter:Connect(function() TweenService:Create(scale, TweenInfo.new(0.15, Enum.EasingStyle.Back), { Scale = 1.07 }):Play() end)
+	hit.MouseLeave:Connect(function() TweenService:Create(scale, TweenInfo.new(0.15), { Scale = 1 }):Play() end)
+	hit.Activated:Connect(function()
 		_G.PlaySfx("Click")
-		scale.Scale = 0.9
-		TweenService:Create(scale, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+		scale.Scale = 0.88
+		TweenService:Create(scale, TweenInfo.new(0.3, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 		if onClick then onClick() end
 	end)
-	return b
+	return holder, body, hit
 end
 
-local gui = new("ScreenGui", { Name = "Main", ResetOnSpawn = false, IgnoreGuiInset = true, Parent = plr:WaitForChild("PlayerGui") })
+-- ===== Root (design space 1920x1080) =====
+local gui = new("ScreenGui", { Name = "Main", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = plr:WaitForChild("PlayerGui") })
+local root = new("Frame", { Size = UDim2.fromOffset(1920, 1080), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Parent = gui })
+local rootScale = new("UIScale", { Parent = root })
+local function rescale()
+	local v = workspace.CurrentCamera.ViewportSize
+	rootScale.Scale = math.max(0.42, math.min(v.X / 1920, v.Y / 1080))
+end
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale)
+rescale()
 
-local toastLabel = text({ Size = UDim2.fromScale(0.5, 0.06), Position = UDim2.fromScale(0.25, 0.2), Text = "", TextTransparency = 1, Parent = gui })
-toastLabel.UIStroke.Transparency = 1
+-- ===== Remotes (the UI is visible even while the server is starting) =====
+local Remotes = RS:WaitForChild("Remotes")
+local Request, Fx = Remotes:WaitForChild("Request"), Remotes:WaitForChild("Fx")
+local state
+
+-- Toast
+local toastLabel = text("", 54, U.Title, { Size = UDim2.fromOffset(1400, 70), Position = UDim2.fromOffset(260, 210), Parent = root, ZIndex = 20 })
+toastLabel.TextTransparency, toastLabel.UIStroke.Transparency = 1, 1
 local function toast(msg, color)
-	toastLabel.Text, toastLabel.TextColor3 = msg, color or U.Accent
+	toastLabel.Text, toastLabel.TextColor3 = msg, color or U.Title
 	toastLabel.TextTransparency, toastLabel.UIStroke.Transparency = 0, 0
-	toastLabel.Position = UDim2.fromScale(0.25, 0.22)
-	TweenService:Create(toastLabel, TweenInfo.new(1.6), { Position = UDim2.fromScale(0.25, 0.16), TextTransparency = 1 }):Play()
-	TweenService:Create(toastLabel.UIStroke, TweenInfo.new(1.6), { Transparency = 1 }):Play()
+	toastLabel.Position = UDim2.fromOffset(260, 230)
+	local info = TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	TweenService:Create(toastLabel, info, { Position = UDim2.fromOffset(260, 180), TextTransparency = 1 }):Play()
+	TweenService:Create(toastLabel.UIStroke, info, { Transparency = 1 }):Play()
 end
 _G.Toast = toast
 
 local function call(action, arg)
 	local ok, msg = Request:InvokeServer(action, arg)
-	if msg then toast(msg, ok and U.Accent or Color3.fromRGB(255, 90, 90)) end
-	if ok and msg then _G.PlaySfx("Reward") end
+	if msg then
+		toast(msg, ok and U.Title or U.Bad)
+		if ok then _G.PlaySfx("Reward") end
+	end
 	return ok
 end
 
--- Деньги
-local cashLabel = text({ Size = UDim2.fromScale(0.3, 0.07), Position = UDim2.fromScale(0.35, 0.02), Text = "💵 0", TextColor3 = Color3.fromRGB(140, 255, 120), Parent = gui })
-local statLabel = text({ Size = UDim2.fromScale(0.4, 0.035), Position = UDim2.fromScale(0.3, 0.09), Text = "", Parent = gui })
+-- ===== HUD =====
+local hud = new("Frame", { Name = "HUD", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = root })
+local cashPill = new("Frame", { Size = UDim2.fromOffset(260, 78), Position = UDim2.fromOffset(960, 24), AnchorPoint = Vector2.new(0.5, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = U.Ink, Parent = hud }, {
+	corner(40), new("UIPadding", { PaddingLeft = UDim.new(0, 36), PaddingRight = UDim.new(0, 36) }),
+	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 14) }),
+})
+text("💵", 48, nil, { Size = UDim2.fromOffset(56, 60), Parent = cashPill })
+local cashLabel = text("0", 56, U.Money, { Size = UDim2.fromOffset(0, 70), AutomaticSize = Enum.AutomaticSize.X, Parent = cashPill })
+local statLabel = text("", 28, nil, { Size = UDim2.fromOffset(1000, 36), Position = UDim2.fromOffset(460, 122), Parent = hud })
 
--- Панели
-local function panel(name, title)
-	local f = new("Frame", {
-		Name = name, Size = UDim2.fromScale(0.5, 0.62), Position = UDim2.fromScale(0.5, 0.52), AnchorPoint = Vector2.new(0.5, 0.5),
-		BackgroundColor3 = U.Panel, Visible = false, Parent = gui,
-	}, { corner(0.06), stroke(5), new("UIAspectRatioConstraint", { AspectRatio = 1.5 }),
-		text({ Size = UDim2.fromScale(0.8, 0.12), Position = UDim2.fromScale(0.1, -0.05), Text = title, TextColor3 = U.Accent }) })
-	button({ Size = UDim2.fromScale(0.08, 0.12), Position = UDim2.fromScale(0.95, -0.04), Text = "✖" }, Color3.fromRGB(255, 80, 80), function() f.Visible = false end).Parent = f
+local menu = new("Frame", { Size = UDim2.fromOffset(120, 560), Position = UDim2.fromOffset(28, 300), BackgroundTransparency = 1, Parent = hud }, {
+	new("UIListLayout", { Padding = UDim.new(0, 18), SortOrder = Enum.SortOrder.LayoutOrder }),
+})
+
+-- Power bar + SHOOT button
+local hint = text("Hold SHOOT to charge • release to shoot", 22, nil, { Size = UDim2.fromOffset(600, 28), Position = UDim2.fromOffset(660, 806), Parent = hud })
+local bar = new("Frame", { Size = UDim2.fromOffset(560, 36), Position = UDim2.fromOffset(680, 850), BackgroundColor3 = U.Ink, Parent = hud }, {
+	corner(18), new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 4 }),
+})
+local fill = new("Frame", { Size = UDim2.new(0, 0, 1, -8), Position = UDim2.fromOffset(4, 4), BackgroundColor3 = Color3.new(1, 1, 1), Parent = bar }, {
+	corner(14), new("UIGradient", { Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(90, 220, 90)), ColorSequenceKeypoint.new(0.6, Color3.fromRGB(255, 220, 40)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 60, 60)) }) }),
+})
+local _, _, shootHit = button({ Size = UDim2.fromOffset(330, 92), Position = UDim2.fromOffset(960, 906), AnchorPoint = Vector2.new(0.5, 0), Parent = hud, Radius = 34 }, U.Red, "🎱 SHOOT!", 52)
+
+-- ===== Panels =====
+local panels, renderers = {}, {}
+local function panel(key, title)
+	local holder, body = box({ Size = UDim2.fromOffset(890, 640), Position = UDim2.fromOffset(960, 560), AnchorPoint = Vector2.new(0.5, 0.5), Parent = root, Name = key }, U.Panel, U.Panel, 40, 6)
+	holder.Visible, holder.ZIndex = false, 10
+	text(title, 52, U.Title, { Size = UDim2.new(1, -140, 0, 70), Position = UDim2.fromOffset(40, 20), Parent = body, TextXAlignment = Enum.TextXAlignment.Left })
+	local sub = text("", 24, U.Ink, { Size = UDim2.new(1, -140, 0, 30), Position = UDim2.fromOffset(42, 86), Parent = body, TextXAlignment = Enum.TextXAlignment.Left })
+	sub.UIStroke.Thickness = 0
+	button({ Size = UDim2.fromOffset(64, 56), Position = UDim2.new(1, -96, 0, 26), Parent = body, Radius = 18 }, U.Red, "✖", 30, function() holder.Visible = false end)
 	local list = new("ScrollingFrame", {
-		Size = UDim2.fromScale(0.92, 0.8), Position = UDim2.fromScale(0.04, 0.13), BackgroundTransparency = 1,
-		ScrollBarThickness = 8, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Parent = f,
+		Size = UDim2.new(1, -60, 1, -150), Position = UDim2.fromOffset(42, 128), BackgroundTransparency = 1, BorderSizePixel = 0,
+		ScrollBarThickness = 10, ScrollBarImageColor3 = U.Ink, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Parent = body,
 	}, {
-		new("UIGridLayout", { CellSize = UDim2.new(0.31, 0, 0, 110), CellPadding = UDim2.new(0.02, 0, 0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
-		new("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6) }),
+		new("UIGridLayout", { CellSize = UDim2.fromOffset(250, 176), CellPadding = UDim2.fromOffset(18, 18), SortOrder = Enum.SortOrder.LayoutOrder }),
+		new("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 2) }),
 	})
-	panels[name] = { frame = f, list = list }
-	return list
-end
-
-local function open(name)
-	if not state then return end
-	for n, p in panels do p.frame.Visible = n == name and not p.frame.Visible end
-	local p = panels[name]
-	if p.frame.Visible then
-		renderers[name](p.list)
-		local sc = p.frame:FindFirstChildOfClass("UIScale") or new("UIScale", { Parent = p.frame })
-		sc.Scale = 0.6
-		TweenService:Create(sc, TweenInfo.new(0.3, Enum.EasingStyle.Back), { Scale = 1 }):Play()
-	end
+	panels[key] = { holder = holder, list = list, sub = sub }
 end
 
 local function clear(list)
-	for _, c in list:GetChildren() do if c:IsA("GuiObject") then c:Destroy() end end
-end
-
-local function card(list, order, color, title, sub, btnText, onClick)
-	local f = new("Frame", { BackgroundColor3 = Color3.new(1, 1, 1), LayoutOrder = order, Parent = list }, {
-		corner(0.15), stroke(3), grad(color),
-		text({ Size = UDim2.fromScale(0.92, 0.3), Position = UDim2.fromScale(0.04, 0.04), Text = title }),
-		text({ Size = UDim2.fromScale(0.92, 0.22), Position = UDim2.fromScale(0.04, 0.34), Text = sub }),
-	})
-	if btnText then
-		button({ Size = UDim2.fromScale(0.8, 0.3), Position = UDim2.fromScale(0.1, 0.62), Text = btnText }, U.Accent, onClick).Parent = f
+	for _, c in list:GetChildren() do
+		if c:IsA("GuiObject") then c:Destroy() end
 	end
-	return f
 end
 
--- Настройки
-panel("Settings", "⚙️ Настройки")
-function renderers.Settings(list)
-	clear(list)
-	for i, n in { "Music", "SFX" } do
-		local g = groups[n]
-		local label = (n == "Music" and "🎵 Музыка" or "🔊 Эффекты")
-		local f = card(list, i, Color3.fromRGB(120, 140, 255), label, "Громкость: " .. math.round(g.Volume * 100) .. "%")
-		for j, d in { { "➖", -0.1 }, { "➕", 0.1 }, { g.Volume > 0 and "🔇" or "🔈", 0 } } do
-			button({ Size = UDim2.fromScale(0.27, 0.3), Position = UDim2.fromScale(0.04 + (j - 1) * 0.32, 0.62), Text = d[1] }, U.Accent, function()
-				g.Volume = d[2] == 0 and (g.Volume > 0 and 0 or 0.5) or math.clamp(g.Volume + d[2], 0, 1)
-				renderers.Settings(list)
-			end).Parent = f
+-- Card (Figma component "Card"): title, subtitle, up to 3 action buttons
+local function card(list, order, top, bottom, title, sub, actions)
+	local holder, body = box({ Size = UDim2.fromOffset(250, 170), LayoutOrder = order, Parent = list }, top, bottom, 22, 4)
+	text(title, 26, nil, { Size = UDim2.new(1, -16, 0, 34), Position = UDim2.fromOffset(8, 12), Parent = body, TextScaled = true })
+	text(sub, 18, nil, { Size = UDim2.new(1, -16, 0, 24), Position = UDim2.fromOffset(8, 50), Parent = body, TextScaled = true })
+	local n = #(actions or {})
+	for i, a in actions or {} do
+		local w = (226 - (n - 1) * 8) / n
+		button({ Size = UDim2.fromOffset(w, 50), Position = UDim2.fromOffset(12 + (i - 1) * (w + 8), 96), Parent = body }, a[3] or U.Action, a[1], n > 2 and 26 or 22, a[2])
+	end
+	return holder
+end
+
+local function open(key)
+	if not state then return end
+	for k, p in panels do
+		p.holder.Visible = (k == key) and not p.holder.Visible
+	end
+	local p = panels[key]
+	if p.holder.Visible then
+		renderers[key]()
+		local sc = p.holder:FindFirstChild("Pop") or new("UIScale", { Name = "Pop", Parent = p.holder })
+		sc.Scale = 0.6
+		TweenService:Create(sc, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+	end
+end
+
+-- Settings
+panel("Settings", "⚙️ Settings")
+renderers.Settings = function()
+	local p = panels.Settings
+	clear(p.list)
+	p.sub.Text = "Music and sound effects"
+	for i, key in { "Music", "SFX" } do
+		local g = groups[key]
+		local function set(v)
+			g.Volume = math.clamp(v, 0, 1)
+			renderers.Settings()
 		end
+		card(p.list, i, Color3.fromRGB(169, 183, 255), Color3.fromRGB(111, 130, 255), key == "Music" and "🎵 Music" or "🔊 Sound FX", "Volume " .. math.round(g.Volume * 100) .. "%", {
+			{ "−", function() set(g.Volume - 0.1) end },
+			{ "+", function() set(g.Volume + 0.1) end },
+			{ g.Volume > 0 and "🔇" or "🔈", function() set(g.Volume > 0 and 0 or 0.5) end },
+		})
 	end
 end
 
--- Инвентарь
-panel("Inventory", "🎒 Инвентарь")
-function renderers.Inventory(list)
-	clear(list)
+-- Inventory
+panel("Inventory", "🎒 Inventory")
+renderers.Inventory = function()
+	local p = panels.Inventory
+	clear(p.list)
+	local on = 0
+	for _, it in state.d.inv do
+		if it.eq then on += 1 end
+	end
+	p.sub.Text = string.format("%d / %d characters  •  on base %d / %d", #state.d.inv, C.MaxInventory, on, C.MaxEquipped)
 	for i, it in state.d.inv do
 		local ch = C.Characters[it.id]
 		local r = C.Rarities[ch.rarity]
-		local f = card(list, -ch.income * 1000 + i, r[2], ch.name, r[1] .. " • 💵" .. C.Short(ch.income) .. "/с")
-		button({ Size = UDim2.fromScale(0.55, 0.3), Position = UDim2.fromScale(0.04, 0.62), Text = it.eq and "Убрать" or "На базу" }, it.eq and Color3.fromRGB(255, 120, 120) or Color3.fromRGB(90, 210, 120), function()
-			if call("Equip", i) then renderers.Inventory(list) end
-		end).Parent = f
-		button({ Size = UDim2.fromScale(0.35, 0.3), Position = UDim2.fromScale(0.61, 0.62), Text = "Продать" }, U.Accent, function()
-			if call("Sell", i) then renderers.Inventory(list) end
-		end).Parent = f
+		card(p.list, -ch.rarity * 1000 + i, r[2]:Lerp(Color3.new(1, 1, 1), 0.35), r[2], ch.name, r[1] .. " • $" .. C.Short(ch.income) .. "/s", {
+			{ it.eq and "Unequip" or "Equip", function()
+				if call("Equip", i) then renderers.Inventory() end
+			end, it.eq and U.Red or U.Action },
+			{ "Sell", function()
+				if call("Sell", i) then renderers.Inventory() end
+			end },
+		})
 	end
+	if #state.d.inv == 0 then card(p.list, 0, U.Cues[1], U.Cues[2], "Empty!", "Shoot the ball to hunt pros") end
 end
 
--- Бонусы
-panel("Daily", "🎁 Бонусы")
-function renderers.Daily(list)
-	clear(list)
+-- Bonus (daily streak + playtime)
+panel("Bonus", "🎁 Bonuses")
+renderers.Bonus = function()
+	local p = panels.Bonus
+	clear(p.list)
 	local day = os.time() // 86400
 	local dd = state.d.daily
-	local next = (dd.day == day - 1) and dd.streak % #C.Daily + 1 or (dd.day == day and dd.streak or 1)
-	card(list, 0, Color3.fromRGB(255, 120, 170), "День " .. next .. "/" .. #C.Daily, "💵 " .. C.Short(C.Daily[next]),
-		dd.day == day and "✅ Получено" or "Забрать!", function()
-			if call("Daily") then renderers.Daily(list) end
-		end)
-	for i, p in C.Playtime do
-		local left = p[1] * 60 - (os.time() - state.join)
-		card(list, i, Color3.fromRGB(255, 170, 80), "⏱️ " .. p[1] .. " мин", "💵 " .. C.Short(p[2]),
-			state.claimed[i] and "✅" or left > 0 and string.format("%d:%02d", left // 60, left % 60) or "Забрать!", function()
-				if call("Playtime", i) then renderers.Daily(list) end
-			end)
+	local claimed = dd.day == day
+	local nextDay = claimed and dd.streak or ((dd.day == day - 1) and dd.streak % #C.Daily + 1 or 1)
+	p.sub.Text = "Log in every day for a bigger streak • stay to earn playtime gifts"
+	card(p.list, 0, Color3.fromRGB(255, 158, 200), Color3.fromRGB(255, 92, 158), "📅 Day " .. nextDay .. " / " .. #C.Daily, "$" .. C.Short(C.Daily[nextDay]), {
+		{ claimed and "✅ Claimed" or "Claim!", function()
+			if not claimed and call("Daily") then renderers.Bonus() end
+		end },
+	})
+	for i, pt in C.Playtime do
+		local left = pt[1] * 60 - (os.time() - state.join)
+		local label = state.claimed[i] and "✅" or left > 0 and string.format("%d:%02d", left // 60, left % 60) or "Claim!"
+		card(p.list, i, Color3.fromRGB(255, 200, 120), Color3.fromRGB(255, 150, 60), "⏱️ " .. pt[1] .. " min", "$" .. C.Short(pt[2]), {
+			{ label, function()
+				if call("Playtime", i) then renderers.Bonus() end
+			end },
+		})
 	end
 end
 
--- Донат-магазин
-panel("Shop", "💎 Магазин")
-function renderers.Shop(list)
-	clear(list)
-	local i = 0
-	for key, gp in C.GamePasses do
-		i += 1
-		card(list, i, Color3.fromRGB(255, 175, 40), gp.icon .. " " .. gp.name, "Гейм-пасс", state.d.passes[key] and "✅ Куплено" or "Купить R$", function()
-			call("Pass", key)
-		end)
+-- Donate shop
+panel("Shop", "💎 Shop")
+renderers.Shop = function()
+	local p = panels.Shop
+	clear(p.list)
+	p.sub.Text = "Game Passes and cash packs"
+	for i, gp in C.GamePasses do
+		local owned = state.d.passes[gp.key]
+		card(p.list, i, U.Menu[4][4], U.Menu[4][5], gp.icon .. " " .. gp.name, gp.desc, {
+			{ owned and "✅ Owned" or "Buy R$", function()
+				if not owned then call("Pass", gp.key) end
+			end, U.Red },
+		})
 	end
-	for j, p in C.Products do
-		card(list, 10 + j, Color3.fromRGB(90, 210, 120), p.icon .. " " .. C.Short(p.cash), "Пачка денег", "Купить R$", function() call("Product", j) end)
+	for i, pr in C.Products do
+		card(p.list, 10 + i, Color3.fromRGB(142, 227, 166), Color3.fromRGB(63, 191, 106), pr.icon .. " $" .. C.Short(pr.cash), "Cash pack", {
+			{ "Buy R$", function() call("Product", i) end, U.Red },
+		})
 	end
 end
 
--- Магазин киёв + прокачка (открывается у ларька на базе)
-panel("Cues", "🎱 Кии и прокачка")
-function renderers.Cues(list)
-	clear(list)
+-- Cue shop + upgrades (opened at the stall on the base)
+panel("Cues", "🎱 Cues & Upgrades")
+renderers.Cues = function()
+	local p = panels.Cues
+	clear(p.list)
 	local d = state.d
-	card(list, 0, Color3.fromRGB(255, 90, 90), "💪 Гантеля ур." .. d.dumbLevel, "+" .. d.dumbLevel .. " силы за подход", "💵 " .. C.Short(C.LiftCost(d.dumbLevel)), function()
-		if call("UpDumb") then renderers.Cues(list) end
-	end)
-	card(list, 1, Color3.fromRGB(120, 140, 255), "🎱 Кий ур." .. d.cueLevel, "+10% к дальности", "💵 " .. C.Short(C.CueUpCost(d.cueLevel)), function()
-		if call("UpCue") then renderers.Cues(list) end
-	end)
+	p.sub.Text = string.format("Strength %s  •  shot power x%.2f", C.Short(d.strength), C.CueMult(d))
+	card(p.list, 0, Color3.fromRGB(255, 138, 138), Color3.fromRGB(255, 71, 71), "💪 Dumbbell Lv." .. d.dumbLevel, "+" .. d.dumbLevel .. " strength / lift", {
+		{ "$" .. C.Short(C.LiftCost(d.dumbLevel)), function()
+			if call("UpDumb") then renderers.Cues() end
+		end },
+	})
+	card(p.list, 1, U.Cues[1], U.Cues[2], "🎱 Cue Lv." .. d.cueLevel, "+10% distance / level", {
+		{ "$" .. C.Short(C.CueUpCost(d.cueLevel)), function()
+			if call("UpCue") then renderers.Cues() end
+		end },
+	})
 	for i, cue in C.Cues do
 		local owned = d.cues[tostring(i)]
-		card(list, 1 + i, cue[4], cue[1], "x" .. cue[2] .. " дальность", d.cue == i and "✅ Выбран" or owned and "Выбрать" or "💵 " .. C.Short(cue[3]), function()
-			if call("Cue", i) then renderers.Cues(list) end
-		end)
+		local label = d.cue == i and "✅ Equipped" or owned and "Equip" or "$" .. C.Short(cue[3])
+		card(p.list, 1 + i, cue[4]:Lerp(Color3.new(1, 1, 1), 0.3), cue[4], cue[1], "x" .. cue[2] .. " distance", {
+			{ label, function()
+				if d.cue ~= i and call("Cue", i) then renderers.Cues() end
+			end },
+		})
 	end
 end
 
--- Кнопки меню слева
-local menu = new("Frame", { Size = UDim2.fromScale(0.09, 0.5), Position = UDim2.fromScale(0.01, 0.25), BackgroundTransparency = 1, Parent = gui }, {
-	new("UIListLayout", { Padding = UDim.new(0.03, 0), SortOrder = Enum.SortOrder.LayoutOrder }),
-})
-local order = { "Settings", "Inventory", "Daily", "Shop" }
-for i, key in order do
-	local b = U.Buttons[key]
-	local btn = button({ Size = UDim2.fromScale(1, 0.22), Text = "", LayoutOrder = i }, b[3], function() open(key) end)
-	btn.Label:Destroy()
-	text({ Size = UDim2.fromScale(1, 0.6), Text = b[1], Parent = btn })
-	text({ Size = UDim2.fromScale(1, 0.32), Position = UDim2.fromScale(0, 0.64), Text = b[2], Parent = btn })
-	new("UIAspectRatioConstraint", { AspectRatio = 1, Parent = btn })
-	btn.Parent = menu
+-- Menu buttons (Figma component "MenuButton": icon + label)
+for i, m in U.Menu do
+	local holder, body = button({ Size = UDim2.fromOffset(120, 120), LayoutOrder = i, Parent = menu, Radius = 28 }, { m[4], m[5] }, nil, nil, function() open(m[1]) end)
+	text(m[2], 54, nil, { Size = UDim2.new(1, 0, 0, 66), Position = UDim2.fromOffset(0, 8), Parent = body })
+	text(m[3], 22, nil, { Size = UDim2.new(1, 0, 0, 28), Position = UDim2.fromOffset(0, 80), Parent = body })
+	holder.Name = m[1]
 end
 
--- Кнопка броска с полосой силы
+-- ===== Shooting =====
 local power, charging, t0 = 0, false, 0
-local bar = new("Frame", { Size = UDim2.fromScale(0.3, 0.035), Position = UDim2.fromScale(0.35, 0.8), BackgroundColor3 = Color3.fromRGB(40, 30, 60), Parent = gui },
-	{ corner(1), stroke(3) })
-local fill = new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(1, 1, 1), Parent = bar }, {
-	corner(1), new("UIGradient", { Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(90, 220, 90)), ColorSequenceKeypoint.new(0.6, Color3.fromRGB(255, 220, 40)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 60, 60)) }) }),
-})
-local throwBtn = button({ Size = UDim2.fromScale(0.16, 0.09), Position = UDim2.fromScale(0.42, 0.86), Text = "🎱 УДАР!" }, Color3.fromRGB(255, 90, 90))
-throwBtn.Parent = gui
-throwBtn.MouseButton1Down:Connect(function()
-	if not _G.ThrowBusy then charging, power, t0 = true, 0, 0 end
+shootHit.MouseButton1Down:Connect(function()
+	if not _G.ThrowBusy and state then charging, power, t0 = true, 0, 0 end
 end)
-game:GetService("UserInputService").InputEnded:Connect(function(input)
-	if not charging or (input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch) then return end
+UserInputService.InputEnded:Connect(function(input)
+	if not charging then return end
+	if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
 	charging = false
 	local ok, msg = Request:InvokeServer("Throw", power)
-	if msg then toast(msg, Color3.fromRGB(255, 90, 90)) end
-	if ok then _G.PlaySfx("Hit") end
+	if msg then toast(msg, U.Bad) end
+	if not ok then fill.Size = UDim2.new(0, 0, 1, -8) end
+end)
+RunService.RenderStepped:Connect(function(dt)
+	if not charging then return end
+	t0 += dt
+	power = 1 - math.abs(((t0 * 0.8) % 2) - 1)
+	fill.Size = UDim2.new(power, -8, 1, -8)
 end)
 
-game:GetService("RunService").RenderStepped:Connect(function(dt)
-	if charging then t0 += dt end
-	power = charging and (1 - math.abs(((t0 * 0.8) % 2) - 1)) or power
-	fill.Size = UDim2.fromScale(charging and power or 0, 1)
-end)
-
--- События сервера
-Fx.OnClientEvent:Connect(function(kind, a)
+-- ===== Server events =====
+local luckIn = C.LuckCycle
+local function renderStats()
+	if not state then return end
+	statLabel.Text = string.format("💪 %s     📈 $%s/s     🍀 Luck +%d (next in %ds)", C.Short(state.d.strength), C.Short(state.income), state.luck, luckIn)
+end
+Fx.OnClientEvent:Connect(function(kind, a, b)
 	if kind == "State" then
 		state = a
 		_G.MySlot = a.slot
-		cashLabel.Text = "💵 " .. C.Short(a.d.cash)
-		statLabel.Text = string.format("💪 %s   📈 %s/с   🍀 +%d", C.Short(a.d.strength), C.Short(a.income), a.luck)
-		for n, p in panels do if p.frame.Visible then renderers[n](p.list) end end
+		_G.MyCue = a.d.cue
+		cashLabel.Text = C.Short(a.d.cash)
+		renderStats()
+		for k, p in panels do
+			if p.holder.Visible then renderers[k]() end
+		end
 	elseif kind == "Cash" then
-		cashLabel.Text = "💵 " .. C.Short(a)
+		cashLabel.Text, luckIn = C.Short(a), b
+		renderStats()
+		if panels.Bonus.holder.Visible then renderers.Bonus() end
 	elseif kind == "Luck" then
-		toast("🍀 Стол меняется! Удача +" .. a, Color3.fromRGB(120, 255, 140))
+		if state then state.luck = a end
+		toast(a == 0 and "🔄 The table reset its zones" or "🍀 The table shifted! Luck +" .. a, Color3.fromRGB(120, 255, 140))
 	elseif kind == "Open" then
-		if not panels[a].frame.Visible then open(a) end
+		if not panels[a].holder.Visible then open(a) end
 	elseif kind == "Lift" then
-		if Request:InvokeServer("Lift") then
+		if Request:InvokeServer("Lift") and state then
 			_G.PlaySfx("Click")
 			toast("+" .. state.d.dumbLevel .. " 💪", Color3.fromRGB(255, 120, 120))
 		end
 	end
 end)
+
+_G.SetHudVisible = function(on)
+	hud.Visible = on
+	if not on then
+		for _, p in panels do p.holder.Visible = false end
+	end
+end
 
 Request:InvokeServer("Sync")

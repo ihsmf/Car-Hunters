@@ -1,6 +1,6 @@
--- Бросок: кий бьёт биток -> биток разбивает пирамиду -> шары разлетаются с отскоками
--- от бортов и падают в лузы -> биток доезжает до своей зоны и падает в её лузу.
--- Для своего броска — кинематографичная камера: зум, аутзум, тряска, затемнение, вспышки, перелив цветов.
+-- Shot: the cue strikes the cue ball -> it breaks the rack -> the rack balls scatter, bounce off the
+-- rails and each other and drop into pockets -> the cue ball stops in its zone and drops into that zone's pocket.
+-- Your own shot gets a cinematic camera: zoom in/out, hard shake, dimming, flashes, colour cycling.
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
@@ -8,13 +8,13 @@ local Lighting = game:GetService("Lighting")
 local RS = game:GetService("ReplicatedStorage")
 local C = require(RS.Shared.Config)
 local Fx = RS:WaitForChild("Remotes").Fx
-local Models = RS:FindFirstChild("Models")
+local MeshBuilder = require(RS.Shared.MeshBuilder)
 local plr = Players.LocalPlayer
 local cam = workspace.CurrentCamera
 local T, N = C.Table, #C.Rarities
 local zoneLen = T.Length / N
 local FELT_Y = 3.3
-local R = 1.1 -- радиус шара
+local R = 1.1 -- ball radius
 local rng = Random.new()
 
 local function sfx(k) if _G.PlaySfx then _G.PlaySfx(k) end end
@@ -25,12 +25,17 @@ local function tween(o, t, props, style, dir)
 end
 local function laneX(slot) return -T.Width / 2 + (slot - 0.5) * T.Width / T.Lanes end
 
-local function ball(color, size)
-	local src = Models and Models:FindFirstChild("Ball")
-	local b = src and src:Clone() or Instance.new("Part")
-	if not src then b.Shape = Enum.PartType.Ball end
-	b.Size, b.Color, b.Material = Vector3.one * size, color, Enum.Material.SmoothPlastic
-	b.Anchored, b.CanCollide, b.CastShadow = true, false, true
+-- Billiard ball: Blender mesh (coloured body + white number spots), plain sphere as a fallback
+local function ball(color, size, cf)
+	local b = MeshBuilder.Create("Ball", cf or CFrame.new(), { Body = color }, size)
+	if not b then
+		b = Instance.new("Part")
+		b.Shape, b.Size, b.Color, b.Material = Enum.PartType.Ball, Vector3.one * size, color, Enum.Material.SmoothPlastic
+		b.Anchored, b.CanCollide = true, false
+		if cf then b.CFrame = cf end
+	end
+	b:SetAttribute("Tint", color)
+	b.CastShadow = true
 	b.Parent = workspace
 	return b
 end
@@ -45,12 +50,12 @@ end
 
 local function drop(b, at)
 	sfx("Pocket")
-	burst(b, b.Color, 25)
+	burst(b, b:GetAttribute("Tint") or b.Color, 25)
 	tween(b, 0.45, { Size = Vector3.one * 0.1, CFrame = CFrame.new(at - Vector3.new(0, 1.6, 0)) }, Enum.EasingStyle.Back, Enum.EasingDirection.In)
 	task.delay(1, b.Destroy, b)
 end
 
--- ===== Лузы длинного стола (как в Map.luau) =====
+-- ===== Long-table pockets (same positions as tools/place.py) =====
 local pockets = {}
 for i = 1, N do
 	for _, sx in { -1, 1 } do
@@ -66,7 +71,7 @@ local function nearestPocket(pos)
 	return best, bd
 end
 
--- ===== Пирамиды на каждой дорожке =====
+-- ===== A rack on every lane =====
 local RACK_Z = T.StartZ + 16
 local rackColors = { Color3.fromRGB(255, 220, 40), Color3.fromRGB(40, 90, 255), Color3.fromRGB(255, 50, 50), Color3.fromRGB(140, 40, 200), Color3.fromRGB(255, 130, 20), Color3.fromRGB(30, 160, 60), Color3.fromRGB(130, 30, 30), Color3.fromRGB(20, 20, 20), Color3.fromRGB(255, 120, 200), Color3.fromRGB(0, 200, 200) }
 local racks = {}
@@ -79,8 +84,8 @@ local function buildRack(slot)
 		for j = 0, row do
 			k += 1
 			local pos = Vector3.new(x0 + (j - row / 2) * R * 2.05, FELT_Y + R, RACK_Z + row * R * 1.8)
-			local b = ball(rackColors[k], R * 2)
-			b.CFrame, b.Size = CFrame.new(pos), Vector3.one * 0.1
+			local b = ball(rackColors[k], R * 2, CFrame.new(pos))
+			b.Size = Vector3.one * 0.1
 			tween(b, 0.4, { Size = Vector3.one * R * 2 }, Enum.EasingStyle.Back)
 			table.insert(list, b)
 		end
@@ -89,7 +94,7 @@ local function buildRack(slot)
 end
 for s = 1, T.Lanes do buildRack(s) end
 
--- Физика разлёта: трение, отскоки от бортов и друг от друга, «магнит» луз на малой скорости
+-- Scatter physics: friction, rail and ball-ball bounces, pockets "pull" slow balls so every ball gets potted
 local function breakRack(slot, power)
 	local list = racks[slot]
 	racks[slot] = nil
@@ -114,13 +119,13 @@ local function breakRack(slot, power)
 				continue
 			end
 			o.v *= math.max(0, 1 - 0.55 * dt)
-			if speed < 14 then -- шар «ищет» лузу, чтобы все шары оказались забиты
+			if speed < 14 then
 				o.v += (target - o.p).Unit * 40 * dt
 				o.v = o.v.Unit * math.max(o.v.Magnitude, 8)
 			end
 			o.p += o.v * dt
 			local lim = T.Width / 2 - R
-			if math.abs(o.p.X) > lim then -- отскок от борта
+			if math.abs(o.p.X) > lim then -- rail bounce
 				o.p = Vector3.new(math.sign(o.p.X) * lim, o.p.Y, o.p.Z)
 				o.v = Vector3.new(-o.v.X * 0.8, 0, o.v.Z)
 				sfx("Hit")
@@ -129,7 +134,7 @@ local function breakRack(slot, power)
 				o.p = Vector3.new(o.p.X, o.p.Y, T.StartZ + R)
 				o.v = Vector3.new(o.v.X, 0, -o.v.Z * 0.8)
 			end
-			for j = i + 1, #bodies do -- упругое столкновение шаров
+			for j = i + 1, #bodies do -- elastic ball-ball collision
 				local q = bodies[j]
 				if not q.done then
 					local delta = q.p - o.p
@@ -157,7 +162,7 @@ local function breakRack(slot, power)
 	end)
 end
 
--- ===== Эффекты экрана =====
+-- ===== Screen effects =====
 local fxGui = Instance.new("ScreenGui")
 fxGui.Name, fxGui.IgnoreGuiInset, fxGui.ResetOnSpawn, fxGui.DisplayOrder = "CinemaFx", true, false, 10
 fxGui.Parent = plr:WaitForChild("PlayerGui")
@@ -171,7 +176,7 @@ local function frame(props)
 end
 local flash = frame({ BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1 })
 local dim = frame({ BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 1 })
-local bars = {} -- кинематографичные полосы
+local bars = {} -- letterbox bars
 for i, y in { 0, 1 } do
 	bars[i] = frame({ BackgroundColor3 = Color3.new(0, 0, 0), Size = UDim2.fromScale(1, 0), AnchorPoint = Vector2.new(0, y), Position = UDim2.fromScale(0, y) })
 end
@@ -188,16 +193,16 @@ local function letterbox(on)
 	for _, b in bars do tween(b, 0.4, { Size = UDim2.fromScale(1, on and 0.11 or 0) }) end
 end
 
--- тряска: shake = амплитуда в стадах, затухает
+-- shake = amplitude in studs, decays every frame
 local shake = 0
 local function hardShake(a) shake = math.max(shake, a) end
 
--- окно с выпавшим персонажем: лучи, радужный градиент, пульсация
+-- reveal card: spinning rays, rainbow gradient, pulse
 local function reveal(ch)
 	local r = C.Rarities[ch.rarity]
 	local root = frame({ BackgroundTransparency = 1 })
 	local rays = frame({ Parent = root, BackgroundTransparency = 1, Size = UDim2.fromOffset(900, 900), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45) })
-	for k = 1, 12 do -- луч внутри повёрнутого полноразмерного «шарнира» вращается вокруг центра
+	for k = 1, 12 do -- each ray sits in a full-size rotated pivot so it spins around the centre
 		local pivot = frame({ Parent = rays, BackgroundTransparency = 1, Rotation = k * 30 })
 		frame({ Parent = pivot, BackgroundColor3 = r[2], BackgroundTransparency = 0.55, Size = UDim2.new(0, 40, 0.5, 0), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.fromScale(0.5, 0.5) })
 	end
@@ -207,14 +212,14 @@ local function reveal(ch)
 		l.Size, l.AnchorPoint, l.Position = UDim2.fromScale(0.8, h), Vector2.new(0.5, 0.5), UDim2.fromScale(0.5, y)
 		l.Text, l.TextColor3, l.Parent = text, color, root
 		local st = Instance.new("UIStroke")
-		st.Thickness, st.Color, st.Parent = 5, C.UI.Stroke, l
+		st.Thickness, st.Color, st.Parent = 5, C.UI.Ink, l
 		local sc = Instance.new("UIScale")
 		sc.Scale, sc.Parent = 0, l
 		return l, sc
 	end
 	local title, s1 = label(string.upper(r[1]) .. "!", 0.34, 0.14, Color3.new(1, 1, 1))
 	local name, s2 = label(ch.name, 0.48, 0.09, r[2])
-	local _, s3 = label("💵 " .. C.Short(ch.income) .. "/с", 0.58, 0.06, Color3.fromRGB(140, 255, 120))
+	local _, s3 = label("💵 $" .. C.Short(ch.income) .. "/s", 0.58, 0.06, C.UI.Money)
 	local grad = Instance.new("UIGradient")
 	grad.Color = ch.rarity >= 10 and ColorSequence.new({
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 60, 60)), ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 230, 40)),
@@ -233,7 +238,7 @@ local function reveal(ch)
 		grad.Rotation = t * 90
 		s1.Scale = s1.Scale > 0.95 and 1 + math.sin(t * 8) * 0.05 or s1.Scale
 		name.TextColor3 = ch.rarity >= 10 and Color3.fromHSV((t * 0.6) % 1, 0.7, 1) or r[2]
-		if ch.rarity >= 10 then cc.TintColor = Color3.fromHSV((t * 0.5) % 1, 0.25, 1) end -- перелив мира
+		if ch.rarity >= 10 then cc.TintColor = Color3.fromHSV((t * 0.5) % 1, 0.25, 1) end -- world colour cycling
 	end)
 	task.delay(2.8, function()
 		for _, sc in { s1, s2, s3 } do tween(sc, 0.3, { Scale = 0 }, Enum.EasingStyle.Back, Enum.EasingDirection.In) end
@@ -245,8 +250,8 @@ local function reveal(ch)
 	end)
 end
 
--- ===== Камера =====
-local camTarget, camOffset, camLook -- куда смотрит кинокамера
+-- ===== Camera =====
+local camTarget, camOffset, camLook
 local cinema = false
 RunService:BindToRenderStep("CinemaCam", Enum.RenderPriority.Camera.Value + 1, function(dt)
 	if not cinema or not camTarget then return end
@@ -262,8 +267,7 @@ end)
 local function setCinema(on)
 	cinema = on
 	_G.ThrowBusy = on
-	local main = plr.PlayerGui:FindFirstChild("Main")
-	if main then main.Enabled = not on end
+	if _G.SetHudVisible then _G.SetHudVisible(not on) end
 	letterbox(on)
 	if on then
 		cam.CameraType = Enum.CameraType.Scriptable
@@ -275,8 +279,13 @@ local function setCinema(on)
 	end
 end
 
--- ===== Бросок =====
-local function cueModel(color)
+-- ===== The shot =====
+local function cueModel(color) -- Blender cue mesh, or a 3-part fallback
+	local mesh = MeshBuilder.Create("Cue", CFrame.new(), { Shaft = color })
+	if mesh then
+		mesh.Parent = workspace
+		return mesh
+	end
 	local m = Instance.new("Model")
 	for _, d in { { 0.4, 7, Color3.fromRGB(25, 12, 5), -2.5 }, { 0.3, 7, color, 4.5 }, { 0.22, 0.3, Color3.fromRGB(25, 80, 230), 8.15 } } do
 		local p = Instance.new("Part")
@@ -288,7 +297,11 @@ local function cueModel(color)
 	m.Parent = workspace
 	return m
 end
-local function placeCue(m, tip) -- кий лежит вдоль +Z, кончик в точке tip
+local function placeCue(m, tip) -- cue lies along +Z with its tip at `tip`
+	if m:IsA("MeshPart") then
+		m.CFrame = CFrame.new(tip + Vector3.new(0, 0.6, -4.6)) * CFrame.Angles(math.pi / 2, 0, 0)
+		return
+	end
 	for _, p in m:GetChildren() do
 		p.CFrame = CFrame.new(tip - Vector3.new(0, -0.6, 8.3 - p:GetAttribute("off"))) * CFrame.Angles(0, math.pi / 2, 0)
 	end
@@ -301,16 +314,15 @@ Fx.OnClientEvent:Connect(function(kind, a, dist, id)
 	local mine = slot == _G.MySlot
 	local x = laneX(slot)
 	local start = Vector3.new(x, FELT_Y + R, T.StartZ + 3)
-	local b = ball(Color3.new(1, 1, 1), R * 2)
-	b.CFrame = CFrame.new(start)
+	local b = ball(Color3.new(1, 1, 1), R * 2, CFrame.new(start))
 	local a0, a1 = Instance.new("Attachment", b), Instance.new("Attachment", b)
 	a0.Position, a1.Position = Vector3.new(0, 0.7, 0), Vector3.new(0, -0.7, 0)
 	local trail = Instance.new("Trail")
 	trail.Attachment0, trail.Attachment1, trail.Color, trail.LightEmission = a0, a1, ColorSequence.new(Color3.new(1, 1, 1), rcol), 1
 	trail.Lifetime, trail.Transparency, trail.Parent = 0.5, NumberSequence.new(0.1, 1), b
 
-	-- 1. Замах кием: зум-ин и затемнение
-	local cue = cueModel(C.Cues[2][4])
+	-- 1. Wind-up: zoom in + dim
+	local cue = cueModel(C.Cues[mine and _G.MyCue or 1][4])
 	if mine then
 		setCinema(true)
 		camTarget, camOffset, camLook = b, Vector3.new(6, 4, -10), Vector3.new(0, 0, 6)
@@ -322,7 +334,7 @@ Fx.OnClientEvent:Connect(function(kind, a, dist, id)
 	local t0 = os.clock()
 	while os.clock() - t0 < C.Anim.Windup do
 		local t = (os.clock() - t0) / C.Anim.Windup
-		local back = t < 0.8 and math.sin(t / 0.8 * math.pi / 2) * 4 or 4 * (1 - (t - 0.8) / 0.2) -- оттяжка и резкий удар
+		local back = t < 0.8 and math.sin(t / 0.8 * math.pi / 2) * 4 or 4 * (1 - (t - 0.8) / 0.2) -- pull back, then strike
 		placeCue(cue, start - Vector3.new(0, 0, R + back))
 		RunService.RenderStepped:Wait()
 	end
@@ -330,7 +342,7 @@ Fx.OnClientEvent:Connect(function(kind, a, dist, id)
 	burst(b, Color3.new(1, 1, 1), 30)
 	task.delay(0.3, cue.Destroy, cue)
 
-	-- 2. Удар: вспышка, жёсткая тряска, аутзум-рывок
+	-- 2. Strike: flash, hard shake, zoom-out punch
 	if mine then
 		doFlash(Color3.new(1, 1, 1), 0.9)
 		hardShake(2.5)
@@ -341,7 +353,7 @@ Fx.OnClientEvent:Connect(function(kind, a, dist, id)
 		camOffset, camLook = Vector3.new(0, 9, -22), Vector3.new(0, 0, 20)
 	end
 
-	-- 3. Качение до своей зоны (+ разбивка пирамиды по пути)
+	-- 3. Roll to the zone (breaking the rack on the way)
 	local roll = C.RollTime(dist)
 	local zone = math.clamp(math.ceil(dist / zoneLen), 1, N)
 	local endZ = math.min(T.StartZ + 3 + dist, T.StartZ + T.Length - R)
@@ -362,7 +374,7 @@ Fx.OnClientEvent:Connect(function(kind, a, dist, id)
 		RunService.RenderStepped:Wait()
 	until t >= 1
 
-	-- 4. Скат в лузу зоны: зум-ин, затемнение, замедление
+	-- 4. Slide into the zone pocket: zoom in, dim, blur
 	local side = x < 0 and -1 or 1
 	local pocket = Vector3.new(side * T.Width / 2, start.Y, T.StartZ + (zone - 0.5) * zoneLen)
 	if mine then
@@ -379,10 +391,10 @@ Fx.OnClientEvent:Connect(function(kind, a, dist, id)
 		b.CFrame = CFrame.new(from:Lerp(pocket, e)) * rot
 		RunService.RenderStepped:Wait()
 	until t >= 1
-	b.Color = rcol
+	b:SetAttribute("Tint", rcol)
 	drop(b, pocket)
 
-	-- 5. Финал: вспышка цвета редкости, тряска, аутзум, окно персонажа
+	-- 5. Finale: rarity flash, shake, zoom-out, reveal card
 	if mine then
 		doFlash(rcol, 1)
 		hardShake(1 + ch.rarity * 0.12)
@@ -400,9 +412,11 @@ Fx.OnClientEvent:Connect(function(kind, a, dist, id)
 	end
 end)
 
--- ===== Декоративные шары на столах баз =====
+-- ===== Decorative balls rolling into pockets on the base tables =====
 local basePockets = {}
-for _, px in { -4.5, 4.5 } do for _, pz in { -8, 0, 8 } do table.insert(basePockets, Vector3.new(px, 0, pz)) end end
+for _, px in { -4.6, 4.6 } do
+	for _, pz in { -8.1, 0, 8.1 } do table.insert(basePockets, Vector3.new(px, 0, pz)) end
+end
 local world = workspace:WaitForChild("World")
 while true do
 	task.wait(rng:NextNumber(1, 2.5))
@@ -412,8 +426,7 @@ while true do
 		local o = floor.Position + Vector3.new(0, 3.95, 0)
 		local from = o + Vector3.new(rng:NextNumber(-3, 3), 0, rng:NextNumber(-6, 6))
 		local goal = o + basePockets[rng:NextInteger(1, #basePockets)]
-		local b = ball(rackColors[rng:NextInteger(1, #rackColors)], 0.8)
-		b.CFrame = CFrame.new(from)
+		local b = ball(rackColors[rng:NextInteger(1, #rackColors)], 0.8, CFrame.new(from))
 		local spin = CFrame.fromAxisAngle((goal - from).Unit:Cross(Vector3.yAxis), -(goal - from).Magnitude / 0.4)
 		tween(b, 1.2, { CFrame = CFrame.new(goal) * spin.Rotation }).Completed:Once(function() drop(b, goal) end)
 	end

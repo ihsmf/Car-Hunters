@@ -1,28 +1,38 @@
 # 🎱 Billiard Hunters (Roblox)
 
-Похоже на «Throw Food to Animals», только с бильярдом: зажми **УДАР!** и отпусти, чтобы послать шар по длинному столу. В какой зоне шар остановится, такой редкости персонаж и выпадет. Он встанет на твоей базе вокруг бильярдного стола и будет приносить доход.
+Механика как в «Throw Food to Animals», только с бильярдом. Зажимаешь **SHOOT**, кий бьёт биток, тот разбивает пирамиду и катится по длинному столу. В какой зоне биток упадёт в лузу, такой редкости персонаж-профи и выпадет. Профи встаёт у бильярдного стола на твоей базе и приносит доход. На этот доход прокачиваешь кий и силу удара: сила растёт от гантели у базы, а гантелю тоже можно прокачать.
 
-## Структура
+Весь текст в игре на английском.
+
+## Что где
 | Путь | Что внутри |
 |---|---|
-| `src/shared/Config.luau` | UI-токены (шрифт, цвета, кнопки), 12 редкостей, 36 персонажей, кии, гейм-пассы, бонусы |
-| `tools/place.py` | генерирует готовый `BilliardHunters.rbxlx`: вся карта (~5000 деталей) сразу в Workspace + скрипты |
-| `tools/preview.py` | рендер превью карты через Blender (bpy) |
-| `src/server/Map.luau` | ссылки на объекты карты и её анимации |
-| `src/server/Main.server.luau` | DataStore, бросок, доход, прокачка, ежедневный бонус и бонус за время в игре, покупки |
-| `src/client/UI.client.luau` | HUD, кнопки (иконка + текст), панели: Настройки / Инвентарь / Бонус / Магазин / Кии |
-| `src/client/Balls.client.luau` | анимация броска (шар катится, оставляет след и падает в лузу), декоративные шары на столах баз |
-| `blender/build_models.py` | генерация мешей: PoolTable, Cue, Ball, Dumbbell, Fence → `blender/export/*.fbx` |
+| **`BilliardHunters.rbxlx`** | готовый плейс: открыть в Studio и нажать Play |
+| Figma: [Billiard Hunters — UI](https://www.figma.com/design/mE9bTdXWf52Fk2fC8KF6dn) | дизайн интерфейса: HUD, компоненты MenuButton/Card, 5 окон (скриншоты в `docs/`) |
+| `blender/build_models.py` | модели PoolTable, Cue, Ball, Dumbbell, Fence → `src/shared/Meshes.luau` + FBX + рендер `docs/blender-models.png` |
+| `src/shared/MeshBuilder.luau` | собирает MeshPart из геометрии Blender через EditableMesh, без загрузки ассетов |
+| `src/shared/Config.luau` | 25 редкостей, 100 персонажей, кии, гейм-пассы, бонусы, UI-токены из Figma |
+| `src/server/Main.server.luau` | данные, базы, бросок, доход, прокачка, ежедневный бонус и бонус за время в игре, покупки |
+| `src/server/Map.luau` | объекты карты и их анимации |
+| `src/client/UI.client.luau` | HUD и окна по макету Figma: Settings, Inventory, Bonus, Shop, Cues |
+| `src/client/Throw.client.luau` | бросок: физика разлёта шаров по лузам, кинокамера, окно с выпавшим персонажем |
+| `src/client/Visuals.client.luau` | заменяет модели из деталей на меши Blender |
+| `tools/place.py` | генерирует `.rbxlx`: карта (~4800 деталей) прямо в Workspace + все скрипты |
+| `tools/lint_luau.py` | проверка Luau: баланс блоков и скобок, необъявленные имена, несуществующие ключи Config |
+| `tools/preview.py` | рендер карты через Blender (`tools/preview.png`) |
 
 ## Запуск
-1. Открыть `BilliardHunters.rbxlx` в Roblox Studio — карта видна сразу.
-2. Нажать **Play (F5)**: появляются кнопки, база, бросок и вся механика.
-3. Для сохранений: опубликовать плейс и включить Game Settings → Security → API Services (без этого игра работает, но прогресс не сохраняется).
-4. Вписать ID гейм-пассов/продуктов в `Config.GamePasses` / `Config.Products`.
+1. Открыть `BilliardHunters.rbxlx` в Roblox Studio. Карта видна сразу.
+2. Нажать **Play (F5)**. Вас перенесёт на свою базу. Слева 4 кнопки, внизу кнопка SHOOT.
+3. Сохранения: опубликовать плейс и включить Game Settings → Security → **API Services**. Без этого игра работает, но прогресс не сохраняется.
+4. Вписать ID гейм-пассов и продуктов в `C.GamePasses` / `C.Products` (`src/shared/Config.luau`), затем пересобрать.
 
-Пересборка после правок: `python3 tools/place.py`.
+Меши из Blender создаются через **EditableMesh**. Если в вашем Studio или опыте эта функция недоступна, в Output будет предупреждение `[MeshBuilder]`, и останутся модели из деталей той же формы.
 
-## Механика
-- Дальность = сила × множитель кия × уровень кия. Сила растёт от подходов к гантеле (ProximityPrompt), прибавка за подход = уровень гантели.
-- Каждые 45 с длинный стол сдвигает редкости зон вверх (до +3), потом цикл начинается заново.
-- На базе стоят до 8 персонажей, в инвентаре помещается до 100.
+## Пересборка
+```
+pip install bpy                    # Blender как Python-модуль, один раз
+python3 blender/build_models.py    # модели → Meshes.luau
+python3 tools/lint_luau.py         # проверка кода
+python3 tools/place.py             # → BilliardHunters.rbxlx
+```
