@@ -331,16 +331,24 @@ local function applyTrapLevel(b, level)
 		end
 		ring.Parent = f
 		trapSpin(ring, cf, 0.35)
-		-- pinion + motor on the +X+Z deck corner, on a bracket bolted across the edge frame
+		-- pinion + motor on the +X+Z deck corner. The pinion is its own TrapSpin model (opposite way, ring/pinion
+		-- teeth ratio faster); it sits clear of the ring's teeth (they end at r 8.05, the pinion's at r 8.22) so the
+		-- two never cut through each other. The motor hangs above it from an arm on a post on the edge frame
 		local diag = CFrame.Angles(0, math.pi / 4, 0)
-		local pc = O * diag * CFrame.new(0, 0, 8.6) -- pinion axis (the ring's teeth end at r 8.05)
-		pinion = trapPart(f, "TrapUpPinion", Vector3.new(0.32, 1.2, 1.2), pc * CFrame.new(0, 1.84, 0) * UPRIGHT, TRAP_STEEL, METAL, { shape = CYL })
+		local pc = O * diag * CFrame.new(0, 0, 9) -- pinion axis
+		local pcf = pc * CFrame.new(0, 1.87, 0) -- pinion centre: bottom 1.71 just over the deck top 1.7
+		local gear = Instance.new("Model")
+		gear.Name = "TrapUpPinionGear"
+		trapPart(gear, "TrapUpPinion", Vector3.new(0.32, 1.2, 1.2), pcf * UPRIGHT, TRAP_STEEL, METAL, { shape = CYL })
 		for i = 0, 5 do
-			trapPart(f, "TrapUpPinionTooth", Vector3.new(0.26, 0.26, 0.24), pc * CFrame.Angles(0, i / 6 * math.pi * 2, 0) * CFrame.new(0.64, 1.84, 0), TRAP_STEEL, METAL)
+			trapPart(gear, "TrapUpPinionTooth", Vector3.new(0.26, 0.26, 0.24), pcf * CFrame.Angles(0, i / 6 * math.pi * 2, 0) * CFrame.new(0.64, 0, 0), TRAP_STEEL, METAL)
 		end
-		trapPart(f, "TrapUpMotor", Vector3.new(1.1, 1, 1), pc * CFrame.new(0, 2.5, 0) * UPRIGHT, TRAP_YELLOW, METAL, { shape = CYL })
-		trapPart(f, "TrapUpMotor", Vector3.new(0.2, 1.1, 1.1), pc * CFrame.new(0, 3.08, 0) * UPRIGHT, TRAP_DARK, METAL, { shape = CYL })
-		trapPart(f, "TrapUpBracket", Vector3.new(0.8, 0.3, 4), O * diag * CFrame.new(0, 1.95, 10.4), TRAP_DARK, METAL)
+		gear.Parent = f
+		trapSpin(gear, pcf, -0.35 * n / 6)
+		pinion = trapPart(f, "TrapUpMotor", Vector3.new(1, 1, 1), pc * CFrame.new(0, 2.6, 0) * UPRIGHT, TRAP_YELLOW, METAL, { shape = CYL })
+		trapPart(f, "TrapUpMotor", Vector3.new(0.2, 1.1, 1.1), pc * CFrame.new(0, 3.18, 0) * UPRIGHT, TRAP_DARK, METAL, { shape = CYL })
+		trapPart(f, "TrapUpBracket", Vector3.new(0.8, 0.3, 2.9), O * diag * CFrame.new(0, 2.6, 10.9), TRAP_DARK, METAL)
+		trapPart(f, "TrapUpBracket", Vector3.new(0.8, 0.75, 0.6), O * diag * CFrame.new(0, 2.075, 12), TRAP_DARK, METAL)
 	end
 	if level >= 6 then -- hydraulic rams on the two closed sides, bolted to the posts, with hoses down to the plinth
 		for _, sz in ipairs({ -1, 1 }) do
@@ -361,10 +369,10 @@ local function applyTrapLevel(b, level)
 				end
 			end
 		end
-		if pinion then -- grinding sparks where the pinion bites the ring
+		if pinion then -- grinding sparks where the pinion bites the ring (on the static motor: the gears spin)
 			local att = Instance.new("Attachment")
 			att.Name = "TrapUpSparkAt"
-			att.CFrame = pinion.CFrame:ToObjectSpace(O * CFrame.Angles(0, math.pi / 4, 0) * CFrame.new(0, 1.95, 7.95)) -- the bite, sparks fly up
+			att.CFrame = pinion.CFrame:ToObjectSpace(O * CFrame.Angles(0, math.pi / 4, 0) * CFrame.new(0, 1.95, 8.13)) -- the bite, sparks fly up
 			att.Parent = pinion
 			trapSparks(att, 22)
 		end

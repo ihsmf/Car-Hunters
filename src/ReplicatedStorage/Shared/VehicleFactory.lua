@@ -134,12 +134,17 @@ local function prepareTemplate(tpl, targetL, opts)
 	return m
 end
 
--- a failed prepare is not cached for good (v25): the model may still be arriving (server start installs the
--- cars after early clients joined), so it is tried again after RETRY_AFTER seconds
+-- a failed prepare is retried (v25): the model may still be arriving (server start installs the cars after early
+-- clients joined), so it is tried again after RETRY_AFTER seconds. After MAX_TRIES failures, or a failure once
+-- ReplicatedStorage "CarsReady" is set, the failure is cached for good (templateCache[key] = false: procedural car)
 local RETRY_AFTER = 8
-local failedAt = {}
+local MAX_TRIES = 3
+local failedAt, failCount = {}, {}
 local function fromTemplate(key, tpl, targetL, opts)
 	local cached = templateCache[key]
+	if cached == false then
+		return nil
+	end
 	if cached == nil then
 		local t = failedAt[key]
 		if t and os.clock() - t < RETRY_AFTER then
@@ -149,10 +154,16 @@ local function fromTemplate(key, tpl, targetL, opts)
 		if ok and res then
 			cached = res
 			templateCache[key] = cached
-			failedAt[key] = nil
+			failedAt[key], failCount[key] = nil, nil
 		else
 			warn("[CarModels] could not prepare", tpl:GetFullName(), res)
-			failedAt[key] = os.clock()
+			local n = (failCount[key] or 0) + 1
+			if n >= MAX_TRIES or ReplicatedStorage:GetAttribute("CarsReady") == true then
+				templateCache[key] = false
+				failedAt[key], failCount[key] = nil, nil
+			else
+				failedAt[key], failCount[key] = os.clock(), n
+			end
 			return nil
 		end
 	end

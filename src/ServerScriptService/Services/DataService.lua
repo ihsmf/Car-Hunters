@@ -44,6 +44,11 @@ local SERVER_ID = (game.JobId ~= "" and game.JobId) or ("studio-" .. HttpService
 local store = nil
 local sessions = {}
 
+-- v8 economy marker kept in `receipts`: old (v24) servers copy receipts but save schemaVersion 7 without touching
+-- money, so the schema number alone cannot tell whether the x10 already ran (v25 -> v24 -> v25 would give x100)
+local ECON_MARKER = "econ_v8"
+DataService.EconMarker = ECON_MARKER
+
 local function newProfile(isNew)
 	local p = {
 		schemaVersion = SCHEMA_VERSION,
@@ -84,6 +89,7 @@ local function newProfile(isNew)
 		skin = "classic",
 	}
 	if isNew then
+		p.receipts[1] = ECON_MARKER -- born in v8 money units: never runs the x10 migration
 		for id, n in pairs(EconomyConfig.StarterParts) do
 			p.parts[id] = n
 		end
@@ -297,9 +303,17 @@ local function sanitize(raw)
 			p.tutorial = p.tutorial + 2
 		end
 	end
-	if rawVersion < 8 then
+	local hasMarker = false
+	for _, r in ipairs(p.receipts) do
+		if r == ECON_MARKER then
+			hasMarker = true
+			break
+		end
+	end
+	if rawVersion < 8 and not hasMarker then
 		-- v8 (v25 economy): car income, values and every price went x10, so saved money and income peaks follow once.
-		-- Runs only for saves older than v8; the next save stamps SCHEMA_VERSION, so it never runs twice
+		-- Guarded by the "econ_v8" receipts marker (old servers keep receipts but rewrite schemaVersion), so it never
+		-- runs twice
 		p.money = math.min(p.money * 10, EconomyConfig.MaxMoney)
 		p.peakIncome = math.min(p.peakIncome * 10, 1e15)
 		p.peakCarIncome = math.min(p.peakCarIncome * 10, 1e15)
@@ -310,6 +324,9 @@ local function sanitize(raw)
 		if p.pendingNotice and p.pendingNotice.amount then
 			p.pendingNotice.amount = math.min(p.pendingNotice.amount * 10, 1e12) -- the v6 refund was added before the x10
 		end
+	end
+	if not hasMarker then
+		table.insert(p.receipts, 1, ECON_MARKER) -- profile is now in v8 units (migrated above, or already v8)
 	end
 	p.settings = DataService.SanitizeSettings(raw.settings)
 	if type(raw.play) == "table" then

@@ -11,7 +11,7 @@ TrapConfig.LuckPerLevel = 0.06
 
 -- economy (v25, tools/econ_sim.py): every level is a real goal (minutes to hours of income); all money is x10 since v25
 TrapConfig.Costs = {
-	[2] = 150000,
+	[2] = 15000,
 	[3] = 6000000,
 	[4] = 25000000,
 	[5] = 80000000,

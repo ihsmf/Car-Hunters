@@ -41,8 +41,12 @@ end
 
 local function remember(d, rid)
 	table.insert(d.receipts, rid)
-	while #d.receipts > 100 do
-		table.remove(d.receipts, 1)
+	-- keep the last receipts, but never drop the "econ_v8" money-migration marker (DataService). The cap stays under
+	-- the old servers' 100 so a few purchases on a v24 server during a rollback do not trim the marker either
+	local marker = S.Data.EconMarker
+	while #d.receipts > 90 do
+		local i = (d.receipts[1] == marker) and 2 or 1
+		table.remove(d.receipts, i)
 	end
 end
 

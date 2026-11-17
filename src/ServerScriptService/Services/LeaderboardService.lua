@@ -23,7 +23,7 @@ LB.Tabs = {
 }
 
 -- global ranking (OrderedDataStore): every player's collection value is written every 2 min, top 10 read every 2 min
-local ORDERED_NAME = "CarHunters_TopCollection_v1"
+local ORDERED_NAME = "CarHunters_TopCollection_v2"
 local worldTop = {} -- { { userId, name, v } }
 local names = {}
 local function nameOf(userId)
