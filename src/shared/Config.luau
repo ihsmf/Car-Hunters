@@ -61,14 +61,14 @@ for r, v in R do
 	end
 end
 
-C.Table = { Length = 900, Width = 48, StartZ = 70, Lanes = 4 } -- tools/place.py reads these values
+C.Table = { Length = 2000, Width = 36, StartZ = 80, Lanes = 4 } -- tools/place.py reads these values
 C.LuckCycle = 45 -- every N seconds the long table shifts every zone one rarity up
 C.MaxLuckShift = 4
 C.ThrowCooldown = 1
 C.MaxEquipped = 8
 C.MaxInventory = 100
 C.Anim = { Windup = 0.9, Slide = 0.7 }
-function C.RollTime(dist) return 1.2 + dist / 130 end
+function C.RollTime(dist) return 1.4 + dist / 260 end
 function C.ThrowTime(dist) return C.Anim.Windup + C.RollTime(dist) + C.Anim.Slide end -- until the ball is pocketed
 
 C.Cues = { -- name, distance multiplier, price, colour
@@ -93,7 +93,7 @@ function C.CueMult(d)
 	return base * (1 + (d.cueLevel - 1) * 0.1)
 end
 function C.Distance(power, d)
-	return math.min(C.Table.Length, power * (30 + d.strength * 0.4) * C.CueMult(d))
+	return math.min(C.Table.Length, power * (40 + d.strength * 0.6) * C.CueMult(d))
 end
 
 -- Replace 0 with real IDs from the Creator Dashboard (Monetization → Passes / Developer Products)

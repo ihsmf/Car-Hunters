@@ -4,12 +4,20 @@
 
 Весь текст в игре на английском.
 
+## Карта
+Устроена как в Throw Food to Animals. Стартовая площадка с 4 базами в ряд. От её середины уходит длинный узкий каньон с бильярдным столом длиной 2000 стадов. Всё окружено сплошной цепью высоких гор из Blender, а вдоль контура стоят невидимые стены.
+
+- **Стол.** Высокие борта, ножки, лузы и прицельные метки. Каждая из 25 зон — отдельный стол со своей темой, и каждый следующий круче: дуб → орех → королевский → золотой → драконий → древний → ледяной → лавовый → кибер → … → космический → радужный → квантовый → глитч → абсолютный. С 5-го стола появляется подсветка, с 8-го частицы.
+- **Базы.** Круглая платформа с лестницей, мраморный навес с лампой над столом, 8 подиумов с подсветкой для персонажей, стена трофеев с именем игрока, арка входа, уголок с гантелями и стойкой, киоск с киями, кадки с растениями.
+
+Рендеры: `tools/preview.png`, `docs/map-lane.png`, `docs/map-far-tables.png`, `docs/map-base.png`.
+
 ## Что где
 | Путь | Что внутри |
 |---|---|
 | **`BilliardHunters.rbxlx`** | готовый плейс: открыть в Studio и нажать Play |
 | Figma: [Billiard Hunters — UI](https://www.figma.com/design/mE9bTdXWf52Fk2fC8KF6dn) | дизайн интерфейса: HUD, компоненты MenuButton/Card, 5 окон (скриншоты в `docs/`) |
-| `blender/build_models.py` | модели PoolTable, Cue, Ball, Dumbbell, Fence → `src/shared/Meshes.luau` + FBX + рендер `docs/blender-models.png` |
+| `blender/build_models.py` | модели PoolTable, Cue, Ball, Dumbbell, Fence, Mountain, Peak → `src/shared/Meshes.luau` + FBX + рендер `docs/blender-models.png` |
 | `src/shared/MeshBuilder.luau` | собирает MeshPart из геометрии Blender через EditableMesh, без загрузки ассетов |
 | `src/shared/Config.luau` | 25 редкостей, 100 персонажей, кии, гейм-пассы, бонусы, UI-токены из Figma |
 | `src/server/Main.server.luau` | данные, базы, бросок, доход, прокачка, ежедневный бонус и бонус за время в игре, покупки |
@@ -17,7 +25,7 @@
 | `src/client/UI.client.luau` | HUD и окна по макету Figma: Settings, Inventory, Bonus, Shop, Cues |
 | `src/client/Throw.client.luau` | бросок: физика разлёта шаров по лузам, кинокамера, окно с выпавшим персонажем |
 | `src/client/Visuals.client.luau` | заменяет модели из деталей на меши Blender |
-| `tools/place.py` | генерирует `.rbxlx`: карта (~4800 деталей) прямо в Workspace + все скрипты |
+| `tools/place.py` | генерирует `.rbxlx`: карта (~3000 деталей + меши) прямо в Workspace + все скрипты |
 | `tools/lint_luau.py` | проверка Luau: баланс блоков и скобок, необъявленные имена, несуществующие ключи Config |
 | `tools/preview.py` | рендер карты через Blender (`tools/preview.png`) |
 

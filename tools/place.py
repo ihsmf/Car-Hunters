@@ -58,9 +58,10 @@ rnd = random.Random(7)
 
 # ---------- Models. Visible part-built fallbacks; the client swaps them for the Blender
 # meshes (src/shared/Meshes.luau) via a "Mesh" StringValue tag on a pivot part.
-def tag_mesh(p, mesh, scale=None, **colors):
+def tag_mesh(p, mesh, scale=None, vscale=None, **colors):
     Inst("StringValue", "Mesh", p, Value=mesh)
     if scale: Inst("NumberValue", "Scale", p, Value=scale)
+    if vscale: Inst("Vector3Value", "Scale", p, Value=vscale)
     for k, c in colors.items(): Inst("Color3Value", k, p, Value=c)
     return p
 
@@ -141,213 +142,337 @@ def tree(par, pos, h, kind):
         for dx, dy, dz, d in ((0, h + 2, 0, 11), (3, h, 2, 8), (-3, h + 0.5, -1.5, 8), (0.5, h + 5, -0.5, 7)):
             ball(m, d, cf(x + dx, dy, z + dz), g, "Grass")
 
-# ---------- Карта ----------
+# ---------- Map: start area with 4 bases + a very long, narrow billiard corridor, all walled by mountains ----------
+# Each zone of the long table is its own billiard table, and every next one is fancier (see THEMES).
+THEMES = [  # frame, frame material, rail, rail material, felt, trim (neon/metal) or None, trim material, decoration
+    ((150, 95, 50), "Wood", (120, 70, 35), "Wood", (30, 140, 60), None, "Metal", "lamps"),
+    ((95, 55, 30), "Wood", (80, 45, 25), "Wood", (25, 130, 70), (200, 160, 80), "Metal", "plants"),
+    ((70, 45, 30), "Wood", (60, 35, 20), "Wood", (40, 90, 200), (210, 215, 225), "Metal", "balls"),
+    ((110, 30, 40), "Wood", (90, 20, 30), "Wood", (120, 50, 180), (255, 200, 60), "Metal", "lamps"),
+    ((255, 190, 50), "Metal", (240, 170, 40), "Metal", (180, 30, 40), (255, 230, 120), "Neon", "pillars"),
+    ((40, 20, 20), "Slate", (120, 20, 20), "Smooth", (150, 20, 30), (255, 80, 30), "Neon", "fire"),
+    ((220, 190, 130), "Sandstone", (200, 170, 110), "Sandstone", (40, 170, 170), (255, 210, 80), "Metal", "obelisks"),
+    ((170, 220, 255), "Ice", (200, 235, 255), "Ice", (120, 190, 240), (230, 250, 255), "Neon", "crystals"),
+    ((50, 40, 40), "Slate", (70, 50, 45), "Slate", (200, 70, 20), (255, 120, 20), "Neon", "fire"),
+    ((60, 70, 60), "Metal", (40, 50, 40), "Metal", (90, 200, 40), (150, 255, 40), "Neon", "barrels"),
+    ((20, 20, 30), "Glass", (30, 30, 45), "Smooth", (20, 40, 60), (0, 255, 220), "Neon", "pylons"),
+    ((110, 75, 40), "Planks", (90, 60, 30), "Planks", (30, 110, 90), (220, 180, 90), "Metal", "barrels"),
+    ((25, 20, 20), "Smooth", (200, 30, 40), "Smooth", (230, 220, 200), (255, 200, 60), "Metal", "torii"),
+    ((220, 225, 255), "Glass", (200, 210, 255), "Glass", (110, 80, 170), (220, 200, 255), "Neon", "spirits"),
+    ((250, 250, 245), "Marble", (255, 255, 250), "Marble", (240, 240, 230), (255, 210, 80), "Neon", "pillars"),
+    ((30, 10, 15), "Slate", (90, 0, 20), "Smooth", (110, 0, 25), (255, 30, 60), "Neon", "spikes"),
+    ((210, 245, 255), "Glass", (230, 250, 255), "Marble", (90, 210, 240), (120, 255, 255), "Neon", "clouds"),
+    ((255, 240, 170), "Metal", (255, 230, 120), "Metal", (40, 30, 90), (255, 255, 190), "Neon", "stars"),
+    ((60, 30, 120), "Glass", (80, 40, 160), "Glass", (30, 15, 70), (170, 110, 255), "Neon", "planets"),
+    ((25, 15, 60), "Glass", (40, 20, 90), "Smooth", (15, 10, 40), (90, 140, 255), "Neon", "planets"),
+    ((255, 255, 255), "Smooth", (255, 80, 80), "Smooth", (255, 120, 255), (255, 255, 255), "Neon", "rainbow"),
+    ((20, 40, 60), "Glass", (40, 200, 255), "ForceField", (10, 30, 50), (40, 200, 255), "Neon", "crystals"),
+    ((15, 15, 15), "Smooth", (25, 25, 25), "Smooth", (35, 35, 35), (255, 255, 255), "Neon", "pylons"),
+    ((20, 0, 30), "Smooth", (255, 0, 255), "Neon", (0, 200, 220), (0, 255, 255), "Neon", "glitch"),
+    ((255, 255, 255), "Glass", (255, 200, 60), "Metal", (255, 0, 140), (255, 0, 140), "Neon", "crowns"),
+]
+RAINBOW = [(255, 60, 60), (255, 150, 30), (255, 230, 40), (80, 220, 80), (50, 160, 255), (90, 80, 230), (190, 80, 255)]
+RAIL_W, RAIL_H = 3, 4.2
+WALK = TW / 2 + RAIL_W + 12  # walkway decoration line
+
+
+def fx(par, pos, color, kind="Sparkle"):  # Map.luau turns these into particle emitters
+    p = part(par, (1, 1, 1), cf(*pos), WHITE, Transparency=1, CanCollide=False, name="Fx")
+    Inst("Color3Value", kind, p, Value=color)
+    return p
+
+
+def mountain(par, x, z, d, h, rot, kind):
+    m = Inst("Model", "Mountain", par)
+    o = cf(x, 0, z) @ ry(rot)
+    tag_mesh(part(m, (0.2, 0.2, 0.2), o, WHITE, Transparency=1, CanCollide=False, name="MeshPivot"), kind, vscale=(d, h, d))
+    for k, (col, mt) in enumerate((((96, 176, 82), "Grass"), ((128, 118, 112), "Rock"), ((110, 102, 98), "Rock"), ((250, 252, 255), "Snow"))):
+        w = d * (0.92 - k * 0.24)
+        part(m, (w, h / 4 + 1, w), o @ cf(0, h / 8 + k * h / 4, 0) @ ry(math.pi / 4 * (k % 2)), col, mt)
+
+
+def ridge(par, a, b, out, spacing=42):
+    ax, az = a; bx, bz = b
+    n = max(1, int(math.hypot(bx - ax, bz - az) // spacing))
+    for row in (0, 1):
+        for k in range(n + 1):
+            t = k / n
+            d = rnd.uniform(110, 150) * (1.3 if row else 1)
+            h = rnd.uniform(100, 150) * (1.4 if row else 1)
+            off = d * (0.33 + row * 0.6)
+            x = ax + (bx - ax) * t + out[0] * off + rnd.uniform(-6, 6)
+            z = az + (bz - az) * t + out[1] * off + rnd.uniform(-6, 6)
+            mountain(par, x, z, d, h, rnd.uniform(0, 6.28), "Peak" if (k + row) % 2 else "Mountain")
+
+
+def deco(par, kind, x, z, trim, zi):
+    s = 1 if x > 0 else -1
+    t = trim or (255, 220, 150)
+    if kind == "lamps":
+        ycyl(par, 1, 14, cf(x, 7, z), (60, 60, 70), "Metal")
+        light(ball(par, 2.6, cf(x, 15, z), (255, 240, 180), "Neon"), (255, 230, 170), 30)
+    elif kind == "plants":
+        part(par, (5, 2, 5), cf(x, 1, z), (150, 90, 50), "Wood")
+        for k in range(3): ball(par, 3.5, cf(x + rnd.uniform(-1, 1), 3 + k * 1.2, z + rnd.uniform(-1, 1)), (60, 170, 70), "Grass")
+    elif kind == "balls":
+        ycyl(par, 5, 3, cf(x, 1.5, z), (240, 240, 245), "Marble")
+        mesh_ball(par, 6, cf(x, 6, z) @ ry(rnd.uniform(0, 6)), BALLS[zi % 7])
+    elif kind == "pillars":
+        ycyl(par, 3, 16, cf(x, 8, z), (250, 248, 240), "Marble")
+        ycyl(par, 4, 1, cf(x, 0.5, z), t, "Metal"); ycyl(par, 4, 1, cf(x, 16.5, z), t, "Metal")
+        light(ball(par, 3, cf(x, 18.5, z), t, "Neon"), t, 28, 2)
+    elif kind == "fire":
+        ycyl(par, 4, 5, cf(x, 2.5, z), (40, 35, 35), "Slate")
+        ball(par, 3, cf(x, 5.5, z), t, "Neon")
+        fx(par, (x, 6, z), t, "Fire")
+    elif kind == "obelisks":
+        part(par, (3, 18, 3), cf(x, 9, z), (220, 190, 130), "Sandstone")
+        part(par, (2, 2, 2), cf(x, 18.6, z) @ ry(math.pi / 4) @ rx(math.pi / 4), t, "Metal")
+    elif kind == "crystals":
+        for k in range(3):
+            part(par, (2.2, rnd.uniform(7, 13), 2.2), cf(x + rnd.uniform(-2, 2), 4, z + rnd.uniform(-2, 2)) @ ang(rnd.uniform(-0.4, 0.4), rnd.uniform(0, 3), rnd.uniform(-0.4, 0.4)), t, "Glass", Transparency=0.2)
+        fx(par, (x, 6, z), t)
+    elif kind == "barrels":
+        for k in range(2):
+            ycyl(par, 3.6, 4.5, cf(x + (k - 0.5) * 4, 2.25, z), (130, 85, 45) if zi != 9 else (60, 160, 50), "Wood")
+            ycyl(par, 3.8, 0.4, cf(x + (k - 0.5) * 4, 3.6, z), t, "Metal")
+    elif kind == "pylons":
+        part(par, (2, 20, 2), cf(x, 10, z), (20, 20, 25), "Smooth")
+        for y in (5, 10, 15): part(par, (2.3, 0.5, 2.3), cf(x, y, z), t, "Neon")
+    elif kind == "torii":
+        for o in (-4, 4): ycyl(par, 1.6, 14, cf(x + o, 7, z), (200, 30, 40))
+        part(par, (12, 1.2, 1.6), cf(x, 14.6, z), (25, 20, 20)); part(par, (10, 0.8, 1.2), cf(x, 12, z), (200, 30, 40))
+    elif kind == "spirits":
+        ball(par, 3, cf(x, 9 + rnd.uniform(-2, 2), z), (230, 220, 255), "Neon", Transparency=0.3, CanCollide=False)
+        fx(par, (x, 9, z), t, "Spirit")
+    elif kind == "spikes":
+        for k in range(4): part(par, (1.5, 8, 1.5), cf(x, 3, z) @ ang(rnd.uniform(-0.5, 0.5), 0, rnd.uniform(-0.5, 0.5)), (60, 0, 15), "Slate")
+        fx(par, (x, 4, z), t, "Fire")
+    elif kind == "clouds":
+        for k in range(4): ball(par, rnd.uniform(4, 7), cf(x + rnd.uniform(-3, 3), 14 + rnd.uniform(-1, 1), z + rnd.uniform(-3, 3)), WHITE, CanCollide=False)
+    elif kind == "stars":
+        st = cf(x, 13, z) @ rx(math.pi / 2)
+        for a in range(3): part(par, (1, 7, 1.4), st @ ry(0) @ rz(a * math.pi / 3), t, "Neon", CanCollide=False)
+        ycyl(par, 0.6, 9, cf(x, 4.5, z), (200, 200, 210), "Metal"); fx(par, (x, 13, z), t)
+    elif kind == "planets":
+        p = cf(x, 14, z) @ ang(0.4, rnd.uniform(0, 3), 0.3)
+        ball(par, 7, p, t, "Glass", CanCollide=False)
+        part(par, (0.3, 12, 12), p @ rz(math.pi / 2), t, "ForceField", "Cyl", CanCollide=False)
+    elif kind == "rainbow":
+        for k, c in enumerate(RAINBOW): part(par, (3, 2.2, 3), cf(x, 1.1 + k * 2.2, z), c, "Neon")
+    elif kind == "glitch":
+        for k in range(5): part(par, (rnd.uniform(1, 3),) * 3, cf(x + rnd.uniform(-3, 3), rnd.uniform(2, 12), z + rnd.uniform(-3, 3)), rnd.choice([(255, 0, 255), (0, 255, 255), (255, 255, 255)]), "Neon", CanCollide=False)
+    elif kind == "crowns":
+        ycyl(par, 6, 4, cf(x, 2, z), (255, 255, 255), "Marble")
+        ycyl(par, 5, 2, cf(x, 6, z), (255, 200, 60), "Metal")
+        for a in range(6): ball(par, 1.2, cf(x + math.cos(a) * 2.3, 7.4, z + math.sin(a) * 2.3), (255, 0, 140), "Neon")
+        light(part(par, (0.5, 0.5, 0.5), cf(x, 9, z), WHITE, Transparency=1, CanCollide=False), (255, 0, 140), 30, 3)
+        fx(par, (x, 8, z), (255, 0, 140))
+
+
+def long_table(world):
+    long = Inst("Model", "LongTable", world)
+    for i in range(N):
+        z0 = TSZ + i * ZL
+        zc = z0 + ZL / 2
+        frame, fmat, rail, rmat, felt, trim, tmat, kind = THEMES[i]
+        rarity, rcol = RAR[i]
+        seg = Inst("Model", f"Table{i + 1}", long)
+        tr = dict(Transparency=0.35) if fmat == "Glass" else {}
+        # body on legs: frame from y 1.6 to 3.0, felt on top, high rails along both sides
+        part(seg, (TW + 2 * RAIL_W, 1.4, ZL), cf(0, 2.3, zc), frame, fmat, **tr)
+        part(seg, (TW, 0.3, ZL - 0.2), cf(0, 3.15, zc), felt, "Fabric", name=f"Zone{i + 1}")
+        for sx in (-1, 1):
+            rc = RAINBOW[(i + (sx > 0)) % 7] if kind == "rainbow" else rail
+            part(seg, (RAIL_W, RAIL_H, ZL), cf(sx * (TW / 2 + RAIL_W / 2), 3 + RAIL_H / 2, zc), rc, rmat, **(dict(Transparency=0.3) if rmat in ("Glass", "ForceField") else {}))
+            part(seg, (0.7, 1.1, ZL), cf(sx * (TW / 2 + 0.35), 3.85, zc), tuple(int(c * 0.75) for c in felt), "Fabric")
+            if trim:
+                part(seg, (RAIL_W + 0.4, 0.5, ZL), cf(sx * (TW / 2 + RAIL_W / 2), 3 + RAIL_H + 0.25, zc), trim, tmat)
+            for k in range(1, 8):  # sights on the rail
+                part(seg, (0.8, 0.12, 0.8), cf(sx * (TW / 2 + RAIL_W / 2), 3 + RAIL_H + (0.55 if trim else 0.06), z0 + k * ZL / 8) @ ry(math.pi / 4), trim or (255, 250, 235), "Neon" if i >= 4 else "Smooth")
+            if i >= 4:  # underglow
+                part(seg, (0.4, 0.4, ZL - 2), cf(sx * (TW / 2 + RAIL_W + 0.2), 1.7, zc), trim, "Neon")
+            for lz in (z0 + 4, z0 + ZL - 4):  # turned legs
+                leg = cf(sx * (TW / 2 + 1), 0, lz)
+                ycyl(seg, 2.6, 1.6, leg @ cf(0, 0.8, 0), frame if i < 4 else (255, 200, 60), fmat if i < 4 else "Metal")
+                ycyl(seg, 3.4, 0.4, leg @ cf(0, 0.2, 0), (60, 40, 30) if i < 4 else (255, 220, 120), "Metal")
+            if i >= 7:
+                fx(seg, (sx * (TW / 2 + RAIL_W / 2), 8, z0 + 2), trim)
+            for dz in (20, 60):
+                deco(seg, kind, sx * WALK, z0 + dz, trim, i)
+        # gate with the rarity name at the start of every zone
+        nf = Inst("Folder", f"Neon{i + 1}", long)
+        for sx in (-1, 1):
+            part(nf, (1.8, 20, 1.8), cf(sx * (TW / 2 + RAIL_W + 3), 10, z0), rcol, "Neon")
+            ball(nf, 4, cf(sx * (TW / 2 + RAIL_W + 3), 21, z0), rcol, "Neon")
+            pc = cf(sx * TW / 2, 3.32, zc)
+            ycyl(seg, 4.4, 0.2, pc, (5, 5, 5))
+            ycyl(nf, 5.4, 0.15, pc @ cf(0, -0.05, 0), rcol, "Neon")
+        beam = part(long, (TW + 2 * RAIL_W + 10, 5, 1.2), cf(0, 21, z0), (40, 25, 60), name=f"Beam{i + 1}")
+        part(nf, (TW + 2 * RAIL_W + 10, 0.6, 1.4), cf(0, 18.3, z0), rcol, "Neon")
+        light(beam, WHITE, 34, 1.2)
+        label(beam, FACE["Front"], rarity, rcol, 20, "Rarity")
+        label(beam, FACE["Back"], f"Table {i + 1}", WHITE, 20)
+    part(long, (TW + 2 * RAIL_W, RAIL_H + 1.4, RAIL_W), cf(0, 1.6 + (RAIL_H + 1.4) / 2, END + RAIL_W / 2), THEMES[-1][2], "Metal")
+    part(long, (TW + 2 * RAIL_W, RAIL_H + 1.4, 1), cf(0, 1.6 + (RAIL_H + 1.4) / 2, TSZ - 0.5), THEMES[0][2], "Wood")  # head cushion
+
+
+def player_base(world, i, o, col):
+    b = Inst("Model", f"Base{i + 1}", world)
+    light_col = tuple(int(c * 0.3 + 255 * 0.7) for c in col)
+    # round raised platform with a coloured rim
+    ycyl(b, 96, 2, o @ cf(0, 1, 0), col)
+    ycyl(b, 92, 0.6, o @ cf(0, 2.1, 0), (250, 240, 225), "Planks", name="Floor")
+    ycyl(b, 97, 0.4, o @ cf(0, 2.05, 0), col, "Neon")
+    top = o @ cf(0, 2.4, 0)
+    ycyl(b, 40, 0.2, top @ cf(0, 0.05, 0), (170, 40, 60), "Fabric")
+    ycyl(b, 42, 0.15, top @ cf(0, 0.0, 0), GOLD, "Metal")
+    for k in range(3):  # front stairs
+        part(b, (24, 0.8, 3), o @ cf(0, 0.4 + k * 0.8 - 0.4, 49.5 - k * 2.2 + 2), (250, 240, 225), "Planks")
+    pool_table(b, top)
+    table_lamp(b, top)
+    # pergola over the table
+    for px, pz in ((-11, -13), (11, -13), (-11, 13), (11, 13)):
+        ycyl(b, 2.2, 15, top @ cf(px, 7.5, pz), (250, 248, 240), "Marble")
+        ycyl(b, 3, 0.8, top @ cf(px, 15.2, pz), GOLD, "Metal")
+        ycyl(b, 3, 0.6, top @ cf(px, 0.3, pz), GOLD, "Metal")
+    for pz in (-13, 13): part(b, (25, 1.2, 1.6), top @ cf(0, 16, pz), (250, 248, 240), "Marble")
+    for px in (-11, 11): part(b, (1.6, 1.2, 29), top @ cf(px, 16, 0), (250, 248, 240), "Marble")
+    for k in range(-5, 6): part(b, (23, 0.4, 0.8), top @ cf(0, 16.8, k * 2.4), col)
+    # podiums for the characters (arc around the table)
+    slots = Inst("Folder", "Slots", b)
+    for s in range(SLOTS):
+        a = math.radians(-150 + s * 300 / (SLOTS - 1))
+        x, z = math.sin(a) * 23, -math.cos(a) * 23
+        ycyl(b, 7, 0.8, top @ cf(x, 0.4, z), (240, 240, 245), "Marble")
+        ycyl(b, 7.4, 0.25, top @ cf(x, 0.8, z), col, "Neon")
+        ycyl(slots, 5.4, 0.6, top @ cf(x, 1.1, z), WHITE, "Marble", name=f"Slot{s + 1}")
+        light(part(b, (0.4, 0.4, 0.4), top @ cf(x, 9, z), WHITE, Transparency=1, CanCollide=False), light_col, 12, 1.5)
+    # trophy wall at the back with the owner's name
+    for k in range(-4, 5):
+        wall = top @ ry(-math.radians(k * 10.4)) @ cf(0, 0, -41)
+        part(b, (7.4, 10, 1.4), wall @ cf(0, 5, 0), (250, 245, 235), "Marble")
+        part(b, (7.4, 0.6, 1.8), wall @ cf(0, 10.3, 0), col, "Neon")
+        mesh_ball(b, 2.2, wall @ cf(0, 6, 1.4), BALLS[k % 7])
+        ycyl(b, 1.6, 2, wall @ cf(0, 1, 1.4), GOLD, "Metal")
+    sign = part(b, (30, 7, 1.4), top @ cf(0, 16, -42), col, name="Sign")
+    label(sign, FACE["Back"], "Free Base")
+    part(b, (32, 0.8, 1.8), top @ cf(0, 12.2, -42), GOLD, "Metal")
+    # fence: 9-gon of Blender fence segments, open at the front for the stairs
+    R = 15 / math.sin(math.pi / 9)
+    for k in range(9):
+        a = 2 * math.pi * k / 9
+        if k in (0, 4, 5):  # front = entrance, back = trophy wall
+            continue
+        mid = top @ ry(-a) @ cf(0, 0, R * math.cos(math.pi / 9) - 0.5)
+        fence(b, mid, col)
+    # entrance arch
+    for sx in (-1, 1):
+        ycyl(b, 2.6, 14, top @ cf(sx * 13, 7, 43), col)
+        light(ball(b, 3.2, top @ cf(sx * 13, 14.8, 43), col, "Neon"), col, 22)
+    gate = part(b, (28, 3, 1.2), top @ cf(0, 13, 43), (250, 245, 235), "Marble")
+    label(gate, FACE["Back"], "🎱 WELCOME 🎱", col)
+    # gym corner: mat, dumbbell, weight rack
+    part(b, (12, 0.25, 9), top @ cf(-27, 0.12, 22), (44, 44, 58))
+    dumbbell(b, top @ cf(-27, 0.7, 22))
+    prompt(part(b, (7, 3, 4), top @ cf(-27, 1.5, 22), WHITE, Transparency=1, CanCollide=False, name="DumbbellHit"), "Lift", "Dumbbell")
+    for sx in (-1, 1): part(b, (0.6, 5, 0.6), top @ cf(-27 + sx * 4, 2.5, 17), (60, 60, 70), "Metal")
+    part(b, (8.6, 0.5, 0.5), top @ cf(-27, 4.2, 17), (215, 220, 232), "Metal", "Cyl")
+    for sx in (-1, 1): part(b, (0.5, 2.4, 2.4), top @ cf(-27 + sx * 3, 4.2, 17), (240, 60, 70), shape="Cyl")
+    # cue kiosk with a striped awning
+    shop = part(b, (9, 3.6, 3.6), top @ cf(27, 1.8, 24), (120, 200, 255), name="CueShop")
+    part(b, (9.6, 0.4, 4.2), top @ cf(27, 3.8, 24), (250, 245, 235), "Marble")
+    part(b, (9, 8, 0.6), top @ cf(27, 4, 20), (90, 160, 230))
+    for k in range(5): part(b, (2, 0.5, 5.5), top @ cf(23 + k * 2, 9.2, 22.6) @ rx(-0.25), (255, 90, 90) if k % 2 == 0 else WHITE)
+    for sx in (-4.3, 4.3): part(b, (0.5, 9, 0.5), top @ cf(27 + sx, 4.5, 25.5), WHITE)
+    label(shop, FACE["Back"], "🎱 CUES")
+    prompt(shop, "Open", "Cue Shop")
+    for k, cc in enumerate(((230, 190, 120), (255, 200, 40), (140, 240, 255)), 1):
+        cue(b, top @ cf(23.5 + k * 1.8, 4.6 + 0.4, 20.6) @ rz(math.radians(6 - k * 3)), cc)
+    # planters with small palms on the sides
+    for sx in (-1, 1):
+        for pz in (-6, 6):
+            ycyl(b, 4.5, 2, top @ cf(sx * 37, 1, pz), col)
+            ball(b, 4, top @ cf(sx * 37, 2.6, pz), (70, 175, 70), "Grass")
+    part(b, (4, 1, 4), top @ cf(0, 0.5, 34), WHITE, Transparency=1, CanCollide=False, name="SpawnPoint")
+    Inst("Folder", "Chars", b)
+
+
 def build():
     ws = Inst("Workspace", "Workspace")
     world = Inst("Folder", "World", ws)
     env = Inst("Folder", "Environment", world)
 
-    # Земля: океан, пляж, трава, дорожки
-    part(env, (3000, 2, 3200), cf(0, -4, 480), (40, 180, 230), "Glass", Transparency=0.15, Reflectance=0.2, CanCollide=False, name="Ocean")
-    part(env, (2950, 1, 3150), cf(0, -8, 480), (20, 110, 170), "Sand", name="SeaFloor")
-    part(env, (760, 4, 1220), cf(0, -2.4, 480), (245, 220, 160), "Sand", name="Beach")
-    part(env, (700, 4, 1160), cf(0, -2, 480), (105, 205, 85), "Grass", name="Ground")
-    part(env, (480, 0.4, 46), cf(0, 0.2, 52), (250, 228, 185), "Pebble", name="Plaza")
-    for x in range(-230, 231, 10):
-        part(env, (5, 0.42, 5), cf(x, 0.21, 52 + (5 if (x // 10) % 2 else -5)), WHITE, "Marble")
-    for s in (-1, 1):  # дорожки вдоль стола
-        part(env, (14, 0.3, TL + 40), cf(s * 42, 0.15, TSZ + TL / 2), (250, 228, 185), "Pebble")
-    # клумбы с цветами
-    for _ in range(140):
-        s = rnd.choice((-1, 1))
-        p = (s * rnd.uniform(52, 80), rnd.uniform(TSZ, END))
-        ball(env, rnd.uniform(1, 1.8), cf(p[0], 0.4, p[1]), rnd.choice([(255, 90, 140), (255, 230, 60), (190, 110, 255), (255, 255, 255), (255, 150, 60)]), CanCollide=False)
-    for _ in range(60):
-        s = rnd.choice((-1, 1))
-        ball(env, rnd.uniform(4, 7), cf(s * rnd.uniform(85, 110), 1, rnd.uniform(TSZ, END)), (70, 175, 70), "Grass")
+    part(env, (1600, 4, END + 900), cf(0, -2, END / 2), (105, 200, 85), "Grass", name="Ground")
+    part(env, (450, 0.4, 46), cf(0, 0.2, 60), (250, 228, 185), "Pebble", name="Plaza")
+    for x in range(-220, 221, 10):
+        part(env, (5, 0.42, 5), cf(x, 0.21, 60 + (5 if (x // 10) % 2 else -5)), WHITE, "Marble")
+    for sx in (-1, 1):  # walkways along the long table
+        part(env, (24, 0.3, TL + 20), cf(sx * (TW / 2 + RAIL_W + 12.5), 0.15, TSZ + TL / 2), (250, 228, 185), "Pebble")
+        for z in np.arange(TSZ + 10, END, 18):  # bushes at the mountain foot
+            ball(env, rnd.uniform(4, 7), cf(sx * rnd.uniform(44, 47), 1, z + rnd.uniform(-4, 4)), rnd.choice([(70, 175, 70), (90, 190, 80), (255, 150, 200)]), "Grass")
 
-    # Боковые зоны: пруды, радужные поля цветов, гигантские шары и кии
-    deco = Inst("Folder", "Decor", world)
-    for s in (-1, 1):
-        for pz, pr in ((260, 45), (700, 55)):
-            ycyl(deco, pr * 2 + 6, 0.5, cf(s * 210, 0.1, pz), (245, 220, 160), "Sand")
-            ycyl(deco, pr * 2, 0.6, cf(s * 210, 0.15, pz), (60, 190, 240), "Glass", Transparency=0.1, Reflectance=0.25, name="Pond")
-            for _ in range(8):
-                a = rnd.uniform(0, 2 * math.pi); r = rnd.uniform(0, pr - 6)
-                ycyl(deco, rnd.uniform(3, 5), 0.2, cf(s * 210 + math.cos(a) * r, 0.5, pz + math.sin(a) * r), (90, 200, 90))
-            for k in range(14):  # камни по берегу
-                a = k / 14 * 2 * math.pi
-                ball(deco, rnd.uniform(3, 6), cf(s * 210 + math.cos(a) * (pr + 3), 0.3, pz + math.sin(a) * (pr + 3)), (200, 195, 185), "Rock")
-        rain = [(255, 70, 90), (255, 150, 40), (255, 230, 60), (120, 220, 80), (70, 170, 255), (170, 100, 255)]
-        for fz in (430, 870):  # поле цветов-радуга
-            for k, c in enumerate(rain):
-                for j in range(14):
-                    ball(deco, 1.8, cf(s * (150 + k * 5), 0.6, fz + j * 4), c, CanCollide=False)
-                    part(deco, (0.3, 1, 0.3), cf(s * (150 + k * 5), 0.3, fz + j * 4), (60, 160, 60))
-        for k in range(5):  # гигантские шары
-            d = rnd.uniform(14, 22)
-            z = 160 + k * 180 + rnd.uniform(-30, 30)
-            x = s * rnd.uniform(110, 290)
-            if abs(abs(x) - 210) < 70 and (abs(z - 260) < 70 or abs(z - 700) < 80): x = s * 120
-            b = cf(x, d / 2 - 0.5, z) @ ang(rnd.uniform(-0.5, 0.5), rnd.uniform(0, 6), rnd.uniform(-0.5, 0.5))
-            mesh_ball(deco, d, b, BALLS[(k + (s > 0) * 3) % 7])
-        for k in range(3):  # giant cues lying on the grass
-            cue(deco, cf(s * 250, 1.5, 330 + k * 260) @ ry(rnd.uniform(-0.6, 0.6)) @ rx(math.pi / 2), BALLS[(k * 2 + (s > 0)) % 7], 3.3)
+    long_table(world)
 
-    # Длинный стол
-    long = Inst("Model", "LongTable", world)
-    mid = TSZ + TL / 2
-    part(long, (TW + 8, 3, TL + 8), cf(0, 1.5, mid), WOOD, "Wood")
-    for s in (-1, 1):
-        part(long, (2.5, 2.2, TL + 8), cf(s * (TW / 2 + 2.75), 4.1, mid), DARK, "Wood")
-        part(long, (0.6, 0.4, TL + 8), cf(s * (TW / 2 + 2.75), 5.3, mid), GOLD, "Neon")
-    part(long, (TW + 8, 2.2, 2.5), cf(0, 4.1, END + 2.75), DARK, "Wood")
-    for z in np.arange(TSZ, END + 1, 60):
-        for s in (-1, 1): ycyl(long, 3, 1, cf(s * (TW / 2 + 1), 0.5, z), GOLD, "Metal")
-    for l in range(1, int(LANES)):
-        part(long, (0.3, 0.32, TL), cf(-TW / 2 + l * TW / LANES, 3.17, mid), WHITE, Transparency=0.5)
-    for i in range(N):
-        z0 = TSZ + i * ZL
-        name, col = RAR[i]
-        part(long, (TW, 0.3, ZL - 0.4), cf(0, 3.15, z0 + ZL / 2), tuple(int(c * 0.65 + d * 0.35) for c, d in zip(col, (20, 120, 60))), "Fabric", name=f"Zone{i + 1}")
-        nf = Inst("Folder", f"Neon{i + 1}", long)
-        for s in (-1, 1):
-            part(nf, (1.6, 16, 1.6), cf(s * (TW / 2 + 5), 8, z0), col, "Neon")
-            ball(nf, 3.5, cf(s * (TW / 2 + 5), 17, z0), col, "Neon")
-            pc = cf(s * TW / 2, 3.32, z0 + ZL / 2)
-            ycyl(long, 4.4, 0.2, pc, (5, 5, 5))
-            ycyl(nf, 5.4, 0.15, pc @ cf(0, -0.05, 0), col, "Neon")
-        beam = part(long, (TW + 12, 4, 1), cf(0, 17, z0), (40, 25, 60), name=f"Beam{i + 1}")
-        part(nf, (TW + 12, 0.5, 1.2), cf(0, 15, z0), col, "Neon")
-        light(beam, WHITE, 30, 1)
-        label(beam, FACE["Front"], name, col, 20, "Rarity")
-        label(beam, FACE["Back"], f"Zone {i + 1}", WHITE, 20)
-
-    # Радужная арка и вывеска
-    rain = [(255, 60, 60), (255, 150, 30), (255, 230, 40), (80, 220, 80), (50, 160, 255), (90, 80, 230), (190, 80, 255)]
+    # rainbow arch + title over the head of the table
     arch = Inst("Model", "RainbowArch", world)
-    for b, col in enumerate(rain, 1):
-        R = 40 - b * 1.6
+    for b, col in enumerate(RAINBOW, 1):
+        R = 34 - b * 1.6
         for k in range(25):
             a = math.pi * k / 24
-            part(arch, (1.6, 1.6, 5.4), cf(math.cos(a) * R, math.sin(a) * R, TSZ - 8) @ rz(a) @ rx(math.pi / 2), col, "Neon", CanCollide=False)
-    sign = part(arch, (50, 8, 1), cf(0, 26, TSZ - 8), (255, 110, 170))
-    label(sign, FACE["Front"], "🎱 BILLIARD HUNTERS 🎱")
+            part(arch, (1.6, 1.6, 4.6), cf(math.cos(a) * R, math.sin(a) * R, TSZ - 8) @ rz(a) @ rx(math.pi / 2), col, "Neon", CanCollide=False)
+    label(part(arch, (44, 7, 1), cf(0, 22, TSZ - 8), (255, 110, 170)), FACE["Front"], "🎱 BILLIARD HUNTERS 🎱")
 
-    # Шар «8» на пьедестале
+    # giant 8-ball at the far end
     eight = Inst("Model", "EightBall", world)
-    e = cf(0, 32, END + 40)
+    e = cf(0, 34, END + 55)
     ball(eight, 40, e, (15, 15, 20), "Glass", name="Ball", Reflectance=0.15)
     c = part(eight, (1, 18, 18), e @ cf(0, 0, -19.7) @ ry(math.pi / 2), WHITE, shape="Cyl", name="Circle", CanCollide=False)
     label(c, FACE["Right"], "8", (0, 0, 0), 10)
-    ycyl(eight, 30, 10, cf(0, 5, END + 40), GOLD, "Metal", name="Pedestal")
+    ycyl(eight, 30, 12, cf(0, 6, END + 55), GOLD, "Metal", name="Pedestal")
     for k in range(1, 4):
-        part(eight, (1, 50 + k * 8, 50 + k * 8), e @ ang(k, k * 0.7, 0), rain[k * 2 - 1], "ForceField", "Cyl", name=f"Ring{k}", CanCollide=False)
+        part(eight, (1, 50 + k * 6, 50 + k * 6), e @ ang(k, k * 0.7, 0), RAINBOW[k * 2 - 1], "ForceField", "Cyl", name=f"Ring{k}", CanCollide=False)
 
-    # Фонтан
-    fc = cf(0, 0, 30)
-    fo = Inst("Model", "Fountain", world)
-    ycyl(fo, 16, 2, fc @ cf(0, 1, 0), (240, 240, 250), "Marble")
-    ycyl(fo, 14, 0.3, fc @ cf(0, 2.05, 0), (80, 200, 255), "Glass", Transparency=0.3)
-    ycyl(fo, 4, 8, fc @ cf(0, 5, 0), (240, 240, 250), "Marble")
-    ball(fo, 5, fc @ cf(0, 10, 0), (255, 230, 40), "Glass", name="Top")
-
-    # Летающие шары
     fb = Inst("Folder", "FloatBalls", world)
-    for k in range(24):
-        s = 1 if k % 2 else -1
-        mesh_ball(fb, rnd.uniform(8, 16), cf(s * rnd.uniform(130, 280), rnd.uniform(40, 80), rnd.uniform(120, END)), BALLS[k % 7], CanCollide=False)
+    for k in range(30):
+        sx = 1 if k % 2 else -1
+        mesh_ball(fb, rnd.uniform(6, 11), cf(sx * rnd.uniform(28, 42), rnd.uniform(30, 60), rnd.uniform(140, END)), BALLS[k % 7], CanCollide=False)
 
-    # Деревья
     trees = Inst("Folder", "Trees", world)
-    for _ in range(170):
-        s = rnd.choice((-1, 1))
-        x, z = s * rnd.uniform(300, 318) if rnd.random() < 0.4 else s * rnd.uniform(100, 318), rnd.uniform(90, END + 60)
-        tree(trees, (x, z), rnd.uniform(9, 15), "round")
-    for _ in range(50):  # пальмы по пляжу
-        a = rnd.uniform(0, 2 * math.pi)
-        tree(trees, (math.cos(a) * 340, 480 + math.sin(a) * 570), rnd.uniform(14, 20), "palm")
-    for x in range(-250, 251, 50):  # за базами
-        tree(trees, (x + rnd.uniform(-8, 8), -95), rnd.uniform(12, 16), "palm")
+    for x in range(-210, 211, 30):  # behind the bases
+        tree(trees, (x + rnd.uniform(-6, 6), -78 + rnd.uniform(-6, 6)), rnd.uniform(12, 16), "palm" if (x // 30) % 2 else "round")
+    for sx in (-1, 1):
+        for z in range(-60, 60, 28):
+            tree(trees, (sx * rnd.uniform(212, 222), z), rnd.uniform(11, 15), "round")
+        for x in range(60, 210, 30):
+            tree(trees, (sx * x, rnd.uniform(84, 92)), rnd.uniform(12, 16), "palm")
 
-    # Фонари вдоль стола
-    lamps = Inst("Folder", "Lamps", world)
-    for z in np.arange(TSZ + 20, END, 50):
-        for s in (-1, 1):
-            ycyl(lamps, 1, 14, cf(s * 36, 7, z), (60, 60, 70), "Metal")
-            light(ball(lamps, 2.5, cf(s * 36, 15, z), (255, 240, 180), "Neon"), (255, 230, 170), 30)
-
-    # Ограждение по периметру
-    wall = Inst("Model", "Barrier", world)
-    X0, Z0, Z1 = 330, -110, END + 75
-    for m, ln in ((cf(-X0, 0, (Z0 + Z1) / 2), Z1 - Z0), (cf(X0, 0, (Z0 + Z1) / 2), Z1 - Z0),
-                  (cf(0, 0, Z0) @ ry(math.pi / 2), 2 * X0), (cf(0, 0, Z1) @ ry(math.pi / 2), 2 * X0)):
-        part(wall, (4, 7, ln), m @ cf(0, 3.5, 0), (235, 225, 210), "Cobble")
-        part(wall, (4.6, 0.8, ln), m @ cf(0, 7.2, 0), (255, 120, 200), "Neon")
-        part(wall, (0.4, 40, ln), m @ cf(0, 27, 0), (150, 200, 255), "ForceField", Transparency=0.3, CanCollide=False, CastShadow=False)
-        part(wall, (2, 400, ln), m @ cf(0, 200, 0), WHITE, Transparency=1, name="Invisible")
-        n = int(ln // 40)
-        for k in range(n + 1):
-            pc = m @ cf(0, 0, -ln / 2 + k * ln / n)
-            part(wall, (6, 11, 6), pc @ cf(0, 5.5, 0), (250, 240, 225), "Cobble")
-            light(ball(wall, 4, pc @ cf(0, 13, 0), BALLS[k % 7], "Neon"), BALLS[k % 7], 25)
-
-    # Горы за стеной
+    # mountains: a closed ring around the start area and the long corridor
     hills = Inst("Folder", "Mountains", world)
-    for _ in range(46):
-        a = rnd.uniform(0, 2 * math.pi)
-        r = rnd.uniform(60, 110)
-        x, z = math.cos(a) * 520, 480 + math.sin(a) * 760
-        ball(hills, r * 2, cf(x, -r * 0.35, z), rnd.choice([(120, 170, 110), (100, 150, 100), (140, 130, 120)]), "Rock")
-        ball(hills, r * 0.9, cf(x, r * 0.55, z), WHITE, "Snow")
+    ridge(hills, (-260, -115), (260, -115), (0, -1))
+    for sx in (-1, 1):
+        ridge(hills, (sx * 260, -115), (sx * 260, 130), (sx, 0))
+        ridge(hills, (sx * 260, 130), (sx * 150, 130), (0, 1))  # stops short of the corridor mouth
+        ridge(hills, (sx * 72, 150), (sx * 72, END + 125), (sx, 0), 40)
+    ridge(hills, (-72, END + 125), (72, END + 125), (0, 1))
+    # invisible walls exactly along the playable shape
+    walls = Inst("Folder", "Walls", world)
+    H = 400
+    def wall(x0, z0, x1, z1):
+        ln = math.hypot(x1 - x0, z1 - z0)
+        part(walls, (2, H, ln), cf((x0 + x1) / 2, H / 2, (z0 + z1) / 2) @ ry(math.atan2(x1 - x0, z1 - z0)), WHITE, Transparency=1, name="Wall")
+    wall(-225, -88, 225, -88)
+    for sx in (-1, 1):
+        wall(sx * 225, -88, sx * 225, 78)
+        wall(sx * 225, 78, sx * 48, 78)
+        wall(sx * 48, 78, sx * 48, END + 95)
+    wall(-48, END + 95, 48, END + 95)
 
-    # 4 базы
-    bcol = [(255, 120, 120), (120, 180, 255), (120, 230, 140), (255, 200, 90)]
+    bcol = [(255, 110, 120), (110, 170, 255), (110, 225, 140), (255, 190, 80)]
     for i in range(4):
-        o = cf((i - 1.5) * 110, 0, -10)
-        col = bcol[i]
-        b = Inst("Model", f"Base{i + 1}", world)
-        part(b, (90, 1, 90), o @ cf(0, 0.5, 0), (255, 235, 200), "Planks", name="Floor")
-        part(b, (92, 0.8, 92), o @ cf(0, 0.3, 0), col)
-        for tx in range(9):
-            for tz in range(9):
-                if (tx + tz) % 2: part(b, (10, 0.1, 10), o @ cf(-40 + tx * 10, 1.03, -40 + tz * 10), tuple(int(c * 0.35 + 255 * 0.65) for c in col))
-        ycyl(b, 34, 0.4, o @ cf(0, 1.15, 0), (170, 40, 60), "Fabric")
-        ycyl(b, 36, 0.3, o @ cf(0, 1.05, 0), GOLD, "Metal")
-        for k in range(4):  # флаги по углам
-            fx, fz = (-43, 43)[k % 2], (-43, 43)[k // 2]
-            ycyl(b, 0.5, 18, o @ cf(fx, 9, fz), WHITE, "Metal")
-            part(b, (0.2, 4, 6), o @ cf(fx, 16, fz + (3 if fz < 0 else -3)), col)
-        pool_table(b, o)
-        table_lamp(b, o)
-        for fx, fz, fr, offs in ((0, -45, 0, (-30, 0, 30)), (0, 45, math.pi, (-30, 30)), (-45, 0, math.pi / 2, (-30, 0, 30)), (45, 0, -math.pi / 2, (-30, 0, 30))):
-            for off in offs: fence(b, o @ cf(fx, 1, fz) @ ry(fr) @ cf(off, 0, 0), col)
-        for s in (-1, 1):
-            ycyl(b, 2.4, 12, o @ cf(s * 15, 6, 45), col)
-            light(ball(b, 3, o @ cf(s * 15, 13, 45), col, "Neon"), col, 20)
-        dumbbell(b, o @ cf(-30, 1.3, 25))
-        prompt(part(b, (6, 3, 3), o @ cf(-30, 2, 25), WHITE, Transparency=1, CanCollide=False, name="DumbbellHit"), "Lift", "Dumbbell")
-        part(b, (2, 0.1, 2), o @ cf(-30, 1.06, 25), col, "Neon")
-        shop = part(b, (10, 4, 4), o @ cf(30, 3, 25), (120, 200, 255), name="CueShop")
-        for k in range(6): part(b, (2, 0.6, 6), o @ cf(25 + k * 2, 10, 25), (255, 90, 90) if k % 2 == 0 else WHITE)
-        for s in (-5, 5): part(b, (0.6, 6, 0.6), o @ cf(30 + s, 7, 25), WHITE)
-        label(shop, FACE["Back"], "🎱 CUES")
-        prompt(shop, "Open", "Cue Shop")
-        for k, cc in enumerate(((230, 190, 120), (255, 200, 40), (140, 240, 255)), 1):
-            cue(b, o @ cf(27 + k * 1.5, 5 + 4.6, 23.6) @ rz(math.radians(8 - k * 4)), cc)
-        sp = part(b, (24, 5, 1), o @ cf(0, 16, 45), col, name="Sign")
-        label(sp, FACE["Back"], "Free Base")
-        part(b, (32, 1, 1), o @ cf(0, 12, 45), col)
-        slots = Inst("Folder", "Slots", b)
-        for s in range(SLOTS):
-            a = math.radians(-150 + s * 300 / (SLOTS - 1))
-            p = o[:3, 3] + np.array([math.sin(a) * 18, 0, -math.cos(a) * 18])
-            ycyl(slots, 5, 0.6, cf(p[0], 1.3, p[2]), WHITE, "Marble", name=f"Slot{s + 1}")
-            ycyl(b, 5.4, 0.2, cf(p[0], 1.1, p[2]), col, "Neon")
-        Inst("Folder", "Chars", b)
-    part(world, (6, 1, 6), cf(0, 0.6, 52), WHITE, cls="SpawnLocation", name="Spawn", Transparency=1, CanCollide=False, Neutral=True)
+        player_base(world, i, cf((i - 1.5) * 105, 0, -10), bcol[i])
+    part(world, (6, 1, 6), cf(0, 0.6, 62), WHITE, cls="SpawnLocation", name="Spawn", Transparency=1, CanCollide=False, Neutral=True)
     return ws
-
 # ---------- rbxlx ----------
 ref = iter(range(10 ** 9))
 def v3(n, v): return f'<Vector3 name="{n}"><X>{v[0]:.4f}</X><Y>{v[1]:.4f}</Y><Z>{v[2]:.4f}</Z></Vector3>'
@@ -378,6 +503,7 @@ def props(i):
     if i.cls == "StringValue": out.append(f'<string name="Value">{escape(p["Value"])}</string>')
     if i.cls == "NumberValue": out.append(f'<double name="Value">{p["Value"]}</double>')
     if i.cls == "Color3Value": out.append(c3("Value", p["Value"]))
+    if i.cls == "Vector3Value": out.append(v3("Value", p["Value"]))
     if "Source" in p: out.append(f'<ProtectedString name="Source"><![CDATA[{p["Source"]}]]></ProtectedString>')
     for k in ("ClockTime", "Brightness", "Density", "Haze", "Intensity", "Size", "Threshold", "Saturation", "Contrast", "EnvironmentDiffuseScale", "EnvironmentSpecularScale"):
         if k in p and i.cls != "PointLight": out.append(f'<float name="{k}">{p[k]}</float>')
@@ -410,11 +536,24 @@ def services(ws):
     Inst("SunRaysEffect", "SunRays", lt, Intensity=0.06)
     return [ws, rs, sss, sp, lt]
 
-def dump_scene(ws, path):  # плоский список деталей для превью в Blender
+def dump_scene(ws, path):  # flat list for tools/preview.py; tagged parts are drawn with the Blender meshes
     out = []
+    def mesh_of(p):
+        tag = next((k for k in p.kids if k.cls == "StringValue" and k.name == "Mesh"), None)
+        if not tag: return None
+        sc = next((k.p["Value"] for k in p.kids if k.name == "Scale"), 1)
+        sc = list(sc) if isinstance(sc, tuple) else [sc] * 3
+        return dict(mesh=tag.p["Value"], m=p.p["cf"].tolist(), sc=sc)
     def walk(i):
-        if "cf" in i.p and i.p.get("Transparency", 0) < 1:
-            out.append(dict(m=i.p["cf"].tolist(), s=i.p["size"], c=i.p["color"], mat=i.p["mat"], sh=i.p["shape"], t=i.p.get("Transparency", 0)))
+        piv = next((k for k in i.kids if k.name == "MeshPivot"), None) if i.cls == "Model" else None
+        if piv:
+            out.append(mesh_of(piv))
+            return
+        if "cf" in i.p:
+            ms = mesh_of(i)
+            if ms: out.append(ms)
+            elif i.p.get("Transparency", 0) < 1:
+                out.append(dict(m=i.p["cf"].tolist(), s=i.p["size"], c=i.p["color"], mat=i.p["mat"], sh=i.p["shape"], t=i.p.get("Transparency", 0)))
         for k in i.kids: walk(k)
     walk(ws)
     json.dump(out, open(path, "w"))

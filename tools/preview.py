@@ -39,7 +39,24 @@ def material(c, kind, t):
     mats[key] = m
     return m
 
+FBX = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "blender", "export")
+blender_meshes = {}
+def blender_mesh(name):  # import once, bake transforms so the data sits in model space
+    if name not in blender_meshes:
+        bpy.ops.import_scene.fbx(filepath=os.path.join(FBX, name + ".fbx"))
+        o = bpy.context.selected_objects[0]
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        blender_meshes[name] = o.data
+        bpy.data.objects.remove(o)
+    return blender_meshes[name]
+Pinv = np.linalg.inv(P)
+
 for d in json.load(open(scene_path)):
+    if "mesh" in d:
+        o = bpy.data.objects.new("m", blender_mesh(d["mesh"]))
+        o.matrix_world = Matrix((P @ np.array(d["m"]) @ np.diag(d["sc"] + [1]) @ Pinv).tolist())
+        bpy.context.scene.collection.objects.link(o)
+        continue
     o = bpy.data.objects.new("p", meshes[d["sh"]])
     o.matrix_world = Matrix((P @ np.array(d["m"]) @ np.diag(list(d["s"]) + [1])).tolist())
     bpy.context.scene.collection.objects.link(o)

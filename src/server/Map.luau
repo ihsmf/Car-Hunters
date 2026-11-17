@@ -14,7 +14,7 @@ function Map.Build()
 
 	for i = 1, #C.Rarities do
 		Map.Zones[i] = {
-			felt = long["Zone" .. i],
+			felt = long["Table" .. i]["Zone" .. i],
 			neon = long["Neon" .. i]:GetChildren(),
 			text = long["Beam" .. i].Rarity.Text,
 		}
@@ -22,15 +22,15 @@ function Map.Build()
 
 	for i = 1, 4 do
 		local base = world["Base" .. i]
-		local floor = base.Floor
+		local center = base.PoolTable.MeshPivot.Position
 		local slots = {}
 		for s = 1, C.MaxEquipped do
 			local p = base.Slots["Slot" .. s].Position + Vector3.new(0, 0.3, 0)
-			slots[s] = CFrame.lookAt(p, Vector3.new(floor.Position.X, p.Y, floor.Position.Z))
+			slots[s] = CFrame.lookAt(p, Vector3.new(center.X, p.Y, center.Z))
 		end
 		Map.Bases[i] = {
 			slots = slots,
-			spawn = floor.CFrame * CFrame.new(0, 1, 32),
+			spawn = base.SpawnPoint.CFrame,
 			sign = base.Sign.Label.Text,
 			dumbPrompt = base.DumbbellHit.Prompt,
 			shopPrompt = base.CueShop.Prompt,
@@ -51,10 +51,26 @@ function Map.Build()
 	for _, b in world.FloatBalls:GetChildren() do
 		loop(b, math.random(30, 60) / 10, { CFrame = b.CFrame * CFrame.new(0, 8, 0) * CFrame.Angles(0, math.pi, 0) }, true)
 	end
-	local water = Instance.new("ParticleEmitter")
-	water.Color, water.Rate, water.Speed, water.SpreadAngle = ColorSequence.new(Color3.fromRGB(150, 230, 255)), 120, NumberRange.new(18, 22), Vector2.new(25, 25)
-	water.Acceleration, water.Lifetime, water.Size = Vector3.new(0, -40, 0), NumberRange.new(1.2), NumberSequence.new(0.6, 0.2)
-	water.LightEmission, water.Parent = 0.4, world.Fountain.Top
+	-- particle effects on the fancier tables ("Fx" parts carry a Color3Value named Fire / Spirit / Sparkle)
+	for _, fx in world.LongTable:GetDescendants() do
+		local v = fx.Name == "Fx" and fx:FindFirstChildOfClass("Color3Value")
+		if v then
+			local e = Instance.new("ParticleEmitter")
+			e.Color, e.LightEmission = ColorSequence.new(v.Value, Color3.new(1, 1, 1)), 1
+			if v.Name == "Fire" then
+				e.Rate, e.Lifetime, e.Speed = 30, NumberRange.new(0.6, 1), NumberRange.new(4, 7)
+				e.Size, e.SpreadAngle = NumberSequence.new(2, 0), Vector2.new(15, 15)
+				e.Color = ColorSequence.new(Color3.fromRGB(255, 230, 120), v.Value)
+			elseif v.Name == "Spirit" then
+				e.Rate, e.Lifetime, e.Speed = 6, NumberRange.new(2, 3), NumberRange.new(1, 2)
+				e.Size, e.SpreadAngle, e.Transparency = NumberSequence.new(1.5, 0), Vector2.new(180, 180), NumberSequence.new(0.3, 1)
+			else
+				e.Rate, e.Lifetime, e.Speed = 12, NumberRange.new(1, 1.6), NumberRange.new(2, 4)
+				e.Size, e.SpreadAngle = NumberSequence.new(0.6, 0), Vector2.new(180, 180)
+			end
+			e.Parent = fx
+		end
+	end
 	local clouds = Instance.new("Clouds")
 	clouds.Cover, clouds.Density, clouds.Parent = 0.55, 0.6, workspace.Terrain
 	return Map

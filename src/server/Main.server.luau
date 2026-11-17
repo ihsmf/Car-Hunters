@@ -423,11 +423,10 @@ MarketplaceService.ProcessReceipt = function(info)
 	return Enum.ProductPurchaseDecision.PurchaseGranted
 end
 
--- ===== The long table keeps shifting its zones to higher rarities =====
+-- ===== The long table keeps shifting its zones to higher rarities (gates, pockets and labels) =====
 local function paintZones()
 	for i, z in Map.Zones do
 		local r = C.Rarities[math.min(i + luckShift, N)]
-		z.felt.Color = r[2]:Lerp(Color3.fromRGB(20, 120, 60), 0.35)
 		z.text.Text, z.text.TextColor3 = r[1], r[2]
 		for _, n in z.neon do n.Color = r[2] end
 	end

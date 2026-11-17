@@ -421,9 +421,9 @@ local world = workspace:WaitForChild("World")
 while true do
 	task.wait(rng:NextNumber(1, 2.5))
 	local base = world:FindFirstChild("Base" .. rng:NextInteger(1, 4))
-	local floor = base and base:FindFirstChild("Floor")
-	if floor then
-		local o = floor.Position + Vector3.new(0, 3.95, 0)
+	local table_ = base and base:FindFirstChild("PoolTable")
+	if table_ then
+		local o = table_.MeshPivot.Position + Vector3.new(0, 4.4, 0)
 		local from = o + Vector3.new(rng:NextNumber(-3, 3), 0, rng:NextNumber(-6, 6))
 		local goal = o + basePockets[rng:NextInteger(1, #basePockets)]
 		local b = ball(rackColors[rng:NextInteger(1, #rackColors)], 0.8, CFrame.new(from))

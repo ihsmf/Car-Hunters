@@ -155,7 +155,46 @@ def fence():
         box((30, 0.55, 0.45), (0, y, 0), M["Rail"], 0.15)
 
 
-MODELS = [("PoolTable", pool_table), ("Cue", cue), ("Ball", ball), ("Dumbbell", dumbbell), ("Fence", fence)]
+def mountain(seed):
+    """Low-poly faceted peak, base diameter 1 and height 1 (scaled per instance in the game).
+    Faces are coloured by height: grass -> rock -> snow."""
+    import random
+    rnd = random.Random(seed)
+    grass, rock, snow = mat("Grass", (96, 176, 82)), mat("Rock", (128, 118, 112)), mat("Snow", (250, 252, 255))
+    rock2 = mat("RockDark", (98, 90, 88))
+    bm = bmesh.new()
+    sides = 9
+    rings = [(0.0, 0.5), (0.28, 0.40), (0.55, 0.27), (0.78, 0.15)]
+    verts = []
+    for h, r in rings:
+        ring = []
+        for k in range(sides):
+            a = 2 * math.pi * k / sides + rnd.uniform(-0.15, 0.15)
+            rr = r * rnd.uniform(0.82, 1.12)
+            ring.append(bm.verts.new(rb(math.cos(a) * rr, h + (rnd.uniform(-0.04, 0.04) if h else 0), math.sin(a) * rr)))
+        verts.append(ring)
+    apex = bm.verts.new(rb(rnd.uniform(-0.05, 0.05), 1.0, rnd.uniform(-0.05, 0.05)))
+    for i in range(len(rings) - 1):
+        for k in range(sides):
+            a, b = verts[i][k], verts[i][(k + 1) % sides]
+            c, d = verts[i + 1][(k + 1) % sides], verts[i + 1][k]
+            bm.faces.new((a, b, c)); bm.faces.new((a, c, d))
+    for k in range(sides):
+        bm.faces.new((verts[-1][k], verts[-1][(k + 1) % sides], apex))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new("Mountain")
+    bm.to_mesh(me)
+    o = bpy.data.objects.new("Mountain", me)
+    bpy.context.scene.collection.objects.link(o)
+    for m in (grass, rock, snow, rock2):
+        me.materials.append(m)
+    for p in me.polygons:
+        h = p.center.z + rnd.uniform(-0.06, 0.06)
+        p.material_index = 0 if h < 0.2 else 2 if h > 0.66 else (1 if p.index % 3 else 3)
+
+
+MODELS = [("PoolTable", pool_table), ("Cue", cue), ("Ball", ball), ("Dumbbell", dumbbell), ("Fence", fence),
+          ("Mountain", lambda: mountain(3)), ("Peak", lambda: mountain(11))]
 
 
 def join_triangulate(name):
@@ -167,7 +206,7 @@ def join_triangulate(name):
     o = bpy.context.object
     o.name = name
     es = o.modifiers.new("Split", "EDGE_SPLIT")
-    es.split_angle = math.radians(35)
+    es.split_angle = math.radians(1 if name in ("Mountain", "Peak") else 35)
     tri = o.modifiers.new("Tri", "TRIANGULATE")
     bpy.ops.object.convert(target="MESH")
     return o
@@ -202,7 +241,7 @@ def render_preview(objs):
     sun = bpy.data.objects.new("sun", bpy.data.lights.new("sun", "SUN")); sun.data.energy = 4
     sun.rotation_euler = (math.radians(50), 0, math.radians(35)); sc.collection.objects.link(sun)
     cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam")); sc.collection.objects.link(cam); sc.camera = cam
-    cam.location = (0, -36, 24); cam.rotation_euler = (math.radians(58), 0, 0)
+    cam.location = (0, -40, 26); cam.rotation_euler = (math.radians(66), 0, 0)
     sc.render.engine = "CYCLES"; sc.cycles.samples = 32
     sc.render.resolution_x, sc.render.resolution_y = 1280, 720
     sc.view_settings.view_transform = "Standard"
@@ -229,9 +268,12 @@ def main():
     for i, (name, _) in enumerate(MODELS):
         bpy.ops.import_scene.fbx(filepath=os.path.join(OUT, name + ".fbx"))
         o = bpy.context.selected_objects[0]
-        o.location = {"PoolTable": (0, 0, 0), "Cue": (-11, -2, 4.6), "Ball": (10, -7, 1.5), "Dumbbell": (12, 3, 0.7), "Fence": (0, 13, 0)}[name]
+        o.location = {"PoolTable": (0, 0, 0), "Cue": (-11, -2, 4.6), "Ball": (10, -7, 1.5), "Dumbbell": (12, 3, 0.7), "Fence": (0, 13, 0),
+                      "Mountain": (-26, 40, 0), "Peak": (26, 40, 0)}[name]
         if name == "Ball":
             o.scale = (3, 3, 3)
+        if name in ("Mountain", "Peak"):
+            o.scale = (30, 30, 34)
         objs.append(o)
     render_preview(objs)
 
