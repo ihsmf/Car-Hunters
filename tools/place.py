@@ -319,16 +319,17 @@ def player_base(world, i, o, col):
 
 
 def gym_station(b, o):
-    part(b, (10, 0.3, 7), o @ cf(0, 0.15, 0), (44, 44, 58))
+    g = Inst("Model", "GymDecor", b)
+    part(g, (10, 0.3, 7), o @ cf(0, 0.15, 0), (44, 44, 58))
     dumbbell(b, o @ cf(0, 0.75, 0.5))
     for sx in (-1, 1):  # small weight rack behind the dumbbell
-        part(b, (0.5, 5, 0.5), o @ cf(sx * 3.6, 2.5, -2.6), (60, 60, 72), "Metal")
-        part(b, (0.4, 2.2, 2.2), o @ cf(sx * 2.6, 4.2, -2.6), (240, 60, 70), shape="Cyl")
-    part(b, (8.2, 0.45, 0.45), o @ cf(0, 4.2, -2.6), (215, 220, 232), "Metal", "Cyl")
+        part(g, (0.5, 5, 0.5), o @ cf(sx * 3.6, 2.5, -2.6), (60, 60, 72), "Metal")
+        part(g, (0.4, 2.2, 2.2), o @ cf(sx * 2.6, 4.2, -2.6), (240, 60, 70), shape="Cyl")
+    part(g, (8.2, 0.45, 0.45), o @ cf(0, 4.2, -2.6), (215, 220, 232), "Metal", "Cyl")
     hit = part(b, (8, 3, 5), o @ cf(0, 1.5, 0.5), WHITE, Transparency=1, CanCollide=False, name="DumbbellHit")
     prompt(hit, "Lift", "Dumbbell")
     Inst("ProximityPrompt", "UpgradePrompt", hit, ActionText="Upgrade", ObjectText="Dumbbell", Key=114)  # R
-    label(part(b, (5, 1.4, 0.3), o @ cf(0, 6.2, -2.6), (44, 44, 58)), FACE["Back"], "💪 GYM")
+    label(part(g, (5, 1.4, 0.3), o @ cf(0, 6.2, -2.6), (44, 44, 58)), FACE["Back"], "💪 GYM")
 
 
 def cue_shop(b, o, col):
@@ -340,8 +341,8 @@ def cue_shop(b, o, col):
     for sx in (-1, 1): ycyl(m, 0.55, 9.9, o @ cf(sx * 5.6, 5.2, 3.2), (92, 50, 24), "Wood")
     shop = part(b, (10, 3.2, 2.6), o @ cf(0, 2.1, 1.3), (92, 50, 24), "Wood", name="CueShop")  # counter: prompt lives here
     prompt(shop, "Open", "Cue Shop")
-    label(part(b, (8.6, 2.1, 0.1), o @ cf(0, 2.1, 2.78), WHITE, Transparency=1, CanCollide=False), FACE["Back"], "🎱 CUE SHOP")
-    label(part(b, (8, 1.8, 0.1), o @ cf(0, 12.6, 3.55), WHITE, Transparency=1, CanCollide=False), FACE["Back"], "UPGRADE YOUR CUE")
+    label(part(m, (8.6, 2.1, 0.1), o @ cf(0, 2.1, 2.78), WHITE, Transparency=1, CanCollide=False), FACE["Back"], "🎱 CUE SHOP")
+    label(part(m, (8, 1.8, 0.1), o @ cf(0, 12.6, 3.55), WHITE, Transparency=1, CanCollide=False), FACE["Back"], "UPGRADE YOUR CUE")
     stands = Inst("Folder", "Stands", b)
     for k, x in enumerate((-3, 0, 3), 1):  # the owner's current / next / locked cue hang here
         part(stands, (0.4, 0.4, 0.4), o @ cf(x, 4.9, -2.7), WHITE, Transparency=1, CanCollide=False, name=f"Stand{k}")
@@ -400,6 +401,77 @@ def build():
         player_base(world, i, cf(x, 0.17, -20), bcol[i])
     part(world, (6, 1, 6), cf(0, 0.6, 66), WHITE, cls="SpawnLocation", name="Spawn", Transparency=1, CanCollide=False, Neutral=True)
     return ws
+
+# ---------- Layout check: nothing may intersect or block anything else ----------
+def aabb(node):
+    """World-space XZ bounds (x0, x1, z0, z1) of every part under node (rotation-aware)."""
+    xs, zs = [], []
+    def walk(n):
+        if "cf" in n.p:
+            m, (sx, sy, sz) = n.p["cf"], n.p["size"]
+            for cx in (-sx / 2, sx / 2):
+                for cz in (-sz / 2, sz / 2):
+                    w = m @ np.array([cx, 0, cz, 1])
+                    xs.append(w[0]); zs.append(w[2])
+        for k in n.kids: walk(k)
+    walk(node)
+    return (min(xs), max(xs), min(zs), max(zs)) if xs else None
+
+
+def overlap(a, b, gap=0):
+    return a[0] < b[1] + gap and b[0] < a[1] + gap and a[2] < b[3] + gap and b[2] < a[3] + gap
+
+
+def check_layout(ws):
+    world = next(k for k in ws.kids if k.name == "World")
+    kid = lambda n, name: next((k for k in n.kids if k.name == name), None)
+    rugs = [k for k in world.kids if k.name == "Rug"]
+    errs = []
+    for a in range(len(rugs)):
+        for b_ in range(a + 1, len(rugs)):
+            if overlap(aabb(rugs[a]), aabb(rugs[b_]), 2):
+                errs.append(f"rugs {a + 1} and {b_ + 1} touch")
+    hall = (-225 + 5, 225 - 5, -88 + 5, 78 - 5)  # inside the walls, clear of the candy columns
+    for i in range(1, 5):
+        base = kid(world, f"Base{i}")
+        centre = kid(kid(base, "PoolTable"), "MeshPivot").p["cf"][:3, 3]
+        groups = {
+            "stage": [kid(base, "Stage"), kid(base, "PoolTable")],
+            "gym": [kid(base, "GymDecor"), kid(base, "Dumbbell"), kid(base, "DumbbellHit")],
+            "shop": [kid(base, "Kiosk"), kid(base, "CueShop"), kid(base, "Stands")],
+        }
+        boxes = {}
+        for g, nodes in groups.items():
+            bs = [aabb(n) for n in nodes if n is not None]
+            boxes[g] = (min(b[0] for b in bs), max(b[1] for b in bs), min(b[2] for b in bs), max(b[3] for b in bs))
+        rug = min(rugs, key=lambda r: abs(r.p["cf"][0, 3] - centre[0]))
+        rb = aabb(rug)
+        for g, bx in boxes.items():
+            if not (rb[0] <= bx[0] and bx[1] <= rb[1] and rb[2] <= bx[2] and bx[3] <= rb[3]):
+                errs.append(f"base {i}: {g} sticks out of its rug")
+            if not (hall[0] <= bx[0] and bx[1] <= hall[1] and hall[2] <= bx[2] and bx[3] <= hall[3]):
+                errs.append(f"base {i}: {g} touches the hall walls")
+        for g1, g2 in (("gym", "shop"), ("stage", "gym"), ("stage", "shop")):
+            if overlap(boxes[g1], boxes[g2], 2):
+                errs.append(f"base {i}: {g1} and {g2} are closer than 2 studs")
+        slots = [s.p["cf"][:3, 3] for s in kid(base, "Slots").kids]
+        for a in range(len(slots)):
+            if np.linalg.norm((slots[a] - centre)[[0, 2]]) < 12:
+                errs.append(f"base {i}: slot {a + 1} is too close to the table")
+            for b_ in range(a + 1, len(slots)):
+                if np.linalg.norm((slots[a] - slots[b_])[[0, 2]]) < 5:
+                    errs.append(f"base {i}: slots {a + 1} and {b_ + 1} overlap")
+        prompts = [kid(base, "DumbbellHit").p["cf"][:3, 3], kid(base, "CueShop").p["cf"][:3, 3]]
+        if np.linalg.norm(prompts[0] - prompts[1]) < 10:
+            errs.append(f"base {i}: gym and shop prompts are too close")
+        spawn = kid(base, "SpawnPoint").p["cf"][:3, 3]
+        reveal = kid(base, "RevealSpot").p["cf"][:3, 3]
+        for name, pt in (("spawn", spawn), ("reveal spot", reveal)):
+            if min(np.linalg.norm((pt - s)[[0, 2]]) for s in slots) < 4:
+                errs.append(f"base {i}: {name} stands on a character slot")
+    assert not errs, "layout problems:\n  " + "\n  ".join(errs)
+    return True
+
 
 # ---------- rbxlx ----------
 ref = iter(range(10 ** 9))
@@ -494,6 +566,7 @@ def dump_scene(ws, path):  # flat list for tools/preview.py; tagged parts are dr
 
 if __name__ == "__main__":
     ws = build()
+    check_layout(ws)
     data = '<roblox version="4">' + "".join(xml(s) for s in services(ws)) + "</roblox>"
     open(os.path.join(ROOT, "BilliardHunters.rbxlx"), "w", encoding="utf-8").write(data)
     print("parts:", dump_scene(ws, os.path.join(ROOT, "tools/scene.json")), "-> BilliardHunters.rbxlx")

@@ -74,9 +74,15 @@ end
 C.ThrowCooldown = 1
 C.MaxEquipped = 8
 C.MaxInventory = 100
-C.Anim = { Windup = 1.6, Slide = 0.8 }
-function C.RollTime(dist) return 1.4 + dist / 260 end
-function C.ThrowTime(dist) return C.Anim.Windup + C.RollTime(dist) + C.Anim.Slide end -- until the ball is pocketed
+-- Shots that land Epic+ get the full cinematic, the rest a short one (the server decides, both sides use these times)
+C.FullCinematicRarity = 4
+C.Anim = { Full = { Windup = 1.6, Slide = 0.8 }, Short = { Windup = 0.5, Slide = 0.3 } }
+function C.AnimOf(full) return full and C.Anim.Full or C.Anim.Short end
+function C.RollTime(dist, full) return full and 1.4 + dist / 260 or 0.8 + dist / 600 end
+function C.ThrowTime(dist, full) -- until the ball is pocketed
+	local a = C.AnimOf(full)
+	return a.Windup + C.RollTime(dist, full) + a.Slide
+end
 
 -- The 25 tables of the long table (one per zone): name + colour used by the flight camera
 C.Tables = {
@@ -92,35 +98,37 @@ C.Tables = {
 }
 
 
-C.Cues = { -- name, distance multiplier, price, colour
+C.Cues = { -- name, distance multiplier, price, colour (balanced with tools/balance_sim.py)
 	{ "Wooden", 1, 0, rgb(236, 196, 132) },
-	{ "Maple", 1.3, 500, rgb(250, 220, 160) },
-	{ "Carbon", 1.7, 5000, rgb(60, 60, 70) },
-	{ "Golden", 2.3, 50000, rgb(255, 200, 40) },
-	{ "Diamond", 3, 500000, rgb(140, 240, 255) },
-	{ "Plasma", 4, 5e6, rgb(255, 60, 220) },
-	{ "Lava", 5.5, 5e7, rgb(255, 80, 0) },
-	{ "Starlight", 7.5, 5e8, rgb(255, 255, 180) },
-	{ "Galaxy", 10, 5e9, rgb(90, 40, 200) },
-	{ "Absolute", 14, 5e10, rgb(255, 0, 140) },
+	{ "Maple", 1.25, 500, rgb(250, 220, 160) },
+	{ "Carbon", 1.5, 1e4, rgb(60, 60, 70) },
+	{ "Golden", 1.8, 3e5, rgb(255, 200, 40) },
+	{ "Diamond", 2.2, 1e7, rgb(140, 240, 255) },
+	{ "Plasma", 2.6, 4e8, rgb(255, 60, 220) },
+	{ "Lava", 3.1, 2e10, rgb(255, 80, 0) },
+	{ "Starlight", 3.7, 1e12, rgb(255, 255, 180) },
+	{ "Galaxy", 4.4, 6e13, rgb(90, 40, 200) },
+	{ "Absolute", 5.2, 4e15, rgb(255, 0, 140) },
 }
-C.DragonCue = { "Dragon", 6, 0, rgb(80, 220, 120) }
+C.DragonCue = { "Dragon", 3, 0, rgb(80, 220, 120) } -- game pass: x3 until you own a better cue
 
-function C.LiftCost(lvl) return math.floor(50 * 1.6 ^ (lvl - 1)) end
-function C.CueMult(d)
+function C.LiftCost(lvl) return math.floor(100 * 3 ^ (lvl - 1)) end
+function C.CueMult(d, passes)
 	local base = C.Cues[d.cue][2]
-	if d.passes.DragonCue then base = math.max(base, C.DragonCue[2]) end
+	if passes and passes.DragonCue then base = math.max(base, C.DragonCue[2]) end
 	return base
 end
-function C.Distance(power, d)
-	return math.min(C.Table.Length, power * (40 + d.strength * 0.6) * C.CueMult(d))
+-- strength has diminishing returns (cube root), the cue multiplies everything
+function C.Distance(power, d, passes)
+	return math.min(C.Table.Length, power * (40 + 6 * (d.strength or 0) ^ (1 / 3)) * C.CueMult(d, passes))
 end
+function C.ZoneOf(dist) return math.clamp(math.ceil(dist / (C.Table.Length / #C.Rarities)), 1, #C.Rarities) end
 
 -- Replace 0 with real IDs from the Creator Dashboard (Monetization → Passes / Developer Products)
 C.GamePasses = {
 	{ key = "Cash2x", id = 0, icon = "💰", name = "x2 Cash", desc = "Double income" },
 	{ key = "Luck2x", id = 0, icon = "🍀", name = "x2 Luck", desc = "50% chance +1 rarity" },
-	{ key = "DragonCue", id = 0, icon = "🐉", name = "Dragon Cue", desc = "x6 shot distance" },
+	{ key = "DragonCue", id = 0, icon = "🐉", name = "Dragon Cue", desc = "x3 shot distance cue" },
 	{ key = "GoldStick", id = 0, icon = "🪄", name = "Golden Stick", desc = "+50% income, gold sticks" },
 }
 C.Products = {

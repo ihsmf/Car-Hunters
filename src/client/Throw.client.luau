@@ -270,9 +270,25 @@ local function showBanner(text, color)
 	end)
 end
 
+-- Skip button (bottom-right, only during your own cinematic)
+local skip = false
+local skipBtn = Instance.new("TextButton")
+skipBtn.Size, skipBtn.AnchorPoint, skipBtn.Position = UDim2.fromOffset(170, 60), Vector2.new(1, 1), UDim2.new(1, -30, 1, -30)
+skipBtn.BackgroundColor3, skipBtn.Text, skipBtn.FontFace, skipBtn.TextSize = WHITE, "SKIP ⏩", C.UI.Font, 30
+skipBtn.TextColor3, skipBtn.Visible, skipBtn.ZIndex, skipBtn.AutoButtonColor = C.UI.Ink, false, 8, true
+Instance.new("UICorner", skipBtn).CornerRadius = UDim.new(0, 24)
+local skipStroke = Instance.new("UIStroke")
+skipStroke.Thickness, skipStroke.Color, skipStroke.ApplyStrokeMode, skipStroke.Parent = 4, C.UI.Ink, Enum.ApplyStrokeMode.Border, skipBtn
+skipBtn.Parent = fxGui
+skipBtn.Activated:Connect(function() skip = true end)
+local function waitOrSkip(sec)
+	local t0 = os.clock()
+	while os.clock() - t0 < sec and not skip do RunService.RenderStepped:Wait() end
+end
+
 -- ===== Camera =====
 local shake = 0
-local function hardShake(a) shake = math.max(shake, a) end
+local function hardShake(a) shake = math.max(shake, a * (_G.ShakeScale or 1)) end -- Settings: camera shake on/off
 local camFn -- function(dt) -> CFrame, or nil when the default camera is in control
 local cinema = false
 RunService:BindToRenderStep("CinemaCam", Enum.RenderPriority.Camera.Value + 1, function(dt)
@@ -291,7 +307,9 @@ local function setCinema(on)
 	if _G.SetHudVisible then _G.SetHudVisible(not on) end
 	letterbox(on)
 	luckLabel.Visible = on
+	skipBtn.Visible = on
 	if on then
+		skip = false
 		cam.CameraType = Enum.CameraType.Scriptable
 	else
 		camFn = nil
@@ -351,7 +369,7 @@ local function cueCF(tip, pitch, k)
 	return CFrame.fromMatrix(tip - d * 4.6 * k, Vector3.xAxis, d)
 end
 
-local function windup(b, start, mine, power, cueColor)
+local function windup(b, start, mine, power, cueColor, full)
 	local k = 1.15
 	local cue = MeshBuilder.Create("Cue", CFrame.new(start), { Shaft = cueColor }, k)
 	if not cue then
@@ -368,7 +386,8 @@ local function windup(b, start, mine, power, cueColor)
 	local glow = Instance.new("PointLight")
 	glow.Color, glow.Range, glow.Brightness, glow.Parent = cueColor:Lerp(WHITE, 0.5), 10, 0, b
 	burst(start - Vector3.new(0, 0, R + 0.4), Color3.fromRGB(90, 170, 255), 18, 5) -- chalk puff
-	local W = C.Anim.Windup
+	local W = C.AnimOf(full).Windup
+	local k_ = W / C.Anim.Full.Windup -- the short version runs the same moves faster
 	local t0 = os.clock()
 	if mine then
 		camFn = function() -- from behind-right and above to straight behind the ball, never into walls/cushion
@@ -386,8 +405,8 @@ local function windup(b, start, mine, power, cueColor)
 		tween(cc, W, { Saturation = -0.35, Contrast = 0.25 })
 	end
 	while true do
-		local t = os.clock() - t0
-		if t >= W then break end
+		local t = (os.clock() - t0) / k_
+		if t >= C.Anim.Full.Windup or skip then break end
 		local pitch, back
 		if t < 0.35 then -- swoop in from above
 			local e = TweenService:GetValue(t / 0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
@@ -421,7 +440,7 @@ local function windup(b, start, mine, power, cueColor)
 		hardShake(3)
 		local hold = cam.CFrame
 		camFn = function() return hold, true end
-		task.wait(0.09) -- freeze frame
+		task.wait(full and 0.09 or 0.03) -- freeze frame
 		cam.FieldOfView = 100
 		tween(cam, 0.9, { FieldOfView = 80 }, Enum.EasingStyle.Quart)
 		tween(dim, 0.3, { BackgroundTransparency = 1 })
@@ -485,7 +504,7 @@ local function revealOnBase(slot, tid, ch, bonus)
 	if not copy then -- nothing to show on the base (inventory full / not equipped): just the card
 		tween(dim, 0.3, { BackgroundTransparency = 0.35 })
 		local close = revealCard(ch, bonus)
-		task.wait(3)
+		waitOrSkip(3)
 		close()
 		return
 	end
@@ -529,7 +548,7 @@ local function revealOnBase(slot, tid, ch, bonus)
 	hardShake(0.6)
 	sfx("Hit")
 	local t0 = os.clock()
-	while os.clock() - t0 < 1.1 do
+	while os.clock() - t0 < 1.1 and not skip do
 		hardShake(0.1 + (os.clock() - t0) * 0.45)
 		RunService.RenderStepped:Wait()
 	end
@@ -571,7 +590,7 @@ local function revealOnBase(slot, tid, ch, bonus)
 	end
 	tween(cam, 3.4, { FieldOfView = 40 }, Enum.EasingStyle.Sine)
 	local close = revealCard(ch, bonus)
-	task.wait(3.4)
+	waitOrSkip(3.4)
 	close()
 	beam:Destroy()
 	copy:Destroy()
@@ -581,11 +600,14 @@ local function revealOnBase(slot, tid, ch, bonus)
 end
 
 -- ===== The shot =====
-Fx.OnClientEvent:Connect(function(kind, slot, dist, id, luck, tid)
+Fx.OnClientEvent:Connect(function(kind, slot, dist, id, luck, tid, fullByServer)
 	if kind ~= "Throw" then return end
 	local ch = C.Characters[id]
 	local rcol = C.Rarities[ch.rarity][2]
 	local mine = slot == _G.MySlot
+	local full = fullByServer and not _G.ShortOnly -- Epic+ gets the full show unless the player chose short cinematics
+	local A = C.AnimOf(full)
+	if mine then _G.ShotReadyAt = os.clock() + C.ThrowTime(dist, fullByServer) + C.ThrowCooldown end
 	local x = laneX(slot)
 	local start = Vector3.new(x, FELT_Y + R, T.StartZ + 10) -- room behind the ball for the cue and the camera
 	local b = ball(WHITE, R * 2, CFrame.new(start))
@@ -614,11 +636,11 @@ Fx.OnClientEvent:Connect(function(kind, slot, dist, id, luck, tid)
 		pop(luckScale)
 	end
 	local power = math.clamp(dist / T.Length, 0, 1)
-	windup(b, start, mine, math.clamp(dist / 400, 0.3, 1), C.Cues[mine and _G.MyCue or 1][4])
+	windup(b, start, mine, math.clamp(dist / 400, 0.3, 1), C.Cues[mine and _G.MyCue or 1][4], full)
 	aura.Rate = 40
 
 	-- 2. Flight over the tables
-	local roll = C.RollTime(dist)
+	local roll = C.RollTime(dist, full)
 	local zone = math.clamp(math.ceil(dist / zoneLen), 1, N)
 	local endZ = math.clamp(T.StartZ + dist, start.Z + 4, T.StartZ + T.Length - R) -- same zone as the server picked
 	local broke, lastZone = false, 1
@@ -631,7 +653,7 @@ Fx.OnClientEvent:Connect(function(kind, slot, dist, id, luck, tid)
 	end
 	local t0 = os.clock()
 	repeat
-		local t = math.min((os.clock() - t0) / roll, 1)
+		local t = skip and 1 or math.min((os.clock() - t0) / roll, 1)
 		local z = start.Z + (endZ - start.Z) * (1 - (1 - t) ^ 3)
 		rot = CFrame.Angles((z - lastZ) / R, 0, 0) * rot
 		lastZ = z
@@ -649,7 +671,7 @@ Fx.OnClientEvent:Connect(function(kind, slot, dist, id, luck, tid)
 			lastZone = zn
 			local tbl = themeAt(z)
 			aura.Rate = 40 + zn * 6
-			if mine then
+			if mine and (full or zn == zone) then -- the short version only announces the final table
 				hardShake(0.7 + zn * 0.06)
 				doFlash(tbl[2], 0.45, 0.4)
 				cam.FieldOfView = 92
@@ -669,14 +691,14 @@ Fx.OnClientEvent:Connect(function(kind, slot, dist, id, luck, tid)
 		camFn = function()
 			return CFrame.lookAt(pocket + Vector3.new(-side * 8, 7, -9), pocket)
 		end
-		tween(cam, C.Anim.Slide, { FieldOfView = 34 }, Enum.EasingStyle.Sine)
-		tween(dim, C.Anim.Slide, { BackgroundTransparency = 0.45 })
-		tween(blur, C.Anim.Slide, { Size = 6 })
+		tween(cam, A.Slide, { FieldOfView = 34 }, Enum.EasingStyle.Sine)
+		tween(dim, A.Slide, { BackgroundTransparency = full and 0.45 or 0.75 })
+		tween(blur, A.Slide, { Size = full and 6 or 2 })
 	end
 	local from = b.Position
 	t0 = os.clock()
 	repeat
-		local t = math.min((os.clock() - t0) / C.Anim.Slide, 1)
+		local t = skip and 1 or math.min((os.clock() - t0) / A.Slide, 1)
 		b.CFrame = CFrame.new(from:Lerp(pocket, t * t * (3 - 2 * t))) * rot
 		RunService.RenderStepped:Wait()
 	until t >= 1
@@ -691,9 +713,17 @@ Fx.OnClientEvent:Connect(function(kind, slot, dist, id, luck, tid)
 	hardShake(1)
 	doFlash(rcol, 0.6, 0.3)
 	tween(blur, 0.3, { Size = 0 })
-	tween(dim, 0.35, { BackgroundTransparency = 0 }).Completed:Wait()
 	local bonus = math.max(0, ch.rarity - zone)
-	revealOnBase(slot, tid, ch, bonus)
+	if full and not skip then
+		tween(dim, 0.35, { BackgroundTransparency = 0 }).Completed:Wait()
+		revealOnBase(slot, tid, ch, bonus)
+	else -- short version / skipped: just the card, the character pops up on the base by itself
+		tween(dim, 0.25, { BackgroundTransparency = 0.55 })
+		local close = revealCard(ch, bonus)
+		skip = false
+		waitOrSkip(full and 2.2 or 1.6)
+		close()
+	end
 	setCinema(false)
 end)
 

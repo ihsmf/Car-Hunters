@@ -21,6 +21,7 @@ function Map.Build()
 			sign = base.Sign.Label.Text,
 			liftPrompt = base.DumbbellHit.Prompt,
 			upgradePrompt = base.DumbbellHit.UpgradePrompt,
+			gym = base.DumbbellHit,
 			shopPrompt = base.CueShop.Prompt,
 			stands = stands,
 			chars = base.Chars,

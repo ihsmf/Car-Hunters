@@ -11,7 +11,7 @@ local Map = require(script.Parent.Map).Build()
 local okStore, store = pcall(DataStoreService.GetDataStore, DataStoreService, "BilliardHuntersV2")
 if not okStore then
 	warn("DataStore unavailable, progress will not be saved:", store)
-	store = { GetAsync = function() return nil end, SetAsync = function() end }
+	store = { GetAsync = function() return nil end, UpdateAsync = function() end }
 end
 
 local remotes = Instance.new("Folder")
@@ -33,11 +33,52 @@ for _, gp in C.GamePasses do passByKey[gp.key] = gp end
 
 local ANIM = { Idle = "rbxassetid://507766666", Cheer = "rbxassetid://507770677", Wave = "rbxassetid://507770239" }
 
+local DATA_VERSION = 3
 local function default()
 	return {
-		cash = 0, strength = 0, dumbLevel = 1, cue = 1,
-		inv = {}, daily = { day = 0, streak = 0 }, receipts = {},
+		version = DATA_VERSION, cash = 0, strength = 0, dumbLevel = 1, cue = 1,
+		inv = {}, daily = { day = 0, streak = 0 }, receipts = {}, tutorial = 1,
+		settings = { music = 0.5, sfx = 0.7, shake = true, short = false },
 	}
+end
+
+-- Accept only known fields with sane values (old saves, edited saves, removed items)
+local function sanitize(saved)
+	local d = default()
+	if type(saved) ~= "table" then return d end
+	local function num(v, lo, hi, def)
+		v = tonumber(v)
+		if not v or v ~= v then return def end
+		return math.clamp(v, lo, hi)
+	end
+	d.cash = num(saved.cash, 0, 1e300, 0)
+	d.strength = num(saved.strength, 0, 1e300, 0)
+	d.dumbLevel = math.floor(num(saved.dumbLevel, 1, 200, 1))
+	d.cue = math.floor(num(saved.cue, 1, #C.Cues, 1))
+	d.tutorial = math.floor(num(saved.tutorial, 1, 4, 4)) -- existing players skip the tutorial
+	if type(saved.daily) == "table" then
+		d.daily = { day = math.floor(num(saved.daily.day, 0, 1e7, 0)), streak = math.floor(num(saved.daily.streak, 0, #C.Daily, 0)) }
+	end
+	if type(saved.receipts) == "table" then
+		for _, r in saved.receipts do
+			if type(r) == "string" and #d.receipts < 50 then table.insert(d.receipts, r) end
+		end
+	end
+	if type(saved.settings) == "table" then
+		local st = saved.settings
+		d.settings = { music = num(st.music, 0, 1, 0.5), sfx = num(st.sfx, 0, 1, 0.7), shake = st.shake ~= false, short = st.short == true }
+	end
+	local equipped = 0
+	if type(saved.inv) == "table" then
+		for _, it in saved.inv do
+			if type(it) == "table" and C.Characters[tonumber(it.id) or 0] and #d.inv < C.MaxInventory then
+				local eq = it.eq == true and equipped < C.MaxEquipped
+				if eq then equipped += 1 end
+				table.insert(d.inv, { id = tonumber(it.id), eq = eq })
+			end
+		end
+	end
+	return d
 end
 
 local function luckOf(s)
@@ -55,8 +96,7 @@ end
 local function sync(plr)
 	local s = sessions[plr]
 	if not s then return end
-	s.d.passes = s.passes
-	Fx:FireClient(plr, "State", { d = s.d, slot = s.slot, income = income(s), luck = luckOf(s), luckIn = C.LuckCycle, join = s.join, claimed = s.claimed })
+	Fx:FireClient(plr, "State", { d = s.d, passes = s.passes, slot = s.slot, income = income(s), luck = luckOf(s), luckIn = C.LuckCycle, join = s.join, claimed = s.claimed })
 	plr.leaderstats.Cash.Value = math.floor(s.d.cash)
 end
 
@@ -155,7 +195,7 @@ local function makeNPC(id, cf, gold, fresh)
 	ring.Anchored, ring.CanCollide, ring.CastShadow, ring.Parent = true, false, false, m
 
 	local bb = Instance.new("BillboardGui")
-	bb.Size, bb.StudsOffset, bb.AlwaysOnTop, bb.MaxDistance = UDim2.fromOffset(200, 64), Vector3.new(0, 3.5, 0), true, 90
+	bb.Size, bb.StudsOffset, bb.AlwaysOnTop, bb.MaxDistance = UDim2.fromOffset(200, 64), Vector3.new(0, 3.5, 0), false, 35
 	for i, t in { { info.name, Color3.new(1, 1, 1) }, { r[1] .. " • $" .. C.Short(info.income) .. "/s", r[2] } } do
 		local l = Instance.new("TextLabel")
 		l.Size, l.Position, l.BackgroundTransparency = UDim2.fromScale(1, 0.5), UDim2.fromScale(0, (i - 1) * 0.5), 1
@@ -272,7 +312,7 @@ local function showCues(plr)
 			p.Anchored = true
 			p.Parent = stand
 			local bb = Instance.new("BillboardGui")
-			bb.Size, bb.StudsOffset, bb.MaxDistance, bb.AlwaysOnTop = UDim2.fromOffset(150, 46), Vector3.new(0, 5.6, 0), 45, true
+			bb.Size, bb.StudsOffset, bb.MaxDistance, bb.AlwaysOnTop = UDim2.fromOffset(150, 46), Vector3.new(0, 5.6, 0), 25, false
 			local l = Instance.new("TextLabel")
 			l.Size, l.BackgroundTransparency, l.TextScaled, l.FontFace = UDim2.fromScale(1, 1), 1, true, C.UI.Font
 			l.Text = k == 1 and ("✅ " .. cue[1]) or k == 2 and (cue[1] .. "\n$" .. C.Short(cue[3])) or "🔒 " .. cue[1]
@@ -286,17 +326,31 @@ end
 
 -- ===== Player actions (Request:InvokeServer(action, arg)) =====
 local actions = {}
+local COOLDOWN = { Settings = 0.2, Sync = 0.5, Lift = 0.32, Equip = 0.15, Sell = 0.15, EquipBest = 0.5, SellRarity = 0.5, Cue = 0.3, UpDumb = 0.3, Daily = 1, Playtime = 0.5, Pass = 1, Product = 1, Tutorial = 0.2 }
 
 function actions.Sync() return true end
+
+function actions.Settings(_, s, st)
+	if type(st) ~= "table" then return false end
+	local function vol(v, def) return type(v) == "number" and v == v and math.clamp(v, 0, 1) or def end
+	s.d.settings = { music = vol(st.music, 0.5), sfx = vol(st.sfx, 0.7), shake = st.shake ~= false, short = st.short == true }
+	return true
+end
+
+function actions.Tutorial(_, s, step)
+	if type(step) == "number" and step == s.d.tutorial + 1 and step <= 4 then s.d.tutorial = step end
+	return true
+end
 
 function actions.Throw(plr, s, power)
 	if type(power) ~= "number" or power ~= power or os.clock() < s.nextThrow then return false end
 	if #s.d.inv >= C.MaxInventory then return false, "Inventory is full! Sell someone first" end
-	local dist = C.Distance(math.clamp(power, 0, 1), s.d)
-	s.nextThrow = os.clock() + C.ThrowTime(dist) + C.ThrowCooldown
-	local zone = math.clamp(math.ceil(dist / (C.Table.Length / N)), 1, N)
+	local dist = C.Distance(math.clamp(power, 0, 1), s.d, s.passes)
+	local zone = C.ZoneOf(dist)
 	local L = luckOf(s)
 	local rarity = math.min(zone + C.LuckBonus(L, rng:NextNumber(), rng:NextNumber()), N)
+	local full = rarity >= C.FullCinematicRarity
+	s.nextThrow = os.clock() + C.ThrowTime(dist, full) + C.ThrowCooldown
 	local pool = {}
 	for id, ch in C.Characters do
 		if ch.rarity == rarity then table.insert(pool, id) end
@@ -305,15 +359,17 @@ function actions.Throw(plr, s, power)
 	throwCounter += 1
 	local eq = equippedCount(s.d) < C.MaxEquipped
 	table.insert(s.d.inv, { id = id, eq = eq, tid = eq and throwCounter or nil })
-	Fx:FireAllClients("Throw", s.slot, dist, id, L, eq and throwCounter or 0)
-	task.delay(C.ThrowTime(dist), refreshBase, plr)
+	Fx:FireAllClients("Throw", s.slot, dist, id, L, eq and throwCounter or 0, full)
+	task.delay(C.ThrowTime(dist, full), refreshBase, plr)
+	if s.d.tutorial == 1 then s.d.tutorial = 2 end
 	return true
 end
 
-function actions.Lift(_, s)
-	if os.clock() - s.lastLift < 0.35 then return false end
-	s.lastLift = os.clock()
+function actions.Lift(plr, s)
+	local root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+	if not root or (root.Position - Map.Bases[s.slot].gym.Position).Magnitude > 14 then return false end
 	s.d.strength += s.d.dumbLevel
+	if s.d.tutorial == 2 and s.d.strength >= 20 then s.d.tutorial = 3 end
 	return true
 end
 
@@ -330,6 +386,7 @@ function actions.Cue(plr, s)
 	if not cue then return false, "You already own the best cue!" end
 	if not pay(s, cue[3]) then return false, "Not enough cash!" end
 	s.d.cue = nextTier
+	if s.d.tutorial == 3 then s.d.tutorial = 4 end
 	giveCue(plr, true)
 	showCues(plr)
 	return true, cue[1] .. " cue! x" .. cue[2] .. " distance"
@@ -352,6 +409,37 @@ function actions.Sell(plr, s, i)
 	table.remove(s.d.inv, i)
 	if it.eq then refreshBase(plr) end
 	return true, "Sold for $" .. C.Short(price)
+end
+
+-- fill the base with the highest-income characters
+function actions.EquipBest(plr, s)
+	local order = {}
+	for i, it in s.d.inv do
+		it.eq = false
+		table.insert(order, i)
+	end
+	table.sort(order, function(a, b) return C.Characters[s.d.inv[a].id].income > C.Characters[s.d.inv[b].id].income end)
+	for k = 1, math.min(C.MaxEquipped, #order) do s.d.inv[order[k]].eq = true end
+	refreshBase(plr)
+	return true, "Best team on the base!"
+end
+
+-- sell every unequipped character of one rarity
+function actions.SellRarity(_, s, rarity)
+	if type(rarity) ~= "number" or not C.Rarities[rarity] then return false end
+	local total, kept, n = 0, {}, 0
+	for _, it in s.d.inv do
+		if not it.eq and C.Characters[it.id].rarity == rarity then
+			total += C.Characters[it.id].income * 30
+			n += 1
+		else
+			table.insert(kept, it)
+		end
+	end
+	if n == 0 then return false, "Nothing to sell" end
+	s.d.inv = kept
+	s.d.cash += total
+	return true, "Sold " .. n .. " for $" .. C.Short(total)
 end
 
 function actions.Daily(_, s)
@@ -392,6 +480,9 @@ end
 Request.OnServerInvoke = function(plr, action, arg)
 	local s, fn = sessions[plr], actions[action]
 	if not (s and fn) then return false end
+	local now = os.clock()
+	if now - (s.last[action] or 0) < (COOLDOWN[action] or 0) then return false end
+	s.last[action] = now
 	local ok, msg = fn(plr, s, arg)
 	sync(plr)
 	return ok, msg
@@ -419,11 +510,13 @@ local function onPlayer(plr)
 	end
 	taken[slot] = plr
 
-	local ok, saved = pcall(store.GetAsync, store, plr.UserId)
-	local d = default()
-	if ok and type(saved) == "table" then
-		for k, v in saved do d[k] = v end
+	local ok, saved
+	for attempt = 1, 3 do
+		ok, saved = pcall(store.GetAsync, store, plr.UserId)
+		if ok then break end
+		task.wait(attempt)
 	end
+	local d = sanitize(saved)
 	local passes = {}
 	for _, gp in C.GamePasses do
 		if gp.id > 0 then
@@ -435,7 +528,7 @@ local function onPlayer(plr)
 		taken[slot] = nil
 		return
 	end
-	sessions[plr] = { d = d, slot = slot, passes = passes, join = os.time(), claimed = {}, nextThrow = 0, lastLift = 0, loaded = ok }
+	sessions[plr] = { d = d, slot = slot, passes = passes, join = os.time(), claimed = {}, nextThrow = 0, last = {}, loaded = ok }
 
 	local ls = Instance.new("Folder")
 	ls.Name = "leaderstats"
@@ -453,17 +546,22 @@ end
 Players.PlayerAdded:Connect(onPlayer)
 for _, p in Players:GetPlayers() do task.spawn(onPlayer, p) end
 
-local function save(plr)
-	local s = sessions[plr]
-	if not (s and s.loaded) then return end
+local function save(plr, s)
+	s = s or sessions[plr]
+	if not (s and s.loaded) then return end -- never overwrite a save we failed to load
 	local copy = table.clone(s.d)
-	copy.passes = nil
-	pcall(store.SetAsync, store, plr.UserId, copy)
+	copy.version = DATA_VERSION
+	for attempt = 1, 3 do
+		local ok = pcall(store.UpdateAsync, store, plr.UserId, function() return copy end)
+		if ok then return end
+		task.wait(attempt)
+	end
+	warn("[Save] failed for", plr.Name)
 end
 
 Players.PlayerRemoving:Connect(function(plr)
-	save(plr)
 	local s = sessions[plr]
+	task.spawn(save, plr, s)
 	if s then
 		Map.Bases[s.slot].chars:ClearAllChildren()
 		Map.Bases[s.slot].sign.Text = "Free Base"
@@ -474,7 +572,16 @@ Players.PlayerRemoving:Connect(function(plr)
 end)
 
 game:BindToClose(function()
-	for plr in sessions do save(plr) end
+	local left = 0
+	for plr, s in sessions do
+		left += 1
+		task.spawn(function()
+			save(plr, s)
+			left -= 1
+		end)
+	end
+	local t0 = os.clock()
+	while left > 0 and os.clock() - t0 < 25 do task.wait(0.2) end
 end)
 
 -- gym and cue shop stand in front of each base and only serve the base owner
@@ -488,11 +595,7 @@ for idx, base in Map.Bases do
 		if owner(plr) then Fx:FireClient(plr, "Lift") end
 	end)
 	base.upgradePrompt.Triggered:Connect(function(plr)
-		local s = owner(plr)
-		if not s then return end
-		local ok, msg = actions.UpDumb(plr, s)
-		Fx:FireClient(plr, "Toast", ok and msg .. " Lv." .. s.d.dumbLevel or msg .. " ($" .. C.Short(C.LiftCost(s.d.dumbLevel)) .. ")", ok)
-		sync(plr)
+		if owner(plr) then Fx:FireClient(plr, "Open", "Gym") end
 	end)
 	base.shopPrompt.Triggered:Connect(function(plr)
 		if owner(plr) then Fx:FireClient(plr, "Open", "Cues") end
@@ -502,13 +605,19 @@ end
 MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(plr, id, bought)
 	local s = sessions[plr]
 	if not (s and bought) then return end
+	local key
 	for _, gp in C.GamePasses do
-		if gp.id == id then s.passes[gp.key] = true end
+		if gp.id == id then
+			s.passes[gp.key] = true
+			key = gp.key
+		end
 	end
-	Map.Bases[s.slot].chars:ClearAllChildren() -- rebuild sticks for Golden Stick
-	refreshBase(plr)
-	giveCue(plr, true) -- Dragon Cue
-	showCues(plr)
+	if key == "GoldStick" then -- NPCs get golden sticks
+		Map.Bases[s.slot].chars:ClearAllChildren()
+		refreshBase(plr)
+	elseif key == "DragonCue" then
+		giveCue(plr, true)
+	end
 	sync(plr)
 end)
 
