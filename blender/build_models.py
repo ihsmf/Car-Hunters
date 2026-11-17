@@ -9,7 +9,7 @@ import bpy, bmesh, math, os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "export")
-LUAU = os.path.join(HERE, "..", "src", "shared", "Meshes.luau")
+LUAU_DIR = os.path.join(HERE, "..", "src", "shared", "Meshes")  # one ModuleScript per model
 os.makedirs(OUT, exist_ok=True)
 
 
@@ -193,8 +193,404 @@ def mountain(seed):
         p.material_index = 0 if h < 0.2 else 2 if h > 0.66 else (1 if p.index % 3 else 3)
 
 
-MODELS = [("PoolTable", pool_table), ("Cue", cue), ("Ball", ball), ("Dumbbell", dumbbell), ("Fence", fence),
-          ("Mountain", lambda: mountain(3)), ("Peak", lambda: mountain(11))]
+def lathe(profile, c, m, segs=16, axis_rot=None):
+    """Surface of revolution around local Y: profile = [(radius, y), ...] from bottom to top."""
+    bm = bmesh.new()
+    rings = []
+    for r, y in profile:
+        if r <= 1e-4:
+            rings.append([bm.verts.new(rb(0, y, 0))])
+            continue
+        rings.append([bm.verts.new(rb(math.cos(2 * math.pi * k / segs) * r, y, math.sin(2 * math.pi * k / segs) * r)) for k in range(segs)])
+    for a, b in zip(rings, rings[1:]):
+        if len(a) == 1 and len(b) == 1:
+            continue
+        for k in range(segs):
+            if len(a) == 1:
+                bm.faces.new((a[0], b[(k + 1) % segs], b[k]))
+            elif len(b) == 1:
+                bm.faces.new((a[k], a[(k + 1) % segs], b[0]))
+            else:
+                bm.faces.new((a[k], a[(k + 1) % segs], b[(k + 1) % segs], b[k]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new("lathe")
+    bm.to_mesh(me)
+    o = bpy.data.objects.new("lathe", me)
+    bpy.context.scene.collection.objects.link(o)
+    o.location = rb(*c)
+    if axis_rot:
+        o.rotation_euler = axis_rot
+    bpy.context.view_layer.objects.active = o
+    o.select_set(True)
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    return finish(o, m)
+
+
+def cut(target, cutter):
+    """Boolean difference (both get their modifiers applied first)."""
+    cutter.data.materials.append(target.data.materials[0])  # cut faces keep the target's material
+    for o in (target, cutter):
+        bpy.context.view_layer.objects.active = o
+        for mod in list(o.modifiers):
+            bpy.ops.object.modifier_apply(modifier=mod.name)
+    b = target.modifiers.new("Cut", "BOOLEAN")
+    b.operation, b.object = "DIFFERENCE", cutter
+    bpy.context.view_layer.objects.active = target
+    bpy.ops.object.modifier_apply(modifier=b.name)
+    bpy.data.objects.remove(cutter)
+
+
+# ---------- Long-table segment: one billiard table per zone (80 x 42 studs), recoloured per theme ----------
+SEG = dict(Wood=(120, 64, 30), Panel=(150, 86, 44), Rail=(96, 50, 22), Felt=(28, 140, 66), Cushion=(20, 110, 52),
+           Trim=(230, 180, 70), Pearl=(255, 250, 235), Pocket=(20, 16, 18), Leg=(90, 46, 20))
+
+
+def table_segment():
+    M = {k: mat(k, v, 1 if k == "Trim" else 0, 0.3) for k, v in SEG.items()}
+    L, W, RW = 80, 36, 3.0
+    box((W + 2 * RW, 1.4, L), (0, 2.3, 0), M["Wood"], 0.3)
+    box((W, 0.3, L), (0, 3.15, 0), M["Felt"], 0)
+    for s in (-1, 1):
+        rail = box((RW, 4.2, L), (s * (W / 2 + RW / 2), 5.1, 0), M["Rail"], 0.7)
+        cush = box((0.9, 1.1, L), (s * (W / 2 + 0.45), 3.85, 0), M["Cushion"], 0.3)
+        for o in (rail, cush):  # pocket notch in the middle of the segment
+            bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=2.5, depth=12, location=rb(s * W / 2, 5, 0))
+            cut(o, bpy.context.object)
+        cyl(4.8, 0.5, (s * W / 2, 3.12, 0), M["Pocket"], verts=24, bevel=0)
+        liner = cyl(5.1, 4.3, (s * W / 2, 5.0, 0), M["Pocket"], verts=24, bevel=0)  # dark pocket throat in the notch
+        bpy.ops.mesh.primitive_cube_add(size=1, location=rb(s * W / 2 - s * 3, 5, 0))
+        bpy.context.object.scale = (6, 8, 6)
+        cut(liner, bpy.context.object)
+        bm = bmesh.new(); bm.from_mesh(liner.data)  # open the throat towards the felt: drop the flat cut face
+        mw = liner.matrix_world
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if abs((mw @ f.calc_center_median()).x - s * W / 2) < 0.02 and abs(f.normal.x) > 0.9], context="FACES")
+        bm.to_mesh(liner.data); bm.free()
+        rim = torus(5.6, 0.45, (s * W / 2, 7.15, 0), M["Trim"])  # brass pocket plate: outer half only
+        bpy.ops.mesh.primitive_cube_add(size=1, location=rb(s * W / 2 - s * 3, 7.15, 0))
+        bpy.context.object.scale = (6, 8, 3)
+        cut(rim, bpy.context.object)
+        box((0.35, 0.12, L - 1), (s * (W / 2 + RW / 2), 7.23, 0), M["Trim"], 0.05)  # brass inlay line
+        for k in (-35, -25, -15, -8, 8, 15, 25, 35):  # sights
+            cyl(1.0, 0.12, (s * (W / 2 + RW / 2), 7.27, k), M["Trim"], verts=12, bevel=0)
+            sphere(0.62, (s * (W / 2 + RW / 2), 7.33, k), M["Pearl"], 8, 4, (1, 0.35, 1.4))
+        x = s * (W / 2 + RW + 0.12)
+        for z in (-28, -12, 12, 28):  # raised apron panels with brass frames
+            box((0.3, 0.8, 13), (x, 2.3, z), M["Panel"], 0.12)
+            box((0.12, 0.08, 13.4), (x + s * 0.12, 2.74, z), M["Trim"], 0)
+            box((0.12, 0.08, 13.4), (x + s * 0.12, 1.86, z), M["Trim"], 0)
+        cyl(1.3, 0.25, (x + s * 0.1, 2.3, 0), M["Trim"], "X", verts=16)  # medallion under the pocket
+        box((0.3, 0.25, L), (s * (W / 2 + RW + 0.08), 1.72, 0), M["Trim"], 0.05)
+        for e in (-1, 1):
+            lathe([(0, 0), (0.75, 0), (0.85, 0.25), (0.5, 0.6), (0.95, 1.1), (0.6, 1.6), (0.25, 1.9), (0, 2.15)], (s * (W / 2 + RW / 2), 7.2, e * (L / 2 - 1.6)), M["Trim"], 12)
+            lathe([(0, 0), (1.7, 0), (1.75, 0.18), (1.15, 0.38), (1.55, 0.8), (1.05, 1.2), (1.45, 1.5), (1.45, 1.62), (0, 1.62)], (s * (W / 2 + 1), 0, e * (L / 2 - 6)), M["Leg"], 16)
+            torus(3.1, 0.3, (s * (W / 2 + 1), 0.15, e * (L / 2 - 6)), M["Trim"])
+    for e in (-1, 1):  # brass bands where two tables meet
+        box((W + 2 * RW + 0.4, 1.6, 0.5), (0, 2.3, e * (L / 2 - 0.25)), M["Trim"], 0.08)
+
+
+# ---------- Backdrop props (sizes in studs; recoloured per theme) ----------
+def pine():
+    t, l, s = mat("Trunk", (110, 70, 40)), mat("Leaves", (40, 120, 70)), mat("Snow", (245, 250, 255))
+    cyl(1.4, 4, (0, 2, 0), t, verts=8)
+    for k, (d, y) in enumerate(((9, 3), (7, 6.5), (5, 9.5))):
+        cyl(d, 4.5, (0, y + 2.25, 0), l, d2=0.3, verts=9, bevel=0)
+        cyl(d * 0.45, 1.6, (0, y + 3.9, 0), s, d2=0.2, verts=9, bevel=0)
+
+
+def tree():
+    t, l = mat("Trunk", (120, 76, 40)), mat("Leaves", (80, 180, 70))
+    cyl(1.6, 7, (0, 3.5, 0), t, verts=8, d2=1.1)
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=4.2, location=rb(0, 9, 0)); finish(bpy.context.object, l)
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=3.0, location=rb(2.4, 7.6, 1)); finish(bpy.context.object, l)
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=2.8, location=rb(-2.2, 8, -1.2)); finish(bpy.context.object, l)
+
+
+def palm():
+    t, l, n = mat("Trunk", (160, 110, 60)), mat("Leaves", (60, 170, 70)), mat("Nut", (110, 70, 40))
+    for k in range(7):
+        cyl(1.3 - k * 0.07, 2.1, (k * 0.32, 1 + k * 2, 0), t, verts=8)
+    top = (2.2, 14.2, 0)
+    for a in range(8):  # drooping leaves: flattened ellipsoids in two segments
+        ang = a * 2 * math.pi / 8
+        dx, dz = math.cos(ang), math.sin(ang)
+        for j, (r, y, ln) in enumerate(((2.2, 0.1, 4.6), (5.2, -1.4, 3.6))):
+            o = sphere(1, (top[0] + dx * r, top[1] + y, top[2] + dz * r), l, 10, 6, (ln, 0.18, 1.4 - j * 0.3))
+            o.rotation_euler = (0, -0.35 - j * 0.35, -ang)
+    for k in range(3):
+        sphere(0.9, (top[0] + math.cos(k * 2) * 0.6, top[1] - 0.9, math.sin(k * 2) * 0.6), n, 8, 6)
+
+
+def cactus():
+    b, f = mat("Body", (70, 160, 80)), mat("Flower", (255, 120, 170))
+    cyl(2, 8, (0, 4, 0), b, verts=12); sphere(2, (0, 8, 0), b, 12, 6)
+    for s, h in ((-1, 3.5), (1, 5)):
+        cyl(1.2, 2.4, (s * 1.8, h, 0), b, "X", verts=10)
+        cyl(1.2, 3, (s * 3, h + 1.5, 0), b, verts=10); sphere(1.2, (s * 3, h + 3, 0), b, 10, 6)
+    sphere(0.9, (0, 9, 0), f, 8, 6)
+
+
+def rock():
+    r = mat("Rock", (130, 125, 120))
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=3, location=rb(0, 2, 0))
+    o = bpy.context.object
+    import random
+    rnd = random.Random(5)
+    for v in o.data.vertices:
+        v.co *= rnd.uniform(0.8, 1.2)
+        v.co.z *= 0.75
+    finish(o, r)
+
+
+def dune():
+    s, d = mat("Sand", (240, 210, 140)), mat("SandDark", (215, 180, 110))
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=20, ring_count=10, radius=1, location=(0, 0, 0))
+    o = bpy.context.object
+    o.scale = (30, 20, 9)
+    bpy.ops.object.transform_apply(scale=True)
+    finish(o, s); o.data.materials.append(d)
+    for p in o.data.polygons:
+        if p.normal.x < -0.2:
+            p.material_index = 1
+
+
+def crystal():
+    c, l = mat("Crystal", (120, 200, 255)), mat("CrystalLight", (210, 245, 255))
+    for k, (x, z, h, tilt) in enumerate(((0, 0, 10, 0), (2, 1, 7, 0.35), (-2, 0.5, 6, -0.4), (0.5, -2, 5, 0.3), (-1, 2, 4, -0.2))):
+        rot = (tilt, 0, tilt * 0.5)
+        bpy.ops.mesh.primitive_cone_add(vertices=6, radius1=1.2, radius2=0, depth=h * 0.3, location=rb(x, h * 0.85, z), rotation=rot)
+        finish(bpy.context.object, l)
+        bpy.ops.mesh.primitive_cylinder_add(vertices=6, radius=1.2, depth=h * 0.7, location=rb(x, h * 0.35, z), rotation=rot)
+        finish(bpy.context.object, c)
+
+
+def volcano():
+    r, lv = mat("Rock", (90, 70, 66)), mat("Lava", (255, 110, 20))
+    lathe([(0, 0), (45, 0), (30, 18), (16, 40), (11, 46), (8, 44), (0, 40)], (0, 0, 0), r, 18)
+    lathe([(0, 43), (8.2, 43.5), (0, 44)], (0, 0, 0), lv, 18)
+
+
+def tower():
+    b, w = mat("Body", (40, 44, 60)), mat("Window", (120, 230, 255))
+    for k, (s, y, h) in enumerate(((16, 0, 30), (12, 30, 20), (8, 50, 12))):
+        box((s, h, s), (0, y + h / 2, 0), b, 0.4)
+        for j in range(int(h // 4)):
+            box((s + 0.2, 0.8, s + 0.2), (0, y + 2 + j * 4, 0), w, 0)
+    cyl(0.5, 10, (0, 67, 0), b, verts=6)
+
+
+def planet():
+    b, r = mat("Body", (150, 110, 230)), mat("Ring", (230, 200, 255))
+    sphere(20, (0, 0, 0), b, 24, 14)
+    bpy.ops.mesh.primitive_torus_add(major_radius=15, minor_radius=1.4, major_segments=32, minor_segments=6, rotation=(0.35, 0.2, 0))
+    o = bpy.context.object
+    o.scale = (1, 1, 0.25)
+    bpy.ops.object.transform_apply(scale=True)
+    finish(o, r)
+
+
+def torii():
+    red, blk = mat("Red", (210, 40, 40)), mat("Black", (30, 26, 26))
+    for s in (-1, 1):
+        cyl(1.4, 13, (s * 5, 6.5, 0), red, verts=12)
+        cyl(1.9, 1, (s * 5, 0.5, 0), blk, verts=12)
+    box((15, 1.2, 1.8), (0, 13.6, 0), blk, 0.2)
+    box((13, 1, 1.4), (0, 12.2, 0), red, 0.15)
+    box((12, 0.8, 1.2), (0, 9.8, 0), red, 0.1)
+
+
+def pyramid():
+    s, g = mat("Sand", (230, 195, 120)), mat("Gold", (255, 205, 70), 1, 0.3)
+    for k in range(6):
+        w = 40 - k * 6.5
+        box((w, 4, w), (0, 2 + k * 4, 0), s, 0.2)
+    bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=3.2, radius2=0, depth=4, location=rb(0, 26, 0), rotation=(0, 0, math.pi / 4))
+    finish(bpy.context.object, g)
+
+
+def column():
+    m, g = mat("Marble", (245, 242, 235)), mat("Gold", (255, 205, 70), 1, 0.3)
+    box((4, 1, 4), (0, 0.5, 0), m, 0.1)
+    lathe([(0, 1), (1.6, 1), (1.4, 1.4), (1.3, 15), (1.6, 15.4), (0, 15.4)], (0, 0, 0), m, 16)
+    torus(3, 0.3, (0, 15.6, 0), g)
+    box((4, 0.8, 4), (0, 16.2, 0), m, 0.1)
+
+
+def mushroom():
+    st, cp, sp = mat("Stem", (245, 235, 215)), mat("Cap", (230, 50, 60)), mat("Spot", (255, 255, 255))
+    lathe([(0, 0), (1.4, 0), (1.0, 2), (1.1, 4.5), (0, 4.5)], (0, 0, 0), st, 12)
+    lathe([(0, 4.2), (4.2, 4.2), (4, 5.3), (3, 6.8), (1.4, 7.7), (0, 7.9)], (0, 0, 0), cp, 18)
+    for k in range(6):
+        a = k * 1.05
+        sphere(0.9, (math.cos(a) * 2.7, 6.6, math.sin(a) * 2.7), sp, 8, 4, (1, 0.5, 1))
+
+
+def cloud():
+    c = mat("Cloud", (255, 255, 255))
+    for x, y, z, d in ((0, 0, 0, 10), (6, -1, 1, 7), (-6, -1, 0, 8), (2, 3, -1, 7), (-3, 2, 2, 6)):
+        sphere(d, (x, y, z), c, 12, 8)
+
+
+def star():
+    s = mat("Star", (255, 225, 80), 0.3, 0.3)
+    bm = bmesh.new()
+    pts = []
+    for k in range(10):
+        r = 3 if k % 2 == 0 else 1.3
+        a = math.pi / 2 + k * math.pi / 5
+        pts.append((math.cos(a) * r, math.sin(a) * r))
+    top = [bm.verts.new(rb(x, y, -0.6)) for x, y in pts]
+    bot = [bm.verts.new(rb(x, y, 0.6)) for x, y in pts]
+    cf_, cb = bm.verts.new(rb(0, 0, -1.2)), bm.verts.new(rb(0, 0, 1.2))
+    for k in range(10):
+        n = (k + 1) % 10
+        bm.faces.new((cf_, top[n], top[k])); bm.faces.new((cb, bot[k], bot[n]))
+        bm.faces.new((top[k], top[n], bot[n], bot[k]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new("star"); bm.to_mesh(me)
+    o = bpy.data.objects.new("star", me); bpy.context.scene.collection.objects.link(o)
+    finish(o, s)
+
+
+# ---------- Character accessories (R15). Head items: origin = head centre. Back items: origin = UpperTorso centre ----------
+def acc_mats():
+    return mat("Main", (220, 60, 60)), mat("Accent", (255, 210, 70), 1, 0.3), mat("Gem", (90, 200, 255), 0, 0.1)
+
+
+def acc_cap():
+    m, a, g = acc_mats()
+    sphere(1.3, (0, 0.35, 0.05), m, 16, 8, (1, 0.75, 1))
+    cyl(1.0, 0.08, (0, 0.42, -0.75), m, verts=16, bevel=0)
+    bpy.context.object.scale = (1, 1, 0.6)
+    sphere(0.22, (0, 0.85, 0.05), a, 8, 4)
+
+
+def acc_fedora():
+    m, a, g = acc_mats()
+    cyl(2.1, 0.08, (0, 0.5, 0), m, verts=24, bevel=0.03)
+    lathe([(0, 0.5), (0.72, 0.5), (0.68, 1.0), (0.45, 1.15), (0, 1.1)], (0, 0, 0), m, 18)
+    cyl(1.46, 0.14, (0, 0.6, 0), a, verts=18, bevel=0)
+
+
+def acc_tophat():
+    m, a, g = acc_mats()
+    cyl(1.9, 0.1, (0, 0.55, 0), m, verts=24, bevel=0.03)
+    cyl(1.2, 1.3, (0, 1.25, 0), m, verts=20, bevel=0.05)
+    cyl(1.24, 0.25, (0, 0.75, 0), a, verts=20, bevel=0)
+    sphere(0.3, (0.45, 0.78, -0.45), g, 8, 6)
+
+
+def acc_crown():
+    m, a, g = acc_mats()
+    cyl(1.25, 0.35, (0, 0.72, 0), a, verts=20, bevel=0.04)
+    for k in range(8):
+        ang = k * math.pi / 4
+        x, z = math.cos(ang) * 0.58, math.sin(ang) * 0.58
+        cyl(0.26, 0.55, (x, 1.15, z), a, d2=0.02, verts=6, bevel=0)
+        sphere(0.14, (x, 1.45, z), a, 6, 4)
+        if k % 2 == 0:
+            sphere(0.2, (math.cos(ang) * 0.64, 0.72, math.sin(ang) * 0.64), g, 8, 4)
+    sphere(0.36, (0, 0.95, 0), m, 10, 6, (1, 0.6, 1))
+
+
+def acc_horns():
+    m, a, g = acc_mats()
+    for s in (-1, 1):
+        for k in range(5):
+            t = k / 4
+            cyl(0.32 - t * 0.24, 0.32, (s * (0.45 + t * 0.35), 0.55 + t * 0.55, 0.05 - t * 0.12), m if k < 4 else a, verts=8, bevel=0)
+            bpy.context.object.rotation_euler = (0, s * (0.35 + t * 0.5), 0)
+
+
+def acc_halo():
+    m, a, g = acc_mats()
+    torus(1.25, 0.14, (0, 1.2, 0), a)
+
+
+def acc_visor():
+    m, a, g = acc_mats()
+    box((1.32, 0.34, 0.2), (0, 0.08, -0.58), g, 0.08)
+    for s in (-1, 1):
+        box((0.12, 0.3, 1.0), (s * 0.64, 0.08, -0.15), a, 0.04)
+
+
+def acc_shades():
+    m, a, g = acc_mats()
+    for s in (-1, 1):
+        box((0.48, 0.28, 0.08), (s * 0.3, 0.1, -0.62), (mat("Lens", (20, 20, 30))), 0.06)
+    box((0.2, 0.06, 0.06), (0, 0.16, -0.62), a, 0)
+    for s in (-1, 1):
+        box((0.06, 0.06, 0.9), (s * 0.56, 0.16, -0.2), a, 0)
+
+
+def acc_tricorne():
+    m, a, g = acc_mats()
+    sphere(1.25, (0, 0.55, 0), m, 16, 8, (1, 0.6, 1))
+    for k in range(3):
+        ang = k * 2 * math.pi / 3 + math.pi / 2
+        box((1.3, 0.35, 0.18), (math.cos(ang) * 0.62, 0.62, -math.sin(ang) * 0.62), m, 0.06)
+        bpy.context.object.rotation_euler = (0, 0, ang + math.pi / 2)
+    sphere(0.3, (0, 0.75, -0.66), a, 8, 6, (1, 1, 0.3))
+
+
+def acc_kabuto():
+    m, a, g = acc_mats()
+    sphere(1.35, (0, 0.3, 0.05), m, 16, 8, (1, 0.85, 1))
+    for s in (-1, 1):
+        box((0.12, 0.7, 0.9), (s * 0.72, -0.05, 0.15), m, 0.05)
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.55, minor_radius=0.07, major_segments=16, minor_segments=4, location=rb(0, 0.95, -0.45), rotation=(math.pi / 2, 0, 0))
+    finish(bpy.context.object, a)
+
+
+def acc_bubble():
+    m, a, g = acc_mats()
+    sphere(1.85, (0, 0.05, 0), m, 18, 10)
+    sphere(1.25, (0, 0.1, -0.42), g, 16, 8, (1, 0.8, 0.7))
+    torus(1.5, 0.16, (0, -0.68, 0), a)
+
+
+def acc_hood():
+    m, a, g = acc_mats()
+    sphere(1.6, (0, 0.12, 0.12), m, 16, 10, (1, 1.05, 1))
+    box((1.5, 1.4, 0.2), (0, -0.4, 0.62), m, 0.1)
+
+
+def acc_nemes():
+    m, a, g = acc_mats()
+    sphere(1.36, (0, 0.28, 0.05), m, 16, 8, (1, 0.8, 1))
+    for s in (-1, 1):
+        box((0.3, 1.4, 0.7), (s * 0.68, -0.4, -0.05), m, 0.08)
+        for k in range(3):
+            box((0.32, 0.1, 0.72), (s * 0.68, -0.05 - k * 0.35, -0.05), a, 0)
+    sphere(0.25, (0, 0.62, -0.62), a, 8, 6)
+
+
+def acc_wings():  # back item
+    m, a, g = acc_mats()
+    for s in (-1, 1):
+        for k in range(4):
+            ln = 2.6 - k * 0.45
+            box((ln, 0.42, 0.12), (s * (0.6 + ln / 2), 0.9 - k * 0.42, 0.75), m if k else a, 0.12)
+            bpy.context.object.rotation_euler = (0, -s * (0.35 + k * 0.08), 0)  # about Roblox Z: outer tips up
+
+
+def acc_cape():  # back item
+    m, a, g = acc_mats()
+    box((2.0, 3.4, 0.12), (0, -0.85, 0.62), m, 0.05)
+    bpy.context.object.rotation_euler = (math.radians(8), 0, 0)
+    box((2.2, 0.3, 0.6), (0, 0.85, 0.35), a, 0.1)
+    sphere(0.3, (0, 0.85, -0.05), g, 8, 6)
+
+
+CORE = [("PoolTable", pool_table), ("Cue", cue), ("Ball", ball), ("Dumbbell", dumbbell), ("Fence", fence), ("TableSegment", table_segment)]
+PROPS = [("Mountain", lambda: mountain(3)), ("Peak", lambda: mountain(11)), ("Pine", pine), ("Tree", tree), ("Palm", palm),
+         ("Cactus", cactus), ("Rock", rock), ("Dune", dune), ("Crystal", crystal), ("Volcano", volcano), ("Tower", tower),
+         ("Planet", planet), ("Torii", torii), ("Pyramid", pyramid), ("Column", column), ("Mushroom", mushroom),
+         ("Cloud", cloud), ("Star", star)]
+ACCESSORIES = [("AccCap", acc_cap), ("AccFedora", acc_fedora), ("AccTopHat", acc_tophat), ("AccCrown", acc_crown),
+               ("AccHorns", acc_horns), ("AccHalo", acc_halo), ("AccVisor", acc_visor), ("AccShades", acc_shades),
+               ("AccTricorne", acc_tricorne), ("AccKabuto", acc_kabuto), ("AccBubble", acc_bubble), ("AccHood", acc_hood),
+               ("AccNemes", acc_nemes), ("AccWings", acc_wings), ("AccCape", acc_cape)]
+MODELS = CORE + PROPS + ACCESSORIES
 
 
 def join_triangulate(name):
@@ -205,6 +601,7 @@ def join_triangulate(name):
         bpy.ops.object.join()
     o = bpy.context.object
     o.name = name
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     es = o.modifiers.new("Split", "EDGE_SPLIT")
     es.split_angle = math.radians(1 if name in ("Mountain", "Peak") else 35)
     tri = o.modifiers.new("Tri", "TRIANGULATE")
@@ -228,24 +625,49 @@ def luau_mesh(o):
     f = lambda x: f"{x:.3f}".rstrip("0").rstrip(".") if abs(x) >= 0.0005 else "0"
     flat = ",".join(f(v[i] - ctr[i]) for v in verts for i in range(3))
     palette = ", ".join(f'{{ "{n}", Color3.fromRGB({m["rgb"][0]}, {m["rgb"][1]}, {m["rgb"][2]}) }}' for n, m in zip(pal, mats))
-    return (f'M.{o.name} = {{\n\tcenter = Vector3.new({f(ctr[0])}, {f(ctr[1])}, {f(ctr[2])}),\n'
+    return (f'return {{\n\tcenter = Vector3.new({f(ctr[0])}, {f(ctr[1])}, {f(ctr[2])}),\n'
             f'\tsize = Vector3.new({f(hi[0] - lo[0])}, {f(hi[1] - lo[1])}, {f(hi[2] - lo[2])}),\n'
             f'\tpalette = {{ {palette} }},\n\tverts = {{ {flat} }},\n'
             f'\ttris = {{ {",".join(map(str, tris))} }},\n\tcolors = {{ {",".join(map(str, cols))} }},\n}}\n'), len(me.polygons)
 
 
-def render_preview(objs):
+def render_group(names, filename, cols, cell=12, dummy=False):
+    """Preview sheet: every model normalised to one grid cell (accessories: real size on a dummy R15 body)."""
+    reset()
     sc = bpy.context.scene
+    rows = (len(names) + cols - 1) // cols
+    skin, shirt = mat("Skin", (255, 210, 170)), mat("Shirt", (90, 140, 230))
+    for k, name in enumerate(names):
+        bpy.ops.import_scene.fbx(filepath=os.path.join(OUT, name + ".fbx"))
+        o = bpy.context.selected_objects[0]
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        cx, cz = (k % cols - (cols - 1) / 2) * cell, -(k // cols - (rows - 1) / 2) * cell * (2.6 if dummy else 1.3)
+        if dummy:  # head centre at y=4.5, UpperTorso centre at y=2.9 (Roblox R15 proportions)
+            back = name in ("AccWings", "AccCape")
+            o.location = (cx, 0, 2.9 if back else 4.5)
+            o.location.z += cz
+            box((1.2, 1.2, 1.2), (cx, 4.5 + cz, 0), skin, 0.25); box((2, 1.6, 1), (cx, 2.9 + cz, 0), shirt, 0.1)
+            box((2, 2, 1), (cx, 1.1 + cz, 0), shirt, 0.1)
+            continue
+        dims = max(o.dimensions) or 1
+        f = cell * 0.8 / dims
+        o.scale = (f, f, f)
+        lo = min((o.matrix_world @ v.co).z for v in o.data.vertices)
+        o.location = (cx, cz, -lo * f)
     w = bpy.data.worlds.new("w"); sc.world = w; w.use_nodes = True
-    w.node_tree.nodes["Background"].inputs[0].default_value = (0.55, 0.75, 1, 1)
+    w.node_tree.nodes["Background"].inputs[0].default_value = (0.62, 0.8, 1, 1)
     sun = bpy.data.objects.new("sun", bpy.data.lights.new("sun", "SUN")); sun.data.energy = 4
-    sun.rotation_euler = (math.radians(50), 0, math.radians(35)); sc.collection.objects.link(sun)
+    sun.rotation_euler = (math.radians(45), 0, math.radians(30)); sc.collection.objects.link(sun)
     cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam")); sc.collection.objects.link(cam); sc.camera = cam
-    cam.location = (0, -40, 26); cam.rotation_euler = (math.radians(66), 0, 0)
-    sc.render.engine = "CYCLES"; sc.cycles.samples = 32
-    sc.render.resolution_x, sc.render.resolution_y = 1280, 720
+    cam.data.type, cam.data.ortho_scale = "ORTHO", max(cols, rows * 1.9) * cell * 1.05
+    cam.location = (0, -200, 120); cam.rotation_euler = (math.radians(60), 0, 0)
+    if dummy:  # front view (Roblox front = -Z = Blender +Y), slightly from the side
+        cam.location = (0, 200, 4 + 200 * math.tan(math.radians(10))); cam.rotation_euler = (math.radians(80), 0, math.radians(180))
+        cam.data.ortho_scale = max(cols * cell, rows * cell * 2.6 * 16 / 9) * 1.05
+    sc.render.engine = "CYCLES"; sc.cycles.samples = 24
+    sc.render.resolution_x, sc.render.resolution_y = 1600, 900
     sc.view_settings.view_transform = "Standard"
-    sc.render.filepath = os.path.join(OUT, "models.png")
+    sc.render.filepath = os.path.join(OUT, filename)
     bpy.ops.render.render(write_still=True)
 
 
@@ -259,23 +681,15 @@ def main():
         text, n = luau_mesh(o)
         chunks.append(text)
         print(f"{name}: {n} triangles")
-    with open(LUAU, "w", encoding="utf-8") as fh:
-        fh.write("-- AUTO-GENERATED by blender/build_models.py — do not edit by hand.\n"
-                 "-- Roblox axes, studs; vertices centred on bbox, `center` = offset from the model origin.\nlocal M = {}\n\n"
-                 + "\n".join(chunks) + "\nreturn M\n")
-    reset()  # preview: re-import the exported models side by side
-    objs = []
-    for i, (name, _) in enumerate(MODELS):
-        bpy.ops.import_scene.fbx(filepath=os.path.join(OUT, name + ".fbx"))
-        o = bpy.context.selected_objects[0]
-        o.location = {"PoolTable": (0, 0, 0), "Cue": (-11, -2, 4.6), "Ball": (10, -7, 1.5), "Dumbbell": (12, 3, 0.7), "Fence": (0, 13, 0),
-                      "Mountain": (-26, 40, 0), "Peak": (26, 40, 0)}[name]
-        if name == "Ball":
-            o.scale = (3, 3, 3)
-        if name in ("Mountain", "Peak"):
-            o.scale = (30, 30, 34)
-        objs.append(o)
-    render_preview(objs)
-
+    import shutil
+    shutil.rmtree(LUAU_DIR, ignore_errors=True)
+    os.makedirs(LUAU_DIR)
+    for (name, _), text in zip(MODELS, chunks):
+        with open(os.path.join(LUAU_DIR, name + ".luau"), "w", encoding="utf-8") as fh:
+            fh.write("-- AUTO-GENERATED by blender/build_models.py — do not edit by hand.\n"
+                     "-- Roblox axes, studs; vertices centred on bbox, `center` = offset from the model origin.\n" + text)
+    render_group([n for n, _ in CORE], "models.png", 3)
+    render_group([n for n, _ in PROPS], "props.png", 6)
+    render_group([n for n, _ in ACCESSORIES], "accessories.png", 5, 4.5, dummy=True)
 
 main()

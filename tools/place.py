@@ -27,7 +27,7 @@ def look(pos, at):
     r = np.cross(f, [0, 1, 0]); r /= np.linalg.norm(r); u = np.cross(r, f)
     m = np.eye(4); m[:3, 0], m[:3, 1], m[:3, 2], m[:3, 3] = r, u, -f, pos; return m
 
-MAT = dict(Plastic=256, Smooth=272, Neon=288, Wood=512, Planks=528, Marble=784, Slate=800, Concrete=816, Brick=848,
+MAT = dict(Plastic=256, Smooth=272, Wood=512, Planks=528, Marble=784, Slate=800, Concrete=816, Brick=848,
            Pebble=864, Cobble=880, Rock=896, Sandstone=912, Metal=1088, Grass=1280, Sand=1296, Fabric=1312, Snow=1328,
            Ice=1536, Glass=1568, ForceField=1584)
 SHAPE = dict(Ball=0, Block=1, Cyl=2)
@@ -39,7 +39,7 @@ class Inst:
 
 def part(parent, size, m, color, mat="Smooth", shape="Block", name="Part", cls="Part", **kw):
     return Inst(cls, name, parent, size=size, cf=m, color=color, mat=mat, shape=shape, **kw)
-def ycyl(parent, d, h, m, color, mat="Smooth", **kw):  # цилиндр вдоль Y
+def ycyl(parent, d, h, m, color, mat="Smooth", **kw):  # cylinder along Y
     return part(parent, (h, d, d), m @ rz(math.pi / 2), color, mat, "Cyl", **kw)
 def ball(parent, d, m, color, mat="Smooth", **kw):
     return part(parent, (d, d, d), m, color, mat, "Ball", **kw)
@@ -90,7 +90,7 @@ def pool_table(par, o):
 
 def table_lamp(par, o):
     lamp = part(par, (4, 0.6, 10), o @ cf(0, 11, 0), (20, 90, 40), name="Lamp")
-    part(par, (3.4, 0.2, 9.4), o @ cf(0, 10.65, 0), (255, 245, 200), "Neon")
+    part(par, (3.4, 0.2, 9.4), o @ cf(0, 10.65, 0), (255, 245, 200), "Glass")
     for s in (-1, 1): part(par, (0.15, 4.4, 0.15), o @ cf(0, 13.4, s * 4), (40, 40, 40), "Metal")
     light(lamp, (255, 240, 200), 18, 2)
 
@@ -144,177 +144,175 @@ def tree(par, pos, h, kind):
 
 # ---------- Map: start area with 4 bases + a very long, narrow billiard corridor, all walled by mountains ----------
 # Each zone of the long table is its own billiard table, and every next one is fancier (see THEMES).
-THEMES = [  # frame, frame material, rail, rail material, felt, trim (neon/metal) or None, trim material, decoration
-    ((150, 95, 50), "Wood", (120, 70, 35), "Wood", (30, 140, 60), None, "Metal", "lamps"),
-    ((95, 55, 30), "Wood", (80, 45, 25), "Wood", (25, 130, 70), (200, 160, 80), "Metal", "plants"),
-    ((70, 45, 30), "Wood", (60, 35, 20), "Wood", (40, 90, 200), (210, 215, 225), "Metal", "balls"),
-    ((110, 30, 40), "Wood", (90, 20, 30), "Wood", (120, 50, 180), (255, 200, 60), "Metal", "lamps"),
-    ((255, 190, 50), "Metal", (240, 170, 40), "Metal", (180, 30, 40), (255, 230, 120), "Neon", "pillars"),
-    ((40, 20, 20), "Slate", (120, 20, 20), "Smooth", (150, 20, 30), (255, 80, 30), "Neon", "fire"),
-    ((220, 190, 130), "Sandstone", (200, 170, 110), "Sandstone", (40, 170, 170), (255, 210, 80), "Metal", "obelisks"),
-    ((170, 220, 255), "Ice", (200, 235, 255), "Ice", (120, 190, 240), (230, 250, 255), "Neon", "crystals"),
-    ((50, 40, 40), "Slate", (70, 50, 45), "Slate", (200, 70, 20), (255, 120, 20), "Neon", "fire"),
-    ((60, 70, 60), "Metal", (40, 50, 40), "Metal", (90, 200, 40), (150, 255, 40), "Neon", "barrels"),
-    ((20, 20, 30), "Glass", (30, 30, 45), "Smooth", (20, 40, 60), (0, 255, 220), "Neon", "pylons"),
-    ((110, 75, 40), "Planks", (90, 60, 30), "Planks", (30, 110, 90), (220, 180, 90), "Metal", "barrels"),
-    ((25, 20, 20), "Smooth", (200, 30, 40), "Smooth", (230, 220, 200), (255, 200, 60), "Metal", "torii"),
-    ((220, 225, 255), "Glass", (200, 210, 255), "Glass", (110, 80, 170), (220, 200, 255), "Neon", "spirits"),
-    ((250, 250, 245), "Marble", (255, 255, 250), "Marble", (240, 240, 230), (255, 210, 80), "Neon", "pillars"),
-    ((30, 10, 15), "Slate", (90, 0, 20), "Smooth", (110, 0, 25), (255, 30, 60), "Neon", "spikes"),
-    ((210, 245, 255), "Glass", (230, 250, 255), "Marble", (90, 210, 240), (120, 255, 255), "Neon", "clouds"),
-    ((255, 240, 170), "Metal", (255, 230, 120), "Metal", (40, 30, 90), (255, 255, 190), "Neon", "stars"),
-    ((60, 30, 120), "Glass", (80, 40, 160), "Glass", (30, 15, 70), (170, 110, 255), "Neon", "planets"),
-    ((25, 15, 60), "Glass", (40, 20, 90), "Smooth", (15, 10, 40), (90, 140, 255), "Neon", "planets"),
-    ((255, 255, 255), "Smooth", (255, 80, 80), "Smooth", (255, 120, 255), (255, 255, 255), "Neon", "rainbow"),
-    ((20, 40, 60), "Glass", (40, 200, 255), "ForceField", (10, 30, 50), (40, 200, 255), "Neon", "crystals"),
-    ((15, 15, 15), "Smooth", (25, 25, 25), "Smooth", (35, 35, 35), (255, 255, 255), "Neon", "pylons"),
-    ((20, 0, 30), "Smooth", (255, 0, 255), "Neon", (0, 200, 220), (0, 255, 255), "Neon", "glitch"),
-    ((255, 255, 255), "Glass", (255, 200, 60), "Metal", (255, 0, 140), (255, 0, 140), "Neon", "crowns"),
-]
+# ---------- The long table: 25 Blender table segments, each with its own scenery on both sides ----------
 RAINBOW = [(255, 60, 60), (255, 150, 30), (255, 230, 40), (80, 220, 80), (50, 160, 255), (90, 80, 230), (190, 80, 255)]
 RAIL_W, RAIL_H = 3, 4.2
-WALK = TW / 2 + RAIL_W + 12  # walkway decoration line
 
 
-def fx(par, pos, color, kind="Sparkle"):  # Map.luau turns these into particle emitters
-    p = part(par, (1, 1, 1), cf(*pos), WHITE, Transparency=1, CanCollide=False, name="Fx")
-    Inst("Color3Value", kind, p, Value=color)
-    return p
+def shade(c, f):
+    return tuple(max(0, min(255, int(v * f))) for v in c)
 
 
-def mountain(par, x, z, d, h, rot, kind):
-    m = Inst("Model", "Mountain", par)
-    o = cf(x, 0, z) @ ry(rot)
-    tag_mesh(part(m, (0.2, 0.2, 0.2), o, WHITE, Transparency=1, CanCollide=False, name="MeshPivot"), kind, vscale=(d, h, d))
-    for k, (col, mt) in enumerate((((96, 176, 82), "Grass"), ((128, 118, 112), "Rock"), ((110, 102, 98), "Rock"), ((250, 252, 255), "Snow"))):
-        w = d * (0.92 - k * 0.24)
-        part(m, (w, h / 4 + 1, w), o @ cf(0, h / 8 + k * h / 4, 0) @ ry(math.pi / 4 * (k % 2)), col, mt)
+SNOWY = dict(Grass=(250, 252, 255), Rock=(185, 198, 214), RockDark=(150, 165, 186), Snow=(255, 255, 255))
+# per zone: table (wood, rail, felt, trim), ground (colour, material), near props, far props, optional sea
+# prop = (mesh, overrides, scale or (min, max) or Vector3 tuple, height above ground, count)
+THEMES = [
+    dict(t=((150, 95, 50), (120, 70, 35), (30, 140, 60), (205, 205, 210)), g=((110, 200, 90), "Grass"),
+         near=[("Tree", {}, (1.0, 1.3), 0, 3), ("Rock", {}, (0.8, 1.4), 0, 1)], far=[("Tree", {}, (2.2, 3), 0, 3)]),
+    dict(t=((95, 55, 30), (80, 45, 25), (25, 130, 70), (230, 180, 70)), g=((100, 190, 85), "Grass"),
+         near=[("Pine", {"Snow": (40, 120, 70)}, (1.0, 1.4), 0, 4)], far=[("Pine", {"Snow": (40, 120, 70)}, (2.4, 3.2), 0, 4), ("Tree", {}, (2.4, 3), 0, 1)]),
+    dict(t=((70, 45, 30), (60, 35, 20), (40, 90, 200), (210, 215, 225)), g=((120, 200, 140), "Grass"),
+         near=[("Tree", {"Leaves": (60, 170, 120)}, (1.0, 1.3), 0, 3), ("Rock", {}, (1, 1.6), 0, 1)], far=[("Rock", {"Rock": (150, 150, 160)}, (5, 8), 0, 2), ("Pine", {"Snow": (40, 120, 70), "Leaves": (50, 140, 110)}, (2.6, 3.2), 0, 3)]),
+    dict(t=((110, 30, 40), (90, 20, 30), (120, 50, 180), (240, 195, 80)), g=((90, 170, 80), "Grass"),
+         near=[("Column", {}, (0.7, 0.8), 0, 2), ("Tree", {}, (1.0, 1.2), 0, 2)], far=[("Column", {}, (2.2, 2.8), 0, 2), ("Cloud", {}, (1.4, 2), 45, 1)]),
+    dict(t=((215, 165, 60), (240, 190, 70), (180, 30, 40), (255, 240, 190)), g=((250, 235, 185), "Marble"),
+         near=[("Column", {"Marble": (255, 215, 110), "Gold": (255, 250, 220)}, (0.8, 0.9), 0, 3)],
+         far=[("Pyramid", {"Sand": (255, 205, 80)}, (1.6, 2.2), 0, 1), ("Star", {}, (2.5, 3.5), 40, 2)]),
+    dict(t=((40, 20, 20), (120, 20, 20), (150, 20, 30), (255, 130, 50)), g=((60, 40, 40), "Slate"),
+         near=[("Rock", {"Rock": (70, 50, 50)}, (1.2, 2), 0, 2), ("Crystal", {"Crystal": (220, 40, 40), "CrystalLight": (255, 140, 90)}, (0.9, 1.3), 0, 2)],
+         far=[("Volcano", {}, (1.4, 1.9), 0, 2)], fx=("Fire", (255, 110, 30))),
+    dict(t=((200, 160, 100), (180, 140, 80), (40, 170, 170), (240, 195, 80)), g=((240, 210, 140), "Sand"),
+         near=[("Cactus", {}, (1.0, 1.4), 0, 3), ("Palm", {}, (1.0, 1.2), 0, 1)], far=[("Dune", {}, (1.6, 2.4), 0, 2), ("Pyramid", {}, (2.0, 2.6), 0, 1)]),
+    dict(t=((170, 215, 240), (200, 235, 255), (120, 190, 240), (240, 250, 255)), g=((245, 250, 255), "Snow"),
+         near=[("Pine", {"Leaves": (40, 100, 80)}, (1.0, 1.5), 0, 3), ("Crystal", {}, (0.8, 1.2), 0, 1)],
+         far=[("Mountain", SNOWY, (150, 150, 150), 0, 1), ("Peak", SNOWY, (130, 170, 130), 0, 1), ("Pine", {"Leaves": (40, 100, 80)}, (2.5, 3), 0, 2)], fx=("Snow", (255, 255, 255))),
+    dict(t=((50, 40, 40), (70, 50, 45), (200, 70, 20), (255, 150, 50)), g=((55, 45, 45), "Slate"),
+         near=[("Rock", {"Rock": (60, 50, 50)}, (1.2, 2.2), 0, 3)], far=[("Volcano", {}, (2.0, 2.6), 0, 2)], fx=("Fire", (255, 120, 30))),
+    dict(t=((60, 70, 60), (40, 50, 40), (90, 200, 40), (160, 230, 70)), g=((70, 100, 50), "Grass"),
+         near=[("Mushroom", {"Cap": (140, 230, 40), "Spot": (170, 70, 210)}, (1.0, 1.6), 0, 3)],
+         far=[("Tree", {"Leaves": (90, 70, 110), "Trunk": (60, 50, 40)}, (2.4, 3), 0, 3), ("Mushroom", {"Cap": (170, 70, 210), "Spot": (140, 230, 40)}, (3, 4), 0, 1)]),
+    dict(t=((30, 30, 40), (45, 45, 60), (20, 40, 60), (0, 220, 210)), g=((45, 45, 55), "Concrete"),
+         near=[("Crystal", {"Crystal": (0, 200, 200), "CrystalLight": (180, 255, 250)}, (0.7, 1.0), 0, 2)],
+         far=[("Tower", {}, (0.9, 1.4), 0, 3), ("Tower", {"Window": (255, 90, 220)}, (0.8, 1.2), 0, 1)]),
+    dict(t=((110, 75, 40), (90, 60, 30), (30, 110, 90), (220, 180, 90)), g=((245, 225, 170), "Sand"), sea=True,
+         near=[("Palm", {}, (1.0, 1.3), 0, 3), ("Rock", {}, (1, 1.5), 0, 1)], far=[("Palm", {}, (1.6, 2), 0, 2), ("Cloud", {}, (1.5, 2), 45, 1)]),
+    dict(t=((25, 20, 20), (200, 30, 40), (230, 220, 200), (240, 195, 80)), g=((120, 190, 100), "Grass"),
+         near=[("Tree", {"Leaves": (255, 175, 205)}, (1.0, 1.3), 0, 3)], far=[("Torii", {}, (2.0, 2.4), 0, 1), ("Tree", {"Leaves": (255, 175, 205)}, (2.4, 3), 0, 2)]),
+    dict(t=((40, 30, 50), (60, 40, 70), (110, 80, 170), (200, 190, 230)), g=((50, 40, 60), "Slate"),
+         near=[("Tree", {"Leaves": (70, 50, 80), "Trunk": (40, 30, 30)}, (1.0, 1.4), 0, 2), ("Mushroom", {"Cap": (120, 60, 180)}, (0.8, 1.2), 0, 2)],
+         far=[("Tree", {"Leaves": (70, 50, 80), "Trunk": (40, 30, 30)}, (3, 4), 0, 3), ("Mushroom", {"Cap": (120, 60, 180)}, (3, 4), 0, 1)], fx=("Spirit", (210, 190, 255))),
+    dict(t=((250, 250, 245), (255, 255, 250), (240, 240, 230), (240, 195, 80)), g=((255, 255, 255), "Smooth"),
+         near=[("Cloud", {}, (0.6, 0.9), 2, 2), ("Column", {}, (0.7, 0.8), 0, 2)], far=[("Cloud", {}, (2.5, 3.5), 30, 2), ("Column", {}, (2.4, 3), 0, 1)]),
+    dict(t=((30, 10, 15), (90, 0, 20), (110, 0, 25), (255, 80, 70)), g=((60, 15, 15), "Slate"),
+         near=[("Crystal", {"Crystal": (200, 20, 40), "CrystalLight": (255, 120, 100)}, (1.0, 1.5), 0, 3)],
+         far=[("Volcano", {"Rock": (45, 12, 12), "Lava": (255, 60, 20)}, (2.0, 2.6), 0, 2)], fx=("Fire", (255, 50, 30))),
+    dict(t=((210, 245, 255), (230, 250, 255), (90, 210, 240), (255, 255, 255)), g=((175, 225, 255), "Smooth"),
+         near=[("Cloud", {}, (0.7, 1.0), 2, 2)], far=[("Cloud", {}, (2.5, 3.5), 25, 2), ("Tree", {}, (2.2, 2.6), 28, 2)]),
+    dict(t=((255, 240, 170), (255, 230, 120), (40, 30, 90), (255, 255, 210)), g=((30, 30, 70), "Smooth"),
+         near=[("Star", {}, (1.0, 1.5), 6, 3)], far=[("Star", {}, (4, 6), 30, 2), ("Crystal", {"Crystal": (255, 220, 90), "CrystalLight": (255, 250, 200)}, (2, 2.6), 0, 1)], fx=("Sparkle", (255, 240, 150))),
+    dict(t=((60, 30, 120), (80, 40, 160), (30, 15, 70), (170, 120, 255)), g=((25, 15, 50), "Smooth"),
+         near=[("Crystal", {"Crystal": (150, 90, 255), "CrystalLight": (220, 200, 255)}, (0.9, 1.3), 0, 2), ("Star", {}, (0.8, 1.2), 8, 2)],
+         far=[("Planet", {}, (2.4, 3.2), 50, 1), ("Planet", {"Body": (255, 160, 90), "Ring": (255, 230, 200)}, (1.4, 2), 35, 1)], fx=("Sparkle", (190, 150, 255))),
+    dict(t=((25, 15, 60), (40, 20, 90), (15, 10, 40), (100, 150, 255)), g=((12, 12, 35), "Smooth"),
+         near=[("Star", {"Star": (190, 210, 255)}, (0.8, 1.2), 7, 3)],
+         far=[("Planet", {"Body": (80, 120, 255), "Ring": (200, 220, 255)}, (3, 3.8), 55, 1), ("Planet", {"Body": (90, 230, 200), "Ring": (230, 255, 250)}, (1.6, 2.2), 30, 1)], fx=("Sparkle", (150, 180, 255))),
+    dict(t=((255, 255, 255), (255, 120, 170), (255, 120, 255), (255, 230, 90)), g=((255, 230, 245), "Smooth"),
+         near=[("Mushroom", {"Cap": (120, 200, 255), "Spot": (255, 240, 120)}, (1.0, 1.4), 0, 2), ("Tree", {"Leaves": (255, 160, 220)}, (1.0, 1.3), 0, 2)],
+         far=[("Cloud", {"Cloud": (255, 210, 240)}, (2.5, 3.5), 30, 2), ("Tree", {"Leaves": (160, 220, 255)}, (2.4, 3), 0, 2)]),
+    dict(t=((20, 40, 60), (40, 120, 160), (10, 30, 50), (60, 210, 255)), g=((22, 40, 52), "Concrete"),
+         near=[("Crystal", {"Crystal": (40, 200, 255), "CrystalLight": (200, 250, 255)}, (1.0, 1.5), 0, 3)],
+         far=[("Tower", {"Body": (40, 80, 100), "Window": (140, 240, 255)}, (1.0, 1.4), 0, 3)], fx=("Sparkle", (120, 230, 255))),
+    dict(t=((15, 15, 15), (25, 25, 25), (35, 35, 35), (200, 200, 210)), g=((22, 22, 26), "Slate"),
+         near=[("Rock", {"Rock": (35, 35, 40)}, (1.2, 2), 0, 3)],
+         far=[("Rock", {"Rock": (40, 40, 46)}, (6, 9), 0, 2), ("Crystal", {"Crystal": (30, 30, 36), "CrystalLight": (90, 90, 100)}, (3, 4), 0, 2)]),
+    dict(t=((20, 0, 30), (255, 0, 255), (0, 200, 220), (0, 255, 255)), g=((40, 0, 52), "Smooth"),
+         near=[("Crystal", {"Crystal": (255, 0, 255), "CrystalLight": (0, 255, 255)}, (1.0, 1.4), 0, 3)],
+         far=[("Tower", {"Body": (60, 0, 80), "Window": (255, 0, 255)}, (0.9, 1.3), 0, 2), ("Tower", {"Body": (0, 60, 70), "Window": (0, 255, 255)}, (0.9, 1.2), 0, 1)], fx=("Sparkle", (255, 80, 255))),
+    dict(t=((255, 255, 255), (255, 200, 60), (255, 0, 140), (255, 215, 90)), g=((255, 250, 240), "Marble"),
+         near=[("Column", {"Marble": (255, 255, 255), "Gold": (255, 200, 60)}, (0.8, 0.9), 0, 2), ("Crystal", {"Crystal": (255, 80, 170), "CrystalLight": (255, 220, 240)}, (1.0, 1.3), 0, 2)],
+         far=[("Planet", {"Body": (255, 90, 180), "Ring": (255, 215, 90)}, (2.8, 3.4), 50, 1), ("Star", {}, (5, 7), 35, 1), ("Column", {"Gold": (255, 200, 60)}, (2.6, 3), 0, 1)], fx=("Sparkle", (255, 120, 200))),
+]
+assert len(THEMES) == N
+FALLBACK = dict(  # crude part shapes, only visible if EditableMesh is unavailable
+    Tree=("Ball", (8, 8, 8), 9), Pine=("Block", (6, 12, 6), 6), Palm=("Ball", (8, 3, 8), 14), Cactus=("Block", (2, 9, 2), 4.5),
+    Rock=("Ball", (5, 4, 5), 1.5), Dune=("Ball", (60, 18, 40), 0), Crystal=("Block", (2.4, 10, 2.4), 5), Volcano=("Block", (60, 46, 60), 23),
+    Tower=("Block", (16, 60, 16), 30), Planet=("Ball", (20, 20, 20), 0), Torii=("Block", (15, 14, 1.8), 7), Pyramid=("Block", (40, 24, 40), 12),
+    Column=("Block", (3, 16, 3), 8), Mushroom=("Ball", (8, 4, 8), 6), Cloud=("Ball", (20, 10, 14), 0), Star=("Ball", (5, 5, 1.5), 0),
+    Mountain=("Block", (0.7, 1, 0.7), 0.5), Peak=("Block", (0.7, 1, 0.7), 0.5))
 
 
-def ridge(par, a, b, out, spacing=42):
-    ax, az = a; bx, bz = b
-    n = max(1, int(math.hypot(bx - ax, bz - az) // spacing))
-    for row in (0, 1):
-        for k in range(n + 1):
-            t = k / n
-            d = rnd.uniform(110, 150) * (1.3 if row else 1)
-            h = rnd.uniform(100, 150) * (1.4 if row else 1)
-            off = d * (0.33 + row * 0.6)
-            x = ax + (bx - ax) * t + out[0] * off + rnd.uniform(-6, 6)
-            z = az + (bz - az) * t + out[1] * off + rnd.uniform(-6, 6)
-            mountain(par, x, z, d, h, rnd.uniform(0, 6.28), "Peak" if (k + row) % 2 else "Mountain")
+def prop(par, name, x, y, z, scale, rot, overrides, color):
+    m = Inst("Model", name, par)
+    o = cf(x, y, z) @ ry(rot)
+    vec = isinstance(scale, tuple)
+    piv = part(m, (0.2, 0.2, 0.2), o, WHITE, Transparency=1, CanCollide=False, name="MeshPivot")
+    tag_mesh(piv, name, scale=None if vec else scale, vscale=scale if vec else None, **overrides)
+    shape, size, cy = FALLBACK[name]
+    k = scale if vec else (scale, scale, scale)
+    part(m, tuple(a * b for a, b in zip(size, k)), o @ cf(0, cy * k[1], 0), color, shape=shape, CanCollide=False)
 
 
-def deco(par, kind, x, z, trim, zi):
-    s = 1 if x > 0 else -1
-    t = trim or (255, 220, 150)
-    if kind == "lamps":
-        ycyl(par, 1, 14, cf(x, 7, z), (60, 60, 70), "Metal")
-        light(ball(par, 2.6, cf(x, 15, z), (255, 240, 180), "Neon"), (255, 230, 170), 30)
-    elif kind == "plants":
-        part(par, (5, 2, 5), cf(x, 1, z), (150, 90, 50), "Wood")
-        for k in range(3): ball(par, 3.5, cf(x + rnd.uniform(-1, 1), 3 + k * 1.2, z + rnd.uniform(-1, 1)), (60, 170, 70), "Grass")
-    elif kind == "balls":
-        ycyl(par, 5, 3, cf(x, 1.5, z), (240, 240, 245), "Marble")
-        mesh_ball(par, 6, cf(x, 6, z) @ ry(rnd.uniform(0, 6)), BALLS[zi % 7])
-    elif kind == "pillars":
-        ycyl(par, 3, 16, cf(x, 8, z), (250, 248, 240), "Marble")
-        ycyl(par, 4, 1, cf(x, 0.5, z), t, "Metal"); ycyl(par, 4, 1, cf(x, 16.5, z), t, "Metal")
-        light(ball(par, 3, cf(x, 18.5, z), t, "Neon"), t, 28, 2)
-    elif kind == "fire":
-        ycyl(par, 4, 5, cf(x, 2.5, z), (40, 35, 35), "Slate")
-        ball(par, 3, cf(x, 5.5, z), t, "Neon")
-        fx(par, (x, 6, z), t, "Fire")
-    elif kind == "obelisks":
-        part(par, (3, 18, 3), cf(x, 9, z), (220, 190, 130), "Sandstone")
-        part(par, (2, 2, 2), cf(x, 18.6, z) @ ry(math.pi / 4) @ rx(math.pi / 4), t, "Metal")
-    elif kind == "crystals":
-        for k in range(3):
-            part(par, (2.2, rnd.uniform(7, 13), 2.2), cf(x + rnd.uniform(-2, 2), 4, z + rnd.uniform(-2, 2)) @ ang(rnd.uniform(-0.4, 0.4), rnd.uniform(0, 3), rnd.uniform(-0.4, 0.4)), t, "Glass", Transparency=0.2)
-        fx(par, (x, 6, z), t)
-    elif kind == "barrels":
-        for k in range(2):
-            ycyl(par, 3.6, 4.5, cf(x + (k - 0.5) * 4, 2.25, z), (130, 85, 45) if zi != 9 else (60, 160, 50), "Wood")
-            ycyl(par, 3.8, 0.4, cf(x + (k - 0.5) * 4, 3.6, z), t, "Metal")
-    elif kind == "pylons":
-        part(par, (2, 20, 2), cf(x, 10, z), (20, 20, 25), "Smooth")
-        for y in (5, 10, 15): part(par, (2.3, 0.5, 2.3), cf(x, y, z), t, "Neon")
-    elif kind == "torii":
-        for o in (-4, 4): ycyl(par, 1.6, 14, cf(x + o, 7, z), (200, 30, 40))
-        part(par, (12, 1.2, 1.6), cf(x, 14.6, z), (25, 20, 20)); part(par, (10, 0.8, 1.2), cf(x, 12, z), (200, 30, 40))
-    elif kind == "spirits":
-        ball(par, 3, cf(x, 9 + rnd.uniform(-2, 2), z), (230, 220, 255), "Neon", Transparency=0.3, CanCollide=False)
-        fx(par, (x, 9, z), t, "Spirit")
-    elif kind == "spikes":
-        for k in range(4): part(par, (1.5, 8, 1.5), cf(x, 3, z) @ ang(rnd.uniform(-0.5, 0.5), 0, rnd.uniform(-0.5, 0.5)), (60, 0, 15), "Slate")
-        fx(par, (x, 4, z), t, "Fire")
-    elif kind == "clouds":
-        for k in range(4): ball(par, rnd.uniform(4, 7), cf(x + rnd.uniform(-3, 3), 14 + rnd.uniform(-1, 1), z + rnd.uniform(-3, 3)), WHITE, CanCollide=False)
-    elif kind == "stars":
-        st = cf(x, 13, z) @ rx(math.pi / 2)
-        for a in range(3): part(par, (1, 7, 1.4), st @ ry(0) @ rz(a * math.pi / 3), t, "Neon", CanCollide=False)
-        ycyl(par, 0.6, 9, cf(x, 4.5, z), (200, 200, 210), "Metal"); fx(par, (x, 13, z), t)
-    elif kind == "planets":
-        p = cf(x, 14, z) @ ang(0.4, rnd.uniform(0, 3), 0.3)
-        ball(par, 7, p, t, "Glass", CanCollide=False)
-        part(par, (0.3, 12, 12), p @ rz(math.pi / 2), t, "ForceField", "Cyl", CanCollide=False)
-    elif kind == "rainbow":
-        for k, c in enumerate(RAINBOW): part(par, (3, 2.2, 3), cf(x, 1.1 + k * 2.2, z), c, "Neon")
-    elif kind == "glitch":
-        for k in range(5): part(par, (rnd.uniform(1, 3),) * 3, cf(x + rnd.uniform(-3, 3), rnd.uniform(2, 12), z + rnd.uniform(-3, 3)), rnd.choice([(255, 0, 255), (0, 255, 255), (255, 255, 255)]), "Neon", CanCollide=False)
-    elif kind == "crowns":
-        ycyl(par, 6, 4, cf(x, 2, z), (255, 255, 255), "Marble")
-        ycyl(par, 5, 2, cf(x, 6, z), (255, 200, 60), "Metal")
-        for a in range(6): ball(par, 1.2, cf(x + math.cos(a) * 2.3, 7.4, z + math.sin(a) * 2.3), (255, 0, 140), "Neon")
-        light(part(par, (0.5, 0.5, 0.5), cf(x, 9, z), WHITE, Transparency=1, CanCollide=False), (255, 0, 140), 30, 3)
-        fx(par, (x, 8, z), (255, 0, 140))
+def scenery(par, i, z0):
+    th = THEMES[i]
+    gcol, gmat = th["g"]
+    for sx in (-1, 1):
+        part(par, (380, 1, ZL), cf(sx * (48 + 190), -0.45, z0 + ZL / 2), gcol, gmat, name="Ground")
+        if th.get("sea"):
+            part(par, (260, 1.2, ZL), cf(sx * (160 + 130), -0.3, z0 + ZL / 2), (60, 170, 220), "Glass", Transparency=0.1, Reflectance=0.25)
+        part(par, (1.6, 3, ZL), cf(sx * 48.8, 1.5, z0 + ZL / 2), shade(th["t"][1], 1.1), "Wood" if i < 6 else "Smooth", name="Edge")
+        for band, (lo, hi) in (("near", (56, 100)), ("far", (115, 270))):
+            for name, ov, sc, h, cnt in th[band]:
+                for _ in range(cnt):
+                    s = sc if len(sc) == 3 else rnd.uniform(*sc)
+                    x = sx * rnd.uniform(lo, hi)
+                    z = z0 + rnd.uniform(6, ZL - 6)
+                    prop(par, name, x, h, z, s, rnd.uniform(0, 6.28), ov, next(iter(ov.values()), gcol))
+        if th.get("fx"):
+            kind, col = th["fx"]
+            for _ in range(2):
+                p = part(par, (1, 1, 1), cf(sx * rnd.uniform(52, 90), 6, z0 + rnd.uniform(5, ZL - 5)), WHITE, Transparency=1, CanCollide=False, name="Fx")
+                Inst("Color3Value", kind, p, Value=col)
 
 
 def long_table(world):
     long = Inst("Model", "LongTable", world)
+    scen = Inst("Folder", "Scenery", world)
     for i in range(N):
         z0 = TSZ + i * ZL
         zc = z0 + ZL / 2
-        frame, fmat, rail, rmat, felt, trim, tmat, kind = THEMES[i]
-        rarity, rcol = RAR[i]
+        wood, rail, felt, trim = THEMES[i]["t"]
         seg = Inst("Model", f"Table{i + 1}", long)
-        tr = dict(Transparency=0.35) if fmat == "Glass" else {}
-        # body on legs: frame from y 1.6 to 3.0, felt on top, high rails along both sides
-        part(seg, (TW + 2 * RAIL_W, 1.4, ZL), cf(0, 2.3, zc), frame, fmat, **tr)
-        part(seg, (TW, 0.3, ZL - 0.2), cf(0, 3.15, zc), felt, "Fabric", name=f"Zone{i + 1}")
+        tag_mesh(part(seg, (0.2, 0.2, 0.2), cf(0, 0, zc), WHITE, Transparency=1, CanCollide=False, name="MeshPivot"), "TableSegment",
+                 Wood=wood, Panel=shade(wood, 1.25), Rail=rail, Felt=felt, Cushion=shade(felt, 0.75), Trim=trim, Leg=shade(wood, 0.8))
+        # part-built twin of the Blender segment (collisions + fallback look)
+        part(seg, (TW + 2 * RAIL_W, 1.4, ZL), cf(0, 2.3, zc), wood, "Wood")
+        part(seg, (TW, 0.3, ZL), cf(0, 3.15, zc), felt, "Fabric", name=f"Zone{i + 1}")
         for sx in (-1, 1):
-            rc = RAINBOW[(i + (sx > 0)) % 7] if kind == "rainbow" else rail
-            part(seg, (RAIL_W, RAIL_H, ZL), cf(sx * (TW / 2 + RAIL_W / 2), 3 + RAIL_H / 2, zc), rc, rmat, **(dict(Transparency=0.3) if rmat in ("Glass", "ForceField") else {}))
-            part(seg, (0.7, 1.1, ZL), cf(sx * (TW / 2 + 0.35), 3.85, zc), tuple(int(c * 0.75) for c in felt), "Fabric")
-            if trim:
-                part(seg, (RAIL_W + 0.4, 0.5, ZL), cf(sx * (TW / 2 + RAIL_W / 2), 3 + RAIL_H + 0.25, zc), trim, tmat)
-            for k in range(1, 8):  # sights on the rail
-                part(seg, (0.8, 0.12, 0.8), cf(sx * (TW / 2 + RAIL_W / 2), 3 + RAIL_H + (0.55 if trim else 0.06), z0 + k * ZL / 8) @ ry(math.pi / 4), trim or (255, 250, 235), "Neon" if i >= 4 else "Smooth")
-            if i >= 4:  # underglow
-                part(seg, (0.4, 0.4, ZL - 2), cf(sx * (TW / 2 + RAIL_W + 0.2), 1.7, zc), trim, "Neon")
-            for lz in (z0 + 4, z0 + ZL - 4):  # turned legs
-                leg = cf(sx * (TW / 2 + 1), 0, lz)
-                ycyl(seg, 2.6, 1.6, leg @ cf(0, 0.8, 0), frame if i < 4 else (255, 200, 60), fmat if i < 4 else "Metal")
-                ycyl(seg, 3.4, 0.4, leg @ cf(0, 0.2, 0), (60, 40, 30) if i < 4 else (255, 220, 120), "Metal")
-            if i >= 7:
-                fx(seg, (sx * (TW / 2 + RAIL_W / 2), 8, z0 + 2), trim)
-            for dz in (20, 60):
-                deco(seg, kind, sx * WALK, z0 + dz, trim, i)
-        # gate with the rarity name at the start of every zone
-        nf = Inst("Folder", f"Neon{i + 1}", long)
-        for sx in (-1, 1):
-            part(nf, (1.8, 20, 1.8), cf(sx * (TW / 2 + RAIL_W + 3), 10, z0), rcol, "Neon")
-            ball(nf, 4, cf(sx * (TW / 2 + RAIL_W + 3), 21, z0), rcol, "Neon")
-            pc = cf(sx * TW / 2, 3.32, zc)
-            ycyl(seg, 4.4, 0.2, pc, (5, 5, 5))
-            ycyl(nf, 5.4, 0.15, pc @ cf(0, -0.05, 0), rcol, "Neon")
-        beam = part(long, (TW + 2 * RAIL_W + 10, 5, 1.2), cf(0, 21, z0), (40, 25, 60), name=f"Beam{i + 1}")
-        part(nf, (TW + 2 * RAIL_W + 10, 0.6, 1.4), cf(0, 18.3, z0), rcol, "Neon")
-        light(beam, WHITE, 34, 1.2)
-        label(beam, FACE["Front"], rarity, rcol, 20, "Rarity")
-        label(beam, FACE["Back"], f"Table {i + 1}", WHITE, 20)
-    part(long, (TW + 2 * RAIL_W, RAIL_H + 1.4, RAIL_W), cf(0, 1.6 + (RAIL_H + 1.4) / 2, END + RAIL_W / 2), THEMES[-1][2], "Metal")
-    part(long, (TW + 2 * RAIL_W, RAIL_H + 1.4, 1), cf(0, 1.6 + (RAIL_H + 1.4) / 2, TSZ - 0.5), THEMES[0][2], "Wood")  # head cushion
+            part(seg, (RAIL_W, RAIL_H, ZL), cf(sx * (TW / 2 + RAIL_W / 2), 3 + RAIL_H / 2, zc), rail, "Wood")
+            part(seg, (RAIL_W + 0.2, 0.15, ZL), cf(sx * (TW / 2 + RAIL_W / 2), 7.25, zc), trim, "Metal")
+            ycyl(seg, 4.8, 0.5, cf(sx * TW / 2, 3.12, zc), (20, 16, 18))
+            for e in (-1, 1):
+                ycyl(seg, 3, 1.6, cf(sx * (TW / 2 + 1), 0.8, zc + e * (ZL / 2 - 6)), shade(wood, 0.8), "Wood")
+        scenery(scen, i, z0)
+    part(long, (TW + 2 * RAIL_W, RAIL_H + 1.4, RAIL_W), cf(0, 1.6 + (RAIL_H + 1.4) / 2, END + RAIL_W / 2), THEMES[-1]["t"][1], "Metal")
+    part(long, (TW + 2 * RAIL_W, RAIL_H + 1.4, 1), cf(0, 1.6 + (RAIL_H + 1.4) / 2, TSZ - 0.5), THEMES[0]["t"][1], "Wood")  # head cushion
+
+
+def giant_rail(par, x0, z0, x1, z1, ix, iz):
+    """Boundary of the start area: a giant billiard-table cushion (wood, felt, brass, pearl sights)."""
+    ln = math.hypot(x1 - x0, z1 - z0)
+    a = math.atan2(x1 - x0, z1 - z0)
+    m = cf((x0 + x1) / 2, 0, (z0 + z1) / 2) @ ry(a)  # local Z runs along the wall
+    inward = 1 if math.cos(a) * ix - math.sin(a) * iz > 0 else -1  # local X axis = (cos a, 0, -sin a)
+    H = 26
+    part(par, (10, H, ln), m @ cf(0, H / 2, 0), (110, 58, 26), "Wood")
+    part(par, (10.6, 1.2, ln + 0.6), m @ cf(0, 0.6, 0), (230, 180, 70), "Metal")
+    part(par, (10.6, 1, ln + 0.6), m @ cf(0, H - 2.5, 0), (230, 180, 70), "Metal")
+    part(par, (3, 4, ln), m @ cf(inward * 4.6, H - 6, 0), (28, 140, 66), "Fabric")  # felt cushion nose
+    part(par, (10.2, 1.2, ln), m @ cf(0, H + 0.4, 0), (90, 46, 20), "Wood")
+    for k in range(int(ln // 22)):
+        zz = -ln / 2 + 11 + k * 22
+        ball(par, 2, m @ cf(0, H + 1.1, zz), (255, 250, 235), CanCollide=False)
+        part(par, (0.4, 6, 3), m @ cf(inward * 5.1, H / 2 - 2, zz), (150, 86, 44), "Wood")  # carved panel
+    part(par, (2, 400, ln), m @ cf(0, 200, 0), WHITE, Transparency=1, name="Wall")
+
+
+def pocket_tower(par, x, z):
+    ycyl(par, 20, 30, cf(x, 15, z), (90, 46, 20), "Wood")
+    ycyl(par, 21, 1.4, cf(x, 30.4, z), (230, 180, 70), "Metal")
+    ycyl(par, 15, 1.2, cf(x, 30.6, z), (20, 16, 18))
+    mesh_ball(par, 11, cf(x, 33, z) @ ry(rnd.uniform(0, 6)), BALLS[rnd.randrange(7)])
+    ycyl(par, 21, 1.4, cf(x, 0.7, z), (230, 180, 70), "Metal")
 
 
 def player_base(world, i, o, col):
@@ -323,7 +321,7 @@ def player_base(world, i, o, col):
     # round raised platform with a coloured rim
     ycyl(b, 96, 2, o @ cf(0, 1, 0), col)
     ycyl(b, 92, 0.6, o @ cf(0, 2.1, 0), (250, 240, 225), "Planks", name="Floor")
-    ycyl(b, 97, 0.4, o @ cf(0, 2.05, 0), col, "Neon")
+    ycyl(b, 97, 0.4, o @ cf(0, 2.05, 0), GOLD, "Metal")
     top = o @ cf(0, 2.4, 0)
     ycyl(b, 40, 0.2, top @ cf(0, 0.05, 0), (170, 40, 60), "Fabric")
     ycyl(b, 42, 0.15, top @ cf(0, 0.0, 0), GOLD, "Metal")
@@ -345,14 +343,14 @@ def player_base(world, i, o, col):
         a = math.radians(-150 + s * 300 / (SLOTS - 1))
         x, z = math.sin(a) * 23, -math.cos(a) * 23
         ycyl(b, 7, 0.8, top @ cf(x, 0.4, z), (240, 240, 245), "Marble")
-        ycyl(b, 7.4, 0.25, top @ cf(x, 0.8, z), col, "Neon")
+        ycyl(b, 7.4, 0.25, top @ cf(x, 0.8, z), GOLD, "Metal")
         ycyl(slots, 5.4, 0.6, top @ cf(x, 1.1, z), WHITE, "Marble", name=f"Slot{s + 1}")
         light(part(b, (0.4, 0.4, 0.4), top @ cf(x, 9, z), WHITE, Transparency=1, CanCollide=False), light_col, 12, 1.5)
     # trophy wall at the back with the owner's name
     for k in range(-4, 5):
         wall = top @ ry(-math.radians(k * 10.4)) @ cf(0, 0, -41)
         part(b, (7.4, 10, 1.4), wall @ cf(0, 5, 0), (250, 245, 235), "Marble")
-        part(b, (7.4, 0.6, 1.8), wall @ cf(0, 10.3, 0), col, "Neon")
+        part(b, (7.4, 0.6, 1.8), wall @ cf(0, 10.3, 0), col)
         mesh_ball(b, 2.2, wall @ cf(0, 6, 1.4), BALLS[k % 7])
         ycyl(b, 1.6, 2, wall @ cf(0, 1, 1.4), GOLD, "Metal")
     sign = part(b, (30, 7, 1.4), top @ cf(0, 16, -42), col, name="Sign")
@@ -369,7 +367,7 @@ def player_base(world, i, o, col):
     # entrance arch
     for sx in (-1, 1):
         ycyl(b, 2.6, 14, top @ cf(sx * 13, 7, 43), col)
-        light(ball(b, 3.2, top @ cf(sx * 13, 14.8, 43), col, "Neon"), col, 22)
+        light(ball(b, 3.2, top @ cf(sx * 13, 14.8, 43), (255, 245, 220), "Glass"), col, 22)
     gate = part(b, (28, 3, 1.2), top @ cf(0, 13, 43), (250, 245, 235), "Marble")
     label(gate, FACE["Back"], "🎱 WELCOME 🎱", col)
     # gym corner: mat, dumbbell, weight rack
@@ -403,27 +401,22 @@ def build():
     world = Inst("Folder", "World", ws)
     env = Inst("Folder", "Environment", world)
 
-    part(env, (1600, 4, END + 900), cf(0, -2, END / 2), (105, 200, 85), "Grass", name="Ground")
+    part(env, (1400, 4, END + 1000), cf(0, -2, END / 2), (105, 200, 85), "Grass", name="Ground")
     part(env, (450, 0.4, 46), cf(0, 0.2, 60), (250, 228, 185), "Pebble", name="Plaza")
     for x in range(-220, 221, 10):
         part(env, (5, 0.42, 5), cf(x, 0.21, 60 + (5 if (x // 10) % 2 else -5)), WHITE, "Marble")
     for sx in (-1, 1):  # walkways along the long table
-        part(env, (24, 0.3, TL + 20), cf(sx * (TW / 2 + RAIL_W + 12.5), 0.15, TSZ + TL / 2), (250, 228, 185), "Pebble")
-        for z in np.arange(TSZ + 10, END, 18):  # bushes at the mountain foot
-            ball(env, rnd.uniform(4, 7), cf(sx * rnd.uniform(44, 47), 1, z + rnd.uniform(-4, 4)), rnd.choice([(70, 175, 70), (90, 190, 80), (255, 150, 200)]), "Grass")
+        part(env, (25, 0.3, TL + 20), cf(sx * (TW / 2 + RAIL_W + 12.5), 0.15, TSZ + TL / 2), (250, 228, 185), "Pebble")
 
     long_table(world)
 
-    # rainbow arch + title over the head of the table
     arch = Inst("Model", "RainbowArch", world)
     for b, col in enumerate(RAINBOW, 1):
         R = 34 - b * 1.6
         for k in range(25):
             a = math.pi * k / 24
-            part(arch, (1.6, 1.6, 4.6), cf(math.cos(a) * R, math.sin(a) * R, TSZ - 8) @ rz(a) @ rx(math.pi / 2), col, "Neon", CanCollide=False)
-    label(part(arch, (44, 7, 1), cf(0, 22, TSZ - 8), (255, 110, 170)), FACE["Front"], "🎱 BILLIARD HUNTERS 🎱")
+            part(arch, (1.6, 1.6, 4.6), cf(math.cos(a) * R, math.sin(a) * R, TSZ - 8) @ rz(a) @ rx(math.pi / 2), col, "Smooth", CanCollide=False)
 
-    # giant 8-ball at the far end
     eight = Inst("Model", "EightBall", world)
     e = cf(0, 34, END + 55)
     ball(eight, 40, e, (15, 15, 20), "Glass", name="Ball", Reflectance=0.15)
@@ -434,45 +427,44 @@ def build():
         part(eight, (1, 50 + k * 6, 50 + k * 6), e @ ang(k, k * 0.7, 0), RAINBOW[k * 2 - 1], "ForceField", "Cyl", name=f"Ring{k}", CanCollide=False)
 
     fb = Inst("Folder", "FloatBalls", world)
-    for k in range(30):
+    for k in range(16):
         sx = 1 if k % 2 else -1
-        mesh_ball(fb, rnd.uniform(6, 11), cf(sx * rnd.uniform(28, 42), rnd.uniform(30, 60), rnd.uniform(140, END)), BALLS[k % 7], CanCollide=False)
+        mesh_ball(fb, rnd.uniform(5, 9), cf(sx * rnd.uniform(30, 44), rnd.uniform(28, 45), rnd.uniform(140, END)), BALLS[k % 7], CanCollide=False)
 
-    trees = Inst("Folder", "Trees", world)
-    for x in range(-210, 211, 30):  # behind the bases
-        tree(trees, (x + rnd.uniform(-6, 6), -78 + rnd.uniform(-6, 6)), rnd.uniform(12, 16), "palm" if (x // 30) % 2 else "round")
-    for sx in (-1, 1):
-        for z in range(-60, 60, 28):
-            tree(trees, (sx * rnd.uniform(212, 222), z), rnd.uniform(11, 15), "round")
-        for x in range(60, 210, 30):
-            tree(trees, (sx * x, rnd.uniform(84, 92)), rnd.uniform(12, 16), "palm")
-
-    # mountains: a closed ring around the start area and the long corridor
-    hills = Inst("Folder", "Mountains", world)
-    ridge(hills, (-260, -115), (260, -115), (0, -1))
-    for sx in (-1, 1):
-        ridge(hills, (sx * 260, -115), (sx * 260, 130), (sx, 0))
-        ridge(hills, (sx * 260, 130), (sx * 150, 130), (0, 1))  # stops short of the corridor mouth
-        ridge(hills, (sx * 72, 150), (sx * 72, END + 125), (sx, 0), 40)
-    ridge(hills, (-72, END + 125), (72, END + 125), (0, 1))
-    # invisible walls exactly along the playable shape
+    # start area boundary: giant billiard cushions with pocket towers in the corners
+    border = Inst("Model", "Border", world)
+    for (x0, z0, x1, z1, ix, iz) in ((-225, -88, 225, -88, 0, 1), (-225, -88, -225, 78, 1, 0), (225, -88, 225, 78, -1, 0),
+                                     (-225, 78, -60, 78, 0, -1), (60, 78, 225, 78, 0, -1)):
+        giant_rail(border, x0, z0, x1, z1, ix, iz)
+    for x, z in ((-225, -88), (225, -88), (-225, 78), (225, 78), (-60, 78), (60, 78)):
+        pocket_tower(border, x, z)
     walls = Inst("Folder", "Walls", world)
-    H = 400
     def wall(x0, z0, x1, z1):
         ln = math.hypot(x1 - x0, z1 - z0)
-        part(walls, (2, H, ln), cf((x0 + x1) / 2, H / 2, (z0 + z1) / 2) @ ry(math.atan2(x1 - x0, z1 - z0)), WHITE, Transparency=1, name="Wall")
-    wall(-225, -88, 225, -88)
+        part(walls, (2, 400, ln), cf((x0 + x1) / 2, 200, (z0 + z1) / 2) @ ry(math.atan2(x1 - x0, z1 - z0)), WHITE, Transparency=1, name="Wall")
     for sx in (-1, 1):
-        wall(sx * 225, -88, sx * 225, 78)
-        wall(sx * 225, 78, sx * 48, 78)
+        wall(sx * 60, 78, sx * 48, 78)
         wall(sx * 48, 78, sx * 48, END + 95)
     wall(-48, END + 95, 48, END + 95)
+
+    trees = Inst("Folder", "Trees", world)  # forest behind the cushions
+    for _ in range(70):
+        side = rnd.randrange(3)
+        if side == 0:
+            x, z = rnd.uniform(-300, 300), rnd.uniform(-170, -110)
+        else:
+            x, z = (1 if side == 1 else -1) * rnd.uniform(250, 320), rnd.uniform(-170, 70)
+        prop(trees, "Tree" if rnd.random() < 0.6 else "Pine", x, 0, z, rnd.uniform(2.6, 3.6), rnd.uniform(0, 6.28), {"Snow": (40, 120, 70)}, (80, 170, 70))
+    for x in range(-200, 201, 40):  # small palms in front of the back cushion
+        tree(trees, (x + rnd.uniform(-5, 5), -76), rnd.uniform(12, 15), "palm")
 
     bcol = [(255, 110, 120), (110, 170, 255), (110, 225, 140), (255, 190, 80)]
     for i in range(4):
         player_base(world, i, cf((i - 1.5) * 105, 0, -10), bcol[i])
     part(world, (6, 1, 6), cf(0, 0.6, 62), WHITE, cls="SpawnLocation", name="Spawn", Transparency=1, CanCollide=False, Neutral=True)
     return ws
+
+
 # ---------- rbxlx ----------
 ref = iter(range(10 ** 9))
 def v3(n, v): return f'<Vector3 name="{n}"><X>{v[0]:.4f}</X><Y>{v[1]:.4f}</Y><Z>{v[2]:.4f}</Z></Vector3>'
@@ -518,8 +510,11 @@ def src(path): return open(os.path.join(ROOT, path), encoding="utf-8").read()
 def services(ws):
     rs = Inst("ReplicatedStorage", "ReplicatedStorage")
     shared = Inst("Folder", "Shared", rs)
-    for n in ("Config", "Meshes", "MeshBuilder"):
+    for n in ("Config", "MeshBuilder"):
         Inst("ModuleScript", n, shared, Source=src(f"src/shared/{n}.luau"))
+    meshes = Inst("Folder", "Meshes", shared)
+    for f in sorted(os.listdir(os.path.join(ROOT, "src/shared/Meshes"))):
+        Inst("ModuleScript", f[:-5], meshes, Source=src(f"src/shared/Meshes/{f}"))
     sss = Inst("ServerScriptService", "ServerScriptService")
     sv = Inst("Folder", "Server", sss)
     Inst("Script", "Main", sv, Source=src("src/server/Main.server.luau"))
@@ -543,7 +538,8 @@ def dump_scene(ws, path):  # flat list for tools/preview.py; tagged parts are dr
         if not tag: return None
         sc = next((k.p["Value"] for k in p.kids if k.name == "Scale"), 1)
         sc = list(sc) if isinstance(sc, tuple) else [sc] * 3
-        return dict(mesh=tag.p["Value"], m=p.p["cf"].tolist(), sc=sc)
+        ov = {k.name: list(k.p["Value"]) for k in p.kids if k.cls == "Color3Value"}
+        return dict(mesh=tag.p["Value"], m=p.p["cf"].tolist(), sc=sc, ov=ov)
     def walk(i):
         piv = next((k for k in i.kids if k.name == "MeshPivot"), None) if i.cls == "Model" else None
         if piv:

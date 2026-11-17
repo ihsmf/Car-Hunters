@@ -1,7 +1,15 @@
--- Turns Blender mesh data (Shared/Meshes) into MeshParts via EditableMesh — no asset upload needed.
+-- Turns Blender mesh data (Shared/Meshes/<Name>) into MeshParts via EditableMesh — no asset upload needed.
 -- Client-side only (EditableMesh content does not replicate). Falls back gracefully when unavailable.
 local AssetService = game:GetService("AssetService")
-local Meshes = require(script.Parent.Meshes)
+local MeshFolder = script.Parent:WaitForChild("Meshes") -- one ModuleScript per Blender model
+local Meshes = setmetatable({}, {
+	__index = function(t, name)
+		local m = MeshFolder:FindFirstChild(name)
+		local data = m and require(m)
+		rawset(t, name, data or false)
+		return data or false
+	end,
+})
 
 local MeshBuilder = {}
 local cache = {}

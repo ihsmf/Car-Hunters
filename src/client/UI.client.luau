@@ -121,6 +121,11 @@ local cashPill = new("Frame", { Size = UDim2.fromOffset(260, 78), Position = UDi
 text("💵", 48, nil, { Size = UDim2.fromOffset(56, 60), Parent = cashPill })
 local cashLabel = text("0", 56, U.Money, { Size = UDim2.fromOffset(0, 70), AutomaticSize = Enum.AutomaticSize.X, Parent = cashPill })
 local statLabel = text("", 28, nil, { Size = UDim2.fromOffset(1000, 36), Position = UDim2.fromOffset(460, 122), Parent = hud })
+local luckPill = new("Frame", { Size = UDim2.fromOffset(380, 58), Position = UDim2.fromOffset(960, 168), AnchorPoint = Vector2.new(0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1), Parent = hud }, {
+	corner(29), stroke(4), grad(Color3.fromRGB(150, 240, 120), Color3.fromRGB(60, 180, 70)),
+})
+local luckLabel = text("🍀 LUCK x1", 34, nil, { Size = UDim2.fromScale(1, 1), Parent = luckPill })
+local luckScale = new("UIScale", { Parent = luckPill })
 
 local menu = new("Frame", { Size = UDim2.fromOffset(120, 560), Position = UDim2.fromOffset(28, 300), BackgroundTransparency = 1, Parent = hud }, {
 	new("UIListLayout", { Padding = UDim.new(0, 18), SortOrder = Enum.SortOrder.LayoutOrder }),
@@ -340,7 +345,8 @@ end)
 local luckIn = C.LuckCycle
 local function renderStats()
 	if not state then return end
-	statLabel.Text = string.format("💪 %s     📈 $%s/s     🍀 Luck +%d (next in %ds)", C.Short(state.d.strength), C.Short(state.income), state.luck, luckIn)
+	statLabel.Text = string.format("💪 %s     📈 $%s/s", C.Short(state.d.strength), C.Short(state.income))
+	luckLabel.Text = string.format("🍀 LUCK x%d  •  %ds", state.luck, luckIn)
 end
 Fx.OnClientEvent:Connect(function(kind, a, b)
 	if kind == "State" then
@@ -358,7 +364,10 @@ Fx.OnClientEvent:Connect(function(kind, a, b)
 		if panels.Bonus.holder.Visible then renderers.Bonus() end
 	elseif kind == "Luck" then
 		if state then state.luck = a end
-		toast(a == 0 and "🔄 The table reset its zones" or "🍀 The table shifted! Luck +" .. a, Color3.fromRGB(120, 255, 140))
+		renderStats()
+		luckScale.Scale = 1.5
+		TweenService:Create(luckScale, TweenInfo.new(0.5, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+		toast("🍀 The table changed! LUCK x" .. a, Color3.fromRGB(120, 255, 140))
 	elseif kind == "Open" then
 		if not panels[a].holder.Visible then open(a) end
 	elseif kind == "Lift" then

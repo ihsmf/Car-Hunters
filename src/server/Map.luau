@@ -2,7 +2,7 @@
 local TweenService = game:GetService("TweenService")
 local C = require(game.ReplicatedStorage.Shared.Config)
 
-local Map = { Bases = {}, Zones = {} }
+local Map = { Bases = {} }
 
 local function loop(p, t, goal, reverse)
 	TweenService:Create(p, TweenInfo.new(t, reverse and Enum.EasingStyle.Sine or Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, reverse), goal):Play()
@@ -10,15 +10,6 @@ end
 
 function Map.Build()
 	local world = workspace:WaitForChild("World")
-	local long = world.LongTable
-
-	for i = 1, #C.Rarities do
-		Map.Zones[i] = {
-			felt = long["Table" .. i]["Zone" .. i],
-			neon = long["Neon" .. i]:GetChildren(),
-			text = long["Beam" .. i].Rarity.Text,
-		}
-	end
 
 	for i = 1, 4 do
 		local base = world["Base" .. i]
@@ -52,7 +43,7 @@ function Map.Build()
 		loop(b, math.random(30, 60) / 10, { CFrame = b.CFrame * CFrame.new(0, 8, 0) * CFrame.Angles(0, math.pi, 0) }, true)
 	end
 	-- particle effects on the fancier tables ("Fx" parts carry a Color3Value named Fire / Spirit / Sparkle)
-	for _, fx in world.LongTable:GetDescendants() do
+	for _, fx in world:GetDescendants() do
 		local v = fx.Name == "Fx" and fx:FindFirstChildOfClass("Color3Value")
 		if v then
 			local e = Instance.new("ParticleEmitter")
@@ -61,6 +52,10 @@ function Map.Build()
 				e.Rate, e.Lifetime, e.Speed = 30, NumberRange.new(0.6, 1), NumberRange.new(4, 7)
 				e.Size, e.SpreadAngle = NumberSequence.new(2, 0), Vector2.new(15, 15)
 				e.Color = ColorSequence.new(Color3.fromRGB(255, 230, 120), v.Value)
+			elseif v.Name == "Snow" then
+				e.Rate, e.Lifetime, e.Speed, e.LightEmission = 25, NumberRange.new(4, 6), NumberRange.new(1, 2), 0
+				e.Size, e.SpreadAngle, e.Acceleration = NumberSequence.new(0.4), Vector2.new(180, 180), Vector3.new(0, -2, 0)
+				e.Color = ColorSequence.new(Color3.new(1, 1, 1))
 			elseif v.Name == "Spirit" then
 				e.Rate, e.Lifetime, e.Speed = 6, NumberRange.new(2, 3), NumberRange.new(1, 2)
 				e.Size, e.SpreadAngle, e.Transparency = NumberSequence.new(1.5, 0), Vector2.new(180, 180), NumberSequence.new(0.3, 1)

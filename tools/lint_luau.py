@@ -114,7 +114,7 @@ if __name__ == "__main__":
     bad = 0
     for d, _, files in os.walk(os.path.join(ROOT, "src")):
         for f in sorted(files):
-            if f.endswith(".luau") and f != "Meshes.luau":
+            if f.endswith(".luau") and not d.endswith("Meshes"):
                 p = os.path.join(d, f)
                 errs = check(p, keys)
                 bad += len(errs)

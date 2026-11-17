@@ -62,14 +62,45 @@ for r, v in R do
 end
 
 C.Table = { Length = 2000, Width = 36, StartZ = 80, Lanes = 4 } -- tools/place.py reads these values
-C.LuckCycle = 45 -- every N seconds the long table shifts every zone one rarity up
-C.MaxLuckShift = 4
+-- Luck multiplier: the long table keeps changing, cycling through these every LuckCycle seconds.
+-- With luck L a shot has a (1 - 1/L) chance to land one rarity higher, and at L >= 5 a further (1 - 5/L) chance for +2.
+C.LuckSteps = { 1, 2, 3, 5, 10 }
+C.LuckCycle = 30
+function C.LuckBonus(L, roll1, roll2)
+	local bonus = roll1 < 1 - 1 / L and 1 or 0
+	if bonus == 1 and L >= 5 and roll2 < 1 - 5 / L then bonus = 2 end
+	return bonus
+end
 C.ThrowCooldown = 1
 C.MaxEquipped = 8
 C.MaxInventory = 100
-C.Anim = { Windup = 0.9, Slide = 0.7 }
+C.Anim = { Windup = 1.6, Slide = 0.8 }
 function C.RollTime(dist) return 1.4 + dist / 260 end
 function C.ThrowTime(dist) return C.Anim.Windup + C.RollTime(dist) + C.Anim.Slide end -- until the ball is pocketed
+
+-- The 25 tables of the long table (one per zone): name + colour used by the flight camera
+C.Tables = {
+	{ "Oak Club", rgb(150, 220, 120) }, { "Walnut Lounge", rgb(120, 200, 110) }, { "Blue Velvet", rgb(110, 160, 255) },
+	{ "Royal Hall", rgb(180, 120, 255) }, { "Golden Palace", rgb(255, 205, 80) }, { "Dragon Lair", rgb(255, 90, 60) },
+	{ "Desert Temple", rgb(240, 200, 120) }, { "Frozen Peaks", rgb(170, 230, 255) }, { "Volcano", rgb(255, 120, 40) },
+	{ "Toxic Swamp", rgb(150, 255, 60) }, { "Cyber City", rgb(60, 240, 230) }, { "Pirate Cove", rgb(90, 200, 220) },
+	{ "Samurai Garden", rgb(255, 150, 190) }, { "Haunted Woods", rgb(170, 120, 230) }, { "Heaven", rgb(255, 250, 220) },
+	{ "Underworld", rgb(220, 30, 50) }, { "Sky Islands", rgb(160, 220, 255) }, { "Starlight", rgb(255, 240, 150) },
+	{ "Cosmos", rgb(150, 100, 255) }, { "Galaxy", rgb(90, 130, 255) }, { "Rainbow Land", rgb(255, 140, 230) },
+	{ "Quantum Lab", rgb(60, 220, 255) }, { "Shadow Realm", rgb(120, 120, 140) }, { "Glitch Zone", rgb(255, 60, 255) },
+	{ "Absolute", rgb(255, 80, 170) },
+}
+
+-- Blender accessories per rarity (head items sit on the Head, AccWings/AccCape on the UpperTorso)
+C.Outfits = {
+	{ "AccCap" }, { "AccCap", "AccShades" }, { "AccFedora" }, { "AccTopHat", "AccCape" }, { "AccCrown", "AccCape" },
+	{ "AccHorns", "AccWings" }, { "AccNemes" }, { "AccCrown", "AccCape" }, { "AccHorns", "AccWings" }, { "AccHood", "AccVisor" },
+	{ "AccVisor", "AccCape" }, { "AccTricorne", "AccCape" }, { "AccKabuto" }, { "AccHood" }, { "AccHalo", "AccWings" },
+	{ "AccHorns", "AccWings", "AccCape" }, { "AccCrown", "AccHalo", "AccWings" }, { "AccCrown", "AccHalo" }, { "AccBubble" },
+	{ "AccCrown", "AccCape", "AccWings" }, { "AccHalo", "AccWings", "AccCape" }, { "AccVisor", "AccHalo", "AccCape" },
+	{ "AccHood", "AccShades" }, { "AccVisor", "AccHorns" }, { "AccCrown", "AccHalo", "AccWings", "AccCape" },
+}
+C.BackItems = { AccWings = true, AccCape = true }
 
 C.Cues = { -- name, distance multiplier, price, colour
 	{ "Wooden", 1, 0, rgb(236, 196, 132) },
@@ -77,7 +108,7 @@ C.Cues = { -- name, distance multiplier, price, colour
 	{ "Carbon", 1.7, 5000, rgb(60, 60, 70) },
 	{ "Golden", 2.3, 50000, rgb(255, 200, 40) },
 	{ "Diamond", 3, 500000, rgb(140, 240, 255) },
-	{ "Neon", 4, 5e6, rgb(255, 60, 220) },
+	{ "Plasma", 4, 5e6, rgb(255, 60, 220) },
 	{ "Lava", 5.5, 5e7, rgb(255, 80, 0) },
 	{ "Starlight", 7.5, 5e8, rgb(255, 255, 180) },
 	{ "Galaxy", 10, 5e9, rgb(90, 40, 200) },

@@ -23,7 +23,8 @@ remotes.Parent = RS
 
 local sessions = {} -- player -> session
 local taken = {} -- base slot -> player
-local luckShift = 0
+local luckIdx = 1 -- index into C.LuckSteps
+local throwCounter = 0
 local rng = Random.new()
 local N = #C.Rarities
 local passByKey = {}
@@ -38,6 +39,10 @@ local function default()
 	}
 end
 
+local function luckOf(s)
+	return C.LuckSteps[luckIdx] * (s.passes.Luck2x and 2 or 1)
+end
+
 local function income(s)
 	local sum = 0
 	for _, it in s.d.inv do
@@ -50,11 +55,11 @@ local function sync(plr)
 	local s = sessions[plr]
 	if not s then return end
 	s.d.passes = s.passes
-	Fx:FireClient(plr, "State", { d = s.d, slot = s.slot, income = income(s), luck = luckShift, join = s.join, claimed = s.claimed })
+	Fx:FireClient(plr, "State", { d = s.d, slot = s.slot, income = income(s), luck = luckOf(s), luckIn = C.LuckCycle, join = s.join, claimed = s.claimed })
 	plr.leaderstats.Cash.Value = math.floor(s.d.cash)
 end
 
--- ===== Characters: R15 rig + cue in hand + aura + crown/halo =====
+-- ===== Characters: R15 rig + Blender accessories + cue in hand + aura =====
 local function weldTo(base, p)
 	p.Anchored, p.CanCollide, p.Massless = false, false, true
 	local w = Instance.new("WeldConstraint")
@@ -94,7 +99,7 @@ local function makeNPC(id, cf, gold, fresh)
 	local stick = Instance.new("Part")
 	stick.Name, stick.Size = "Stick", Vector3.new(0.3, 9.2, 0.3)
 	stick.Color = gold and Color3.fromRGB(255, 200, 40) or Color3.fromRGB(236, 196, 132)
-	stick.Material = gold and Enum.Material.Neon or Enum.Material.Wood
+	stick.Material = gold and Enum.Material.Metal or Enum.Material.Wood
 	local hand = m.RightHand
 	stick.CFrame = hand.CFrame * CFrame.Angles(math.rad(-12), 0, 0) * CFrame.new(0, 2.2, 0)
 	local tag = Instance.new("StringValue")
@@ -113,24 +118,30 @@ local function makeNPC(id, cf, gold, fresh)
 	aura.Parent = m.HumanoidRootPart
 	local glow = Instance.new("PointLight")
 	glow.Color, glow.Range, glow.Brightness, glow.Parent = r[2], 8 + info.rarity, 1.5, m.HumanoidRootPart
-	local ring = Instance.new("Part") -- aura disc under the feet
-	ring.Shape, ring.Size, ring.Color, ring.Material = Enum.PartType.Cylinder, Vector3.new(0.1, 5, 5), r[2], Enum.Material.Neon
-	ring.Transparency, ring.CFrame = 0.35, cf * CFrame.new(0, 0.05, 0) * CFrame.Angles(0, 0, math.pi / 2)
-	ring.Anchored, ring.CanCollide, ring.Parent = true, false, m
+	local ring = Instance.new("Part") -- glowing aura disc under the feet
+	ring.Shape, ring.Size, ring.Color, ring.Material = Enum.PartType.Cylinder, Vector3.new(0.1, 5.4, 5.4), r[2], Enum.Material.ForceField
+	ring.CFrame = cf * CFrame.new(0, 0.05, 0) * CFrame.Angles(0, 0, math.pi / 2)
+	ring.Anchored, ring.CanCollide, ring.CastShadow, ring.Parent = true, false, false, m
 
-	if info.rarity >= 8 then -- crown
-		local crown = Instance.new("Part")
-		crown.Shape, crown.Size, crown.Color, crown.Material = Enum.PartType.Cylinder, Vector3.new(0.5, 1.3, 1.3), Color3.fromRGB(255, 200, 40), Enum.Material.Metal
-		crown.CFrame = m.Head.CFrame * CFrame.new(0, 0.8, 0) * CFrame.Angles(0, 0, math.pi / 2)
-		weldTo(m.Head, crown)
-		crown.Parent = m
-	end
-	if info.rarity >= 15 then -- halo
-		local halo = Instance.new("Part")
-		halo.Shape, halo.Size, halo.Color, halo.Material = Enum.PartType.Cylinder, Vector3.new(0.15, 2, 2), r[2], Enum.Material.Neon
-		halo.CFrame = m.Head.CFrame * CFrame.new(0, 1.6, 0) * CFrame.Angles(0, 0, math.pi / 2)
-		weldTo(m.Head, halo)
-		halo.Parent = m
+	-- Blender accessories (rendered by Visuals.client from the "Mesh" tag on an invisible anchor)
+	local items = table.clone(C.Outfits[info.rarity])
+	if info.name:sub(1, 5) == "Grand" and not table.find(items, "AccCape") then table.insert(items, "AccCape") end
+	local accent = info.rarity >= 15 and Color3.fromRGB(255, 250, 235) or Color3.fromRGB(255, 205, 70)
+	for _, item in items do
+		local host = C.BackItems[item] and m.UpperTorso or m.Head
+		local anchor = Instance.new("Part")
+		anchor.Name, anchor.Size, anchor.Transparency = "Acc", Vector3.new(0.2, 0.2, 0.2), 1
+		anchor.CFrame = host.CFrame
+		local tag = Instance.new("StringValue")
+		tag.Name, tag.Value, tag.Parent = "Mesh", item, anchor
+		local sc = Instance.new("NumberValue")
+		sc.Name, sc.Value, sc.Parent = "Scale", k, anchor
+		for name, col in { Main = r[2], Accent = accent, Gem = r[2]:Lerp(Color3.new(1, 1, 1), 0.5) } do
+			local v = Instance.new("Color3Value")
+			v.Name, v.Value, v.Parent = name, col, anchor
+		end
+		weldTo(host, anchor)
+		anchor.Parent = m
 	end
 
 	local bb = Instance.new("BillboardGui")
@@ -161,9 +172,12 @@ local function refreshBase(plr)
 	local s = sessions[plr]
 	if not s then return end
 	local base = Map.Bases[s.slot]
-	local want = {}
+	local want, items = {}, {}
 	for _, it in s.d.inv do
-		if it.eq and #want < C.MaxEquipped then table.insert(want, it.id) end
+		if it.eq and #want < C.MaxEquipped then
+			table.insert(want, it.id)
+			table.insert(items, it)
+		end
 	end
 	local bySlot = {}
 	for _, npc in base.chars:GetChildren() do
@@ -180,6 +194,10 @@ local function refreshBase(plr)
 		if not bySlot[i] then
 			local npc = makeNPC(id, base.slots[i], s.passes.GoldStick, true)
 			npc:SetAttribute("Slot", i)
+			if items[i].tid then
+				npc:SetAttribute("ThrowId", items[i].tid) -- the client plays the reveal cinematic on this NPC
+				items[i].tid = nil
+			end
 			npc.Parent = base.chars
 		end
 	end
@@ -210,15 +228,17 @@ function actions.Throw(plr, s, power)
 	local dist = C.Distance(math.clamp(power, 0, 1), s.d)
 	s.nextThrow = os.clock() + C.ThrowTime(dist) + C.ThrowCooldown
 	local zone = math.clamp(math.ceil(dist / (C.Table.Length / N)), 1, N)
-	local bonus = (s.passes.Luck2x and rng:NextNumber() < 0.5) and 1 or 0
-	local rarity = math.min(zone + luckShift + bonus, N)
+	local L = luckOf(s)
+	local rarity = math.min(zone + C.LuckBonus(L, rng:NextNumber(), rng:NextNumber()), N)
 	local pool = {}
 	for id, ch in C.Characters do
 		if ch.rarity == rarity then table.insert(pool, id) end
 	end
 	local id = pool[rng:NextInteger(1, #pool)]
-	table.insert(s.d.inv, { id = id, eq = equippedCount(s.d) < C.MaxEquipped })
-	Fx:FireAllClients("Throw", s.slot, dist, id)
+	throwCounter += 1
+	local eq = equippedCount(s.d) < C.MaxEquipped
+	table.insert(s.d.inv, { id = id, eq = eq, tid = eq and throwCounter or nil })
+	Fx:FireAllClients("Throw", s.slot, dist, id, L, eq and throwCounter or 0)
 	task.delay(C.ThrowTime(dist), refreshBase, plr)
 	return true
 end
@@ -423,16 +443,7 @@ MarketplaceService.ProcessReceipt = function(info)
 	return Enum.ProductPurchaseDecision.PurchaseGranted
 end
 
--- ===== The long table keeps shifting its zones to higher rarities (gates, pockets and labels) =====
-local function paintZones()
-	for i, z in Map.Zones do
-		local r = C.Rarities[math.min(i + luckShift, N)]
-		z.text.Text, z.text.TextColor3 = r[1], r[2]
-		for _, n in z.neon do n.Color = r[2] end
-	end
-end
-paintZones()
-
+-- ===== Luck multiplier cycles through C.LuckSteps =====
 task.spawn(function()
 	local t = 0
 	while true do
@@ -444,9 +455,8 @@ task.spawn(function()
 			Fx:FireClient(plr, "Cash", s.d.cash, C.LuckCycle - t % C.LuckCycle)
 		end
 		if t % C.LuckCycle == 0 then
-			luckShift = (luckShift + 1) % (C.MaxLuckShift + 1)
-			paintZones()
-			Fx:FireAllClients("Luck", luckShift)
+			luckIdx = luckIdx % #C.LuckSteps + 1
+			for plr, s in sessions do Fx:FireClient(plr, "Luck", luckOf(s)) end
 		end
 		if t % 120 == 0 then
 			for plr in sessions do task.spawn(save, plr) end

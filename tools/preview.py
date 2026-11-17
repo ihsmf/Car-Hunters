@@ -41,19 +41,30 @@ def material(c, kind, t):
 
 FBX = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "blender", "export")
 blender_meshes = {}
-def blender_mesh(name):  # import once, bake transforms so the data sits in model space
+def blender_mesh(name, ov):  # import once, bake transforms; recolour palette slots like the game does
+    key = (name, tuple(sorted((k, tuple(v)) for k, v in ov.items())))
+    if key in blender_meshes:
+        return blender_meshes[key]
     if name not in blender_meshes:
         bpy.ops.import_scene.fbx(filepath=os.path.join(FBX, name + ".fbx"))
         o = bpy.context.selected_objects[0]
         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
         blender_meshes[name] = o.data
         bpy.data.objects.remove(o)
-    return blender_meshes[name]
+    me = blender_meshes[name]
+    if ov:
+        me = me.copy()
+        for i, m in enumerate(me.materials):
+            base = m.name.split(".")[0] if m else ""
+            if base in ov:
+                me.materials[i] = material(ov[base], "Smooth", 0)
+    blender_meshes[key] = me
+    return me
 Pinv = np.linalg.inv(P)
 
 for d in json.load(open(scene_path)):
     if "mesh" in d:
-        o = bpy.data.objects.new("m", blender_mesh(d["mesh"]))
+        o = bpy.data.objects.new("m", blender_mesh(d["mesh"], d.get("ov", {})))
         o.matrix_world = Matrix((P @ np.array(d["m"]) @ np.diag(d["sc"] + [1]) @ Pinv).tolist())
         bpy.context.scene.collection.objects.link(o)
         continue
