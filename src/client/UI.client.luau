@@ -286,30 +286,27 @@ renderers.Shop = function()
 end
 
 -- Cue shop + upgrades (opened at the stall on the base)
-panel("Cues", "🎱 Cues & Upgrades")
+panel("Cues", "🎱 Cue Shop")
 renderers.Cues = function()
 	local p = panels.Cues
 	clear(p.list)
 	local d = state.d
-	p.sub.Text = string.format("Strength %s  •  shot power x%.2f", C.Short(d.strength), C.CueMult(d))
-	card(p.list, 0, Color3.fromRGB(255, 138, 138), Color3.fromRGB(255, 71, 71), "💪 Dumbbell Lv." .. d.dumbLevel, "+" .. d.dumbLevel .. " strength / lift", {
-		{ "$" .. C.Short(C.LiftCost(d.dumbLevel)), function()
-			if call("UpDumb") then renderers.Cues() end
-		end },
-	})
-	card(p.list, 1, U.Cues[1], U.Cues[2], "🎱 Cue Lv." .. d.cueLevel, "+10% distance / level", {
-		{ "$" .. C.Short(C.CueUpCost(d.cueLevel)), function()
-			if call("UpCue") then renderers.Cues() end
-		end },
-	})
-	for i, cue in C.Cues do
-		local owned = d.cues[tostring(i)]
-		local label = d.cue == i and "✅ Equipped" or owned and "Equip" or "$" .. C.Short(cue[3])
-		card(p.list, 1 + i, cue[4]:Lerp(Color3.new(1, 1, 1), 0.3), cue[4], cue[1], "x" .. cue[2] .. " distance", {
-			{ label, function()
-				if d.cue ~= i and call("Cue", i) then renderers.Cues() end
+	local cur = C.Cues[d.cue]
+	p.sub.Text = string.format("Each upgrade replaces your cue  •  shot power x%s", C.CueMult(d))
+	card(p.list, 0, C.UI.Money:Lerp(Color3.new(1, 1, 1), 0.3), Color3.fromRGB(63, 191, 106), "✅ " .. cur[1], "In your hands • x" .. cur[2])
+	local nextCue = C.Cues[d.cue + 1]
+	if nextCue then
+		card(p.list, 1, nextCue[4]:Lerp(Color3.new(1, 1, 1), 0.35), nextCue[4], "⬆ " .. nextCue[1], "x" .. nextCue[2] .. " distance", {
+			{ "Upgrade $" .. C.Short(nextCue[3]), function()
+				if call("Cue") then renderers.Cues() end
 			end },
 		})
+	else
+		card(p.list, 1, U.Action[1], U.Action[2], "🏆 Max cue!", "You own the best cue")
+	end
+	for i = d.cue + 2, #C.Cues do -- locked tiers: unlock them one after another
+		local cue = C.Cues[i]
+		card(p.list, i, Color3.fromRGB(120, 120, 135), Color3.fromRGB(70, 70, 85), "🔒 " .. cue[1], "x" .. cue[2] .. " • $" .. C.Short(cue[3]))
 	end
 end
 
@@ -370,6 +367,19 @@ Fx.OnClientEvent:Connect(function(kind, a, b)
 		toast("🍀 The table changed! LUCK x" .. a, Color3.fromRGB(120, 255, 140))
 	elseif kind == "Open" then
 		if not panels[a].holder.Visible then open(a) end
+	elseif kind == "Toast" then
+		toast(a, b and U.Title or U.Bad)
+		if b then _G.PlaySfx("Reward") end
+	elseif kind == "CueSwap" then -- the old cue disappears in a puff
+		local puff = Instance.new("Part")
+		puff.Anchored, puff.CanCollide, puff.Transparency, puff.Size, puff.Position = true, false, 1, Vector3.one, a
+		local e = Instance.new("ParticleEmitter")
+		e.Color, e.Speed, e.Lifetime = ColorSequence.new(U.Title, Color3.new(1, 1, 1)), NumberRange.new(6, 12), NumberRange.new(0.4, 0.8)
+		e.SpreadAngle, e.Size, e.LightEmission, e.Rate = Vector2.new(180, 180), NumberSequence.new(0.8, 0), 1, 0
+		e.Parent, puff.Parent = puff, workspace
+		e:Emit(40)
+		task.delay(2, puff.Destroy, puff)
+		_G.PlaySfx("Reward")
 	elseif kind == "Lift" then
 		if Request:InvokeServer("Lift") and state then
 			_G.PlaySfx("Click")

@@ -223,54 +223,56 @@ THEMES = [
          far=[("Planet", {"Body": (255, 90, 180), "Ring": (255, 215, 90)}, (2.8, 3.4), 50, 1), ("Star", {}, (5, 7), 35, 1), ("Column", {"Gold": (255, 200, 60)}, (2.6, 3), 0, 1)], fx=("Sparkle", (255, 120, 200))),
 ]
 assert len(THEMES) == N
-FALLBACK = dict(  # crude part shapes, only visible if EditableMesh is unavailable
-    Tree=("Ball", (8, 8, 8), 9), Pine=("Block", (6, 12, 6), 6), Palm=("Ball", (8, 3, 8), 14), Cactus=("Block", (2, 9, 2), 4.5),
-    Rock=("Ball", (5, 4, 5), 1.5), Dune=("Ball", (60, 18, 40), 0), Crystal=("Block", (2.4, 10, 2.4), 5), Volcano=("Block", (60, 46, 60), 23),
-    Tower=("Block", (16, 60, 16), 30), Planet=("Ball", (20, 20, 20), 0), Torii=("Block", (15, 14, 1.8), 7), Pyramid=("Block", (40, 24, 40), 12),
-    Column=("Block", (3, 16, 3), 8), Mushroom=("Ball", (8, 4, 8), 6), Cloud=("Ball", (20, 10, 14), 0), Star=("Ball", (5, 5, 1.5), 0),
-    Mountain=("Block", (0.7, 1, 0.7), 0.5), Peak=("Block", (0.7, 1, 0.7), 0.5))
+EXTRA = 10  # extra table segments past the last zone: the table never visibly ends (fades into the haze)
+WALL_H = 56
+WALL_MAT = dict(Grass="Fabric", Sand="Sandstone", Snow="Ice", Slate="Slate", Marble="Marble", Smooth="Smooth", Concrete="Concrete")
 
 
-def prop(par, name, x, y, z, scale, rot, overrides, color):
-    m = Inst("Model", name, par)
-    o = cf(x, y, z) @ ry(rot)
-    vec = isinstance(scale, tuple)
-    piv = part(m, (0.2, 0.2, 0.2), o, WHITE, Transparency=1, CanCollide=False, name="MeshPivot")
-    tag_mesh(piv, name, scale=None if vec else scale, vscale=scale if vec else None, **overrides)
-    shape, size, cy = FALLBACK[name]
-    k = scale if vec else (scale, scale, scale)
-    part(m, tuple(a * b for a, b in zip(size, k)), o @ cf(0, cy * k[1], 0), color, shape=shape, CanCollide=False)
+def club_wall(par, a, b, inward, wood, panel, panel_mat, trim, art):
+    """Solid billiard-club wall from a to b: wood wainscot, themed upper panel, brass rails,
+    pilasters with sconces and framed felt panels. Collides, plus an invisible extension upwards."""
+    (x0, z0), (x1, z1) = a, b
+    ln = math.hypot(x1 - x0, z1 - z0)
+    ang_ = math.atan2(x1 - x0, z1 - z0)
+    if math.cos(ang_) * inward[0] - math.sin(ang_) * inward[1] < 0:
+        ang_ += math.pi  # make local +X point into the playable area
+    m = cf((x0 + x1) / 2, 0, (z0 + z1) / 2) @ ry(ang_)
+    part(par, (3.4, 9, ln), m @ cf(-1.7, 4.5, 0), wood, "Wood")
+    part(par, (3, WALL_H - 9.4, ln), m @ cf(-1.9, 9.4 + (WALL_H - 9.4) / 2, 0), panel, panel_mat)
+    part(par, (3.9, 0.8, ln), m @ cf(-1.55, 9.3, 0), trim, "Metal")
+    part(par, (3.9, 1.4, ln), m @ cf(-1.55, WALL_H, 0), trim, "Metal")
+    part(par, (3.6, 0.6, ln), m @ cf(-1.6, 0.3, 0), shade(wood, 0.7), "Wood")
+    part(par, (2, 300, ln), m @ cf(-2, WALL_H + 150, 0), WHITE, Transparency=1, name="Wall")
+    n = max(1, round(ln / 40))
+    for k in range(n + 1):  # pilasters with sconces
+        z = -ln / 2 + k * ln / n
+        part(par, (1.4, WALL_H - 1, 3.2), m @ cf(0.5, (WALL_H - 1) / 2, z), shade(wood, 1.15), "Wood")
+        part(par, (1.8, 1.2, 3.8), m @ cf(0.7, WALL_H - 1.6, z), trim, "Metal")
+        part(par, (1.8, 1.2, 3.8), m @ cf(0.7, 0.6, z), trim, "Metal")
+        part(par, (0.8, 0.5, 1.2), m @ cf(1.4, 15.5, z), trim, "Metal")
+        light(ball(par, 1.4, m @ cf(1.9, 16.3, z), (255, 244, 214), "Glass", CanCollide=False), (255, 226, 170), 28, 1.4)
+    for k in range(n):  # framed felt panels between the pilasters
+        z = -ln / 2 + (k + 0.5) * ln / n
+        w = ln / n - 8
+        part(par, (0.5, 12, w * 0.7 + 1.2), m @ cf(0.15, 28, z), trim, "Metal")
+        part(par, (0.6, 10.8, w * 0.7), m @ cf(0.2, 28, z), tuple(int(c * 0.6 + 236 * 0.4) for c in art), "Fabric")
 
 
-def scenery(par, i, z0):
-    th = THEMES[i]
+def wall_theme(i):
+    th = THEMES[min(i, N - 1)]
+    wood, rail, felt, trim = th["t"]
     gcol, gmat = th["g"]
-    for sx in (-1, 1):
-        part(par, (380, 1, ZL), cf(sx * (48 + 190), -0.45, z0 + ZL / 2), gcol, gmat, name="Ground")
-        if th.get("sea"):
-            part(par, (260, 1.2, ZL), cf(sx * (160 + 130), -0.3, z0 + ZL / 2), (60, 170, 220), "Glass", Transparency=0.1, Reflectance=0.25)
-        part(par, (1.6, 3, ZL), cf(sx * 48.8, 1.5, z0 + ZL / 2), shade(th["t"][1], 1.1), "Wood" if i < 6 else "Smooth", name="Edge")
-        for band, (lo, hi) in (("near", (56, 100)), ("far", (115, 270))):
-            for name, ov, sc, h, cnt in th[band]:
-                for _ in range(cnt):
-                    s = sc if len(sc) == 3 else rnd.uniform(*sc)
-                    x = sx * rnd.uniform(lo, hi)
-                    z = z0 + rnd.uniform(6, ZL - 6)
-                    prop(par, name, x, h, z, s, rnd.uniform(0, 6.28), ov, next(iter(ov.values()), gcol))
-        if th.get("fx"):
-            kind, col = th["fx"]
-            for _ in range(2):
-                p = part(par, (1, 1, 1), cf(sx * rnd.uniform(52, 90), 6, z0 + rnd.uniform(5, ZL - 5)), WHITE, Transparency=1, CanCollide=False, name="Fx")
-                Inst("Color3Value", kind, p, Value=col)
+    panel = tuple(int(c * 0.45 + d * 0.55) for c, d in zip(gcol, (236, 226, 206)))  # soft theme tint on a cream wall
+    return shade(wood, 0.8), panel, WALL_MAT.get(gmat, "Smooth"), trim, felt
 
 
 def long_table(world):
     long = Inst("Model", "LongTable", world)
-    scen = Inst("Folder", "Scenery", world)
-    for i in range(N):
+    walls = Inst("Folder", "CorridorWalls", world)
+    for i in range(N + EXTRA):
         z0 = TSZ + i * ZL
         zc = z0 + ZL / 2
-        wood, rail, felt, trim = THEMES[i]["t"]
+        wood, rail, felt, trim = THEMES[min(i, N - 1)]["t"]
         seg = Inst("Model", f"Table{i + 1}", long)
         tag_mesh(part(seg, (0.2, 0.2, 0.2), cf(0, 0, zc), WHITE, Transparency=1, CanCollide=False, name="MeshPivot"), "TableSegment",
                  Wood=wood, Panel=shade(wood, 1.25), Rail=rail, Felt=felt, Cushion=shade(felt, 0.75), Trim=trim, Leg=shade(wood, 0.8))
@@ -283,117 +285,71 @@ def long_table(world):
             ycyl(seg, 4.8, 0.5, cf(sx * TW / 2, 3.12, zc), (20, 16, 18))
             for e in (-1, 1):
                 ycyl(seg, 3, 1.6, cf(sx * (TW / 2 + 1), 0.8, zc + e * (ZL / 2 - 6)), shade(wood, 0.8), "Wood")
-        scenery(scen, i, z0)
-    part(long, (TW + 2 * RAIL_W, RAIL_H + 1.4, RAIL_W), cf(0, 1.6 + (RAIL_H + 1.4) / 2, END + RAIL_W / 2), THEMES[-1]["t"][1], "Metal")
+            wood_w, panel, pmat, trim_w, art = wall_theme(i)
+            club_wall(walls, (sx * 48, z0 - (2 if i == 0 else 0)), (sx * 48, z0 + ZL), (-sx, 0), wood_w, panel, pmat, trim_w, art)
     part(long, (TW + 2 * RAIL_W, RAIL_H + 1.4, 1), cf(0, 1.6 + (RAIL_H + 1.4) / 2, TSZ - 0.5), THEMES[0]["t"][1], "Wood")  # head cushion
+    far = TSZ + (N + EXTRA) * ZL
+    part(walls, (100, 300, 2), cf(0, 150, far + 1), WHITE, Transparency=1, name="Wall")  # far end, deep in the haze
 
 
-def giant_rail(par, x0, z0, x1, z1, ix, iz):
-    """Boundary of the start area: a giant billiard-table cushion (wood, felt, brass, pearl sights)."""
-    ln = math.hypot(x1 - x0, z1 - z0)
-    a = math.atan2(x1 - x0, z1 - z0)
-    m = cf((x0 + x1) / 2, 0, (z0 + z1) / 2) @ ry(a)  # local Z runs along the wall
-    inward = 1 if math.cos(a) * ix - math.sin(a) * iz > 0 else -1  # local X axis = (cos a, 0, -sin a)
-    H = 26
-    part(par, (10, H, ln), m @ cf(0, H / 2, 0), (110, 58, 26), "Wood")
-    part(par, (10.6, 1.2, ln + 0.6), m @ cf(0, 0.6, 0), (230, 180, 70), "Metal")
-    part(par, (10.6, 1, ln + 0.6), m @ cf(0, H - 2.5, 0), (230, 180, 70), "Metal")
-    part(par, (3, 4, ln), m @ cf(inward * 4.6, H - 6, 0), (28, 140, 66), "Fabric")  # felt cushion nose
-    part(par, (10.2, 1.2, ln), m @ cf(0, H + 0.4, 0), (90, 46, 20), "Wood")
-    for k in range(int(ln // 22)):
-        zz = -ln / 2 + 11 + k * 22
-        ball(par, 2, m @ cf(0, H + 1.1, zz), (255, 250, 235), CanCollide=False)
-        part(par, (0.4, 6, 3), m @ cf(inward * 5.1, H / 2 - 2, zz), (150, 86, 44), "Wood")  # carved panel
-    part(par, (2, 400, ln), m @ cf(0, 200, 0), WHITE, Transparency=1, name="Wall")
-
-
-def pocket_tower(par, x, z):
-    ycyl(par, 20, 30, cf(x, 15, z), (90, 46, 20), "Wood")
-    ycyl(par, 21, 1.4, cf(x, 30.4, z), (230, 180, 70), "Metal")
-    ycyl(par, 15, 1.2, cf(x, 30.6, z), (20, 16, 18))
-    mesh_ball(par, 11, cf(x, 33, z) @ ry(rnd.uniform(0, 6)), BALLS[rnd.randrange(7)])
-    ycyl(par, 21, 1.4, cf(x, 0.7, z), (230, 180, 70), "Metal")
-
-
+# ---------- Player base: only the billiard table; the gym and the cue shop stand in front of it ----------
 def player_base(world, i, o, col):
     b = Inst("Model", f"Base{i + 1}", world)
-    light_col = tuple(int(c * 0.3 + 255 * 0.7) for c in col)
-    # round raised platform with a coloured rim
-    ycyl(b, 96, 2, o @ cf(0, 1, 0), col)
-    ycyl(b, 92, 0.6, o @ cf(0, 2.1, 0), (250, 240, 225), "Planks", name="Floor")
-    ycyl(b, 97, 0.4, o @ cf(0, 2.05, 0), GOLD, "Metal")
-    top = o @ cf(0, 2.4, 0)
-    ycyl(b, 40, 0.2, top @ cf(0, 0.05, 0), (170, 40, 60), "Fabric")
-    ycyl(b, 42, 0.15, top @ cf(0, 0.0, 0), GOLD, "Metal")
-    for k in range(3):  # front stairs
-        part(b, (24, 0.8, 3), o @ cf(0, 0.4 + k * 0.8 - 0.4, 49.5 - k * 2.2 + 2), (250, 240, 225), "Planks")
+    ycyl(b, 62, 1.0, o @ cf(0, 0.5, 0), col)
+    ycyl(b, 60, 0.3, o @ cf(0, 1.1, 0), (240, 226, 200), "Planks", name="Floor")
+    top = o @ cf(0, 1.25, 0)
     pool_table(b, top)
-    table_lamp(b, top)
-    # pergola over the table
-    for px, pz in ((-11, -13), (11, -13), (-11, 13), (11, 13)):
-        ycyl(b, 2.2, 15, top @ cf(px, 7.5, pz), (250, 248, 240), "Marble")
-        ycyl(b, 3, 0.8, top @ cf(px, 15.2, pz), GOLD, "Metal")
-        ycyl(b, 3, 0.6, top @ cf(px, 0.3, pz), GOLD, "Metal")
-    for pz in (-13, 13): part(b, (25, 1.2, 1.6), top @ cf(0, 16, pz), (250, 248, 240), "Marble")
-    for px in (-11, 11): part(b, (1.6, 1.2, 29), top @ cf(px, 16, 0), (250, 248, 240), "Marble")
-    for k in range(-5, 6): part(b, (23, 0.4, 0.8), top @ cf(0, 16.8, k * 2.4), col)
-    # podiums for the characters (arc around the table)
     slots = Inst("Folder", "Slots", b)
-    for s in range(SLOTS):
+    for s in range(SLOTS):  # where the characters stand around the table
         a = math.radians(-150 + s * 300 / (SLOTS - 1))
-        x, z = math.sin(a) * 23, -math.cos(a) * 23
-        ycyl(b, 7, 0.8, top @ cf(x, 0.4, z), (240, 240, 245), "Marble")
-        ycyl(b, 7.4, 0.25, top @ cf(x, 0.8, z), GOLD, "Metal")
-        ycyl(slots, 5.4, 0.6, top @ cf(x, 1.1, z), WHITE, "Marble", name=f"Slot{s + 1}")
-        light(part(b, (0.4, 0.4, 0.4), top @ cf(x, 9, z), WHITE, Transparency=1, CanCollide=False), light_col, 12, 1.5)
-    # trophy wall at the back with the owner's name
-    for k in range(-4, 5):
-        wall = top @ ry(-math.radians(k * 10.4)) @ cf(0, 0, -41)
-        part(b, (7.4, 10, 1.4), wall @ cf(0, 5, 0), (250, 245, 235), "Marble")
-        part(b, (7.4, 0.6, 1.8), wall @ cf(0, 10.3, 0), col)
-        mesh_ball(b, 2.2, wall @ cf(0, 6, 1.4), BALLS[k % 7])
-        ycyl(b, 1.6, 2, wall @ cf(0, 1, 1.4), GOLD, "Metal")
-    sign = part(b, (30, 7, 1.4), top @ cf(0, 16, -42), col, name="Sign")
+        ycyl(slots, 4.6, 0.2, top @ cf(math.sin(a) * 17, 0.1, -math.cos(a) * 17), GOLD, "Metal", name=f"Slot{s + 1}")
+    sign = part(b, (16, 2.6, 0.6), top @ cf(0, 1.3, 29), shade(col, 0.85), name="Sign")
     label(sign, FACE["Back"], "Free Base")
-    part(b, (32, 0.8, 1.8), top @ cf(0, 12.2, -42), GOLD, "Metal")
-    # fence: 9-gon of Blender fence segments, open at the front for the stairs
-    R = 15 / math.sin(math.pi / 9)
-    for k in range(9):
-        a = 2 * math.pi * k / 9
-        if k in (0, 4, 5):  # front = entrance, back = trophy wall
-            continue
-        mid = top @ ry(-a) @ cf(0, 0, R * math.cos(math.pi / 9) - 0.5)
-        fence(b, mid, col)
-    # entrance arch
-    for sx in (-1, 1):
-        ycyl(b, 2.6, 14, top @ cf(sx * 13, 7, 43), col)
-        light(ball(b, 3.2, top @ cf(sx * 13, 14.8, 43), (255, 245, 220), "Glass"), col, 22)
-    gate = part(b, (28, 3, 1.2), top @ cf(0, 13, 43), (250, 245, 235), "Marble")
-    label(gate, FACE["Back"], "🎱 WELCOME 🎱", col)
-    # gym corner: mat, dumbbell, weight rack
-    part(b, (12, 0.25, 9), top @ cf(-27, 0.12, 22), (44, 44, 58))
-    dumbbell(b, top @ cf(-27, 0.7, 22))
-    prompt(part(b, (7, 3, 4), top @ cf(-27, 1.5, 22), WHITE, Transparency=1, CanCollide=False, name="DumbbellHit"), "Lift", "Dumbbell")
-    for sx in (-1, 1): part(b, (0.6, 5, 0.6), top @ cf(-27 + sx * 4, 2.5, 17), (60, 60, 70), "Metal")
-    part(b, (8.6, 0.5, 0.5), top @ cf(-27, 4.2, 17), (215, 220, 232), "Metal", "Cyl")
-    for sx in (-1, 1): part(b, (0.5, 2.4, 2.4), top @ cf(-27 + sx * 3, 4.2, 17), (240, 60, 70), shape="Cyl")
-    # cue kiosk with a striped awning
-    shop = part(b, (9, 3.6, 3.6), top @ cf(27, 1.8, 24), (120, 200, 255), name="CueShop")
-    part(b, (9.6, 0.4, 4.2), top @ cf(27, 3.8, 24), (250, 245, 235), "Marble")
-    part(b, (9, 8, 0.6), top @ cf(27, 4, 20), (90, 160, 230))
-    for k in range(5): part(b, (2, 0.5, 5.5), top @ cf(23 + k * 2, 9.2, 22.6) @ rx(-0.25), (255, 90, 90) if k % 2 == 0 else WHITE)
-    for sx in (-4.3, 4.3): part(b, (0.5, 9, 0.5), top @ cf(27 + sx, 4.5, 25.5), WHITE)
-    label(shop, FACE["Back"], "🎱 CUES")
-    prompt(shop, "Open", "Cue Shop")
-    for k, cc in enumerate(((230, 190, 120), (255, 200, 40), (140, 240, 255)), 1):
-        cue(b, top @ cf(23.5 + k * 1.8, 4.6 + 0.4, 20.6) @ rz(math.radians(6 - k * 3)), cc)
-    # planters with small palms on the sides
-    for sx in (-1, 1):
-        for pz in (-6, 6):
-            ycyl(b, 4.5, 2, top @ cf(sx * 37, 1, pz), col)
-            ball(b, 4, top @ cf(sx * 37, 2.6, pz), (70, 175, 70), "Grass")
-    part(b, (4, 1, 4), top @ cf(0, 0.5, 34), WHITE, Transparency=1, CanCollide=False, name="SpawnPoint")
+    part(b, (4, 1, 4), top @ cf(0, 0.5, 23), WHITE, Transparency=1, CanCollide=False, name="SpawnPoint")
     Inst("Folder", "Chars", b)
+    gym_station(b, o @ cf(-16, 0, 39))
+    cue_shop(b, o @ cf(16, 0, 39), col)
+
+
+def gym_station(b, o):
+    part(b, (10, 0.3, 7), o @ cf(0, 0.15, 0), (44, 44, 58))
+    dumbbell(b, o @ cf(0, 0.75, 0.5))
+    for sx in (-1, 1):  # small weight rack behind the dumbbell
+        part(b, (0.5, 5, 0.5), o @ cf(sx * 3.6, 2.5, -2.6), (60, 60, 72), "Metal")
+        part(b, (0.4, 2.2, 2.2), o @ cf(sx * 2.6, 4.2, -2.6), (240, 60, 70), shape="Cyl")
+    part(b, (8.2, 0.45, 0.45), o @ cf(0, 4.2, -2.6), (215, 220, 232), "Metal", "Cyl")
+    hit = part(b, (8, 3, 5), o @ cf(0, 1.5, 0.5), WHITE, Transparency=1, CanCollide=False, name="DumbbellHit")
+    prompt(hit, "Lift", "Dumbbell")
+    Inst("ProximityPrompt", "UpgradePrompt", hit, ActionText="Upgrade", ObjectText="Dumbbell", Key=114)  # R
+    label(part(b, (5, 1.4, 0.3), o @ cf(0, 6.2, -2.6), (44, 44, 58)), FACE["Back"], "💪 GYM")
+
+
+def cue_shop(b, o, col):
+    """Mini cue shop: counter, back wall with a 3-cue display (current / next / locked), awning, signs."""
+    part(b, (12, 0.3, 9), o @ cf(0, 0.15, -1), (150, 96, 54), "Planks")
+    shop = part(b, (10, 3.4, 2.6), o @ cf(0, 1.85, 0), (96, 52, 24), "Wood", name="CueShop")
+    label(shop, FACE["Back"], "🎱 CUE SHOP", (255, 230, 150))
+    prompt(shop, "Open", "Cue Shop")
+    part(b, (10.4, 0.3, 3), o @ cf(0, 3.7, 0), (245, 240, 230), "Marble")
+    part(b, (10.6, 0.2, 3.2), o @ cf(0, 3.5, 0), GOLD, "Metal")
+    part(b, (11, 9, 0.6), o @ cf(0, 4.5, -4.2), (110, 60, 28), "Wood")
+    part(b, (11.4, 0.6, 0.8), o @ cf(0, 9.1, -4.2), GOLD, "Metal")
+    for y in (1.6, 7.6):
+        part(b, (9, 0.35, 0.35), o @ cf(0, y, -3.7), GOLD, "Metal", "Cyl")
+    stands = Inst("Folder", "Stands", b)
+    for k, x in enumerate((-3, 0, 3), 1):  # server puts the owner's current / next / locked cue here
+        part(stands, (0.4, 0.4, 0.4), o @ cf(x, 4.9, -3.4), WHITE, Transparency=1, CanCollide=False, name=f"Stand{k}")
+        ycyl(b, 1, 0.3, o @ cf(x, 0.45, -3.4), GOLD, "Metal")
+    for sx in (-1, 1):
+        part(b, (0.5, 10, 0.5), o @ cf(sx * 5.4, 5, 2.4), WHITE, "Wood")
+    for k in range(6):  # striped awning
+        part(b, (2, 0.4, 7.6), o @ cf(-5 + k * 2, 10.2, -0.6) @ rx(-0.18), (230, 60, 70) if k % 2 == 0 else WHITE)
+    lamp = part(b, (1, 0.4, 1), o @ cf(0, 9.5, 0.5), (60, 60, 70), "Metal")
+    light(lamp, (255, 230, 180), 18, 2)
+    label(part(b, (9, 1.8, 0.4), o @ cf(0, 11.9, 3), shade(col, 0.9)), FACE["Back"], "UPGRADE YOUR CUE!")
+    for k in range(3):  # chalk cubes and a cue ball on the counter
+        part(b, (0.45, 0.45, 0.45), o @ cf(-3.8 + k * 0.6, 4.08, 0.4), (60, 140, 230))
+    mesh_ball(b, 0.8, o @ cf(3.6, 4.25, 0.3), WHITE)
 
 
 def build():
@@ -401,69 +357,25 @@ def build():
     world = Inst("Folder", "World", ws)
     env = Inst("Folder", "Environment", world)
 
-    part(env, (1400, 4, END + 1000), cf(0, -2, END / 2), (105, 200, 85), "Grass", name="Ground")
-    part(env, (450, 0.4, 46), cf(0, 0.2, 60), (250, 228, 185), "Pebble", name="Plaza")
-    for x in range(-220, 221, 10):
-        part(env, (5, 0.42, 5), cf(x, 0.21, 60 + (5 if (x // 10) % 2 else -5)), WHITE, "Marble")
+    part(env, (1400, 4, END + EXTRA * ZL + 600), cf(0, -2, (END + EXTRA * ZL) / 2), (105, 200, 85), "Grass", name="Ground")
+    part(env, (450, 0.4, 30), cf(0, 0.2, 63), (250, 228, 185), "Pebble", name="Plaza")
     for sx in (-1, 1):  # walkways along the long table
-        part(env, (25, 0.3, TL + 20), cf(sx * (TW / 2 + RAIL_W + 12.5), 0.15, TSZ + TL / 2), (250, 228, 185), "Pebble")
+        part(env, (25, 0.3, TL + EXTRA * ZL), cf(sx * (TW / 2 + RAIL_W + 12.5), 0.15, TSZ + (TL + EXTRA * ZL) / 2), (250, 228, 185), "Pebble")
 
     long_table(world)
 
-    arch = Inst("Model", "RainbowArch", world)
-    for b, col in enumerate(RAINBOW, 1):
-        R = 34 - b * 1.6
-        for k in range(25):
-            a = math.pi * k / 24
-            part(arch, (1.6, 1.6, 4.6), cf(math.cos(a) * R, math.sin(a) * R, TSZ - 8) @ rz(a) @ rx(math.pi / 2), col, "Smooth", CanCollide=False)
-
-    eight = Inst("Model", "EightBall", world)
-    e = cf(0, 34, END + 55)
-    ball(eight, 40, e, (15, 15, 20), "Glass", name="Ball", Reflectance=0.15)
-    c = part(eight, (1, 18, 18), e @ cf(0, 0, -19.7) @ ry(math.pi / 2), WHITE, shape="Cyl", name="Circle", CanCollide=False)
-    label(c, FACE["Right"], "8", (0, 0, 0), 10)
-    ycyl(eight, 30, 12, cf(0, 6, END + 55), GOLD, "Metal", name="Pedestal")
-    for k in range(1, 4):
-        part(eight, (1, 50 + k * 6, 50 + k * 6), e @ ang(k, k * 0.7, 0), RAINBOW[k * 2 - 1], "ForceField", "Cyl", name=f"Ring{k}", CanCollide=False)
-
-    fb = Inst("Folder", "FloatBalls", world)
-    for k in range(16):
-        sx = 1 if k % 2 else -1
-        mesh_ball(fb, rnd.uniform(5, 9), cf(sx * rnd.uniform(30, 44), rnd.uniform(28, 45), rnd.uniform(140, END)), BALLS[k % 7], CanCollide=False)
-
-    # start area boundary: giant billiard cushions with pocket towers in the corners
-    border = Inst("Model", "Border", world)
-    for (x0, z0, x1, z1, ix, iz) in ((-225, -88, 225, -88, 0, 1), (-225, -88, -225, 78, 1, 0), (225, -88, 225, 78, -1, 0),
-                                     (-225, 78, -60, 78, 0, -1), (60, 78, 225, 78, 0, -1)):
-        giant_rail(border, x0, z0, x1, z1, ix, iz)
-    for x, z in ((-225, -88), (225, -88), (-225, 78), (225, 78), (-60, 78), (60, 78)):
-        pocket_tower(border, x, z)
-    walls = Inst("Folder", "Walls", world)
-    def wall(x0, z0, x1, z1):
-        ln = math.hypot(x1 - x0, z1 - z0)
-        part(walls, (2, 400, ln), cf((x0 + x1) / 2, 200, (z0 + z1) / 2) @ ry(math.atan2(x1 - x0, z1 - z0)), WHITE, Transparency=1, name="Wall")
-    for sx in (-1, 1):
-        wall(sx * 60, 78, sx * 48, 78)
-        wall(sx * 48, 78, sx * 48, END + 95)
-    wall(-48, END + 95, 48, END + 95)
-
-    trees = Inst("Folder", "Trees", world)  # forest behind the cushions
-    for _ in range(70):
-        side = rnd.randrange(3)
-        if side == 0:
-            x, z = rnd.uniform(-300, 300), rnd.uniform(-170, -110)
-        else:
-            x, z = (1 if side == 1 else -1) * rnd.uniform(250, 320), rnd.uniform(-170, 70)
-        prop(trees, "Tree" if rnd.random() < 0.6 else "Pine", x, 0, z, rnd.uniform(2.6, 3.6), rnd.uniform(0, 6.28), {"Snow": (40, 120, 70)}, (80, 170, 70))
-    for x in range(-200, 201, 40):  # small palms in front of the back cushion
-        tree(trees, (x + rnd.uniform(-5, 5), -76), rnd.uniform(12, 15), "palm")
+    # start area: closed on every side by the same club walls
+    hall = Inst("Folder", "HallWalls", world)
+    wood, panel, pmat, trim, art = wall_theme(0)
+    for a, b_, inward in (((-225, -88), (225, -88), (0, 1)), ((-225, -88), (-225, 78), (1, 0)), ((225, -88), (225, 78), (-1, 0)),
+                          ((-225, 78), (-48, 78), (0, -1)), ((48, 78), (225, 78), (0, -1))):
+        club_wall(hall, a, b_, inward, wood, panel, pmat, trim, art)
 
     bcol = [(255, 110, 120), (110, 170, 255), (110, 225, 140), (255, 190, 80)]
     for i in range(4):
-        player_base(world, i, cf((i - 1.5) * 105, 0, -10), bcol[i])
-    part(world, (6, 1, 6), cf(0, 0.6, 62), WHITE, cls="SpawnLocation", name="Spawn", Transparency=1, CanCollide=False, Neutral=True)
+        player_base(world, i, cf((i - 1.5) * 105, 0, -20), bcol[i])
+    part(world, (6, 1, 6), cf(0, 0.6, 66), WHITE, cls="SpawnLocation", name="Spawn", Transparency=1, CanCollide=False, Neutral=True)
     return ws
-
 
 # ---------- rbxlx ----------
 ref = iter(range(10 ** 9))
@@ -492,6 +404,7 @@ def props(i):
     if i.cls == "UIStroke": out += [c3("Color", (40, 20, 60)), '<float name="Thickness">4</float>']
     if i.cls == "PointLight": out += [c3("Color", p["Color"]), f'<float name="Range">{p["Range"]}</float>', f'<float name="Brightness">{p["Brightness"]}</float>']
     if i.cls == "ProximityPrompt": out += [f'<string name="ActionText">{p["ActionText"]}</string>', f'<string name="ObjectText">{p["ObjectText"]}</string>', '<float name="HoldDuration">0</float>']
+    if i.cls == "ProximityPrompt" and "Key" in p: out.append(f'<token name="KeyboardKeyCode">{p["Key"]}</token>')
     if i.cls == "StringValue": out.append(f'<string name="Value">{escape(p["Value"])}</string>')
     if i.cls == "NumberValue": out.append(f'<double name="Value">{p["Value"]}</double>')
     if i.cls == "Color3Value": out.append(c3("Value", p["Value"]))
@@ -525,7 +438,7 @@ def services(ws):
         Inst("LocalScript", n, cl, Source=src(f"src/client/{n}.client.luau"))
     lt = Inst("Lighting", "Lighting", ClockTime=14.6, Brightness=3, EnvironmentDiffuseScale=1, EnvironmentSpecularScale=1, OutdoorAmbient=(150, 140, 170), Ambient=(90, 80, 110))
     Inst("Sky", "Sky", lt)
-    Inst("Atmosphere", "Atmosphere", lt, Density=0.22, Haze=0.6, Color=(200, 225, 255), Decay=(120, 150, 210))
+    Inst("Atmosphere", "Atmosphere", lt, Density=0.38, Haze=1.6, Color=(215, 225, 240), Decay=(150, 165, 200))  # far end of the table fades out
     Inst("BloomEffect", "Bloom", lt, Intensity=0.7, Size=28, Threshold=1.4)
     Inst("ColorCorrectionEffect", "Grade", lt, Saturation=0.22, Contrast=0.06)
     Inst("SunRaysEffect", "SunRays", lt, Intensity=0.06)

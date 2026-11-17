@@ -107,11 +107,10 @@ C.Cues = { -- name, distance multiplier, price, colour
 C.DragonCue = { "Dragon", 6, 0, rgb(80, 220, 120) }
 
 function C.LiftCost(lvl) return math.floor(50 * 1.6 ^ (lvl - 1)) end
-function C.CueUpCost(lvl) return math.floor(100 * 1.8 ^ (lvl - 1)) end
 function C.CueMult(d)
 	local base = C.Cues[d.cue][2]
 	if d.passes.DragonCue then base = math.max(base, C.DragonCue[2]) end
-	return base * (1 + (d.cueLevel - 1) * 0.1)
+	return base
 end
 function C.Distance(power, d)
 	return math.min(C.Table.Length, power * (40 + d.strength * 0.6) * C.CueMult(d))

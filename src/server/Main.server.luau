@@ -35,7 +35,7 @@ local ANIM = { Idle = "rbxassetid://507766666", Cheer = "rbxassetid://507770677"
 
 local function default()
 	return {
-		cash = 0, strength = 0, dumbLevel = 1, cue = 1, cues = { ["1"] = true }, cueLevel = 1,
+		cash = 0, strength = 0, dumbLevel = 1, cue = 1,
 		inv = {}, daily = { day = 0, streak = 0 }, receipts = {},
 	}
 end
@@ -227,6 +227,63 @@ local function pay(s, cost)
 	return true
 end
 
+-- ===== Cues: the one in the player's hand and the 3-cue display in their shop =====
+local function cuePart(color, cf)
+	local p = Instance.new("Part")
+	p.Name, p.Size, p.Color, p.Material = "HeldCue", Vector3.new(0.3, 9.2, 0.3), color, Enum.Material.Wood
+	p.CanCollide, p.CanQuery, p.CanTouch, p.CFrame = false, false, false, cf
+	local tag = Instance.new("StringValue")
+	tag.Name, tag.Value, tag.Parent = "Mesh", "Cue", p
+	local shaft = Instance.new("Color3Value")
+	shaft.Name, shaft.Value, shaft.Parent = "Shaft", color, p
+	return p
+end
+
+local function currentCue(s)
+	local cue = C.Cues[s.d.cue]
+	if s.passes.DragonCue and C.DragonCue[2] > cue[2] then return C.DragonCue end
+	return cue
+end
+
+local function giveCue(plr, upgraded)
+	local s, char = sessions[plr], plr.Character
+	local hand = char and char:FindFirstChild("RightHand")
+	if not (s and hand) then return end
+	local old = char:FindFirstChild("HeldCue")
+	if old then
+		if upgraded then Fx:FireClient(plr, "CueSwap", old.Position) end -- the old cue vanishes in a puff
+		old:Destroy()
+	end
+	local p = cuePart(currentCue(s)[4], hand.CFrame * CFrame.Angles(math.rad(-12), 0, 0) * CFrame.new(0, 2.2, 0))
+	p.Massless = true
+	weldTo(hand, p)
+	p.Parent = char
+end
+
+local function showCues(plr)
+	local s = sessions[plr]
+	if not s then return end
+	for k, stand in Map.Bases[s.slot].stands do
+		stand:ClearAllChildren()
+		local tier = s.d.cue + k - 1
+		local cue = C.Cues[tier]
+		if cue then
+			local p = cuePart(k == 3 and Color3.fromRGB(45, 45, 50) or cue[4], stand.CFrame)
+			p.Anchored = true
+			p.Parent = stand
+			local bb = Instance.new("BillboardGui")
+			bb.Size, bb.StudsOffset, bb.MaxDistance, bb.AlwaysOnTop = UDim2.fromOffset(150, 46), Vector3.new(0, 5.6, 0), 45, true
+			local l = Instance.new("TextLabel")
+			l.Size, l.BackgroundTransparency, l.TextScaled, l.FontFace = UDim2.fromScale(1, 1), 1, true, C.UI.Font
+			l.Text = k == 1 and ("✅ " .. cue[1]) or k == 2 and (cue[1] .. "\n$" .. C.Short(cue[3])) or "🔒 " .. cue[1]
+			l.TextColor3 = k == 1 and C.UI.Money or k == 2 and C.UI.Title or Color3.fromRGB(200, 200, 210)
+			local st = Instance.new("UIStroke")
+			st.Thickness, st.Color, st.Parent = 2.5, C.UI.Ink, l
+			l.Parent, bb.Parent = bb, p
+		end
+	end
+end
+
 -- ===== Player actions (Request:InvokeServer(action, arg)) =====
 local actions = {}
 
@@ -266,21 +323,16 @@ function actions.UpDumb(_, s)
 	return true, "Dumbbell upgraded!"
 end
 
-function actions.UpCue(_, s)
-	if not pay(s, C.CueUpCost(s.d.cueLevel)) then return false, "Not enough cash!" end
-	s.d.cueLevel += 1
-	return true, "Cue upgraded!"
-end
-
-function actions.Cue(_, s, i)
-	local cue = type(i) == "number" and C.Cues[i]
-	if not cue then return false end
-	if not s.d.cues[tostring(i)] then
-		if not pay(s, cue[3]) then return false, "Not enough cash!" end
-		s.d.cues[tostring(i)] = true
-	end
-	s.d.cue = i
-	return true, cue[1] .. " cue equipped!"
+-- Cues are an upgrade path: you can only buy the next tier, and the new cue replaces the old one
+function actions.Cue(plr, s)
+	local nextTier = s.d.cue + 1
+	local cue = C.Cues[nextTier]
+	if not cue then return false, "You already own the best cue!" end
+	if not pay(s, cue[3]) then return false, "Not enough cash!" end
+	s.d.cue = nextTier
+	giveCue(plr, true)
+	showCues(plr)
+	return true, cue[1] .. " cue! x" .. cue[2] .. " distance"
 end
 
 function actions.Equip(plr, s, i)
@@ -346,9 +398,11 @@ Request.OnServerInvoke = function(plr, action, arg)
 end
 
 -- ===== Players =====
-local function onCharacter(slot, char)
+local function onCharacter(plr, slot, char)
 	task.wait()
 	char:PivotTo(Map.Bases[slot].spawn * CFrame.new(0, 3, 0))
+	char:WaitForChild("RightHand", 10)
+	giveCue(plr, false)
 end
 
 local function onPlayer(plr)
@@ -390,9 +444,10 @@ local function onPlayer(plr)
 	ls.Parent = plr
 	Map.Bases[slot].sign.Text = plr.DisplayName .. "'s Base"
 
-	plr.CharacterAdded:Connect(function(char) onCharacter(slot, char) end)
-	if plr.Character then task.spawn(onCharacter, slot, plr.Character) end
+	plr.CharacterAdded:Connect(function(char) onCharacter(plr, slot, char) end)
+	if plr.Character then task.spawn(onCharacter, plr, slot, plr.Character) end
 	refreshBase(plr)
+	showCues(plr)
 	sync(plr)
 end
 Players.PlayerAdded:Connect(onPlayer)
@@ -412,6 +467,7 @@ Players.PlayerRemoving:Connect(function(plr)
 	if s then
 		Map.Bases[s.slot].chars:ClearAllChildren()
 		Map.Bases[s.slot].sign.Text = "Free Base"
+		for _, stand in Map.Bases[s.slot].stands do stand:ClearAllChildren() end
 		taken[s.slot] = nil
 	end
 	sessions[plr] = nil
@@ -421,9 +477,26 @@ game:BindToClose(function()
 	for plr in sessions do save(plr) end
 end)
 
-for _, base in Map.Bases do
-	base.dumbPrompt.Triggered:Connect(function(plr) Fx:FireClient(plr, "Lift") end)
-	base.shopPrompt.Triggered:Connect(function(plr) Fx:FireClient(plr, "Open", "Cues") end)
+-- gym and cue shop stand in front of each base and only serve the base owner
+for idx, base in Map.Bases do
+	local function owner(plr)
+		local s = sessions[plr]
+		if s and s.slot == idx then return s end
+		if s then Fx:FireClient(plr, "Toast", "Use the gym and shop at your own base!") end
+	end
+	base.liftPrompt.Triggered:Connect(function(plr)
+		if owner(plr) then Fx:FireClient(plr, "Lift") end
+	end)
+	base.upgradePrompt.Triggered:Connect(function(plr)
+		local s = owner(plr)
+		if not s then return end
+		local ok, msg = actions.UpDumb(plr, s)
+		Fx:FireClient(plr, "Toast", ok and msg .. " Lv." .. s.d.dumbLevel or msg .. " ($" .. C.Short(C.LiftCost(s.d.dumbLevel)) .. ")", ok)
+		sync(plr)
+	end)
+	base.shopPrompt.Triggered:Connect(function(plr)
+		if owner(plr) then Fx:FireClient(plr, "Open", "Cues") end
+	end)
 end
 
 MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(plr, id, bought)
@@ -434,6 +507,8 @@ MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(plr, id, boug
 	end
 	Map.Bases[s.slot].chars:ClearAllChildren() -- rebuild sticks for Golden Stick
 	refreshBase(plr)
+	giveCue(plr, true) -- Dragon Cue
+	showCues(plr)
 	sync(plr)
 end)
 

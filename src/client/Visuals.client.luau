@@ -43,6 +43,6 @@ local function check(inst)
 	if inst.Name == "Mesh" and inst:IsA("StringValue") then task.spawn(apply, inst) end
 end
 
-local world = workspace:WaitForChild("World")
-for _, d in world:GetDescendants() do check(d) end
-world.DescendantAdded:Connect(check)
+workspace:WaitForChild("World")
+for _, d in workspace:GetDescendants() do check(d) end
+workspace.DescendantAdded:Connect(check) -- also catches the cue in each player's hand
