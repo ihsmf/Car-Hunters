@@ -19,7 +19,7 @@ local ACTIVE = { HIGH = 380, MED = 260, LOW = 190 }
 local INLINE_BUILDS = 2 -- most models ever built inside RenderStepped (only for a road that is already in view)
 local BG_BUDGET = 0.002 -- s of building per frame in the background
 local lastReport = 0
-local parked = CFrame.new(0, -500, 0)
+local parked = CFrame.new(0, -300, 0) -- hidden pool cars: well above FallenPartsDestroyHeight (-500)
 
 local function activeDist()
 	return ACTIVE[Perf.Level()] or ACTIVE.HIGH

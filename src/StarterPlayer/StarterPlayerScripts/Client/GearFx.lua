@@ -9,6 +9,7 @@
 --   tier 4  Money Storm    gold flame jets + money beam into the sky + wide ground halo + coins
 --   tier 5  Golden Engine  golden rays + spinning crown + beam + sparkles + gold outline (Highlight, near cars only)
 -- A billboard above the car shows the boost and the time left ("x2 INCOME  9:42").
+-- The aura follows its car: every piece is re-pivoted with the model when it moves (v25).
 -- Culling: everything that moves or emits switches off beyond 220 studs from the camera; the Highlight only within
 -- 60 studs and at most 10 at once (the engine renders 31); Perf LOW = a quarter of the particles and no Highlight.
 local RunService = game:GetService("RunService")
@@ -386,8 +387,55 @@ local function build(model, def)
 		sparkles(e, def.color, 12, 3)
 	end
 	billboard(e, def)
+	-- follow the car (v25): every piece is stored relative to the model's pivot; animate() re-pivots them with one
+	-- BulkMoveTo whenever the car moves (re-parked, spawned in, repositioned). Attachments, beams, lights and the
+	-- billboard ride on the parts.
+	local pivot = model:GetPivot()
+	e.pivot, e.parts, e.offsets = pivot, {}, {}
+	for _, d in ipairs(e.folder:GetDescendants()) do
+		if d:IsA("BasePart") then
+			table.insert(e.parts, d)
+			table.insert(e.offsets, pivot:ToObjectSpace(d.CFrame))
+		end
+	end
+	e.centerLocal = pivot:PointToObjectSpace(e.center)
+	if e.crownCF then
+		e.crownLocal = pivot:ToObjectSpace(e.crownCF)
+	end
 	e.folder.Parent = fxRoot
 	return e
+end
+
+-- re-pivots an aura that no longer sits where its car is
+local function follow(e)
+	local m = e.model
+	if not m.Parent then
+		return
+	end
+	local ok, cur = pcall(m.GetPivot, m)
+	if not ok then
+		return
+	end
+	local old = e.pivot
+	if (cur.Position - old.Position).Magnitude < 0.02 and cur.LookVector:Dot(old.LookVector) > 0.99995 and cur.UpVector:Dot(old.UpVector) > 0.99995 then
+		return
+	end
+	e.pivot = cur
+	local cfs = table.create(#e.parts)
+	local live, n = {}, 0
+	for i, p in ipairs(e.parts) do
+		if p.Parent then
+			n = n + 1
+			live[n], cfs[n] = p, cur * e.offsets[i]
+		end
+	end
+	if n > 0 then
+		Workspace:BulkMoveTo(live, cfs, Enum.BulkMoveMode.FireCFrameChanged)
+	end
+	e.center = cur:PointToWorldSpace(e.centerLocal)
+	if e.crownLocal then
+		e.crownCF = cur * e.crownLocal
+	end
 end
 
 -- emitters / beams / lights on or off (distance cull); LOW graphics run a quarter of the particles
@@ -504,6 +552,7 @@ local function animate()
 		lastPulse = t
 	end
 	for _, e in pairs(entries) do
+		follow(e)
 		if e.on then
 			if e.crown then
 				local centre = e.crownCF * CFrame.Angles(0, t * 0.9, 0) + Vector3.new(0, math.sin(t * 2) * 0.15, 0)

@@ -97,6 +97,7 @@ if okCars then
 else
 	warn("[CarHunters] car models failed:", carsOrErr)
 end
+game:GetService("ReplicatedStorage"):SetAttribute("CarsReady", true) -- clients warm car templates after this
 
 local savedMap = Workspace:FindFirstChild("GeneratedMap")
 local propsNow = ServerStorage:FindFirstChild("BuilderAssets") and ServerStorage.BuilderAssets:FindFirstChild("Props")

@@ -134,22 +134,29 @@ local function prepareTemplate(tpl, targetL, opts)
 	return m
 end
 
+-- a failed prepare is not cached for good (v25): the model may still be arriving (server start installs the
+-- cars after early clients joined), so it is tried again after RETRY_AFTER seconds
+local RETRY_AFTER = 8
+local failedAt = {}
 local function fromTemplate(key, tpl, targetL, opts)
 	local cached = templateCache[key]
 	if cached == nil then
+		local t = failedAt[key]
+		if t and os.clock() - t < RETRY_AFTER then
+			return nil
+		end
 		local ok, res = pcall(prepareTemplate, tpl, targetL, opts)
-		if ok then
+		if ok and res then
 			cached = res
+			templateCache[key] = cached
+			failedAt[key] = nil
 		else
 			warn("[CarModels] could not prepare", tpl:GetFullName(), res)
-			cached = false
+			failedAt[key] = os.clock()
+			return nil
 		end
-		templateCache[key] = cached
 	end
-	if cached then
-		return cached:Clone()
-	end
-	return nil
+	return cached:Clone()
 end
 
 local function addNeonGlow(model, k, neon)
@@ -416,6 +423,25 @@ function VehicleFactory.BuildTraffic(kindName, color, variant)
 		end
 	end
 	return VehicleFactory.Build(kindName, { BodyColor = color, Low = true })
+end
+
+-- the server sets ReplicatedStorage "CarsReady" once CarStoreTool.InstallMissingEmbedded is done (v25): before that
+-- a car can still be missing from CarModels and would be drawn with the procedural body
+function VehicleFactory.CarsReady()
+	return ReplicatedStorage:GetAttribute("CarsReady") == true
+end
+
+-- yields until CarsReady or `timeout` seconds (default 20); returns whether the cars are ready
+function VehicleFactory.WaitForCars(timeout)
+	local t0 = os.clock()
+	local limit = timeout or 20
+	while not VehicleFactory.CarsReady() do
+		if os.clock() - t0 >= limit then
+			return false
+		end
+		task.wait(0.25)
+	end
+	return true
 end
 
 function VehicleFactory.HeightOf(kindName)

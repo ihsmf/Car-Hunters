@@ -239,6 +239,87 @@ local function sanitize(car)
 	return parts
 end
 
+-- stray parts (v25): a single visible part that alone stretches the car's box by > 35 % on some axis (a ground
+-- plate, a mis-scaled mesh, a forgotten prop far away) is dropped. Only used when the proportion check fails, so a
+-- normal body shell that defines the car's length is never touched. Returns how many parts were dropped.
+local function worldBox(p)
+	local cf, h = p.CFrame, p.Size / 2
+	local r, u, l = cf.RightVector, cf.UpVector, cf.LookVector
+	local e = Vector3.new(
+		math.abs(r.X) * h.X + math.abs(u.X) * h.Y + math.abs(l.X) * h.Z,
+		math.abs(r.Y) * h.X + math.abs(u.Y) * h.Y + math.abs(l.Y) * h.Z,
+		math.abs(r.Z) * h.X + math.abs(u.Z) * h.Y + math.abs(l.Z) * h.Z
+	)
+	return cf.Position - e, cf.Position + e
+end
+
+function Tool.DropStrays(car)
+	local dropped = 0
+	for _ = 1, 4 do
+		local list = {}
+		for _, d in ipairs(car:GetDescendants()) do
+			if d:IsA("BasePart") and d.Transparency < 0.99 then
+				local mn, mx = worldBox(d)
+				table.insert(list, { p = d, mn = { mn.X, mn.Y, mn.Z }, mx = { mx.X, mx.Y, mx.Z } })
+			end
+		end
+		local n = #list
+		if n < 6 then
+			break
+		end
+		-- prefix / suffix min-max per axis: the box of all parts but one in O(n)
+		local pre, suf = { [0] = nil }, {}
+		local function merge(a, b)
+			if not a then
+				return { mn = { b.mn[1], b.mn[2], b.mn[3] }, mx = { b.mx[1], b.mx[2], b.mx[3] } }
+			end
+			local m = { mn = {}, mx = {} }
+			for k = 1, 3 do
+				m.mn[k], m.mx[k] = math.min(a.mn[k], b.mn[k]), math.max(a.mx[k], b.mx[k])
+			end
+			return m
+		end
+		for i = 1, n do
+			pre[i] = merge(pre[i - 1], list[i])
+		end
+		for i = n, 1, -1 do
+			suf[i] = merge(suf[i + 1], list[i])
+		end
+		local full = pre[n]
+		local worst, worstRatio = nil, 1.35
+		for i = 1, n do
+			local rest = pre[i - 1]
+			if suf[i + 1] then
+				rest = rest and merge(rest, suf[i + 1]) or suf[i + 1]
+			end
+			for k = 1, 3 do
+				local ef, er = full.mx[k] - full.mn[k], rest.mx[k] - rest.mn[k]
+				local ratio = ef / math.max(er, 0.5)
+				if ef - er > 1 and ratio > worstRatio then
+					worst, worstRatio = list[i].p, ratio
+				end
+			end
+		end
+		if not worst then
+			break
+		end
+		if hasVisibleDescendant(worst) then
+			worst.Transparency = 1 -- a holder: keep its visible children
+		else
+			worst:Destroy()
+		end
+		dropped = dropped + 1
+	end
+	return dropped
+end
+
+local function proportionsOk(size, parts)
+	local len, wid = size.Z, size.X
+	local r = len / math.max(wid, 0.1)
+	return r >= 1.4 and r <= 4.5 and len / math.max(size.Y, 0.1) >= 1.5 and parts <= Tool.MaxParts
+end
+Tool.ProportionsOk = proportionsOk
+
 -- the car's OWN wheels (same rules as tools/wheel_report.luau). Returns source, count:
 --   "achassis": Wheels/<FL,FR,RL,RR> hubs with visible wheel meshes inside
 --   "named":    visible parts called wheel/tire/tyre/rim (no steering wheels, airbags, spares), grouped by position
@@ -366,10 +447,22 @@ function Tool.Install(carId, assetId, yaw)
 		warn(string.format("[CarStore] %s: asset %s rejected (only %d of 4 wheels)", carId, tostring(assetId), wheelCount))
 		return false
 	end
-	local len, wid = size.Z, size.X
-	if len / math.max(wid, 0.1) < 1.4 or len / math.max(wid, 0.1) > 4.5 or len / math.max(size.Y, 0.1) < 1.5 or parts > Tool.MaxParts then
+	if not proportionsOk(size, parts) then
+		-- a stray prop / mis-scaled mesh can break an otherwise fine car: drop it and measure again
+		local dropped = Tool.DropStrays(car)
+		if dropped > 0 then
+			parts = parts - dropped
+			_, size = car:GetBoundingBox()
+			if not seat and size.X > size.Z then
+				normalize(car, Vector3.new(1, 0, 0))
+				_, size = car:GetBoundingBox()
+			end
+			print(string.format("[CarStore] %s: asset %s - dropped %d stray part(s)", carId, tostring(assetId), dropped))
+		end
+	end
+	if not proportionsOk(size, parts) then
 		holder:Destroy()
-		warn(string.format("[CarStore] %s: asset %s rejected (%.0fx%.0fx%.0f studs, %d parts)", carId, tostring(assetId), len, wid, size.Y, parts))
+		warn(string.format("[CarStore] %s: asset %s rejected (%.0fx%.0fx%.0f studs, %d parts)", carId, tostring(assetId), size.Z, size.X, size.Y, parts))
 		return false
 	end
 	local root = ReplicatedStorage:FindFirstChild("CarModels")
@@ -420,10 +513,20 @@ end
 
 -- server start: every car that has no model yet is installed from the assets embedded in the place
 -- (no downloads, works in an unpublished place and in the live game)
+-- every car the game can show: the trap list and the game-pass exclusives (Golden Magnat GT)
+local function allCars()
+	local t = table.clone(CarConfig.List)
+	for _, def in ipairs(CarConfig.Exclusive or {}) do
+		table.insert(t, def)
+	end
+	return t
+end
+Tool.AllCars = allCars
+
 function Tool.InstallMissingEmbedded()
-	local root = ReplicatedStorage:FindFirstChild("CarModels")
 	local done = 0
-	for _, def in ipairs(CarConfig.List) do
+	for _, def in ipairs(allCars()) do
+		local root = ReplicatedStorage:FindFirstChild("CarModels")
 		local cur = root and root:FindFirstChild(def.id)
 		if not (cur and cur:FindFirstChildWhichIsA("BasePart", true)) then
 			for _, id in ipairs(Tool.Candidates[def.id] or {}) do
@@ -440,7 +543,8 @@ end
 
 function Tool.InstallAllNow()
 	local done, failed = 0, {}
-	for _, def in ipairs(CarConfig.List) do
+	local cars = allCars()
+	for _, def in ipairs(cars) do
 		local ok = false
 		for _, id in ipairs(Tool.Candidates[def.id] or {}) do
 			ok = Tool.Install(def.id, id)
@@ -455,7 +559,7 @@ function Tool.InstallAllNow()
 		end
 		task.wait()
 	end
-	print(string.format("[CarStore] installed %d/%d store models", done, #CarConfig.List))
+	print(string.format("[CarStore] installed %d/%d store models", done, #cars))
 	if #failed > 0 then
 		print("[CarStore] kept the previous model for: " .. table.concat(failed, ", "))
 	end

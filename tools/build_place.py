@@ -71,8 +71,22 @@ if os.path.isdir(rbxm) and any(f.endswith('.rbxm') for f in os.listdir(rbxm)):
     if os.path.exists(lune):
         # CarHunters.rbxlx stays code-only (small, diffable); CarHunters.rbxl = the full place with every model (open this one)
         full = os.path.join(os.path.dirname(out), 'CarHunters.rbxl')
+        # legacy property names lune would drop (MeshPart "MeshID" -> textured cubes): fix the raw files first
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import fetch_assets as _fa
+        _fa.patch_all(rbxm)
         subprocess.run([lune, 'run', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bake_models.luau'), out, rbxm, full], check=True)
         print('full place with embedded models:', full, '%.1f MB' % (os.path.getsize(full) / 1e6))
+        # every car must install from the embedded assets with real meshes and sane proportions
+        _a = subprocess.run([lune, 'run', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'model_audit.luau'), full],
+                            capture_output=True, text=True)
+        _lines = (_a.stdout + _a.stderr).strip().splitlines()
+        for _l in _lines:
+            if 'FAIL' in _l or 'warn' in _l:
+                print(_l)
+        print((_lines or ['model audit: no output'])[-1])
+        if _a.returncode != 0:
+            raise SystemExit('!!! model_audit failed - fix the cars above (tools/model_audit.luau)')
     else:
         print('! lune not found (cargo install lune --locked): 3D models were NOT embedded')
 else:

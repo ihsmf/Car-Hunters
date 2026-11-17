@@ -32,7 +32,129 @@ def fetch(asset_id):
     if not (data.startswith(b"<roblox!") or data.startswith(b"<roblox")):
         raise RuntimeError(f"not a model file ({data[:20]!r})")
     open(path, "wb").write(data)
+    patch_legacy_props(path)
     return f"{len(data) // 1024} KB"
+
+
+# ---- legacy property names lune drops (v25) ------------------------------------------------------------------------
+# Old MeshParts (2016-17 uploads, e.g. car 596656603) store the mesh under the legacy name "MeshID". rbx_binary/lune
+# has no alias for it, so the baked MeshPart ends up with no MeshId and renders as a plain box. Fix: rename the
+# PROP chunk in the raw .rbxm (same length, same String/Content wire type) and rewrite that chunk uncompressed
+# (compressedLength = 0 is valid in the binary format). Idempotent; other chunks are copied byte for byte.
+LEGACY_PROPS = {"MeshPart": {b"MeshID": b"MeshId"}}
+
+
+def _lz4_block(src, size):
+    out = bytearray()
+    i = 0
+    while i < len(src):
+        tok = src[i]
+        i += 1
+        lit = tok >> 4
+        if lit == 15:
+            while True:
+                b = src[i]
+                i += 1
+                lit += b
+                if b != 255:
+                    break
+        out += src[i : i + lit]
+        i += lit
+        if i >= len(src):
+            break
+        off = src[i] | (src[i + 1] << 8)
+        i += 2
+        m = tok & 15
+        if m == 15:
+            while True:
+                b = src[i]
+                i += 1
+                m += b
+                if b != 255:
+                    break
+        m += 4
+        st = len(out) - off
+        if off <= 0 or st < 0:
+            raise ValueError("bad lz4 offset")
+        for k in range(m):
+            out.append(out[st + k])
+    if len(out) != size:
+        raise ValueError(f"lz4 size {len(out)} != {size}")
+    return bytes(out)
+
+
+def _chunk_body(raw, clen, ulen):
+    if not clen:
+        return raw
+    if raw[:4] == b"\x28\xb5\x2f\xfd":
+        import zstandard  # only for zstd chunks (newer Studio saves)
+
+        return zstandard.ZstdDecompressor().decompress(raw, max_output_size=ulen)
+    return _lz4_block(raw, ulen)
+
+
+def patch_legacy_props(path):
+    """Renames legacy property names in a binary .rbxm in place; returns how many PROP chunks were renamed.
+    A class that already has the modern property keeps both chunks as they are (most 2017-19 saves carry both
+    and lune reads the modern one)."""
+    import struct
+
+    d = open(path, "rb").read()
+    if not d.startswith(b"<roblox!"):
+        return 0  # XML models keep their names as text; lune reads those aliases itself
+    chunks, p = [], 32
+    while p + 16 <= len(d):
+        name = d[p : p + 4]
+        clen, ulen, reserved = struct.unpack("<III", d[p + 4 : p + 16])
+        nxt = p + 16 + (clen or ulen)
+        chunks.append((p, nxt, name, clen, ulen, reserved))
+        p = nxt
+        if name == b"END\x00":
+            break
+    # pass 1: class names and which properties each class already has
+    classes, have, bodies = {}, {}, {}
+    for i, (p, nxt, name, clen, ulen, _) in enumerate(chunks):
+        if name in (b"INST", b"PROP"):
+            body = _chunk_body(d[p + 16 : nxt], clen, ulen)
+            cid, nl = struct.unpack("<II", body[:8])
+            if name == b"INST":
+                classes[cid] = body[8 : 8 + nl].decode("utf-8", "replace")
+            else:
+                have.setdefault(cid, set()).add(body[8 : 8 + nl])
+                bodies[i] = (cid, nl, body)
+    # pass 2: rename only where the modern name is missing
+    out, renamed, last = bytearray(d[:32]), 0, 32
+    for i, (p, nxt, name, clen, ulen, reserved) in enumerate(chunks):
+        last = nxt
+        if i in bodies:
+            cid, nl, body = bodies[i]
+            pname = body[8 : 8 + nl]
+            new = LEGACY_PROPS.get(classes.get(cid), {}).get(pname)
+            if new and len(new) == len(pname) and new not in have.get(cid, ()):
+                body = body[:8] + new + body[8 + nl :]
+                out += name + struct.pack("<III", 0, len(body), reserved) + body
+                renamed += 1
+                continue
+        out += d[p:nxt]
+    out += d[last:]  # anything after END (none in practice)
+    if renamed:
+        open(path, "wb").write(bytes(out))
+    return renamed
+
+
+def patch_all(directory=OUT):
+    total = 0
+    for f in sorted(os.listdir(directory)):
+        if f.endswith(".rbxm"):
+            try:
+                n = patch_legacy_props(os.path.join(directory, f))
+            except Exception as e:  # noqa: BLE001 - leave the file as it is, report it
+                print(f"  ! patch {f}: {e}")
+                continue
+            if n:
+                print(f"  patched legacy property names in {f} ({n} chunk(s))")
+                total += n
+    return total
 
 
 def ids():

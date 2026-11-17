@@ -5,6 +5,7 @@
 --    templateCache under "car:<id>"); warming builds one throw-away clone so the reveal only pays a cheap Clone().
 -- Background work is small batches with waits in between; caps per quality level keep phone memory modest.
 -- Ensure(defs) does a car right away (a throw result just arrived); Ready(def, timeout) waits for it.
+-- Warming waits for the server's ReplicatedStorage "CarsReady" attribute (up to 20 s, v25).
 local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -73,9 +74,9 @@ local function preload(ids)
 			if m then
 				table.insert(models, m)
 				table.insert(todo, id)
-			else
+			elseif VehicleFactory.CarsReady() then
 				loaded[id] = true -- procedural car: nothing to download
-			end
+			end -- else: the server is still installing the models, look again later
 		end
 	end
 	if #models > 0 then
@@ -96,10 +97,13 @@ local function warm(def)
 	if warmed[def.id] then
 		return
 	end
-	warmed[def.id] = true
 	if not realModel(def.id) then
-		return -- procedural fallback: built fresh every time, nothing to cache
+		if VehicleFactory.CarsReady() then
+			warmed[def.id] = true -- procedural fallback: built fresh every time, nothing to cache
+		end
+		return -- (models still installing on the server: warm it on a later pass)
 	end
+	warmed[def.id] = true
 	local ok, m = pcall(VehicleFactory.BuildCar, def, { Low = true })
 	if ok and typeof(m) == "Instance" then
 		m:Destroy() -- a clone of the cached template: destroying it leaves the template untouched
@@ -260,6 +264,7 @@ local function background()
 		task.wait(0.5)
 	end
 	task.wait(3) -- let the join (map, HUD, intro) settle first
+	VehicleFactory.WaitForCars(20) -- the server installs the store cars at start: warm real models, not stand-ins
 	while true do
 		local caps = CAPS[perfLevel()]
 		local list = plan()
