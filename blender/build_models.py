@@ -80,49 +80,116 @@ P = dict(
 BALL_COLORS = [(255, 210, 40), (40, 90, 230), (235, 50, 50), (140, 50, 200), (255, 130, 20), (30, 160, 70), (140, 30, 40), (20, 20, 24)]
 
 
+def ball_mesh(d, c, body, white, striped, tilt):
+    """Pool ball: stripes = coloured band on white, solids = coloured with a white number spot."""
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=16, v_segments=10, radius=d / 2)
+    me = bpy.data.meshes.new("ball"); bm.to_mesh(me); bm.free()
+    o = bpy.data.objects.new("ball", me); bpy.context.scene.collection.objects.link(o)
+    o.data.materials.append(body); o.data.materials.append(white)
+    for f in me.polygons:  # Blender Z is the ball's axis here
+        z = f.center.z / (d / 2)
+        f.material_index = int(abs(z) > 0.42) if striped else int(z > 0.8)
+        f.use_smooth = True
+    o.rotation_euler = tilt
+    o.location = rb(*c)
+    return o
+
+
 def pool_table():
-    M = {k: mat(k, P[k], 1 if k == "Gold" else 0, 0.3 if k in ("Gold", "Pearl") else 0.5) for k in ("Wood", "WoodDark", "Felt", "Cushion", "Gold", "Pocket", "Pearl", "White")}
-    L, W = 16, 9
-    box((W + 1.8, 1.5, L + 1.8), (0, 3.05, 0), M["Wood"], 0.3)
-    box((W + 2.0, 0.25, L + 2.0), (0, 2.35, 0), M["Gold"], 0.1)
-    box((W, 0.3, L), (0, 3.85, 0), M["Felt"], 0.02)
-    for s in (-1, 1):
-        box((1.1, 0.75, L + 2.2), (s * (W / 2 + 0.55), 4.2, 0), M["WoodDark"], 0.3)
-        box((W + 2.2, 0.75, 1.1), (0, 4.2, s * (L / 2 + 0.55)), M["WoodDark"], 0.3)
-        box((0.35, 0.4, L - 1.6), (s * (W / 2 - 0.1), 4.1, 0), M["Cushion"], 0.12)
-        box((W - 1.6, 0.4, 0.35), (0, 4.1, s * (L / 2 - 0.1)), M["Cushion"], 0.12)
-        for k in (-2, -1, 1, 2):
-            sphere(0.28, (s * (W / 2 + 0.55), 4.6, k * 3.2), M["Pearl"], 8, 6, (1, 0.4, 1))
+    """Real-proportion table at player scale: felt top at y=3, playing field 6 x 12, 15-ball rack + cue ball."""
+    M = {k: mat(k, v, 1 if k in ("Brass", "Chrome") else 0, 0.3 if k in ("Brass", "Pearl") else 0.55) for k, v in dict(
+        Wood=(96, 48, 22), WoodDark=(62, 30, 14), Felt=(18, 120, 72), Cushion=(14, 100, 60), Brass=(225, 175, 80),
+        Pocket=(16, 12, 12), Leather=(60, 36, 22), Pearl=(250, 246, 232)).items()}
+    W, L, top, cush, rail = 6.0, 12.0, 3.0, 0.3, 0.62
+    box((W, 0.16, L), (0, top - 0.08, 0), M["Felt"], 0.01)
+    box((W + 0.3, 0.3, L + 0.3), (0, top - 0.3, 0), M["WoodDark"], 0)
+    gap = 0.34  # pocket mouths: corners and the middle of the long sides
+    for s in (-1, 1):  # cushions (felt-covered, slightly lighter) and the wooden rails around them
         for k in (-1, 1):
-            sphere(0.28, (k * 2.4, 4.6, s * (L / 2 + 0.55)), M["Pearl"], 8, 6, (1, 0.4, 1))
-        for t in (-1, 1):  # turned legs
-            x, z = s * W / 2.4, t * L / 2.4
-            cyl(1.3, 0.35, (x, 0.18, z), M["Gold"], verts=16)
-            cyl(0.75, 1.3, (x, 1.0, z), M["WoodDark"], d2=1.05, verts=16)
-            sphere(1.25, (x, 1.75, z), M["WoodDark"], 16, 8)
-            cyl(1.05, 0.5, (x, 2.1, z), M["WoodDark"], verts=16)
-        for t in (-1, 0, 1):  # pockets
-            px, pz = s * (W / 2 + 0.1), t * (L / 2 + 0.1)
-            cyl(1.25, 0.35, (px, 4.15, pz), M["Pocket"], verts=16, bevel=0)
-            torus(1.35, 0.22, (px, 4.4, pz), M["Gold"])
-    rack = [(0, 0)] + [(r, j) for r in range(1, 5) for j in range(r + 1)]
-    for i, (r, j) in enumerate(rack):
-        c = mat(f"Ball{i % 8}", BALL_COLORS[i % 8], rough=0.15)
-        sphere(0.8, ((j - r / 2) * 0.82, 4.4, -3 - r * 0.72), c, 10, 6)
-    sphere(0.8, (0, 4.4, 4.5), M["White"], 10, 6)
+            z0, z1 = k * gap, k * (L / 2 - gap)
+            box((cush, 0.2, abs(z1 - z0)), (s * (W / 2 - cush / 2 + 0.02), top + 0.1, (z0 + z1) / 2), M["Cushion"], 0.08)
+        box((W - 2 * gap, 0.2, cush), (0, top + 0.1, s * (L / 2 - cush / 2 + 0.02)), M["Cushion"], 0.08)
+        box((rail, 0.34, L + 2 * rail), (s * (W / 2 + rail / 2), top + 0.03, 0), M["Wood"], 0.12)
+        box((W, 0.34, rail), (0, top + 0.03, s * (L / 2 + rail / 2)), M["Wood"], 0.12)
+        for k in (-3, -2, -1, 1, 2, 3):  # diamond sights
+            sphere(0.12, (s * (W / 2 + rail / 2), top + 0.2, k * L / 8), M["Pearl"], 8, 4, (1, 0.35, 1.6))
+        for k in (-1, 0, 1):
+            sphere(0.12, (k * W / 4, top + 0.2, s * (L / 2 + rail / 2)), M["Pearl"], 8, 4, (1.6, 0.35, 1))
+        for t in (-1, 0, 1):  # pockets: black hole, leather cup below, brass cap on the rail
+            px, pz = s * (W / 2 + 0.05), t * (L / 2 + 0.05)
+            cyl(0.62, 0.36, (px, top + 0.05, pz), M["Pocket"], verts=16, bevel=0)
+            cyl(0.7, 0.5, (px, top - 0.4, pz), M["Leather"], d2=0.56, verts=16)
+            torus(0.78, 0.1, (px, top + 0.21, pz), M["Brass"])
+    box((W + 2 * rail + 0.1, 0.62, L + 2 * rail + 0.1), (0, top - 0.5, 0), M["Wood"], 0.14)  # apron
+    box((W + 2 * rail + 0.16, 0.08, L + 2 * rail + 0.16), (0, top - 0.8, 0), M["Brass"], 0.02)
+    for s in (-1, 1):
+        for t in (-1, 0, 1):  # six turned legs
+            x, z = s * (W / 2 + 0.05), t * (L / 2 - 0.4) if t else 0
+            cyl(0.7, 0.25, (x, 0.12, z), M["Brass"], verts=16)
+            cyl(0.5, 1.4, (x, 0.95, z), M["WoodDark"], d2=0.72, verts=16)
+            sphere(0.8, (x, 1.75, z), M["WoodDark"], 16, 8)
+            cyl(0.7, 0.55, (x, 2.2, z), M["WoodDark"], d2=0.55, verts=16)
+    # rack: apex on the foot spot, 1 at the apex, 8 in the middle, mixed solids/stripes; cue ball on the head spot
+    order = [1, 9, 2, 10, 8, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15]
+    colors = [(250, 200, 30), (30, 80, 200), (220, 40, 40), (110, 40, 170), (255, 120, 20), (20, 140, 70), (130, 30, 30), (18, 18, 20)]
+    white = mat("BallWhite", (250, 248, 240), rough=0.15)
+    d, k = 0.42, 0
+    for row in range(5):
+        for j in range(row + 1):
+            n = order[k]; k += 1
+            body = mat(f"Ball{(n - 1) % 8 + 1}", colors[(n - 1) % 8], rough=0.15)
+            ball_mesh(d, ((j - row / 2) * d * 1.01, top + d / 2, -L / 4 - row * d * 0.875), body, white, n > 8,
+                      (math.radians(30 + 37 * n), math.radians(20 * n), 0))
+    sphere(d, (0.4, top + d / 2, L / 4 + 0.6), white, 16, 10)
 
 
 def cue():
-    M = {k: mat(k, P[k], 1 if k == "Gold" else 0, 0.3) for k in ("Ebony", "Wrap", "Shaft", "Gold", "White", "Tip")}
-    # centred: total length 9.2 (y -4.6 .. 4.6)
-    sphere(0.5, (0, -4.55, 0), M["Ebony"], 12, 8)
-    cyl(0.5, 4.2, (0, -2.45, 0), M["Ebony"], d2=0.38, verts=16)
-    cyl(0.52, 1.2, (0, -3.5, 0), M["Wrap"], verts=16)
-    for y in (-2.8, -0.45):
-        cyl(0.46, 0.14, (0, y, 0), M["Gold"], verts=16)
-    cyl(0.37, 4.3, (0, 1.8, 0), M["Shaft"], d2=0.22, verts=16)
-    cyl(0.23, 0.3, (0, 4.1, 0), M["White"], verts=16)
-    cyl(0.22, 0.15, (0, 4.32, 0), M["Tip"], verts=16)
+    """Two-piece pool cue, 9.2 long: rubber bumper, butt sleeve, wrap, forearm with inlaid points, steel joint,
+    tapered maple shaft, white ferrule, blue tip. Palette slots Shaft/Butt/Inlay/Wrap/Joint are recoloured per tier."""
+    names = ["Bumper", "Butt", "Inlay", "Wrap", "Joint", "Shaft", "Ferrule", "Tip"]
+    rgb = dict(Bumper=(20, 20, 22), Butt=(110, 64, 32), Inlay=(240, 225, 200), Wrap=(60, 50, 45), Joint=(190, 190, 195),
+               Shaft=(222, 184, 128), Ferrule=(250, 250, 245), Tip=(40, 90, 200))
+    M = [mat(n, rgb[n], 1 if n == "Joint" else 0, 0.25 if n == "Joint" else 0.4) for n in names]
+    # (y, radius, part) rings from the butt end (-4.6) to the tip (+4.6)
+    prof = [(-4.6, 0, "Bumper"), (-4.6, 0.17, "Bumper"), (-4.54, 0.2, "Bumper"), (-4.5, 0.205, "Butt"), (-4.2, 0.205, "Butt"),
+            (-4.17, 0.205, "Inlay"), (-4.12, 0.2, "Wrap")] + [(-4.12 + 1.5 * t / 6, 0.2 - 0.008 * t / 6, "Wrap") for t in range(1, 7)] + \
+           [(-2.6, 0.192, "Inlay"), (-2.55, 0.19, "Points")] + [(-2.55 + 1.95 * t / 32, 0.19 - 0.03 * t / 32, "Points") for t in range(1, 33)] + \
+           [(-0.58, 0.162, "Inlay"), (-0.55, 0.165, "Joint"), (-0.35, 0.16, "Joint"), (-0.33, 0.15, "Shaft")] + \
+           [(-0.33 + 4.68 * t / 10, 0.15 - 0.066 * (t / 10) ** 0.8, "Shaft") for t in range(1, 11)] + \
+           [(4.37, 0.084, "Ferrule"), (4.52, 0.084, "Ferrule"), (4.53, 0.083, "Tip"), (4.58, 0.07, "Tip"), (4.6, 0, "Tip")]
+    segs = 40
+    bm = bmesh.new()
+    rings = []
+    for y, r, _ in prof:
+        rings.append([bm.verts.new(rb(math.cos(2 * math.pi * k / segs) * r, y, math.sin(2 * math.pi * k / segs) * r)) for k in range(segs)])
+    faces = []
+    for i in range(len(prof) - 1):
+        part = prof[i + 1][2]
+        for k in range(segs):
+            a, b = rings[i], rings[i + 1]
+            f = bm.faces.new((a[k], a[(k + 1) % segs], b[(k + 1) % segs], b[k]))
+            faces.append((f, names.index("Butt" if part == "Points" else part)))
+    for p4 in range(4):  # four inlaid spear points on the forearm, narrowing towards the joint
+        rows = []
+        for j in range(17):
+            t = j / 16
+            y, r = -2.5 + 1.8 * t, 0.1915 - 0.03 * (0.05 + 0.9 * t) + 0.003
+            half = 0.36 * (1 - t) ** 1.2 + 0.004
+            a0 = p4 * math.pi / 2
+            rows.append([bm.verts.new(rb(math.cos(a0 + h) * r, y, math.sin(a0 + h) * r)) for h in (-half, 0, half)])
+        for j in range(16):
+            for q in range(2):
+                faces.append((bm.faces.new((rows[j][q], rows[j][q + 1], rows[j + 1][q + 1], rows[j + 1][q])), names.index("Inlay")))
+    me = bpy.data.meshes.new("cue")
+    bm.to_mesh(me)
+    for (f, idx), p in zip(faces, me.polygons):
+        p.material_index = idx
+        p.use_smooth = True
+    bm.free()
+    o = bpy.data.objects.new("cue", me); bpy.context.scene.collection.objects.link(o)
+    for m in M:
+        o.data.materials.append(m)
 
 
 def ball():
@@ -134,25 +201,67 @@ def ball():
 
 
 def dumbbell():
-    M = {k: mat(k, P[k], 1 if k == "Chrome" else 0, 0.25) for k in ("Chrome", "Plate", "Rubber", "White")}
-    box((6.4, 0.4, 2.6), (0, -0.3, 0), M["Rubber"], 0.15)
-    cyl(0.45, 5.4, (0, 0.9, 0), M["Chrome"], "X", verts=16)
+    """Plate-loaded dumbbell, 5.4 long, handle on the X axis: knurled chrome handle, collars, three plates per side
+    (palette slot Plate is recoloured per level band)."""
+    M = {k: mat(k, v, 1 if k == "Chrome" else 0, 0.25) for k, v in dict(Chrome=(205, 210, 220), Plate=(70, 70, 78),
+                                                                       Rubber=(30, 30, 34), Grip=(120, 124, 132)).items()}
+    cyl(0.34, 1.7, (0, 0, 0), M["Grip"], "X", verts=16)
+    cyl(0.3, 5.2, (0, 0, 0), M["Chrome"], "X", verts=16)
     for s in (-1, 1):
-        cyl(1.9, 0.5, (s * 2.0, 0.9, 0), M["Plate"], "X", verts=20, bevel=0.1)
-        cyl(1.45, 0.4, (s * 1.6, 0.9, 0), M["Plate"], "X", verts=20, bevel=0.08)
-        cyl(0.75, 0.3, (s * 2.42, 0.9, 0), M["Chrome"], "X", verts=20)
-        torus(1.2, 0.14, (s * 2.27, 0.9, 0), M["White"], "X")
-        sphere(0.6, (s * 2.7, 0.9, 0), M["Chrome"], 12, 8)
+        cyl(0.62, 0.22, (s * 0.98, 0, 0), M["Chrome"], "X", verts=20, bevel=0.04)
+        for k, (dd, w) in enumerate(((2.3, 0.36), (1.9, 0.3), (1.5, 0.26))):
+            x = s * (1.3 + sum(ww for _, ww in ((2.3, 0.36), (1.9, 0.3), (1.5, 0.26))[:k]) + w / 2)
+            cyl(dd, w, (x, 0, 0), M["Plate"], "X", verts=28, bevel=0.06)
+            cyl(dd * 0.42, w + 0.04, (x, 0, 0), M["Rubber"], "X", verts=20, bevel=0.02)
+        cyl(0.55, 0.3, (s * 2.38, 0, 0), M["Chrome"], "X", verts=20, bevel=0.06)
+
+
+def ring():
+    """Thin torus, diameter 4, lies flat (scaled per use)."""
+    bpy.ops.mesh.primitive_torus_add(major_radius=1.92, minor_radius=0.08, major_segments=48, minor_segments=6)
+    finish(bpy.context.object, mat("Ring", (255, 255, 255)))
+
+
+def gym_set():
+    """Weight bench + 2-tier dumbbell rack with 6 small dumbbells (static decor of the gym zone)."""
+    M = {k: mat(k, v, 1 if k == "Steel" else 0, 0.3) for k, v in dict(Steel=(70, 74, 84), Pad=(32, 32, 38), Seam=(200, 40, 50),
+                                                                     Chrome=(205, 210, 220), Iron=(48, 48, 54)).items()}
+    # bench along Z at x = 0
+    box((1.5, 0.35, 4.6), (0, 1.75, 0), M["Pad"], 0.15)
+    box((1.54, 0.05, 4.64), (0, 1.58, 0), M["Seam"], 0)
+    box((0.5, 1.4, 0.5), (0, 0.85, 1.6), M["Steel"], 0.05)
+    box((0.5, 1.4, 0.5), (0, 0.85, -1.6), M["Steel"], 0.05)
+    for z in (1.6, -1.6):
+        box((2.2, 0.25, 0.6), (0, 0.13, z), M["Steel"], 0.06)
+    # rack at x = -4.5, along Z
+    for z in (-2.3, 2.3):  # A-frame ends
+        for sx in (-1, 1):
+            o = box((0.22, 3.3, 0.22), (-4.6 + sx * 0.45, 1.6, z), M["Steel"], 0.04)
+            o.rotation_euler = (0, -sx * math.radians(10), 0)
+        box((1.8, 0.18, 0.3), (-4.6, 0.09, z), M["Steel"], 0.04)
+    for y, x in ((1.2, -4.9), (2.4, -4.3)):
+        box((1.2, 0.12, 4.8), (x, y, 0), M["Steel"], 0.03)
+        for k in range(3):
+            z = -1.5 + k * 1.5
+            cyl(0.22, 1.2, (x, y + 0.35, z), M["Chrome"], "X", verts=10)
+            for sx in (-0.45, 0.45):
+                cyl(0.62, 0.22, (x + sx, y + 0.35, z), M["Iron"], "X", verts=6, bevel=0.03)  # hex heads
 
 
 def fence():
-    M = {k: mat(k, P[k]) for k in ("Rail", "Cap")}
-    for i in range(5):  # posts at -12..12: adjacent 30-stud segments keep a 6-stud rhythm without doubled posts
+    """Club rope barrier segment, 30 long: brass stanchions every 6 studs + sagging red velvet rope."""
+    M = {k: mat(k, v, 1 if k == "Post" else 0, 0.3) for k, v in dict(Post=(230, 180, 70), Rope=(170, 20, 40)).items()}
+    for i in range(5):  # posts at -12..12: adjacent segments keep the 6-stud rhythm without doubled posts
         x = -12 + i * 6
-        box((0.9, 4, 0.9), (x, 2, 0), M["Rail"], 0.15)
-        sphere(1.2, (x, 4.3, 0), M["Cap"], 10, 6)
-    for y in (1.5, 3.2):
-        box((30, 0.55, 0.45), (0, y, 0), M["Rail"], 0.15)
+        cyl(1.4, 0.2, (x, 0.1, 0), M["Post"], verts=20, bevel=0.06)
+        cyl(0.9, 0.3, (x, 0.35, 0), M["Post"], d2=0.4, verts=20)
+        cyl(0.26, 3.2, (x, 2.1, 0), M["Post"], verts=12)
+        sphere(0.55, (x, 3.85, 0), M["Post"], 14, 8)
+    xs = [-15 + k * 0.75 for k in range(41)]  # rope sags between posts; the segment ends are span centres
+    pts = [(x, 3.35 - 0.6 * (1 - (min(abs(x - c) for c in range(-15, 16, 6)) / 3) ** 2)) for x in xs]
+    for (xa, ya), (xb, yb) in zip(pts, pts[1:]):
+        o = cyl(0.22, math.hypot(xb - xa, yb - ya) + 0.04, ((xa + xb) / 2, (ya + yb) / 2, 0), M["Rope"], "X", verts=8, bevel=0)
+        o.rotation_euler = (0, math.pi / 2 - math.atan2(yb - ya, xb - xa), 0)
 
 
 def mountain(seed):
@@ -597,12 +706,12 @@ def base_platform():
         half = math.sqrt(max(0, 27.2 ** 2 - x * x))
         if half > 1:
             box((0.1, 0.04, 2 * half), (x, 1.375, 0), M["Groove"], 0)
-    cyl(26, 0.06, (0, 1.39, 0), M["Felt"], verts=48, bevel=0)
-    torus(27, 0.35, (0, 1.42, 0), M["Trim"])
+    cyl(31, 0.06, (0, 1.39, 0), M["Felt"], verts=48, bevel=0)
+    torus(32, 0.35, (0, 1.42, 0), M["Trim"])
     cyl(14.5, 0.08, (0, 1.4, 0), M["Inset"], verts=48, bevel=0)
     for k in range(8):  # brass spots where the characters stand
         a = math.radians(-150 + k * 300 / 7)
-        x, z = math.sin(a) * 17, -math.cos(a) * 17
+        x, z = math.sin(a) * 12, -math.cos(a) * 12
         cyl(4.4, 0.12, (x, 1.43, z), M["Trim"], verts=24, bevel=0.03)
         cyl(3.4, 0.14, (x, 1.45, z), M["Inset"], verts=24, bevel=0)
     box((15, 0.7, 2.6), (0, 0.35, 31.6), M["Rim"], 0.2)
@@ -622,8 +731,6 @@ def cue_shop():
     o = cyl(11, 0.8, (0, 8.7, -3.6), M["Wood"], "Z", verts=32, bevel=0.1)  # arched top
     o.scale = (1, 0.42, 1)  # squash vertically (local Y is up after the rotation)
     box((9, 6.6, 0.25), (0, 4.9, -3.12), M["Felt"], 0.05)
-    for y in (2.2, 7.4):
-        cyl(0.32, 9.4, (0, y, -2.9), M["Trim"], "X", verts=12)
     for sx in (-1, 1):
         cyl(0.55, 9.9, (sx * 5.6, 5.2, 3.2), M["Wood"], verts=16)
         sphere(0.7, (sx * 5.6, 10.2, 3.2), M["Trim"], 12, 8)
@@ -657,7 +764,8 @@ def cue_shop():
     cyl(0.12, 1.2, (0, 10.8, 0.8), M["Trim"], verts=6)
 
 
-CORE = [("BasePlatform", base_platform), ("CueShop", cue_shop), ("PoolTable", pool_table), ("Cue", cue), ("Ball", ball), ("Dumbbell", dumbbell), ("Fence", fence), ("TableSegment", table_segment)]
+CORE = [("BasePlatform", base_platform), ("CueShop", cue_shop), ("PoolTable", pool_table), ("Cue", cue), ("Ball", ball),
+        ("Dumbbell", dumbbell), ("Fence", fence), ("TableSegment", table_segment), ("Ring", ring), ("GymSet", gym_set)]
 PROPS = [("Mountain", lambda: mountain(3)), ("Peak", lambda: mountain(11)), ("Pine", pine), ("Tree", tree), ("Palm", palm),
          ("Cactus", cactus), ("Rock", rock), ("Dune", dune), ("Crystal", crystal), ("Volcano", volcano), ("Tower", tower),
          ("Planet", planet), ("Torii", torii), ("Pyramid", pyramid), ("Column", column), ("Mushroom", mushroom),

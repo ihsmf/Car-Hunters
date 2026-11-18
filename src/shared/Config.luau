@@ -5,7 +5,11 @@ local rgb = Color3.fromRGB
 C.UI = {
 	Font = Font.new("rbxasset://fonts/families/FredokaOne.json", Enum.FontWeight.Bold),
 	Ink = rgb(40, 20, 60),
-	Panel = rgb(255, 244, 222),
+	Panel = rgb(27, 21, 48), -- dark panel background (#1B1530)
+	Card = rgb(42, 34, 69), -- cards / rows inside panels (#2A2245)
+	Line = rgb(78, 64, 120), -- thin borders on dark surfaces
+	Muted = rgb(170, 160, 205), -- secondary text on dark
+	Text = rgb(255, 255, 255),
 	Title = rgb(255, 190, 40),
 	Money = rgb(140, 255, 120),
 	Bad = rgb(255, 90, 90),
@@ -29,7 +33,7 @@ C.Sounds = { -- Roblox library audio; swap for your own IDs if any are unavailab
 	Reward = "rbxassetid://9125402735",
 }
 
--- 25 rarities: name, colour, character theme. Income grows x2.2 per tier.
+-- 50 rarities: name, colour, character theme. Income grows x2.2 per tier.
 local R = {
 	{ "Common", rgb(200, 200, 200), "Rookie" }, { "Uncommon", rgb(90, 220, 90), "Hustler" },
 	{ "Rare", rgb(70, 150, 255), "Sniper" }, { "Epic", rgb(170, 80, 255), "Count" },
@@ -43,105 +47,184 @@ local R = {
 	{ "Cosmic", rgb(120, 70, 240), "Astronaut" }, { "Galactic", rgb(80, 30, 170), "Emperor" },
 	{ "Rainbow", rgb(255, 120, 255), "Unicorn" }, { "Quantum", rgb(40, 200, 255), "Scientist" },
 	{ "Secret", rgb(40, 40, 40), "Anonymous" }, { "Glitch", rgb(255, 0, 255), "Error" },
-	{ "Absolute", rgb(255, 0, 140), "Billiard God" },
+	{ "Absolute", rgb(255, 0, 140), "Billiard God" }, { "Mega", rgb(255, 90, 0), "Titan" },
+	{ "Ultra", rgb(0, 180, 255), "Warden" }, { "Hyper", rgb(255, 230, 0), "Sprinter" },
+	{ "Nova", rgb(255, 150, 220), "Starborn" }, { "Nebula", rgb(150, 80, 255), "Voyager" },
+	{ "Eclipse", rgb(70, 50, 100), "Shade" }, { "Solar", rgb(255, 200, 60), "Sunlord" },
+	{ "Lunar", rgb(200, 210, 255), "Moonwalker" }, { "Abyssal", rgb(20, 80, 140), "Kraken" },
+	{ "Volcanic", rgb(230, 70, 20), "Magma" }, { "Thunder", rgb(255, 240, 90), "Stormcaller" },
+	{ "Crystal", rgb(170, 255, 240), "Gemsmith" }, { "Ethereal", rgb(230, 220, 255), "Spirit" },
+	{ "Primal", rgb(120, 180, 60), "Beastmaster" }, { "Arcane", rgb(130, 60, 220), "Archmage" },
+	{ "Mythril", rgb(180, 230, 230), "Paladin" }, { "Chrono", rgb(210, 170, 90), "Timekeeper" },
+	{ "Void", rgb(45, 20, 70), "Voidwalker" }, { "Astral", rgb(90, 200, 255), "Starwalker" },
+	{ "Infinity", rgb(255, 120, 180), "Infinite" }, { "Omega", rgb(255, 40, 40), "Omega" },
+	{ "Supreme", rgb(255, 215, 0), "Sovereign" }, { "Eternal", rgb(240, 240, 255), "Immortal" },
+	{ "Transcendent", rgb(255, 180, 255), "Ascended" }, { "Legend", rgb(255, 60, 160), "Cue Master" },
 }
-local titles = { "Young", "Swift", "Master", "Grand" }
+C.Titles = { "Young", "Swift", "Pro", "Master", "Grand", "Elite" }
 
-C.Rarities, C.Characters = {}, {} -- C.Rarities[i] = { name, colour, base income }
+C.Rarities, C.Characters = {}, {} -- C.Rarities[i] = { name, colour, base income }; 50 x 6 = 300 characters
 for r, v in R do
 	local inc = math.floor(2.2 ^ (r - 1))
 	C.Rarities[r] = { v[1], v[2], inc }
-	for i, t in titles do
+	for i, t in C.Titles do
 		table.insert(C.Characters, {
 			name = t .. " " .. v[3],
 			rarity = r,
-			income = math.floor(inc * (1 + (i - 1) * 0.3)),
-			shirt = v[2]:Lerp(rgb(255, 255, 255), (i - 1) * 0.18),
+			title = i,
+			income = math.floor(inc * (1 + (i - 1) * 0.2)),
 		})
 	end
 end
 
-C.Table = { Length = 2000, Width = 36, StartZ = 80, Lanes = 4 } -- tools/place.py reads these values
--- Luck multiplier: the long table keeps changing, cycling through these every LuckCycle seconds.
--- With luck L a shot has a (1 - 1/L) chance to land one rarity higher, and at L >= 5 a further (1 - 5/L) chance for +2.
-C.LuckSteps = { 1, 2, 3, 5, 10 }
-C.LuckCycle = 30
-function C.LuckBonus(L, roll1, roll2)
-	local bonus = roll1 < 1 - 1 / L and 1 or 0
-	if bonus == 1 and L >= 5 and roll2 < 1 - 5 / L then bonus = 2 end
-	return bonus
+-- Variants rolled on every pull (like Big / Huge / Gold ... animals): 300 characters x 7 variants = 2100 to collect
+C.Variants = { -- name, income multiplier, chance (1 in N, nil = default), body scale
+	{ name = "Normal", mult = 1, scale = 1 },
+	{ name = "Big", mult = 2, oneIn = 6, scale = 1.3 },
+	{ name = "Huge", mult = 5, oneIn = 30, scale = 1.7 },
+	{ name = "Gold", mult = 10, oneIn = 100, scale = 1, color = rgb(255, 200, 50) },
+	{ name = "Diamond", mult = 25, oneIn = 400, scale = 1, color = rgb(150, 235, 255) },
+	{ name = "Galaxy", mult = 60, oneIn = 1500, scale = 1.1, color = rgb(90, 40, 170) },
+	{ name = "Rainbow", mult = 150, oneIn = 6000, scale = 1.1, color = rgb(255, 120, 220) },
+}
+function C.RollVariant(roll) -- roll in [0, 1); rarest first
+	local acc = 0
+	for v = #C.Variants, 2, -1 do
+		acc += 1 / C.Variants[v].oneIn
+		if roll < acc then return v end
+	end
+	return 1
 end
+function C.ItemIncome(it) return C.Characters[it.id].income * C.Variants[it.v or 1].mult end
+function C.ItemName(it)
+	local v = C.Variants[it.v or 1]
+	return (v.name ~= "Normal" and string.upper(v.name) .. " " or "") .. C.Characters[it.id].name
+end
+
+C.Table = { Length = 4000, Width = 36, StartZ = 80, Lanes = 4 } -- tools/place.py reads these values
 C.ThrowCooldown = 1
 C.MaxEquipped = 8
-C.MaxInventory = 100
--- Shots that land Epic+ get the full cinematic, the rest a short one (the server decides, both sides use these times)
+C.MaxInventory = 150
+
+-- Luck grows along the ball's path: start luck from the cue (and the x2 Luck pass), every table crossed adds a
+-- little, sometimes a "lucky table" adds a lot. The final value L upgrades the rarity:
+-- +1 with chance 1 - 1/L, +2 with 1 - 5/L (L >= 5), +3 with 1 - 20/L (L >= 20).
+function C.StartLuck(d, passes)
+	return (1 + C.Cues[d.cue].luck) * ((passes and passes.Luck2x) and 2 or 1)
+end
+function C.LuckTrack(start, tables, rnd) -- rnd() -> [0, 1); returns luck after each table and the lucky tables
+	local track, lucky, L = {}, {}, start
+	for k = 1, tables do
+		L += 0.03 + rnd() * 0.09
+		if rnd() < 0.06 then
+			L += 0.5 + rnd() * 1.5
+			lucky[k] = true
+		end
+		track[k] = math.floor(L * 100 + 0.5) / 100
+	end
+	return track, lucky
+end
+function C.LuckBonus(L, r1, r2, r3)
+	if r1 >= 1 - 1 / L then return 0 end
+	if L < 5 or r2 >= 1 - 5 / L then return 1 end
+	if L < 20 or r3 >= 1 - 20 / L then return 2 end
+	return 3
+end
+
+-- Cinematics: full show for Epic+ pulls that are near your best ever, the rest get the short version
 C.FullCinematicRarity = 4
-C.Anim = { Full = { Windup = 1.6, Slide = 0.8 }, Short = { Windup = 0.5, Slide = 0.3 } }
+C.Anim = { Full = { Windup = 2.2, Slide = 0.8 }, Short = { Windup = 0.6, Slide = 0.3 } }
 function C.AnimOf(full) return full and C.Anim.Full or C.Anim.Short end
-function C.RollTime(dist, full) return full and 1.4 + dist / 260 or 0.8 + dist / 600 end
+function C.RollTime(dist, full) return full and 1.4 + dist / 300 or 0.8 + dist / 700 end
 function C.ThrowTime(dist, full) -- until the ball is pocketed
 	local a = C.AnimOf(full)
 	return a.Windup + C.RollTime(dist, full) + a.Slide
 end
 
--- The 25 tables of the long table (one per zone): name + colour used by the flight camera
-C.Tables = {
-	{ "Oak Club", rgb(150, 220, 120) }, { "Walnut Lounge", rgb(120, 200, 110) }, { "Blue Velvet", rgb(110, 160, 255) },
-	{ "Royal Hall", rgb(180, 120, 255) }, { "Golden Palace", rgb(255, 205, 80) }, { "Dragon Lair", rgb(255, 90, 60) },
-	{ "Desert Temple", rgb(240, 200, 120) }, { "Frozen Peaks", rgb(170, 230, 255) }, { "Volcano", rgb(255, 120, 40) },
-	{ "Toxic Swamp", rgb(150, 255, 60) }, { "Cyber City", rgb(60, 240, 230) }, { "Pirate Cove", rgb(90, 200, 220) },
-	{ "Samurai Garden", rgb(255, 150, 190) }, { "Haunted Woods", rgb(170, 120, 230) }, { "Heaven", rgb(255, 250, 220) },
-	{ "Underworld", rgb(220, 30, 50) }, { "Sky Islands", rgb(160, 220, 255) }, { "Starlight", rgb(255, 240, 150) },
-	{ "Cosmos", rgb(150, 100, 255) }, { "Galaxy", rgb(90, 130, 255) }, { "Rainbow Land", rgb(255, 140, 230) },
-	{ "Quantum Lab", rgb(60, 220, 255) }, { "Shadow Realm", rgb(120, 120, 140) }, { "Glitch Zone", rgb(255, 60, 255) },
-	{ "Absolute", rgb(255, 80, 170) },
-}
+-- The 50 tables of the long table (one per zone): name + colour (walls, runners, flight camera)
+C.Tables = {}
+for r, v in R do C.Tables[r] = { v[1] .. " Table", v[2] } end
 
-
-C.Cues = { -- name, distance multiplier, price, colour (balanced with tools/balance_sim.py)
-	{ "Wooden", 1, 0, rgb(236, 196, 132) },
-	{ "Maple", 1.25, 500, rgb(250, 220, 160) },
-	{ "Carbon", 1.5, 1e4, rgb(60, 60, 70) },
-	{ "Golden", 1.8, 3e5, rgb(255, 200, 40) },
-	{ "Diamond", 2.2, 1e7, rgb(140, 240, 255) },
-	{ "Plasma", 2.6, 4e8, rgb(255, 60, 220) },
-	{ "Lava", 3.1, 2e10, rgb(255, 80, 0) },
-	{ "Starlight", 3.7, 1e12, rgb(255, 255, 180) },
-	{ "Galaxy", 4.4, 6e13, rgb(90, 40, 200) },
-	{ "Absolute", 5.2, 4e15, rgb(255, 0, 140) },
+-- 15 cue tiers: name, distance multiplier, price, start-luck bonus, colours (shaft, butt, inlay, wrap, joint)
+C.Cues = {}
+for i, c in {
+	{ "Wooden", 1, 0, 0, rgb(222, 184, 128), rgb(110, 64, 32), rgb(240, 225, 200), rgb(60, 50, 45), rgb(190, 190, 195) },
+	{ "Maple", 1.2, 400, 0.05, rgb(240, 214, 160), rgb(70, 40, 22), rgb(255, 245, 225), rgb(40, 40, 50), rgb(200, 200, 205) },
+	{ "Ash", 1.4, 8e3, 0.1, rgb(214, 196, 160), rgb(40, 40, 44), rgb(230, 60, 60), rgb(30, 30, 34), rgb(210, 210, 215) },
+	{ "Carbon", 1.65, 1.5e5, 0.15, rgb(55, 55, 62), rgb(25, 25, 28), rgb(0, 200, 255), rgb(20, 20, 24), rgb(150, 150, 160) },
+	{ "Ebony", 1.9, 3e6, 0.22, rgb(235, 215, 175), rgb(28, 18, 14), rgb(255, 215, 120), rgb(110, 20, 30), rgb(230, 190, 90) },
+	{ "Golden", 2.2, 6e7, 0.3, rgb(255, 210, 90), rgb(160, 110, 20), rgb(255, 245, 200), rgb(80, 50, 10), rgb(255, 225, 120) },
+	{ "Ivory", 2.55, 1.2e9, 0.4, rgb(250, 245, 230), rgb(200, 180, 150), rgb(60, 140, 120), rgb(140, 110, 80), rgb(225, 225, 235) },
+	{ "Crystal", 2.95, 2.5e10, 0.5, rgb(190, 240, 255), rgb(80, 160, 220), rgb(255, 255, 255), rgb(40, 90, 150), rgb(220, 245, 255) },
+	{ "Inferno", 3.4, 5e11, 0.65, rgb(255, 140, 50), rgb(90, 15, 10), rgb(255, 220, 80), rgb(40, 10, 8), rgb(255, 120, 40) },
+	{ "Frost", 3.9, 1e13, 0.8, rgb(200, 240, 255), rgb(40, 90, 160), rgb(150, 220, 255), rgb(20, 50, 100), rgb(230, 250, 255) },
+	{ "Storm", 4.5, 2e14, 1, rgb(220, 220, 255), rgb(50, 40, 120), rgb(255, 240, 90), rgb(30, 25, 70), rgb(200, 200, 255) },
+	{ "Shadow", 5.2, 4e15, 1.25, rgb(70, 50, 100), rgb(15, 10, 20), rgb(170, 90, 255), rgb(10, 8, 14), rgb(120, 80, 170) },
+	{ "Celestial", 6, 8e16, 1.5, rgb(255, 250, 225), rgb(240, 200, 90), rgb(120, 220, 255), rgb(255, 255, 255), rgb(255, 230, 150) },
+	{ "Cosmic", 7, 2e18, 1.8, rgb(120, 70, 240), rgb(20, 10, 50), rgb(255, 130, 230), rgb(40, 20, 90), rgb(200, 160, 255) },
+	{ "Legend", 8, 5e19, 2.2, rgb(255, 60, 160), rgb(40, 0, 30), rgb(255, 230, 120), rgb(255, 215, 90), rgb(255, 215, 90) },
+} do
+	C.Cues[i] = { c[1], c[2], c[3], luck = c[4], shaft = c[5], butt = c[6], inlay = c[7], wrap = c[8], joint = c[9] }
+	C.Cues[i][4] = c[5] -- legacy colour slot = shaft colour
+end
+C.DragonCue = { -- game pass: x3 until you own a better cue
+	"Dragon", 3, 0, rgb(80, 220, 120), luck = 0.3, tier = 9,
+	shaft = rgb(80, 220, 120), butt = rgb(20, 60, 30), inlay = rgb(255, 210, 60), wrap = rgb(10, 30, 15), joint = rgb(255, 210, 60),
 }
-C.DragonCue = { "Dragon", 3, 0, rgb(80, 220, 120) } -- game pass: x3 until you own a better cue
+C.CueParts = { Shaft = "shaft", Butt = "butt", Inlay = "inlay", Wrap = "wrap", Joint = "joint" } -- mesh palette slot -> cue field
+function C.CueTierOf(rarity) return math.clamp(math.ceil(rarity * #C.Cues / #C.Rarities), 1, #C.Cues) end -- NPC cues
+
+-- Dumbbell looks better every 5 levels: plate colour + size
+local PLATES = { rgb(70, 70, 78), rgb(165, 170, 180), rgb(220, 50, 50), rgb(50, 110, 230), rgb(255, 200, 50), rgb(150, 235, 255), rgb(120, 60, 220) }
+function C.DumbbellLook(lvl)
+	local band = math.min(#PLATES, 1 + (lvl - 1) // 5)
+	return PLATES[band], 1 + math.min(lvl, 60) * 0.008, band
+end
+C.GymRange = 10 -- studs from the training spot
 
 function C.LiftCost(lvl) return math.floor(100 * 3 ^ (lvl - 1)) end
+C.TrainRep = 1.2 -- seconds per training rep
+function C.RepStrength(lvl) return lvl * 3 end
 function C.CueMult(d, passes)
 	local base = C.Cues[d.cue][2]
 	if passes and passes.DragonCue then base = math.max(base, C.DragonCue[2]) end
 	return base
 end
--- strength has diminishing returns (cube root), the cue multiplies everything
-function C.Distance(power, d, passes)
-	return math.min(C.Table.Length, power * (40 + 6 * (d.strength or 0) ^ (1 / 3)) * C.CueMult(d, passes))
+-- Shot power: strength has diminishing returns (cube root), the cue multiplies everything.
+-- Every next table needs a bit more power than the last: table k ends at 80 * k * (1 + (k - 1) / 9) power,
+-- so the first tables come fast and the last ones are a long-term goal (see tools/balance_sim.py).
+local function threshold(k) return 80 * k * (1 + (k - 1) / 9) end
+function C.Distance(power, d, passes) -- studs along the long table
+	local raw = power * (40 + 14 * (d.strength or 0) ^ (1 / 3)) * C.CueMult(d, passes)
+	local zl, prev = C.Table.Length / #C.Rarities, 0
+	for k = 1, #C.Rarities do
+		local t = threshold(k)
+		if raw < t then return (k - 1 + (raw - prev) / (t - prev)) * zl end
+		prev = t
+	end
+	return C.Table.Length
 end
 function C.ZoneOf(dist) return math.clamp(math.ceil(dist / (C.Table.Length / #C.Rarities)), 1, #C.Rarities) end
 
 -- Replace 0 with real IDs from the Creator Dashboard (Monetization → Passes / Developer Products)
 C.GamePasses = {
-	{ key = "Cash2x", id = 0, icon = "💰", name = "x2 Cash", desc = "Double income" },
-	{ key = "Luck2x", id = 0, icon = "🍀", name = "x2 Luck", desc = "50% chance +1 rarity" },
-	{ key = "DragonCue", id = 0, icon = "🐉", name = "Dragon Cue", desc = "x3 shot distance cue" },
-	{ key = "GoldStick", id = 0, icon = "🪄", name = "Golden Stick", desc = "+50% income, gold sticks" },
+	{ key = "Cash2x", id = 0, badge = "2X", name = "x2 Cash", desc = "Double income from every character" },
+	{ key = "Luck2x", id = 0, badge = "2X", name = "x2 Luck", desc = "Every shot starts with double luck" },
+	{ key = "DragonCue", id = 0, badge = "3X", name = "Dragon Cue", desc = "x3 shot distance until you own a better cue" },
+	{ key = "GoldStick", id = 0, badge = "+50%", name = "Golden Stick", desc = "+50% income, your characters hold gold cues" },
+	{ key = "GoldenBall", id = 0, badge = "GOLD", name = "Golden Ball", desc = "Your shot ball turns gold with a sparkle trail" },
 }
 C.Products = {
-	{ id = 0, cash = 5000, icon = "💵" },
-	{ id = 0, cash = 50000, icon = "💰" },
-	{ id = 0, cash = 500000, icon = "🏦" },
+	{ id = 0, cash = 5000 },
+	{ id = 0, cash = 50000 },
+	{ id = 0, cash = 500000 },
 }
 
 C.Daily = { 100, 250, 500, 1000, 2500, 5000, 15000 }
 C.Playtime = { { 5, 300 }, { 15, 1000 }, { 30, 3000 }, { 60, 10000 } } -- minutes, reward
 
 function C.Short(n)
-	for _, s in { { 1e15, "Qa" }, { 1e12, "T" }, { 1e9, "B" }, { 1e6, "M" }, { 1e3, "K" } } do
+	for _, s in { { 1e24, "Sp" }, { 1e21, "Sx" }, { 1e18, "Qi" }, { 1e15, "Qa" }, { 1e12, "T" }, { 1e9, "B" }, { 1e6, "M" }, { 1e3, "K" } } do
 		if n >= s[1] then return string.format("%.1f%s", n / s[1], s[2]) end
 	end
 	return tostring(math.floor(n))

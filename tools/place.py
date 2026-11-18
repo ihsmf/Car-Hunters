@@ -69,25 +69,22 @@ def tag_mesh(p, mesh, scale=None, vscale=None, **colors):
 def pivot(m, o, mesh, **kw):  # invisible model origin; whole model is replaced by the mesh
     return tag_mesh(part(m, (0.2, 0.2, 0.2), o, WHITE, Transparency=1, CanCollide=False, name="MeshPivot"), mesh, **kw)
 
-def pool_table(par, o):
+def pool_table(par, o):  # felt top at y=3, playing field 6 x 12 (matches the Blender model)
     m = Inst("Model", "PoolTable", par)
     pivot(m, o, "PoolTable")
-    L, W = 16, 9
-    part(m, (W + 1.8, 1.5, L + 1.8), o @ cf(0, 3.05, 0), WOOD, "Wood")
-    part(m, (W, 0.3, L), o @ cf(0, 3.85, 0), (22, 150, 70), "Fabric")
-    for s in (-1, 1):
-        part(m, (1.1, 0.75, L + 2.2), o @ cf(s * (W / 2 + 0.55), 4.2, 0), DARK, "Wood")
-        part(m, (W + 2.2, 0.75, 1.1), o @ cf(0, 4.2, s * (L / 2 + 0.55)), DARK, "Wood")
-        for t in (-1, 1):
-            leg = o @ cf(s * W / 2.4, 0, t * L / 2.4)
-            ycyl(m, 0.9, 2.3, leg @ cf(0, 1.15, 0), DARK, "Wood")
-            ycyl(m, 1.3, 0.35, leg @ cf(0, 0.18, 0), GOLD, "Metal")
+    W, L = 6, 12
+    part(m, (W + 1.34, 0.62, L + 1.34), o @ cf(0, 2.5, 0), WOOD, "Wood")
+    part(m, (W, 0.16, L), o @ cf(0, 2.92, 0), (18, 120, 72), "Fabric")
+    for s_ in (-1, 1):
+        part(m, (0.62, 0.34, L + 1.24), o @ cf(s_ * (W / 2 + 0.31), 3.03, 0), DARK, "Wood")
+        part(m, (W, 0.34, 0.62), o @ cf(0, 3.03, s_ * (L / 2 + 0.31)), DARK, "Wood")
         for t in (-1, 0, 1):
-            pc = o @ cf(s * (W / 2 + 0.1), 0, t * (L / 2 + 0.1))
-            ycyl(m, 1.25, 0.35, pc @ cf(0, 4.15, 0), (18, 14, 20))
-    for i, c in enumerate(BALLS):
-        ball(m, 0.8, o @ cf(-2 + (i % 4) * 1.3, 4.4, -3 + (i // 4) * 1.3), c, CanCollide=False)
-    ball(m, 0.8, o @ cf(0, 4.4, 4.5), WHITE, CanCollide=False)
+            ycyl(m, 0.6, 2.2, o @ cf(s_ * (W / 2 + 0.05), 1.1, t * (L / 2 - 0.4) if t else 0), DARK, "Wood")
+    for k in range(15):
+        row = next(r for r in range(5) if k < (r + 1) * (r + 2) // 2)
+        j_ = k - row * (row + 1) // 2
+        ball(m, 0.42, o @ cf((j_ - row / 2) * 0.43, 3.21, -3 - row * 0.37), BALLS[k % 7], CanCollide=False)
+    ball(m, 0.42, o @ cf(0.4, 3.21, 3.6), WHITE, CanCollide=False)
 
 def table_lamp(par, o):
     lamp = part(par, (4, 0.6, 10), o @ cf(0, 11, 0), (20, 90, 40), name="Lamp")
@@ -108,24 +105,33 @@ def mesh_ball(par, d, m, color, **kw):  # visible sphere fallback; swapped for t
     return tag_mesh(ball(par, d, m, color, **kw), "Ball", scale=d, Body=color)
 
 def dumbbell(par, o):
-    m = Inst("Model", "Dumbbell", par)
-    pivot(m, o, "Dumbbell")
-    x = o @ cf(0, 0.9, 0)
-    part(m, (5.4, 0.45, 0.45), x, (215, 220, 232), "Metal", "Cyl")
-    for s in (-1, 1):
-        part(m, (0.5, 1.9, 1.9), x @ cf(s * 2, 0, 0), (240, 60, 70), shape="Cyl")
-        part(m, (0.4, 1.45, 1.45), x @ cf(s * 1.6, 0, 0), (240, 60, 70), shape="Cyl")
-        part(m, (0.3, 0.75, 0.75), x @ cf(s * 2.42, 0, 0), (215, 220, 232), "Metal", "Cyl")
-    part(m, (6.4, 0.4, 2.6), o @ cf(0, -0.3, 0), (44, 44, 58))
+    p = part(par, (5.2, 2.3, 2.3), o, (70, 70, 78), "Metal", "Cyl", name="Dumbbell", CanCollide=False)
+    return tag_mesh(p, "Dumbbell", scale=1, Plate=(70, 70, 78))
 
-def fence(par, o, color):
-    m = Inst("Model", "Fence", par)
-    pivot(m, o, "Fence", Cap=color)
-    for i in range(5):
-        x = -12 + i * 6
-        part(m, (0.9, 4, 0.9), o @ cf(x, 2, 0), (255, 250, 238))
-        ball(m, 1.2, o @ cf(x, 4.3, 0), color)
-    for y in (1.5, 3.2): part(m, (30, 0.55, 0.45), o @ cf(0, y, 0), (255, 250, 238))
+GOLDEN = (230, 180, 70)
+
+
+def fence(par, a, b):
+    """Velvet rope barrier from a to b (x, z) on the floor: Blender segments stretched to fit + invisible collider."""
+    (x0, z0), (x1, z1) = a, b
+    ln = math.hypot(x1 - x0, z1 - z0)
+    n = max(1, round(ln / 30))
+    yaw = math.atan2(-(z1 - z0), x1 - x0)
+    for k in range(n):
+        t = (k + 0.5) / n
+        o = cf(x0 + (x1 - x0) * t, 0.17, z0 + (z1 - z0) * t) @ ry(yaw)
+        m = Inst("Model", "Fence", par)
+        pivot(m, o, "Fence", vscale=(ln / n / 30, 1, 1))
+        part(m, (ln / n, 0.22, 0.22), o @ cf(0, 3.1, 0), (170, 20, 40), "Fabric", CanCollide=False)
+    part(par, (ln, 4.5, 0.6), cf((x0 + x1) / 2, 2.4, (z0 + z1) / 2) @ ry(yaw), WHITE, Transparency=1, name="FenceCollider")
+
+
+def post(par, x, z):  # brass stanchion at fence corners and entrance ends
+    m = Inst("Model", "Post", par)
+    ycyl(m, 1.4, 0.2, cf(x, 0.27, z), GOLDEN, "Metal")
+    ycyl(m, 0.26, 3.4, cf(x, 1.9, z), GOLDEN, "Metal")
+    ball(m, 0.6, cf(x, 3.75, z), GOLDEN, "Metal")
+
 
 def tree(par, pos, h, kind):
     m = Inst("Model", "Tree", par)
@@ -148,6 +154,10 @@ def tree(par, pos, h, kind):
 # ---------- The long table: 25 Blender table segments, each with its own scenery on both sides ----------
 RAINBOW = [(255, 60, 60), (255, 150, 30), (255, 230, 40), (80, 220, 80), (50, 160, 255), (90, 80, 230), (190, 80, 255)]
 RAIL_W, RAIL_H = 3, 4.2
+
+
+def mix(c, d, f):
+    return tuple(int(a * (1 - f) + b * f) for a, b in zip(c, d))
 
 
 def shade(c, f):
@@ -223,20 +233,18 @@ THEMES = [
          near=[("Column", {"Marble": (255, 255, 255), "Gold": (255, 200, 60)}, (0.8, 0.9), 0, 2), ("Crystal", {"Crystal": (255, 80, 170), "CrystalLight": (255, 220, 240)}, (1.0, 1.3), 0, 2)],
          far=[("Planet", {"Body": (255, 90, 180), "Ring": (255, 215, 90)}, (2.8, 3.4), 50, 1), ("Star", {}, (5, 7), 35, 1), ("Column", {"Gold": (255, 200, 60)}, (2.6, 3), 0, 1)], fx=("Sparkle", (255, 120, 200))),
 ]
+TABLE_COLORS = [c for _, c in RAR]
+for c in TABLE_COLORS[len(THEMES):]:  # tables 26-50: dark lacquered wood, felt and trim from the rarity colour
+    THEMES.append(dict(t=(mix(c, (20, 14, 18), 0.7), mix(c, (20, 14, 18), 0.55), mix(c, (10, 10, 20), 0.35), mix(c, WHITE, 0.55))))
 assert len(THEMES) == N
 EXTRA = 10  # extra table segments past the last zone: the table never visibly ends (fades into the haze)
 WALL_H = 56
 WALL_MAT = dict(Grass="Fabric", Sand="Sandstone", Snow="Ice", Slate="Slate", Marble="Marble", Smooth="Smooth", Concrete="Concrete")
 
 
-TABLE_COLORS = [tuple(map(int, c)) for c in re.findall(r'\{ "[^"]+", rgb\((\d+), (\d+), (\d+)\) \}', cfg[cfg.index("C.Tables = {"):])][:N]
 
 
-def mix(c, d, f):
-    return tuple(int(a * (1 - f) + b * f) for a, b in zip(c, d))
-
-
-def club_wall(par, a, b, inward, band, panel, panel_mat, accent, dot):
+def club_wall(par, a, b, inward, band, panel, panel_mat, accent, dot, first=True):
     """Cartoon wall from a to b: bright panel, darker band, chunky white trims, a round rail on top,
     candy-striped columns with balls and big polka dots. Collides, plus an invisible extension upwards."""
     (x0, z0), (x1, z1) = a, b
@@ -251,16 +259,16 @@ def club_wall(par, a, b, inward, band, panel, panel_mat, accent, dot):
     part(par, (4.4, 1.6, ln), m @ cf(-1.3, WALL_H - 0.8, 0), WHITE)
     part(par, (ln, 5, 5), m @ cf(-1.5, WALL_H + 2, 0) @ ry(math.pi / 2), accent, shape="Cyl")  # round rail
     part(par, (2, 300, ln), m @ cf(-2, WALL_H + 150, 0), WHITE, Transparency=1, name="Wall")
-    n = max(1, round(ln / 40))
-    for k in range(n + 1):  # candy-striped columns
-        z = -ln / 2 + k * ln / n
+    n = max(1, round(ln / 80))
+    for k in range(n + (1 if first else 0)):  # candy-striped columns (the next wall piece adds the shared one)
+        z = ln / 2 - k * ln / n
         ycyl(par, 3.6, WALL_H, m @ cf(1, WALL_H / 2, z), WHITE)
-        for y in range(4, int(WALL_H) - 2, 7):
+        for y in range(6, int(WALL_H) - 2, 12):
             ycyl(par, 3.9, 2.4, m @ cf(1, y, z), accent)
         ball(par, 5.6, m @ cf(1, WALL_H + 2.6, z), accent)
     for k in range(n):  # polka dots
         z = -ln / 2 + (k + 0.5) * ln / n
-        for dz, y, d in ((-8, 30, 9), (7, 40, 6), (2, 22, 4)):
+        for dz, y, d in ((-10, 30, 9), (9, 40, 6)):
             part(par, (0.4, d, d), m @ cf(0.1, y, z + dz), dot, shape="Cyl")
 
 
@@ -289,14 +297,17 @@ def long_table(world):
             for e in (-1, 1):
                 ycyl(seg, 3, 1.6, cf(sx * (TW / 2 + 1), 0.8, zc + e * (ZL / 2 - 6)), shade(wood, 0.8), "Wood")
             wood_w, panel, pmat, trim_w, art = wall_theme(i)
-            club_wall(walls, (sx * 48, z0 - (2 if i == 0 else 0)), (sx * 48, z0 + ZL), (-sx, 0), wood_w, panel, pmat, trim_w, art)
+            club_wall(walls, (sx * 48, z0 - (2 if i == 0 else 0)), (sx * 48, z0 + ZL), (-sx, 0), wood_w, panel, pmat, trim_w, art, i == 0)
     part(long, (TW + 2 * RAIL_W, RAIL_H + 1.4, 1), cf(0, 1.6 + (RAIL_H + 1.4) / 2, TSZ - 0.5), THEMES[0]["t"][1], "Wood")  # head cushion
     far = TSZ + (N + EXTRA) * ZL
     part(walls, (100, 300, 2), cf(0, 150, far + 1), WHITE, Transparency=1, name="Wall")  # far end, deep in the haze
 
 
 # ---------- Player base: only the billiard table; the gym and the cue shop stand in front of it ----------
-def player_base(world, i, o, col):
+RUG_W, RUG_D, ENTRANCE = 88, 110, 22
+
+
+def player_base(world, i, o, col, rug):
     b = Inst("Model", f"Base{i + 1}", world)
     stage = Inst("Model", "Stage", b)  # Blender octagonal stage; part twin = collisions + fallback
     pivot(stage, o, "BasePlatform", Rim=col)
@@ -308,32 +319,50 @@ def player_base(world, i, o, col):
     slots = Inst("Folder", "Slots", b)
     for s_ in range(SLOTS):  # invisible markers: the brass spots are part of the stage mesh
         a = math.radians(-150 + s_ * 300 / (SLOTS - 1))
-        part(slots, (1, 0.2, 1), top @ cf(math.sin(a) * 17, 0.1, -math.cos(a) * 17), WHITE, Transparency=1, CanCollide=False, name=f"Slot{s_ + 1}")
-    sign = part(b, (20, 3.4, 0.2), top @ cf(0, 7, -29), WHITE, Transparency=1, CanCollide=False, name="Sign")  # name floats over the back edge
+        part(slots, (1, 0.2, 1), top @ cf(math.sin(a) * 12, 0.1, -math.cos(a) * 12), WHITE, Transparency=1, CanCollide=False, name=f"Slot{s_ + 1}")
+    part(b, (1, 1, 1), top @ cf(0, 17, -4), WHITE, Transparency=1, CanCollide=False, name="AvatarAnchor")  # owner photo floats here
     part(b, (2, 0.2, 2), top @ cf(0, 0.1, 24), WHITE, Transparency=1, CanCollide=False, name="RevealSpot")
-    label(sign, FACE["Back"], "Free Base")
     part(b, (4, 1, 4), top @ cf(0, 0.5, 23), WHITE, Transparency=1, CanCollide=False, name="SpawnPoint")
     Inst("Folder", "Chars", b)
     gym_station(b, o @ cf(-17, 0, 41))
     cue_shop(b, o @ cf(17, 0, 41), col)
+    # velvet rope around the rug, open towards the hall
+    fences = Inst("Folder", "Fences", b)
+    x0, x1, z0, z1 = rug
+    corners = [(x0 + 1, z1 - 1), (x0 + 1, z0 + 1), (x1 - 1, z0 + 1), (x1 - 1, z1 - 1)]
+    cx = (x0 + x1) / 2
+    for a, b_ in zip(corners, corners[1:]):
+        fence(fences, a, b_)
+    fence(fences, corners[3], (cx + ENTRANCE / 2, z1 - 1))
+    fence(fences, (cx - ENTRANCE / 2, z1 - 1), corners[0])
+    for x, z in corners + [(cx - ENTRANCE / 2, z1 - 1), (cx + ENTRANCE / 2, z1 - 1)]:
+        post(fences, x, z)
 
 
 def gym_station(b, o):
-    g = Inst("Model", "GymDecor", b)
-    part(g, (10, 0.3, 7), o @ cf(0, 0.15, 0), (44, 44, 58))
-    dumbbell(b, o @ cf(0, 0.75, 0.5))
-    for sx in (-1, 1):  # small weight rack behind the dumbbell
-        part(g, (0.5, 5, 0.5), o @ cf(sx * 3.6, 2.5, -2.6), (60, 60, 72), "Metal")
-        part(g, (0.4, 2.2, 2.2), o @ cf(sx * 2.6, 4.2, -2.6), (240, 60, 70), shape="Cyl")
-    part(g, (8.2, 0.45, 0.45), o @ cf(0, 4.2, -2.6), (215, 220, 232), "Metal", "Cyl")
-    hit = part(b, (8, 3, 5), o @ cf(0, 1.5, 0.5), WHITE, Transparency=1, CanCollide=False, name="DumbbellHit")
-    prompt(hit, "Lift", "Dumbbell")
-    Inst("ProximityPrompt", "UpgradePrompt", hit, ActionText="Upgrade", ObjectText="Dumbbell", Key=114)  # R
-    label(part(g, (5, 1.4, 0.3), o @ cf(0, 6.2, -2.6), (44, 44, 58)), FACE["Back"], "💪 GYM")
+    """Clean gym corner: rubber floor, bench + dumbbell rack, the upgradeable dumbbell, training spot, upgrade ring."""
+    g = Inst("Model", "Gym", b)
+    part(g, (15, 0.2, 11), o @ cf(0, 0.1, 0), (205, 205, 212), name="FloorEdge")
+    part(g, (14.4, 0.24, 10.4), o @ cf(0, 0.12, 0), (46, 46, 54), "Concrete", name="Floor")
+    sets = Inst("Model", "GymSet", g)
+    pivot(sets, o @ cf(3.6, 0.24, -1.8), "GymSet")
+    part(sets, (1.5, 1.9, 4.6), o @ cf(3.6, 1.2, -1.8), (32, 32, 38))
+    part(sets, (1.6, 3.2, 4.8), o @ cf(-0.9, 1.84, -1.8), (70, 74, 84), "Metal")
+    spot = part(g, (3, 0.06, 3), o @ cf(-4.2, 0.27, 0.2), (255, 255, 255), Transparency=0.6, CanCollide=False, name="TrainSpot", shape="Cyl")
+    spot.p["cf"] = spot.p["cf"] @ rz(math.pi / 2)
+    spot.p["size"] = (0.06, 3, 3)
+    prompt(spot, "Start training", "Dumbbell")
+    dumbbell(g, o @ cf(-4.2, 0.24 + 1.15, 2.6))
+    label(part(g, (3, 0.05, 1), o @ cf(-4.2, 0.26, -1.9), WHITE, Transparency=1, CanCollide=False), FACE["Top"], "TRAIN", pps=30)
+    ring = part(g, (4, 0.3, 4), o @ cf(3.4, 0.4, 3.0), (255, 200, 60), "Smooth", Transparency=1, CanCollide=False, name="UpgradeRingVisual")
+    tag_mesh(ring, "Ring", scale=1, Ring=(255, 200, 60))
+    hit = part(g, (2.5, 4.4, 4.4), o @ cf(3.4, 1.4, 3.0) @ rz(math.pi / 2), WHITE, shape="Cyl", Transparency=1, CanCollide=False, name="UpgradeRing")
+    hit.p["CanTouch"] = True
+    label(part(g, (3.6, 0.05, 1), o @ cf(3.4, 0.27, 3.0), WHITE, Transparency=1, CanCollide=False), FACE["Top"], "UPGRADE", (255, 220, 120), pps=30)
 
 
 def cue_shop(b, o, col):
-    """Blender kiosk (counter, arched cue display, curved canopy, sign) + invisible functional parts."""
+    """Blender kiosk (counter, felt back panel, curved canopy, sign) + the counter part that holds the prompt."""
     m = Inst("Model", "Kiosk", b)
     pivot(m, o, "CueShop", Accent=col)
     part(m, (12.4, 0.5, 8.4), o @ cf(0, 0.25, -0.6), (92, 50, 24), "Wood")
@@ -341,11 +370,7 @@ def cue_shop(b, o, col):
     for sx in (-1, 1): ycyl(m, 0.55, 9.9, o @ cf(sx * 5.6, 5.2, 3.2), (92, 50, 24), "Wood")
     shop = part(b, (10, 3.2, 2.6), o @ cf(0, 2.1, 1.3), (92, 50, 24), "Wood", name="CueShop")  # counter: prompt lives here
     prompt(shop, "Open", "Cue Shop")
-    label(part(m, (8.6, 2.1, 0.1), o @ cf(0, 2.1, 2.78), WHITE, Transparency=1, CanCollide=False), FACE["Back"], "🎱 CUE SHOP")
-    label(part(m, (8, 1.8, 0.1), o @ cf(0, 12.6, 3.55), WHITE, Transparency=1, CanCollide=False), FACE["Back"], "UPGRADE YOUR CUE")
-    stands = Inst("Folder", "Stands", b)
-    for k, x in enumerate((-3, 0, 3), 1):  # the owner's current / next / locked cue hang here
-        part(stands, (0.4, 0.4, 0.4), o @ cf(x, 4.9, -2.7), WHITE, Transparency=1, CanCollide=False, name=f"Stand{k}")
+    label(part(m, (8, 1.8, 0.1), o @ cf(0, 12.6, 3.55), WHITE, Transparency=1, CanCollide=False), FACE["Back"], "CUE SHOP")
     light(part(m, (0.4, 0.4, 0.4), o @ cf(0, 9.6, 0.8), WHITE, Transparency=1, CanCollide=False), (255, 228, 180), 18, 2)
 
 
@@ -396,9 +421,9 @@ def build():
     bcol = [(255, 110, 120), (110, 170, 255), (110, 225, 140), (255, 190, 80)]
     for i in range(4):
         x = (i - 1.5) * 105
-        part(world, (93, 0.14, 115), cf(x, 0.07, -6), WHITE, name="RugBorder")  # each base sits on its own bright rug
-        part(world, (88, 0.16, 110), cf(x, 0.09, -6), mix(bcol[i], WHITE, 0.25), "Fabric", name="Rug")
-        player_base(world, i, cf(x, 0.17, -20), bcol[i])
+        part(world, (RUG_W + 5, 0.14, RUG_D + 5), cf(x, 0.07, -6), WHITE, name="RugBorder")  # each base sits on its own bright rug
+        part(world, (RUG_W, 0.16, RUG_D), cf(x, 0.09, -6), mix(bcol[i], WHITE, 0.25), "Fabric", name="Rug")
+        player_base(world, i, cf(x, 0.17, -20), bcol[i], (x - RUG_W / 2, x + RUG_W / 2, -6 - RUG_D / 2, -6 + RUG_D / 2))
     part(world, (6, 1, 6), cf(0, 0.6, 66), WHITE, cls="SpawnLocation", name="Spawn", Transparency=1, CanCollide=False, Neutral=True)
     return ws
 
@@ -437,8 +462,8 @@ def check_layout(ws):
         centre = kid(kid(base, "PoolTable"), "MeshPivot").p["cf"][:3, 3]
         groups = {
             "stage": [kid(base, "Stage"), kid(base, "PoolTable")],
-            "gym": [kid(base, "GymDecor"), kid(base, "Dumbbell"), kid(base, "DumbbellHit")],
-            "shop": [kid(base, "Kiosk"), kid(base, "CueShop"), kid(base, "Stands")],
+            "gym": [kid(base, "Gym")],
+            "shop": [kid(base, "Kiosk"), kid(base, "CueShop")],
         }
         boxes = {}
         for g, nodes in groups.items():
@@ -456,12 +481,25 @@ def check_layout(ws):
                 errs.append(f"base {i}: {g1} and {g2} are closer than 2 studs")
         slots = [s.p["cf"][:3, 3] for s in kid(base, "Slots").kids]
         for a in range(len(slots)):
-            if np.linalg.norm((slots[a] - centre)[[0, 2]]) < 12:
+            if np.linalg.norm((slots[a] - centre)[[0, 2]]) < 10:
                 errs.append(f"base {i}: slot {a + 1} is too close to the table")
             for b_ in range(a + 1, len(slots)):
                 if np.linalg.norm((slots[a] - slots[b_])[[0, 2]]) < 5:
                     errs.append(f"base {i}: slots {a + 1} and {b_ + 1} overlap")
-        prompts = [kid(base, "DumbbellHit").p["cf"][:3, 3], kid(base, "CueShop").p["cf"][:3, 3]]
+        gym = kid(base, "Gym")
+        prompts = [kid(gym, "TrainSpot").p["cf"][:3, 3], kid(base, "CueShop").p["cf"][:3, 3]]
+        ring = kid(gym, "UpgradeRing").p["cf"][:3, 3]
+        if np.linalg.norm((ring - prompts[0])[[0, 2]]) < 5:
+            errs.append(f"base {i}: upgrade ring overlaps the training spot")
+        fences = [f for f in kid(base, "Fences").kids if f.name == "FenceCollider"]
+        for f in fences:
+            fb = aabb(f)
+            for g, bx in boxes.items():
+                if overlap(fb, bx, 1):
+                    errs.append(f"base {i}: fence touches the {g}")
+        front = sorted((aabb(f) for f in fences if abs(f.p["cf"][2, 3] - rb[3]) < 3), key=lambda b: b[0])
+        if len(front) != 2 or front[1][0] - front[0][1] < ENTRANCE - 1:
+            errs.append(f"base {i}: the entrance is blocked")
         if np.linalg.norm(prompts[0] - prompts[1]) < 10:
             errs.append(f"base {i}: gym and shop prompts are too close")
         spawn = kid(base, "SpawnPoint").p["cf"][:3, 3]
@@ -488,6 +526,7 @@ def props(i):
                 f'<token name="Material">{MAT[p["mat"]]}</token>', f'<token name="shape">{SHAPE[p["shape"]]}</token>',
                 f'<bool name="Anchored">{str(p.get("Anchored", True)).lower()}</bool>', f'<bool name="CanCollide">{str(p.get("CanCollide", True)).lower()}</bool>',
                 f'<bool name="CastShadow">{str(p.get("CastShadow", True)).lower()}</bool>',
+                f'<bool name="CanTouch">{str(p.get("CanTouch", True)).lower()}</bool>',
                 f'<float name="Transparency">{p.get("Transparency", 0)}</float>', f'<float name="Reflectance">{p.get("Reflectance", 0)}</float>',
                 '<token name="TopSurface">0</token><token name="BottomSurface">0</token>']
         if "Neutral" in p: out.append('<bool name="Neutral">true</bool><bool name="AllowTeamChangeOnTouch">false</bool>')
@@ -519,7 +558,7 @@ def src(path): return open(os.path.join(ROOT, path), encoding="utf-8").read()
 def services(ws):
     rs = Inst("ReplicatedStorage", "ReplicatedStorage")
     shared = Inst("Folder", "Shared", rs)
-    for n in ("Config", "MeshBuilder", "Avatars"):
+    for n in ("Config", "MeshBuilder", "Avatars", "CueFx", "Rig"):
         Inst("ModuleScript", n, shared, Source=src(f"src/shared/{n}.luau"))
     meshes = Inst("Folder", "Meshes", shared)
     for f in sorted(os.listdir(os.path.join(ROOT, "src/shared/Meshes"))):
@@ -530,7 +569,7 @@ def services(ws):
     Inst("ModuleScript", "Map", sv, Source=src("src/server/Map.luau"))
     sp = Inst("StarterPlayer", "StarterPlayer")
     cl = Inst("Folder", "Client", Inst("StarterPlayerScripts", "StarterPlayerScripts", sp))
-    for n in ("UI", "Throw", "Visuals"):
+    for n in ("UI", "Throw", "Visuals", "Training"):
         Inst("LocalScript", n, cl, Source=src(f"src/client/{n}.client.luau"))
     lt = Inst("Lighting", "Lighting", ClockTime=13.2, Brightness=3.2, EnvironmentDiffuseScale=1, EnvironmentSpecularScale=0.6, OutdoorAmbient=(190, 185, 200), Ambient=(130, 125, 140))
     Inst("Sky", "Sky", lt)

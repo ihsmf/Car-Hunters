@@ -123,13 +123,16 @@ if __name__ == "__main__":
                     print("     " + e)
     # client <-> server contract: every action the client calls exists, every Fx kind the server fires is handled
     rd = lambda f: open(os.path.join(ROOT, f), encoding="utf-8").read()
-    server, ui, throw = rd("src/server/Main.server.luau"), rd("src/client/UI.client.luau"), rd("src/client/Throw.client.luau")
+    server = rd("src/server/Main.server.luau")
+    client = "".join(rd("src/client/" + f) for f in sorted(os.listdir(os.path.join(ROOT, "src/client"))))
     actions = set(re.findall(r"function actions\.(\w+)", server))
-    called = set(re.findall(r'(?:InvokeServer|call)\("(\w+)"', ui + throw))
+    called = set(re.findall(r'(?:InvokeServer|call)\("(\w+)"', client))
+    for a, b in re.findall(r'call\([\w.]+ and "(\w+)" or "(\w+)"\)', client):  # call(cond and "A" or "B")
+        called |= {a, b}
     for a in sorted(called - actions):
         print(f"FAIL client calls unknown server action '{a}'"); bad += 1
     fired = set(re.findall(r'Fire(?:All)?Clients?\((?:plr, )?"(\w+)"', server))
-    handled = set(re.findall(r'kind [=~]= "(\w+)"', ui + throw))
+    handled = set(re.findall(r'kind [=~]= "(\w+)"', client))
     for k in sorted(fired - handled):
         print(f"FAIL server fires '{k}' but no client handles it"); bad += 1
     print(f"contract: {len(called)} client actions, {len(fired)} server events checked")

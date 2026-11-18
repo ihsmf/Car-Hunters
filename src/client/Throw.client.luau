@@ -1,7 +1,8 @@
 -- The shot, start to finish:
---   1. wind-up: orbiting camera, a giant Blender cue swoops in, pulls back while energy gathers, impact frame
---   2. flight: the camera chases the ball over the long table; every new table = shake, flash, zoom punch,
---      new tint and a banner; "LUCK xN" stays on top; the ball breaks the rack, rack balls scatter into pockets
+--   1. stance: a copy of the shooter bends over the head of their lane, bridge hand on the felt, their own cue
+--      (tier colours + effects) in hand; practice strokes, slow backswing, strike — the cue slides through the bridge
+--   2. flight: the camera chases the ball over the long table; luck grows table by table ("LUCK 11.56X", the same
+--      track the server rolled); the rack breaks quietly in the background and its balls run into the pockets
 --   3. reveal: the camera cuts to the player's base, a light beam hits the podium, the new character bursts in
 -- Other players' shots are shown without the camera work.
 local Players = game:GetService("Players")
@@ -11,13 +12,19 @@ local Lighting = game:GetService("Lighting")
 local RS = game:GetService("ReplicatedStorage")
 local C = require(RS.Shared.Config)
 local MeshBuilder = require(RS.Shared.MeshBuilder)
+local CueFx = require(RS.Shared.CueFx)
+local Rig = require(RS.Shared.Rig)
 local Fx = RS:WaitForChild("Remotes"):WaitForChild("Fx")
 local plr = Players.LocalPlayer
 local cam = workspace.CurrentCamera
 local T, N = C.Table, #C.Rarities
 local zoneLen = T.Length / N
 local FELT_Y = 3.3
-local R = 1.1 -- ball radius
+local R = 1.1 -- main ball radius
+local RR = 0.75 -- rack ball radius
+local BALL_Z = T.StartZ + 13 -- where the ball is struck: room behind it for the shooter and the cue
+local RACK_Z = T.StartZ + 30
+local GOLD = Color3.fromRGB(255, 200, 50)
 local rng = Random.new()
 local WHITE = Color3.new(1, 1, 1)
 
@@ -85,9 +92,9 @@ local function shockwave(pos, color, size, t)
 	task.delay((t or 0.6) + 0.1, ring.Destroy, ring)
 end
 
-local function drop(b, at)
-	sfx("Pocket")
-	burst(b, b:GetAttribute("Tint") or WHITE, 25)
+local function drop(b, at, quiet)
+	if not quiet then sfx("Pocket") end
+	burst(b, b:GetAttribute("Tint") or WHITE, quiet and 8 or 25)
 	tween(b, 0.45, { Size = Vector3.one * 0.1, CFrame = CFrame.new(at - Vector3.new(0, 1.6, 0)) }, Enum.EasingStyle.Back, Enum.EasingDirection.In)
 	task.delay(1, b.Destroy, b)
 end
@@ -96,7 +103,7 @@ end
 local pockets = {}
 for i = 1, N do
 	for _, sx in { -1, 1 } do
-		table.insert(pockets, Vector3.new(sx * T.Width / 2, FELT_Y + R, T.StartZ + (i - 0.5) * zoneLen))
+		table.insert(pockets, Vector3.new(sx * T.Width / 2, FELT_Y + RR, T.StartZ + (i - 0.5) * zoneLen))
 	end
 end
 local function nearestPocket(pos)
@@ -108,21 +115,22 @@ local function nearestPocket(pos)
 	return best, bd
 end
 
--- ===== A rack on every lane =====
-local RACK_Z = T.StartZ + 24
-local rackColors = { Color3.fromRGB(255, 220, 40), Color3.fromRGB(40, 90, 255), Color3.fromRGB(255, 50, 50), Color3.fromRGB(140, 40, 200), Color3.fromRGB(255, 130, 20), Color3.fromRGB(30, 160, 60), Color3.fromRGB(130, 30, 30), Color3.fromRGB(20, 20, 20), Color3.fromRGB(255, 120, 200), Color3.fromRGB(0, 200, 200) }
+-- ===== A full 15-ball rack on every lane: solids, stripes, the black 8 in the middle =====
+local SOLIDS = { Color3.fromRGB(250, 200, 30), Color3.fromRGB(30, 80, 200), Color3.fromRGB(220, 40, 40), Color3.fromRGB(110, 40, 170), Color3.fromRGB(255, 120, 20), Color3.fromRGB(20, 140, 70), Color3.fromRGB(130, 30, 30), Color3.fromRGB(18, 18, 20) }
+local ORDER = { 1, 9, 2, 10, 8, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15 }
 local racks = {}
 
 local function buildRack(slot)
 	local list = {}
 	local x0 = laneX(slot)
 	local k = 0
-	for row = 0, 3 do
+	for row = 0, 4 do
 		for j = 0, row do
 			k += 1
-			local b = ball(rackColors[k], R * 2, CFrame.new(x0 + (j - row / 2) * R * 2.05, FELT_Y + R, RACK_Z + row * R * 1.8))
+			local n = ORDER[k]
+			local b = ball(SOLIDS[(n - 1) % 8 + 1], RR * 2, CFrame.new(x0 + (j - row / 2) * RR * 2.04, FELT_Y + RR, RACK_Z + row * RR * 1.77) * CFrame.Angles(k, k * 2, 0))
 			b.Size = Vector3.one * 0.1
-			tween(b, 0.4, { Size = Vector3.one * R * 2 }, Enum.EasingStyle.Back)
+			tween(b, 0.4, { Size = Vector3.one * RR * 2 }, Enum.EasingStyle.Back)
 			table.insert(list, b)
 		end
 	end
@@ -130,7 +138,8 @@ local function buildRack(slot)
 end
 for s = 1, T.Lanes do task.spawn(buildRack, s) end
 
--- Scatter physics: friction, rail and ball-ball bounces, pockets "pull" slow balls so every ball gets potted
+-- Scatter physics: friction, rail and ball-ball bounces, pockets "pull" slow balls so every ball gets potted.
+-- Runs in the background: no camera work, no sound except the soft clack of the break.
 local function breakRack(slot, power)
 	local list = racks[slot]
 	racks[slot] = nil
@@ -139,7 +148,7 @@ local function breakRack(slot, power)
 		local p = b.Position
 		local away = Vector3.new(p.X - laneX(slot), 0, p.Z - RACK_Z + 3).Unit
 		local dir = (away + Vector3.new(rng:NextNumber(-0.5, 0.5), 0, 0.4)).Unit
-		table.insert(bodies, { b = b, p = p, v = dir * rng:NextNumber(30, 55) * (0.6 + power * 0.6), rot = CFrame.new() })
+		table.insert(bodies, { b = b, p = p, v = dir * rng:NextNumber(26, 46) * (0.6 + power * 0.6), rot = b.CFrame.Rotation })
 	end
 	local alive = #bodies
 	local conn
@@ -151,7 +160,7 @@ local function breakRack(slot, power)
 			if d < 2.3 then
 				o.done, alive = true, alive - 1
 				o.b.CFrame = CFrame.new(target)
-				drop(o.b, target)
+				drop(o.b, target, true)
 				continue
 			end
 			o.v *= math.max(0, 1 - 0.55 * dt)
@@ -160,14 +169,13 @@ local function breakRack(slot, power)
 				o.v = o.v.Unit * math.max(o.v.Magnitude, 8)
 			end
 			o.p += o.v * dt
-			local lim = T.Width / 2 - R
+			local lim = T.Width / 2 - RR
 			if math.abs(o.p.X) > lim then -- rail bounce
 				o.p = Vector3.new(math.sign(o.p.X) * lim, o.p.Y, o.p.Z)
 				o.v = Vector3.new(-o.v.X * 0.8, 0, o.v.Z)
-				sfx("Hit")
 			end
-			if o.p.Z < T.StartZ + R then
-				o.p = Vector3.new(o.p.X, o.p.Y, T.StartZ + R)
+			if o.p.Z < T.StartZ + RR then
+				o.p = Vector3.new(o.p.X, o.p.Y, T.StartZ + RR)
 				o.v = Vector3.new(o.v.X, 0, -o.v.Z * 0.8)
 			end
 			for j = i + 1, #bodies do -- elastic ball-ball collision
@@ -175,20 +183,20 @@ local function breakRack(slot, power)
 				if not q.done then
 					local delta = q.p - o.p
 					local dist = delta.Magnitude
-					if dist < R * 2 and dist > 0 then
+					if dist < RR * 2 and dist > 0 then
 						local n = delta / dist
 						local rel = (o.v - q.v):Dot(n)
 						if rel > 0 then
 							o.v -= n * rel
 							q.v += n * rel
 						end
-						o.p -= n * (R * 2 - dist) / 2
-						q.p += n * (R * 2 - dist) / 2
+						o.p -= n * (RR * 2 - dist) / 2
+						q.p += n * (RR * 2 - dist) / 2
 					end
 				end
 			end
 			local axis = o.v.Magnitude > 0.01 and Vector3.yAxis:Cross(o.v.Unit) or Vector3.xAxis
-			o.rot = CFrame.fromAxisAngle(axis, o.v.Magnitude * dt / R) * o.rot
+			o.rot = CFrame.fromAxisAngle(axis, o.v.Magnitude * dt / RR) * o.rot
 			o.b.CFrame = CFrame.new(o.p) * o.rot
 		end
 		if alive == 0 then
@@ -274,7 +282,7 @@ end
 local skip = false
 local skipBtn = Instance.new("TextButton")
 skipBtn.Size, skipBtn.AnchorPoint, skipBtn.Position = UDim2.fromOffset(170, 60), Vector2.new(1, 1), UDim2.new(1, -30, 1, -30)
-skipBtn.BackgroundColor3, skipBtn.Text, skipBtn.FontFace, skipBtn.TextSize = WHITE, "SKIP ⏩", C.UI.Font, 30
+skipBtn.BackgroundColor3, skipBtn.Text, skipBtn.FontFace, skipBtn.TextSize = WHITE, "SKIP", C.UI.Font, 30
 skipBtn.TextColor3, skipBtn.Visible, skipBtn.ZIndex, skipBtn.AutoButtonColor = C.UI.Ink, false, 8, true
 Instance.new("UICorner", skipBtn).CornerRadius = UDim.new(0, 24)
 local skipStroke = Instance.new("UIStroke")
@@ -322,7 +330,9 @@ local function setCinema(on)
 end
 
 -- ===== Reveal card: spinning rays, flowing rainbow title, pulse =====
-local function revealCard(ch, bonus)
+local function revealCard(it, bonus)
+	local ch = C.Characters[it.id]
+	local V = C.Variants[it.v or 1]
 	local r = C.Rarities[ch.rarity]
 	local root = frame({ BackgroundTransparency = 1, ZIndex = 3 })
 	local rays = frame({ Parent = root, BackgroundTransparency = 1, Size = UDim2.fromOffset(1000, 1000), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42) })
@@ -331,9 +341,10 @@ local function revealCard(ch, bonus)
 		frame({ Parent = pivot, BackgroundColor3 = k % 2 == 0 and r[2] or WHITE, BackgroundTransparency = 0.7, Size = UDim2.new(0, 44, 0.5, 0), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.fromScale(0.5, 0.5) })
 	end
 	local title, s1 = label(root, string.upper(r[1]) .. "!", UDim2.fromScale(0.8, 0.13), WHITE, UDim2.fromScale(0.5, 0.66))
-	local name, s2 = label(root, ch.name, UDim2.fromScale(0.7, 0.08), r[2], UDim2.fromScale(0.5, 0.77))
-	local _, s3 = label(root, "💵 $" .. C.Short(ch.income) .. "/s", UDim2.fromScale(0.4, 0.055), C.UI.Money, UDim2.fromScale(0.5, 0.84))
-	local newTag, s4 = label(root, bonus > 0 and ("🍀 LUCK BONUS +" .. bonus) or "✨ NEW!", UDim2.fromScale(0.3, 0.05), C.UI.Title, UDim2.fromScale(0.5, 0.58))
+	local name, s2 = label(root, C.ItemName(it), UDim2.fromScale(0.7, 0.08), V.color or r[2], UDim2.fromScale(0.5, 0.77))
+	local _, s3 = label(root, "$" .. C.Short(C.ItemIncome(it)) .. "/s", UDim2.fromScale(0.4, 0.055), C.UI.Money, UDim2.fromScale(0.5, 0.84))
+	local tagText = V.name ~= "Normal" and (string.upper(V.name) .. "  x" .. V.mult) or bonus > 0 and ("LUCK BONUS +" .. bonus) or "NEW"
+	local newTag, s4 = label(root, tagText, UDim2.fromScale(0.3, 0.05), V.color or C.UI.Title, UDim2.fromScale(0.5, 0.58))
 	newTag.Rotation = -4
 	local grad = Instance.new("UIGradient")
 	grad.Color = ch.rarity >= 10 and RAINBOW or ColorSequence.new(WHITE, r[2])
@@ -363,92 +374,187 @@ local function revealCard(ch, bonus)
 	end
 end
 
--- ===== 1. Wind-up =====
-local function cueCF(tip, pitch, k)
-	local d = Vector3.new(0, -math.sin(pitch), math.cos(pitch)) -- butt -> tip
-	return CFrame.fromMatrix(tip - d * 4.6 * k, Vector3.xAxis, d)
-end
+-- ===== 1. The shooter: a posed copy of the player's avatar with their cue =====
+local SHOOT_SCALE = 1.35 -- the long table is built big; the shooter is scaled to match
+local CUE_K = 0.85 * SHOOT_SCALE -- cue length 9.2 * CUE_K
+local PITCH = math.rad(7) -- the butt is raised a little, like a real stroke
+local DIR = Vector3.new(0, -math.sin(PITCH), math.cos(PITCH)) -- butt -> tip
 
-local function windup(b, start, mine, power, cueColor, full)
-	local k = 1.15
-	local cue = MeshBuilder.Create("Cue", CFrame.new(start), { Shaft = cueColor }, k)
+local function makeCue(def, tier)
+	local overrides = {}
+	for slot, field in C.CueParts do overrides[slot] = def[field] end
+	local cue = MeshBuilder.Create("Cue", CFrame.new(), overrides, CUE_K)
 	if not cue then
 		cue = Instance.new("Part")
-		cue.Size, cue.Color, cue.Material, cue.Anchored, cue.CanCollide = Vector3.new(0.5, 9.2 * k, 0.5), cueColor, Enum.Material.Wood, true, false
+		cue.Size, cue.Color, cue.Material = Vector3.new(0.3, 9.2, 0.3) * CUE_K, def.shaft, Enum.Material.Wood
+		cue.Anchored, cue.CanCollide, cue.CanQuery = true, false, false
 	end
+	CueFx.Apply(cue, tier, def, CUE_K)
 	cue.Parent = workspace
-	local tipAnchor = anchorPart(CFrame.new(start))
-	local charge = emitter(tipAnchor, {
-		Shape = Enum.ParticleEmitterShape.Sphere, ShapeInOut = Enum.ParticleEmitterShapeInOut.Inward, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
-		Speed = NumberRange.new(7, 9), Lifetime = NumberRange.new(0.35, 0.45), Size = NumberSequence.new(0.35, 0.05),
-		Color = ColorSequence.new(cueColor:Lerp(WHITE, 0.5), WHITE), Transparency = NumberSequence.new(0.2, 0),
-	})
-	local glow = Instance.new("PointLight")
-	glow.Color, glow.Range, glow.Brightness, glow.Parent = cueColor:Lerp(WHITE, 0.5), 10, 0, b
-	burst(start - Vector3.new(0, 0, R + 0.4), Color3.fromRGB(90, 170, 255), 18, 5) -- chalk puff
+	return cue
+end
+
+local function cueCF(grip, back) -- the grip sits 30 % up from the butt
+	local Lc = 9.2 * CUE_K
+	local g = grip - DIR * back
+	return CFrame.fromMatrix(g + DIR * (Lc * 0.2), Vector3.xAxis, DIR), g
+end
+
+-- copy of the shooter's character, posed by IK each frame; nil when the avatar isn't available
+local function makeShooter(uid)
+	local who = Players:GetPlayerByUserId(uid)
+	local char = who and who.Character
+	if not (char and char:FindFirstChild("HumanoidRootPart")) then return nil end
+	char.Archivable = true
+	local ok, m = pcall(char.Clone, char)
+	if not (ok and m) then return nil end
+	for _, d in m:GetDescendants() do
+		if d:IsA("BaseScript") or d:IsA("ForceField") or d:IsA("Sound") or (d:IsA("BasePart") and d.Name == "Cue") then
+			d:Destroy()
+		elseif d:IsA("BasePart") then
+			d.CanCollide, d.CanQuery, d.CanTouch, d.Anchored = false, false, false, false
+		end
+	end
+	local hum = m:FindFirstChildOfClass("Humanoid")
+	if not hum then return nil end
+	hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	hum.EvaluateStateMachine = false
+	m.HumanoidRootPart.Anchored = true
+	pcall(m.ScaleTo, m, SHOOT_SCALE)
+	local J = Rig.Joints(m)
+	if not J then
+		m:Destroy()
+		return nil
+	end
+	m.Name = "Shooter"
+	m.Parent = workspace
+	return { m = m, J = J, hum = hum }
+end
+
+-- Find a natural stance: feet on the felt, right shoulder over the grip, torso bent just enough for the
+-- bridge hand to reach the felt in front. Returns the pose function (back -> Transforms) or nil.
+local function stance(sh, ballPos)
+	local m, J = sh.m, sh.J
+	local hrpPart = m.HumanoidRootPart
+	local addr = ballPos - DIR * (R + 0.35) -- cue tip at address
+	local Lc = 9.2 * CUE_K
+	local grip0 = addr - DIR * (Lc * 0.7)
+	local bridge = addr - DIR * (2.1 * CUE_K) - Vector3.new(0, 0.18 * SHOOT_SCALE, 0)
+	local foot = m:FindFirstChild("RightFoot")
+	local footY = FELT_Y + (foot and foot.Size.Y / 2 or 0.2)
+	local rightFoot = Vector3.new(ballPos.X - 0.5 * SHOOT_SCALE, footY, grip0.Z - 1.1 * SHOOT_SCALE)
+	local leftFoot = Vector3.new(ballPos.X + 1.9 * SHOOT_SCALE, footY, grip0.Z + 1.5 * SHOOT_SCALE)
+	local legReach = Rig.Reach(J.RightHip, J.RightKnee, J.RightAnkle)
+	local armReach = Rig.Reach(J.LeftShoulder, J.LeftElbow, J.LeftWrist)
+	local face = Vector3.new(-0.32, 0, 1).Unit -- turned a little to the right: left shoulder forward
+	local stand = sh.hum.HipHeight + hrpPart.Size.Y / 2
+	local best
+	for bend = 0.7, 1.5, 0.05 do
+		local root, waist = CFrame.Angles(-bend * 0.35, 0, 0), CFrame.Angles(-bend * 0.65, 0, 0)
+		local pos = Vector3.new(ballPos.X + 1, FELT_Y + stand, grip0.Z)
+		local hrp
+		for _ = 1, 4 do
+			hrp = CFrame.lookAt(pos, pos + face)
+			local lt, ut = Rig.Torso(J, hrp, root, waist)
+			local sR = Rig.JointPos(ut, J.RightShoulder)
+			pos += Vector3.new(ballPos.X + 0.15 - sR.X, 0, grip0.Z + 0.5 * SHOOT_SCALE - sR.Z)
+			local hipL, hipR = Rig.JointPos(lt, J.LeftHip), Rig.JointPos(lt, J.RightHip)
+			local far = math.max((hipL - leftFoot).Magnitude, (hipR - rightFoot).Magnitude)
+			pos -= Vector3.new(0, far - legReach * 0.96, 0) -- feet planted, knees slightly bent
+		end
+		hrp = CFrame.lookAt(pos, pos + face)
+		local _, ut = Rig.Torso(J, hrp, root, waist)
+		best = { hrp = hrp, root = root, waist = waist, neck = CFrame.Angles(bend * 0.75, 0, 0) }
+		if (Rig.JointPos(ut, J.LeftShoulder) - bridge).Magnitude <= armReach * 0.97 then break end
+	end
+	hrpPart.CFrame = best.hrp
+	return function(back)
+		local _, g = cueCF(grip0, back)
+		return Rig.Solve(J, best.hrp, {
+			root = best.root, waist = best.waist, neck = best.neck,
+			rightHand = g, leftHand = bridge, rightFoot = rightFoot, leftFoot = leftFoot,
+			rightPole = Vector3.new(-0.4, 0.2, -1).Unit, leftPole = Vector3.new(1, 0.6, 0).Unit,
+		})
+	end, grip0
+end
+
+-- The stroke: practice strokes, slow backswing, pause, strike through the ball. Returns once the tip hits.
+local function windup(b, start, mine, power, payload, full)
+	local def = CueFx.Def(payload.cue or 1, payload.dragon)
+	local cue = makeCue(def, payload.cue or 1)
+	local sh = makeShooter(payload.uid)
+	local pose, grip0
+	if sh then pose, grip0 = stance(sh, start) end
+	if not pose then
+		grip0 = start - DIR * (R + 0.35 + 9.2 * CUE_K * 0.7)
+	end
+	local poseConn
+	local back = 0
+	if pose then
+		poseConn = RunService.Stepped:Connect(function() Rig.Apply(sh.J, pose(back)) end)
+	end
 	local W = C.AnimOf(full).Windup
-	local k_ = W / C.Anim.Full.Windup -- the short version runs the same moves faster
+	local maxBack = (1.1 + 0.9 * power) * SHOOT_SCALE
+	local side = start.X < 0 and 1 or -1 -- camera on the table-centre side of the lane
 	local t0 = os.clock()
 	if mine then
-		camFn = function() -- from behind-right and above to straight behind the ball, never into walls/cushion
+		local mid = start - DIR * 5
+		camFn = function()
 			local t = math.clamp((os.clock() - t0) / W, 0, 1)
-			local e = 1 - (1 - t) ^ 2
-			local a = math.rad(35 * (1 - e))
-			local rad, h = 12 - 3 * e, 6 - 2 * e
-			local pos = start + Vector3.new(math.sin(a) * rad, h, -math.cos(a) * rad)
-			pos = Vector3.new(math.clamp(pos.X, -40, 40), pos.Y, math.max(pos.Z, start.Z - 10))
-			return CFrame.lookAt(pos, start + Vector3.new(0, 0.5, 8))
+			local e = t * t * (3 - 2 * t)
+			local wide = mid + Vector3.new(side * 12, 5.5, 1)
+			local behind = grip0 - DIR * 5 + Vector3.new(side * 1.2, 3.4, 0)
+			return CFrame.lookAt(wide:Lerp(behind, e), (mid + Vector3.new(0, 1, 0)):Lerp(start + Vector3.new(0, 0.6, 6), e))
 		end
-		cam.FieldOfView = 62
-		tween(cam, W, { FieldOfView = 38 }, Enum.EasingStyle.Sine)
-		tween(dim, W, { BackgroundTransparency = 0.55 })
-		tween(cc, W, { Saturation = -0.35, Contrast = 0.25 })
+		cam.FieldOfView = 55
+		tween(cam, W, { FieldOfView = 45 }, Enum.EasingStyle.Sine)
+		tween(dim, W, { BackgroundTransparency = 0.7 })
+		tween(cc, W, { Saturation = -0.15, Contrast = 0.15 })
 	end
+	local practice = full and 0.45 or 0.1 -- share of the wind-up spent on practice strokes
 	while true do
-		local t = (os.clock() - t0) / k_
-		if t >= C.Anim.Full.Windup or skip then break end
-		local pitch, back
-		if t < 0.35 then -- swoop in from above
-			local e = TweenService:GetValue(t / 0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-			pitch, back = 1.25 + (0.14 - 1.25) * e, 0.4
-		elseif t < 1.25 then -- slow pull back, energy gathers
-			local e = math.sin((t - 0.35) / 0.9 * math.pi / 2)
-			pitch, back = 0.14, 0.4 + 4.6 * e * (0.6 + power * 0.4)
-			charge.Rate = 40 + 160 * e
-			glow.Brightness = 4 * e
-			if mine then hardShake(0.04 + 0.12 * e) end
-		elseif t < 1.42 then -- hold at full tension
-			pitch, back = 0.14, 5 * (0.6 + power * 0.4) + math.sin(t * 90) * 0.06
-			if mine then hardShake(0.2) end
-		else -- strike
-			local e = math.clamp((t - 1.42) / 0.07, 0, 1)
-			pitch, back = 0.14, 5 * (0.6 + power * 0.4) * (1 - e ^ 3) - 0.3 * e
-			charge.Rate = 0
+		local u = (os.clock() - t0) / W
+		if u >= 1 or skip then break end
+		if u < practice then -- two small practice strokes
+			back = 0.45 * SHOOT_SCALE * (1 - math.cos(u / practice * 4 * math.pi)) / 2
+		elseif u < 0.86 then -- slow final backswing
+			local e = (u - practice) / (0.86 - practice)
+			back = maxBack * math.sin(e * math.pi / 2)
+			if mine then hardShake(0.03 * e) end
+		elseif u < 0.92 then -- pause at the top
+			back = maxBack
+		else -- strike through the ball
+			local e = (u - 0.92) / 0.08
+			back = maxBack + (-(R + 0.35) * 0.9 - maxBack) * e ^ 2
 		end
-		local tip = start - Vector3.new(0, 0, R + back) + Vector3.new(0, 0.15, 0)
-		cue.CFrame = cueCF(tip, pitch, k)
-		tipAnchor.CFrame = CFrame.new(tip)
+		cue.CFrame = cueCF(grip0, back)
 		RunService.RenderStepped:Wait()
 	end
-	-- impact frame
+	back = -(R + 0.35) * 0.9 -- follow-through: the tip ends just past where the ball was
+	cue.CFrame = cueCF(grip0, back)
+	-- impact
 	sfx("Hit")
-	glow.Brightness = 0
-	shockwave(start - Vector3.new(0, R - 0.1, 0), WHITE, 22, 0.5)
-	burst(start, Color3.fromRGB(255, 230, 120), 50, 22)
+	burst(start - DIR * R, Color3.fromRGB(120, 180, 255), 14, 6) -- chalk puff
+	burst(start, def.inlay:Lerp(WHITE, 0.4), 30, 18)
+	shockwave(start - Vector3.new(0, R - 0.1, 0), WHITE, 16, 0.45)
 	if mine then
-		doFlash(WHITE, 0.95, 0.35)
-		hardShake(3)
-		local hold = cam.CFrame
-		camFn = function() return hold, true end
-		task.wait(full and 0.09 or 0.03) -- freeze frame
-		cam.FieldOfView = 100
-		tween(cam, 0.9, { FieldOfView = 80 }, Enum.EasingStyle.Quart)
+		doFlash(WHITE, 0.7, 0.3)
+		hardShake(2.2)
 		tween(dim, 0.3, { BackgroundTransparency = 1 })
-		tween(cc, 0.3, { Saturation = 0.25, Contrast = 0.1 })
+		tween(cc, 0.3, { Saturation = 0.2, Contrast = 0.08 })
+		cam.FieldOfView = 90
+		tween(cam, 0.8, { FieldOfView = 78 }, Enum.EasingStyle.Quart)
 	end
-	task.delay(0.25, cue.Destroy, cue)
-	task.delay(0.6, tipAnchor.Destroy, tipAnchor)
-	task.delay(0.6, glow.Destroy, glow)
+	task.delay(1.4, function() -- the shooter straightens up and fades away
+		if poseConn then poseConn:Disconnect() end
+		for _, d in (sh and sh.m or cue):GetDescendants() do
+			if d:IsA("BasePart") then tween(d, 0.4, { Transparency = 1 }) end
+		end
+		tween(cue, 0.4, { Transparency = 1 })
+		task.wait(0.45)
+		cue:Destroy()
+		if sh then sh.m:Destroy() end
+	end)
 end
 
 -- ===== 3. Reveal on the base =====
@@ -466,9 +572,9 @@ local function findNpc(slot, tid)
 	return nil
 end
 
-local function setHidden(model, hidden)
+local function setHidden(model, hidden) -- parts replaced by a Blender mesh stay hidden
 	for _, p in model:GetDescendants() do
-		if p:IsA("BasePart") and p.Name ~= "Acc" and p.Name ~= "Stick" then p.LocalTransparencyModifier = hidden and 1 or 0 end
+		if p:IsA("BasePart") and not p:FindFirstChild("MeshVisual") then p.LocalTransparencyModifier = hidden and 1 or 0 end
 	end
 end
 
@@ -491,7 +597,8 @@ end
 
 -- The new character is shown on the front of the stage (RevealSpot), facing the hall: a local copy is used
 -- so the camera can frame it cleanly with the table behind; the real NPC appears on its spot afterwards.
-local function revealOnBase(slot, tid, ch, bonus)
+local function revealOnBase(slot, tid, it, bonus)
+	local ch = C.Characters[it.id]
 	local r = C.Rarities[ch.rarity]
 	local npc = findNpc(slot, tid)
 	local base = workspace.World:FindFirstChild("Base" .. slot)
@@ -503,7 +610,7 @@ local function revealOnBase(slot, tid, ch, bonus)
 	end
 	if not copy then -- nothing to show on the base (inventory full / not equipped): just the card
 		tween(dim, 0.3, { BackgroundTransparency = 0.35 })
-		local close = revealCard(ch, bonus)
+		local close = revealCard(it, bonus)
 		waitOrSkip(3)
 		close()
 		return
@@ -557,9 +664,6 @@ local function revealOnBase(slot, tid, ch, bonus)
 	gather.Rate = 0
 	hideCopy:Disconnect()
 	setHidden(copy, false)
-	for _, p in copy:GetDescendants() do -- keep the part-built cue hidden where the Blender cue mesh is shown
-		if p.Name == "Stick" and p:FindFirstChild("MeshVisual") then p.LocalTransparencyModifier = 1 end
-	end
 	playAnim(copy, ANIM_CHEER, false)
 	sfx("Reward")
 	doFlash(r[2]:Lerp(WHITE, 0.3), 1, 0.7)
@@ -589,7 +693,7 @@ local function revealOnBase(slot, tid, ch, bonus)
 		return CFrame.lookAt(pos, center + Vector3.new(0, 1.2 * e, 0))
 	end
 	tween(cam, 3.4, { FieldOfView = 40 }, Enum.EasingStyle.Sine)
-	local close = revealCard(ch, bonus)
+	local close = revealCard(it, bonus)
 	waitOrSkip(3.4)
 	close()
 	beam:Destroy()
@@ -600,17 +704,37 @@ local function revealOnBase(slot, tid, ch, bonus)
 end
 
 -- ===== The shot =====
-Fx.OnClientEvent:Connect(function(kind, slot, dist, id, luck, tid, fullByServer)
+local luckShown = 0
+local function showLuck(v, lucky)
+	local from = luckShown
+	luckShown = v
+	local t0 = os.clock()
+	task.spawn(function() -- the number counts up
+		while os.clock() - t0 < 0.3 and luckShown == v do
+			local e = (os.clock() - t0) / 0.3
+			luckLabel.Text = string.format("LUCK %.2fX", from + (v - from) * e)
+			RunService.RenderStepped:Wait()
+		end
+		if luckShown == v then luckLabel.Text = string.format("LUCK %.2fX", v) end
+	end)
+	luckGrad.Enabled = v >= 5
+	luckLabel.TextColor3 = v >= 5 and WHITE or C.UI.Title
+	pop(luckScale, lucky and 1.8 or 1.25)
+end
+
+Fx.OnClientEvent:Connect(function(kind, p)
 	if kind ~= "Throw" then return end
-	local ch = C.Characters[id]
+	local slot, dist, tid = p.slot, p.dist, p.tid
+	local it = { id = p.id, v = p.v }
+	local ch = C.Characters[it.id]
 	local rcol = C.Rarities[ch.rarity][2]
 	local mine = slot == _G.MySlot
-	local full = fullByServer and not _G.ShortOnly -- Epic+ gets the full show unless the player chose short cinematics
+	local full = p.full and not _G.ShortOnly -- the big show only for top pulls, unless the player chose short cinematics
 	local A = C.AnimOf(full)
-	if mine then _G.ShotReadyAt = os.clock() + C.ThrowTime(dist, fullByServer) + C.ThrowCooldown end
+	if mine then _G.ShotReadyAt = os.clock() + C.ThrowTime(dist, p.full) + C.ThrowCooldown end
 	local x = laneX(slot)
-	local start = Vector3.new(x, FELT_Y + R, T.StartZ + 10) -- room behind the ball for the cue and the camera
-	local b = ball(WHITE, R * 2, CFrame.new(start))
+	local start = Vector3.new(x, FELT_Y + R, BALL_Z)
+	local b = ball(p.gold and GOLD or WHITE, R * 2, CFrame.new(start))
 	local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
 	a0.Position, a1.Position, a0.Parent, a1.Parent = Vector3.new(0, 0.7, 0), Vector3.new(0, -0.7, 0), b, b
 	local trail = Instance.new("Trail")
@@ -620,23 +744,30 @@ Fx.OnClientEvent:Connect(function(kind, slot, dist, id, luck, tid, fullByServer)
 		Speed = NumberRange.new(1, 3), SpreadAngle = Vector2.new(180, 180), Lifetime = NumberRange.new(0.3, 0.6),
 		Size = NumberSequence.new(0.9, 0), Transparency = NumberSequence.new(0.2, 1),
 	})
+	if p.gold then -- Golden Ball pass: gold sparkles
+		emitter(b, {
+			Color = ColorSequence.new(GOLD, WHITE), Rate = 25, Speed = NumberRange.new(0.5, 1.5), SpreadAngle = Vector2.new(180, 180),
+			Lifetime = NumberRange.new(0.4, 0.8), Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.35), NumberSequenceKeypoint.new(1, 0) }),
+		})
+	end
 	local function themeAt(z)
 		local tbl = C.Tables[zoneAt(z)]
-		trail.Color = ColorSequence.new(WHITE, tbl[2])
+		trail.Color = ColorSequence.new(p.gold and GOLD or WHITE, tbl[2])
 		aura.Color = ColorSequence.new(tbl[2], WHITE)
 		return tbl
 	end
 	themeAt(start.Z)
+	local luckyAt = {}
+	for _, k in p.lucky do luckyAt[k] = true end
 
 	if mine then
 		setCinema(true)
-		luckLabel.Text = "🍀 LUCK x" .. luck
-		luckGrad.Enabled = luck >= 5
-		luckLabel.TextColor3 = luck >= 5 and WHITE or C.UI.Title
-		pop(luckScale)
+		luckShown = p.luck0
+		luckLabel.Text = string.format("LUCK %.2fX", p.luck0)
+		showLuck(p.luck0)
 	end
 	local power = math.clamp(dist / T.Length, 0, 1)
-	windup(b, start, mine, math.clamp(dist / 400, 0.3, 1), C.Cues[mine and _G.MyCue or 1][4], full)
+	windup(b, start, mine, math.clamp(dist / 600, 0.3, 1), p, full)
 	aura.Rate = 40
 
 	-- 2. Flight over the tables
@@ -647,8 +778,8 @@ Fx.OnClientEvent:Connect(function(kind, slot, dist, id, luck, tid, fullByServer)
 	local rot, lastZ = CFrame.new(), start.Z
 	if mine then
 		camFn = function()
-			local p = b.Position
-			return CFrame.lookAt(p + Vector3.new(0, 5.5, -13), p + Vector3.new(0, 1, 12))
+			local bp = b.Position
+			return CFrame.lookAt(bp + Vector3.new(0, 5.5, -13), bp + Vector3.new(0, 1, 12))
 		end
 	end
 	local t0 = os.clock()
@@ -658,31 +789,37 @@ Fx.OnClientEvent:Connect(function(kind, slot, dist, id, luck, tid, fullByServer)
 		rot = CFrame.Angles((z - lastZ) / R, 0, 0) * rot
 		lastZ = z
 		b.CFrame = CFrame.new(x, start.Y, z) * rot
-		if not broke and z >= RACK_Z - R * 2 and racks[slot] then
+		if not broke and z >= RACK_Z - RR * 2 and racks[slot] then
 			broke = true
 			breakRack(slot, math.max(power, 0.3))
-			if mine then
-				hardShake(1.3)
-				doFlash(WHITE, 0.35)
-			end
 		end
 		local zn = zoneAt(z)
-		if zn ~= lastZone then -- entering a new table
+		if zn ~= lastZone then -- entering a new table: the luck of the table just crossed is added
+			local crossed = zn - 1
 			lastZone = zn
 			local tbl = themeAt(z)
-			aura.Rate = 40 + zn * 6
+			aura.Rate = 40 + zn
+			if mine and p.track[crossed] then
+				showLuck(p.track[crossed], luckyAt[crossed])
+				if luckyAt[crossed] then
+					showBanner("LUCKY TABLE", C.UI.Title)
+					doFlash(C.UI.Title, 0.35, 0.35)
+					sfx("Reward")
+				end
+			end
 			if mine and (full or zn == zone) then -- the short version only announces the final table
-				hardShake(0.7 + zn * 0.06)
-				doFlash(tbl[2], 0.45, 0.4)
-				cam.FieldOfView = 92
+				hardShake(0.5 + zn * 0.03)
+				doFlash(tbl[2], 0.35, 0.35)
+				cam.FieldOfView = 90
 				tween(cam, 0.5, { FieldOfView = 80 }, Enum.EasingStyle.Quart)
 				tween(cc, 0.3, { TintColor = tbl[2]:Lerp(WHITE, 0.75) })
-				showBanner("TABLE " .. zn .. " • " .. string.upper(tbl[1]), tbl[2])
+				if not luckyAt[crossed] then showBanner("TABLE " .. zn .. "  " .. string.upper(tbl[1]), tbl[2]) end
 				sfx("Click")
 			end
 		end
 		RunService.RenderStepped:Wait()
 	until t >= 1
+	if mine and p.track[zone] then showLuck(p.track[zone], luckyAt[zone]) end
 
 	-- slide into the zone pocket: zoom in, dim, blur, then fade to black
 	local side = x < 0 and -1 or 1
@@ -707,7 +844,7 @@ Fx.OnClientEvent:Connect(function(kind, slot, dist, id, luck, tid, fullByServer)
 	shockwave(pocket - Vector3.new(0, 0.9, 0), rcol, 12, 0.5)
 
 	if not mine then
-		_G.Toast(ch.name .. " • " .. C.Rarities[ch.rarity][1], rcol)
+		_G.Toast(C.ItemName(it) .. "  " .. C.Rarities[ch.rarity][1], rcol)
 		return
 	end
 	hardShake(1)
@@ -716,33 +853,13 @@ Fx.OnClientEvent:Connect(function(kind, slot, dist, id, luck, tid, fullByServer)
 	local bonus = math.max(0, ch.rarity - zone)
 	if full and not skip then
 		tween(dim, 0.35, { BackgroundTransparency = 0 }).Completed:Wait()
-		revealOnBase(slot, tid, ch, bonus)
+		revealOnBase(slot, tid, it, bonus)
 	else -- short version / skipped: just the card, the character pops up on the base by itself
 		tween(dim, 0.25, { BackgroundTransparency = 0.55 })
-		local close = revealCard(ch, bonus)
+		local close = revealCard(it, bonus)
 		skip = false
 		waitOrSkip(full and 2.2 or 1.6)
 		close()
 	end
 	setCinema(false)
 end)
-
--- ===== Decorative balls rolling into pockets on the base tables =====
-local basePockets = {}
-for _, px in { -4.6, 4.6 } do
-	for _, pz in { -8.1, 0, 8.1 } do table.insert(basePockets, Vector3.new(px, 0, pz)) end
-end
-local world = workspace:WaitForChild("World")
-while true do
-	task.wait(rng:NextNumber(1, 2.5))
-	local base = world:FindFirstChild("Base" .. rng:NextInteger(1, 4))
-	local table_ = base and base:FindFirstChild("PoolTable")
-	if table_ then
-		local o = table_.MeshPivot.Position + Vector3.new(0, 4.4, 0)
-		local from = o + Vector3.new(rng:NextNumber(-3, 3), 0, rng:NextNumber(-6, 6))
-		local goal = o + basePockets[rng:NextInteger(1, #basePockets)]
-		local b = ball(rackColors[rng:NextInteger(1, #rackColors)], 0.8, CFrame.new(from))
-		local spin = CFrame.fromAxisAngle((goal - from).Unit:Cross(Vector3.yAxis), -(goal - from).Magnitude / 0.4)
-		tween(b, 1.2, { CFrame = CFrame.new(goal) * spin.Rotation }).Completed:Once(function() drop(b, goal) end)
-	end
-end
