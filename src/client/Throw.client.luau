@@ -329,9 +329,24 @@ local function setCinema(on)
 	end
 end
 
--- ===== Reveal card: spinning rays, flowing rainbow title, pulse =====
+-- prize ball mesh of an item (variant colours + material), plain sphere as a fallback
+local function prizeBall(it, size, cf)
+	local V = C.Variants[it.v or 1]
+	local p = MeshBuilder.Create("PrizeBall", cf or CFrame.new(), C.BallOverrides(it), size)
+	if not p then
+		p = Instance.new("Part")
+		p.Shape, p.Size, p.Color = Enum.PartType.Ball, Vector3.one * size, C.BallOverrides(it).Body
+		p.Anchored, p.CanCollide, p.CanQuery = true, false, false
+		if cf then p.CFrame = cf end
+	end
+	if V.material then p.Material = Enum.Material[V.material] end
+	if V.name == "Gold" or V.name == "Diamond" then p.Reflectance = 0.3 end
+	return p
+end
+
+-- ===== Reveal card: spinning rays, the ball turning in 3D, flowing rainbow title, pulse =====
 local function revealCard(it, bonus)
-	local ch = C.Characters[it.id]
+	local ch = C.Balls[it.id]
 	local V = C.Variants[it.v or 1]
 	local r = C.Rarities[ch.rarity]
 	local root = frame({ BackgroundTransparency = 1, ZIndex = 3 })
@@ -340,6 +355,18 @@ local function revealCard(it, bonus)
 		local pivot = frame({ Parent = rays, BackgroundTransparency = 1, Rotation = k * 22.5 })
 		frame({ Parent = pivot, BackgroundColor3 = k % 2 == 0 and r[2] or WHITE, BackgroundTransparency = 0.7, Size = UDim2.new(0, 44, 0.5, 0), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.fromScale(0.5, 0.5) })
 	end
+	local vpHolder = frame({ Parent = root, BackgroundTransparency = 1, Size = UDim2.fromOffset(340, 340), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.36) })
+	local vp = Instance.new("ViewportFrame")
+	vp.Size, vp.BackgroundTransparency, vp.Ambient, vp.LightDirection = UDim2.fromScale(1, 1), 1, Color3.fromRGB(200, 195, 220), Vector3.new(-1, -1, -1)
+	vp.Parent = vpHolder
+	local vpScale = Instance.new("UIScale")
+	vpScale.Scale, vpScale.Parent = 0, vpHolder
+	local shown = prizeBall(it, 4)
+	shown.Parent = vp
+	local vcam = Instance.new("Camera")
+	vcam.FieldOfView, vcam.CFrame, vcam.Parent = 30, CFrame.lookAt(Vector3.new(0, 1.5, 8.5), Vector3.zero), vp
+	vp.CurrentCamera = vcam
+	tween(vpScale, 0.6, { Scale = 1 }, Enum.EasingStyle.Back)
 	local title, s1 = label(root, string.upper(r[1]) .. "!", UDim2.fromScale(0.8, 0.13), WHITE, UDim2.fromScale(0.5, 0.66))
 	local name, s2 = label(root, C.ItemName(it), UDim2.fromScale(0.7, 0.08), V.color or r[2], UDim2.fromScale(0.5, 0.77))
 	local _, s3 = label(root, "$" .. C.Short(C.ItemIncome(it)) .. "/s", UDim2.fromScale(0.4, 0.055), C.UI.Money, UDim2.fromScale(0.5, 0.84))
@@ -357,6 +384,7 @@ local function revealCard(it, bonus)
 	local conn = RunService.RenderStepped:Connect(function()
 		local t = os.clock() - t0
 		rays.Rotation = t * 35
+		shown.CFrame = CFrame.Angles(0.35, t * 1.6, 0) * CFrame.new(0, math.sin(t * 3) * 0.15, 0)
 		grad.Offset = Vector2.new(math.sin(t * 2.5) * 0.6, 0)
 		grad.Rotation = t * 60
 		if t > 0.6 then s1.Scale = 1 + math.sin(t * 7) * 0.05 end
@@ -366,7 +394,7 @@ local function revealCard(it, bonus)
 		end
 	end)
 	return function()
-		for _, sc in { s1, s2, s3, s4 } do tween(sc, 0.3, { Scale = 0 }, Enum.EasingStyle.Back, Enum.EasingDirection.In) end
+		for _, sc in { s1, s2, s3, s4, vpScale } do tween(sc, 0.3, { Scale = 0 }, Enum.EasingStyle.Back, Enum.EasingDirection.In) end
 		tween(rays, 0.3, { Size = UDim2.fromOffset(0, 0) })
 		task.wait(0.35)
 		conn:Disconnect()
@@ -557,150 +585,109 @@ local function windup(b, start, mine, power, payload, full)
 	end)
 end
 
--- ===== 3. Reveal on the base =====
-local function findNpc(slot, tid)
+-- ===== 3. The new ball lands on your base table =====
+local function findBall(slot, tid)
 	local base = workspace.World:FindFirstChild("Base" .. slot)
 	local chars = base and base:FindFirstChild("Chars")
 	if not chars or tid == 0 then return nil end
 	local t0 = os.clock()
 	repeat
-		for _, npc in chars:GetChildren() do
-			if npc:GetAttribute("ThrowId") == tid and npc:FindFirstChild("HumanoidRootPart") then return npc end
+		for _, m in chars:GetChildren() do
+			if m:GetAttribute("ThrowId") == tid and m.PrimaryPart then return m end
 		end
 		task.wait(0.05)
 	until os.clock() - t0 > 5
 	return nil
 end
 
-local function setHidden(model, hidden) -- parts replaced by a Blender mesh stay hidden
-	for _, p in model:GetDescendants() do
-		if p:IsA("BasePart") and not p:FindFirstChild("MeshVisual") then p.LocalTransparencyModifier = hidden and 1 or 0 end
+local function setHidden(model, hidden)
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") and (d.Name == "MeshVisual" or not d:FindFirstChild("MeshVisual")) then d.LocalTransparencyModifier = hidden and 1 or 0 end
+		if d:IsA("BillboardGui") then d.Enabled = not hidden end
 	end
 end
 
-local ANIM_CHEER, ANIM_IDLE = "rbxassetid://507770677", "rbxassetid://507766666"
-
-local function playAnim(model, id, looped)
-	local hum = model:FindFirstChildOfClass("Humanoid")
-	if not hum then return end
-	local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator")
-	animator.Parent = hum
-	local a = Instance.new("Animation")
-	a.AnimationId = id
-	local ok, track = pcall(animator.LoadAnimation, animator, a)
-	if ok and track then
-		track.Looped = looped
-		track:Play()
-		return track
-	end
-end
-
--- The new character is shown on the front of the stage (RevealSpot), facing the hall: a local copy is used
--- so the camera can frame it cleanly with the table behind; the real NPC appears on its spot afterwards.
-local function revealOnBase(slot, tid, it, bonus)
-	local ch = C.Characters[it.id]
+-- Camera on the base table; a light beam hits the ball's spot, the ball drops in, bounces, bursts, the card follows.
+local function revealOnBase(slot, tid, it, bonus, quick)
+	local ch = C.Balls[it.id]
 	local r = C.Rarities[ch.rarity]
-	local npc = findNpc(slot, tid)
-	local base = workspace.World:FindFirstChild("Base" .. slot)
-	local spot = base and base:FindFirstChild("RevealSpot")
-	local copy
-	if npc and spot then
-		npc.Archivable = true
-		copy = npc:Clone()
-	end
-	if not copy then -- nothing to show on the base (inventory full / not equipped): just the card
+	local real = findBall(slot, tid)
+	if not real then -- not placed on the base (all spots taken): just the card
 		tween(dim, 0.3, { BackgroundTransparency = 0.35 })
 		local close = revealCard(it, bonus)
 		waitOrSkip(3)
 		close()
 		return
 	end
-	local hrp = npc.HumanoidRootPart
-	local stand = hrp.Size.Y / 2 + npc.Humanoid.HipHeight
-	local floor = spot.Position - Vector3.new(0, spot.Size.Y / 2, 0)
-	local center = floor + Vector3.new(0, stand, 0)
-	local front = Vector3.zAxis -- the stage front faces the hall (+Z)
-	copy:SetAttribute("ThrowId", nil)
-	copy:PivotTo(CFrame.lookAt(center, center + front))
-	copy.Parent = workspace
-	local hideReal = RunService.RenderStepped:Connect(function() setHidden(npc, true) end)
-	local hideCopy = RunService.RenderStepped:Connect(function() setHidden(copy, true) end)
-
-	-- A: dark scene, beam slams down, energy gathers, rumble; the camera pushes in from the hall
+	local goal = real.PrimaryPart.CFrame.Position
+	local size = real.PrimaryPart.Size.X
+	local hideReal = RunService.RenderStepped:Connect(function() setHidden(real, true) end)
+	local front = Vector3.new(0, 0, 1)
 	local camStart = os.clock()
 	camFn = function()
-		local t = os.clock() - camStart
-		local push = math.min(t / 1.1, 1)
-		local pos = center + front * (16 - 4 * push) + Vector3.new(0, 5.5 - 2 * push, 0)
-		return CFrame.lookAt(pos, center + Vector3.new(0, 0.5, 0)), t < 0.05
+		local t = math.min((os.clock() - camStart) / 2.4, 1)
+		local e = 1 - (1 - t) ^ 3
+		return CFrame.lookAt(goal + front * (12 - 5 * e) + Vector3.new(4 - 3 * e, 6 - 2.5 * e, 0), goal + Vector3.new(0, 0.6, 0)), t < 0.02
 	end
-	cam.FieldOfView = 55
-	tween(dim, 0.4, { BackgroundTransparency = 0.5 })
-	tween(cc, 0.4, { Brightness = -0.1, Saturation = -0.2, TintColor = WHITE })
+	cam.FieldOfView = 50
+	tween(dim, 0.4, { BackgroundTransparency = 0.6 })
+	tween(cc, 0.4, { Brightness = -0.05, Saturation = -0.1, TintColor = WHITE })
+	-- light beam from the sky onto the spot
 	local beam = Instance.new("Part")
 	beam.Shape, beam.Anchored, beam.CanCollide, beam.CanQuery, beam.CastShadow = Enum.PartType.Cylinder, true, false, false, false
 	beam.Material, beam.Color, beam.Transparency = Enum.Material.SmoothPlastic, r[2]:Lerp(WHITE, 0.6), 0.55
-	beam.Size = Vector3.new(90, 0.4, 0.4)
-	beam.CFrame = CFrame.new(floor + Vector3.new(0, 45, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+	beam.Size = Vector3.new(60, 0.2, 0.2)
+	beam.CFrame = CFrame.new(goal + Vector3.new(0, 30, 0)) * CFrame.Angles(0, 0, math.pi / 2)
 	beam.Parent = workspace
-	tween(beam, 0.35, { Size = Vector3.new(90, 7, 7) }, Enum.EasingStyle.Back)
+	tween(beam, 0.35, { Size = Vector3.new(60, size * 1.8, size * 1.8) }, Enum.EasingStyle.Back)
 	local beamLight = Instance.new("PointLight")
-	beamLight.Color, beamLight.Range, beamLight.Brightness, beamLight.Parent = r[2], 24, 6, beam
-	local core = anchorPart(CFrame.new(center))
-	local gather = emitter(core, {
-		Shape = Enum.ParticleEmitterShape.Sphere, ShapeInOut = Enum.ParticleEmitterShapeInOut.Inward, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
-		Speed = NumberRange.new(10, 14), Lifetime = NumberRange.new(0.4, 0.5), Size = NumberSequence.new(0.6, 0.1),
-		Color = ColorSequence.new(r[2], WHITE), Rate = 120,
-	})
-	hardShake(0.6)
+	beamLight.Color, beamLight.Range, beamLight.Brightness, beamLight.Parent = r[2], 16, 4, beam
 	sfx("Hit")
-	local t0 = os.clock()
-	while os.clock() - t0 < 1.1 and not skip do
-		hardShake(0.1 + (os.clock() - t0) * 0.45)
+	waitOrSkip(quick and 0.2 or 0.5)
+	-- the ball falls in spinning, with a trail, and bounces on the felt
+	local b = prizeBall(it, size, CFrame.new(goal + Vector3.new(0, 22, 0)))
+	b.Parent = workspace
+	local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
+	a0.Position, a1.Position, a0.Parent, a1.Parent = Vector3.new(size * 0.4, 0, 0), Vector3.new(-size * 0.4, 0, 0), b, b
+	local trail = Instance.new("Trail")
+	trail.Attachment0, trail.Attachment1, trail.Color, trail.LightEmission = a0, a1, ColorSequence.new(WHITE, r[2]), 1
+	trail.Lifetime, trail.Transparency, trail.Parent = 0.35, NumberSequence.new(0.2, 1), b
+	local t0, fall = os.clock(), quick and 0.7 or 0.9
+	repeat
+		local t = skip and 1 or math.min((os.clock() - t0) / fall, 1)
+		local y = 22 * (1 - TweenService:GetValue(t, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out))
+		b.CFrame = CFrame.new(goal + Vector3.new(0, y, 0)) * CFrame.Angles(t * 9, t * 5, 0)
+		if t > 0.36 and not b:GetAttribute("Landed") then -- first touch of the felt
+			b:SetAttribute("Landed", true)
+			sfx("Reward")
+			hardShake(1.2 + ch.rarity * 0.05)
+			doFlash(r[2]:Lerp(WHITE, 0.3), 0.9, 0.6)
+			shockwave(goal - Vector3.new(0, size / 2, 0), r[2], 18, 0.7)
+			shockwave(goal - Vector3.new(0, size / 2 - 0.1, 0), WHITE, 10, 0.45)
+			burst(goal, r[2], 80, 22)
+			local core = anchorPart(CFrame.new(goal))
+			emitter(core, {
+				Speed = NumberRange.new(16, 26), SpreadAngle = Vector2.new(50, 50), Lifetime = NumberRange.new(1.6, 2.4),
+				Acceleration = Vector3.new(0, -25, 0), Drag = 1.2, Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-300, 300),
+				Size = NumberSequence.new(0.25), LightEmission = 0.2, EmissionDirection = Enum.NormalId.Top,
+				Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 80)), ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 220, 60)), ColorSequenceKeypoint.new(0.66, Color3.fromRGB(80, 200, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 255, 120)) }),
+			}):Emit(110)
+			task.delay(3, core.Destroy, core)
+			tween(beam, 0.6, { Size = Vector3.new(60, 0.1, 0.1), Transparency = 1 })
+			tween(dim, 0.3, { BackgroundTransparency = 0.85 })
+			tween(cc, 0.3, { Brightness = 0.05, Saturation = 0.3, TintColor = r[2]:Lerp(WHITE, 0.75) })
+		end
 		RunService.RenderStepped:Wait()
-	end
-
-	-- B: BOOM, the character appears and cheers
-	gather.Rate = 0
-	hideCopy:Disconnect()
-	setHidden(copy, false)
-	playAnim(copy, ANIM_CHEER, false)
-	sfx("Reward")
-	doFlash(r[2]:Lerp(WHITE, 0.3), 1, 0.7)
-	hardShake(1.8 + ch.rarity * 0.08)
-	shockwave(floor + Vector3.new(0, 0.3, 0), r[2], 40, 0.8)
-	shockwave(floor + Vector3.new(0, 0.6, 0), WHITE, 24, 0.5)
-	burst(core, r[2], 120, 30)
-	local confetti = emitter(core, {
-		Speed = NumberRange.new(20, 32), SpreadAngle = Vector2.new(50, 50), Lifetime = NumberRange.new(2, 3),
-		Acceleration = Vector3.new(0, -25, 0), Drag = 1.2, Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-300, 300),
-		Size = NumberSequence.new(0.35), LightEmission = 0.2, EmissionDirection = Enum.NormalId.Top,
-		Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 80)), ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 220, 60)), ColorSequenceKeypoint.new(0.66, Color3.fromRGB(80, 200, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 255, 120)) }),
-	})
-	confetti:Emit(140)
-	tween(beam, 0.6, { Size = Vector3.new(90, 0.2, 0.2), Transparency = 1 })
-	tween(dim, 0.3, { BackgroundTransparency = 0.8 })
-	tween(cc, 0.3, { Brightness = 0.08, Saturation = 0.45, TintColor = r[2]:Lerp(WHITE, 0.7) })
-
-	-- C: slow orbit in front of the character and zoom on the face, reveal card
-	local orbit0 = os.clock()
-	camFn = function()
-		local t = math.min((os.clock() - orbit0) / 3.4, 1)
-		local e = 1 - (1 - t) ^ 3
-		local a = math.rad(-30 + 60 * e)
-		local dir = CFrame.fromAxisAngle(Vector3.yAxis, a) * front
-		local pos = center + dir * (12 - 5 * e) + Vector3.new(0, 3.5 - 1.7 * e, 0)
-		return CFrame.lookAt(pos, center + Vector3.new(0, 1.2 * e, 0))
-	end
-	tween(cam, 3.4, { FieldOfView = 40 }, Enum.EasingStyle.Sine)
-	local close = revealCard(it, bonus)
-	waitOrSkip(3.4)
-	close()
+	until t >= 1
+	-- the real ball takes over; the card shows what you got
+	b:Destroy()
 	beam:Destroy()
-	copy:Destroy()
 	hideReal:Disconnect()
-	setHidden(npc, false)
-	task.delay(2, core.Destroy, core)
+	setHidden(real, false)
+	tween(cam, 2.6, { FieldOfView = 40 }, Enum.EasingStyle.Sine)
+	local close = revealCard(it, bonus)
+	waitOrSkip(quick and 1.8 or 3)
+	close()
 end
 
 -- ===== The shot =====
@@ -726,7 +713,7 @@ Fx.OnClientEvent:Connect(function(kind, p)
 	if kind ~= "Throw" then return end
 	local slot, dist, tid = p.slot, p.dist, p.tid
 	local it = { id = p.id, v = p.v }
-	local ch = C.Characters[it.id]
+	local ch = C.Balls[it.id]
 	local rcol = C.Rarities[ch.rarity][2]
 	local mine = slot == _G.MySlot
 	local full = p.full and not _G.ShortOnly -- the big show only for top pulls, unless the player chose short cinematics
@@ -851,10 +838,10 @@ Fx.OnClientEvent:Connect(function(kind, p)
 	doFlash(rcol, 0.6, 0.3)
 	tween(blur, 0.3, { Size = 0 })
 	local bonus = math.max(0, ch.rarity - zone)
-	if full and not skip then
-		tween(dim, 0.35, { BackgroundTransparency = 0 }).Completed:Wait()
-		revealOnBase(slot, tid, it, bonus)
-	else -- short version / skipped: just the card, the character pops up on the base by itself
+	if not skip then -- every pull lands on your table; the short version is just quicker
+		tween(dim, full and 0.35 or 0.2, { BackgroundTransparency = 0 }).Completed:Wait()
+		revealOnBase(slot, tid, it, bonus, not full)
+	else -- skipped: just the card, the ball appears on the base by itself
 		tween(dim, 0.25, { BackgroundTransparency = 0.55 })
 		local close = revealCard(it, bonus)
 		skip = false

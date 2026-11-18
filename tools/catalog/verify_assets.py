@@ -1,4 +1,4 @@
-"""Check that every Roblox asset ID used by the game exists (sounds, animations, avatar items).
+"""Check that every Roblox asset ID used by the game exists (sounds, animations).
     python3 tools/catalog/verify_assets.py"""
 import json, os, re, time, urllib.request
 
@@ -10,11 +10,6 @@ for name, i in re.findall(r'(\w+) = "rbxassetid://(\d+)"', src("src/shared/Confi
 for f in ("src/server/Main.server.luau", "src/client/Throw.client.luau", "src/client/UI.client.luau"):
     for i in re.findall(r'"rbxassetid://(\d+)"', src(f)):
         ids.setdefault(int(i), ("Animation", 24))
-av = src("src/shared/Avatars.luau")
-for k, i in re.findall(r"(shirt|pants) = (\d+)", av):
-    ids[int(i)] = (k, 11 if k == "shirt" else 12)
-for i, t in re.findall(r"\{ (\d+), (\d+) \}", av):
-    ids[int(i)] = ("accessory", int(t))
 
 bad = []
 for i, (what, want) in sorted(ids.items(), key=lambda x: x[1][0]):

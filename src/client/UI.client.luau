@@ -13,7 +13,9 @@ local plr = Players.LocalPlayer
 local WHITE, INK = Color3.new(1, 1, 1), U.Ink
 local rgb = Color3.fromRGB
 local GREEN, ORANGE, PURPLE = { rgb(157, 245, 154), rgb(62, 193, 90) }, { rgb(255, 196, 138), rgb(255, 138, 61) }, { rgb(230, 166, 255), rgb(164, 92, 255) }
-local GREY = { rgb(110, 102, 140), rgb(84, 76, 112) }
+local GREY = { rgb(205, 198, 214), rgb(170, 162, 182) }
+local CREAM = { rgb(255, 251, 242), rgb(255, 236, 206) } -- panel body
+local MUTED, MONEY = rgb(118, 100, 138), rgb(40, 160, 70)
 
 -- ===== Sound =====
 local groups, sounds = {}, {}
@@ -68,9 +70,11 @@ local function box(props, top, bottom, radius, strokeW, strokeColor)
 	if strokeW ~= 0 then stroke(strokeW or 4, strokeColor).Parent = body end
 	return holder, body
 end
--- dark card inside a panel (flat, thin light border, no shadow)
+-- white cartoon card inside a panel: ink outline, soft cream gradient
 local function card(props, radius, color)
-	local f = new("Frame", { Size = props.Size, Position = props.Position or UDim2.new(), LayoutOrder = props.LayoutOrder or 0, BackgroundColor3 = color or U.Card, Name = props.Name or "Card", Parent = props.Parent }, { corner(radius or 20), stroke(2, U.Line) })
+	local f = new("Frame", { Size = props.Size, Position = props.Position or UDim2.new(), LayoutOrder = props.LayoutOrder or 0, BackgroundColor3 = WHITE, Name = props.Name or "Card", Parent = props.Parent }, {
+		corner(radius or 20), stroke(3), grad(color or WHITE, (color or WHITE):Lerp(CREAM[2], 0.5)),
+	})
 	return f
 end
 
@@ -79,7 +83,9 @@ local function button(props, colors, label, size, onClick)
 	local holder, body = box(props, colors[1], colors[2], props.Radius or 18, 3)
 	local hit = new("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 5, Parent = holder })
 	local scale = new("UIScale", { Parent = holder })
-	local lbl = text(label or "", size or 24, nil, { Size = UDim2.fromScale(1, 1), Parent = body })
+	local big = math.floor((size or 24) * 1.35) -- large, readable button text; shrinks only if the label is long
+	local lbl = text(label or "", big, nil, { Size = UDim2.new(1, -16, 1, -8), Position = UDim2.fromOffset(8, 4), Parent = body, TextScaled = true })
+	new("UITextSizeConstraint", { MaxTextSize = big, Parent = lbl })
 	local enabled = true
 	hit.MouseEnter:Connect(function() if enabled then tween(scale, 0.15, { Scale = 1.06 }, Enum.EasingStyle.Back) end end)
 	hit.MouseLeave:Connect(function() tween(scale, 0.15, { Scale = 1 }) end)
@@ -100,7 +106,7 @@ end
 
 -- progress bar: returns frame, set(fraction, colour?)
 local function bar(parent, pos, size, color)
-	local f = new("Frame", { Position = pos, Size = size, BackgroundColor3 = rgb(16, 12, 30), Parent = parent }, { corner(math.floor(size.Y.Offset / 2)) })
+	local f = new("Frame", { Position = pos, Size = size, BackgroundColor3 = rgb(230, 220, 205), Parent = parent }, { corner(math.floor(size.Y.Offset / 2)), stroke(2) })
 	local fill = new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = color or GREEN[2], Parent = f }, { corner(math.floor(size.Y.Offset / 2)) })
 	return f, function(v, c)
 		fill.Size = UDim2.fromScale(math.clamp(v, 0, 1), 1)
@@ -111,12 +117,13 @@ end
 -- 3D preview of a Blender model inside a ViewportFrame (cached MeshParts are re-parented, never rebuilt)
 local previewCache = {}
 local function viewport(parent, props, mesh, overrides, key, camCF)
-	local vp = new("ViewportFrame", { Size = props.Size, Position = props.Position or UDim2.new(), BackgroundTransparency = 1, Ambient = rgb(170, 160, 200), LightColor = WHITE, LightDirection = Vector3.new(-1, -1, -0.6), Parent = parent })
+	local vp = new("ViewportFrame", { Size = props.Size, Position = props.Position or UDim2.new(), BackgroundTransparency = 1, Ambient = rgb(200, 195, 215), LightColor = WHITE, LightDirection = Vector3.new(-1, -1, -0.6), Parent = parent })
 	local part = previewCache[key]
 	if not part then
 		part = MeshBuilder.Create(mesh, CFrame.new(), overrides)
 		if not part then -- no EditableMesh: a simple stand-in shape
-			part = new("Part", { Size = mesh == "Cue" and Vector3.new(0.3, 9.2, 0.3) or Vector3.new(5.2, 2.3, 2.3), Color = overrides and (overrides.Shaft or overrides.Plate) or WHITE, Anchored = true })
+			local size = mesh == "Cue" and Vector3.new(0.3, 9.2, 0.3) or mesh == "PrizeBall" and Vector3.one or Vector3.new(5.2, 2.3, 2.3)
+			part = new("Part", { Size = size, Shape = mesh == "PrizeBall" and Enum.PartType.Ball or Enum.PartType.Block, Color = overrides and (overrides.Shaft or overrides.Plate or overrides.Body) or WHITE, Anchored = true })
 		end
 		previewCache[key] = part
 	end
@@ -131,11 +138,26 @@ end
 
 -- ===== Root (design space 1920x1080) =====
 local gui = new("ScreenGui", { Name = "Main", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = plr:WaitForChild("PlayerGui") })
-local root = new("Frame", { Size = UDim2.fromOffset(1920, 1080), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Parent = gui })
-local rootScale = new("UIScale", { Parent = root })
+gui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets -- stay clear of notches and the Roblox top bar
+local root = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = gui })
+local hud = new("Frame", { Name = "HUD", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = root })
+-- Every HUD block is laid out in 1920x1080 design pixels inside its own frame, anchored to a screen edge and scaled
+-- by the same factor: on any aspect ratio the menu hugs the left edge, SHOOT the bottom, the stats the top.
+local scales = {}
+local function group(name, size, anchor, pos, parent)
+	local f = new("Frame", { Name = name, Size = UDim2.fromOffset(size.X, size.Y), AnchorPoint = anchor, Position = pos, BackgroundTransparency = 1, Parent = parent or hud })
+	table.insert(scales, new("UIScale", { Parent = f }))
+	return f
+end
+local topBar = group("Top", Vector2.new(920, 110), Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, 8))
+local leftBar = group("Left", Vector2.new(150, 600), Vector2.new(0, 0.5), UDim2.new(0, 12, 0.5, 0))
+local shotBar = group("Shot", Vector2.new(640, 280), Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -6))
+local cornerBar = group("Corner", Vector2.new(460, 230), Vector2.new(1, 1), UDim2.new(1, -12, 1, -12))
+local center = group("Panels", Vector2.new(980, 690), Vector2.new(0.5, 0.5), UDim2.fromScale(0.5, 0.52), root)
 local function rescale()
 	local v = workspace.CurrentCamera.ViewportSize
-	rootScale.Scale = math.max(0.33, math.min(v.X / 1920, v.Y / 1080)) -- 0.33 keeps the whole HUD on an 844x390 phone
+	local k = math.clamp(math.min(v.X / 1920, v.Y / 1080), 0.4, 1.4) -- phones get slightly bigger buttons than pure fit
+	for _, sc in scales do sc.Scale = k end
 end
 workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale)
 rescale()
@@ -145,7 +167,7 @@ local Request, Fx = Remotes:WaitForChild("Request"), Remotes:WaitForChild("Fx")
 local state
 
 -- ===== Toast stack (under the top bar, never over it) =====
-local toastStack = new("Frame", { Size = UDim2.fromOffset(700, 200), Position = UDim2.fromOffset(960, 124), AnchorPoint = Vector2.new(0.5, 0), BackgroundTransparency = 1, ZIndex = 30, Parent = root }, {
+local toastStack = new("Frame", { Size = UDim2.fromOffset(700, 200), Position = UDim2.fromOffset(460, 120), AnchorPoint = Vector2.new(0.5, 0), BackgroundTransparency = 1, ZIndex = 30, Parent = topBar }, {
 	new("UIListLayout", { Padding = UDim.new(0, 8), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }),
 })
 local toastN = 0
@@ -156,8 +178,8 @@ local function toast(msg, color)
 		if c:IsA("Frame") then table.insert(items, c) end
 	end
 	if #items >= 3 then items[1]:Destroy() end
-	local holder, body = box({ Size = UDim2.fromOffset(560, 54), LayoutOrder = toastN, Parent = toastStack }, U.Panel, U.Panel, 27, 2, U.Line)
-	text(msg, 26, color or U.Title, { Size = UDim2.new(1, -20, 1, 0), Position = UDim2.fromOffset(10, 0), Parent = body, TextScaled = false, NoStroke = true })
+	local holder, body = box({ Size = UDim2.fromOffset(580, 60), LayoutOrder = toastN, Parent = toastStack }, CREAM[1], CREAM[2], 30, 4)
+	text(msg, 30, color or U.Title, { Size = UDim2.new(1, -20, 1, 0), Position = UDim2.fromOffset(10, 0), Parent = body, TextScaled = false })
 	local sc = new("UIScale", { Scale = 0.5, Parent = holder })
 	tween(sc, 0.3, { Scale = 1 }, Enum.EasingStyle.Back)
 	task.delay(2.6, function()
@@ -178,11 +200,9 @@ local function call(action, arg)
 end
 
 -- ===== HUD =====
-local hud = new("Frame", { Name = "HUD", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = root })
-
 -- top bar: cash (+income) | strength | luck at the start of a shot
 local function pill(x, w, colors, label)
-	local holder, body = box({ Size = UDim2.fromOffset(w, 86), Position = UDim2.fromOffset(x, 22), Parent = hud }, colors[1], colors[2], 43, 4)
+	local holder, body = box({ Size = UDim2.fromOffset(w, 90), Position = UDim2.fromOffset(x - 500, 4), Parent = topBar }, colors[1], colors[2], 45, 4)
 	text(label, 18, WHITE, { Size = UDim2.fromOffset(w, 22), Position = UDim2.fromOffset(0, 8), Parent = body, NoStroke = true, TextTransparency = 0.15 })
 	return holder, body
 end
@@ -196,42 +216,47 @@ local _, luckBody = pill(1160, 260, PURPLE, "START LUCK")
 local luckLabel = text("1.00X", 40, nil, { Size = UDim2.new(1, 0, 0, 50), Position = UDim2.fromOffset(0, 28), Parent = luckBody })
 
 -- left menu with badges
-local menu = new("Frame", { Size = UDim2.fromOffset(150, 600), Position = UDim2.fromOffset(28, 300), BackgroundTransparency = 1, Parent = hud }, {
+local menu = new("Frame", { Size = UDim2.fromOffset(150, 600), BackgroundTransparency = 1, Parent = leftBar }, {
 	new("UIListLayout", { Padding = UDim.new(0, 20), SortOrder = Enum.SortOrder.LayoutOrder }),
 })
 local badges = {}
 local open -- forward
 
 -- shot area: live preview, power bar, SHOOT
-local previewHolder, previewBody = box({ Size = UDim2.fromOffset(440, 52), Position = UDim2.fromOffset(960, 770), AnchorPoint = Vector2.new(0.5, 0), Parent = hud }, rgb(255, 227, 138), rgb(255, 184, 48), 26, 3)
-local previewLabel = text("TABLE 1", 28, nil, { Size = UDim2.fromScale(1, 1), Parent = previewBody })
-local powerFrame = new("Frame", { Size = UDim2.fromOffset(640, 44), Position = UDim2.fromOffset(640, 836), BackgroundColor3 = INK, Parent = hud }, { corner(22), stroke(4) })
+local previewHolder, previewBody = box({ Size = UDim2.fromOffset(460, 56), Position = UDim2.fromOffset(320, 0), AnchorPoint = Vector2.new(0.5, 0), Parent = shotBar }, rgb(255, 227, 138), rgb(255, 184, 48), 28, 3)
+local previewLabel = text("TABLE 1", 32, nil, { Size = UDim2.fromScale(1, 1), Parent = previewBody })
+local powerFrame = new("Frame", { Size = UDim2.fromOffset(640, 44), Position = UDim2.fromOffset(0, 66), BackgroundColor3 = INK, Parent = shotBar }, { corner(22), stroke(4) })
 local powerFill = new("Frame", { Size = UDim2.new(0, 0, 1, -12), Position = UDim2.fromOffset(6, 6), BackgroundColor3 = WHITE, Parent = powerFrame }, {
 	corner(16), new("UIGradient", { Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, rgb(90, 220, 90)), ColorSequenceKeypoint.new(0.6, rgb(255, 220, 40)), ColorSequenceKeypoint.new(1, rgb(255, 60, 60)) }) }),
 })
-local _, _, shootLabel, setShootEnabled, shootHit = button({ Size = UDim2.fromOffset(360, 104), Position = UDim2.fromOffset(780, 900), Parent = hud, Radius = 40 }, U.Red, "SHOOT", 56)
-local hint = text("Hold to charge, release to shoot", 22, nil, { Size = UDim2.fromOffset(600, 30), Position = UDim2.fromOffset(660, 1014), Parent = hud })
+local _, _, shootLabel, setShootEnabled, shootHit = button({ Size = UDim2.fromOffset(380, 116), Position = UDim2.fromOffset(130, 122), Parent = shotBar, Radius = 44 }, U.Red, "SHOOT", 56)
+local hint = text("Hold to charge, release to shoot", 24, nil, { Size = UDim2.fromOffset(640, 30), Position = UDim2.fromOffset(0, 248), Parent = shotBar })
 
 -- training context button (shown at the gym and while training)
-local trainHolder, _, trainLabel = button({ Size = UDim2.fromOffset(300, 84), Position = UDim2.fromOffset(1580, 920), Parent = hud, Radius = 30 }, ORANGE, "START TRAINING", 28, function()
+local trainHolder, _, trainLabel = button({ Size = UDim2.fromOffset(320, 96), Position = UDim2.fromOffset(140, 134), Parent = cornerBar, Radius = 32 }, GREEN, "START TRAINING", 30, function()
 	if state then call(state.training and "TrainStop" or "TrainStart") end
 end)
 trainHolder.Visible = false
 
 -- onboarding bubble
-local tipHolder, tipBody = box({ Size = UDim2.fromOffset(460, 100), Position = UDim2.fromOffset(1190, 770), Parent = hud }, U.Panel, U.Panel, 24, 2, U.Line)
-local tipText = text("", 24, WHITE, { Size = UDim2.new(1, -40, 0, 56), Position = UDim2.fromOffset(20, 10), Parent = tipBody, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
-local tipStep = text("", 20, U.Title, { Size = UDim2.new(1, -40, 0, 24), Position = UDim2.fromOffset(20, 66), Parent = tipBody, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
+local tipHolder, tipBody = box({ Size = UDim2.fromOffset(460, 110), Position = UDim2.fromOffset(0, 0), Parent = cornerBar }, CREAM[1], CREAM[2], 26, 4)
+local tipText = text("", 26, INK, { Size = UDim2.new(1, -40, 0, 56), Position = UDim2.fromOffset(20, 10), Parent = tipBody, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
+local tipStep = text("", 22, PURPLE[2], { Size = UDim2.new(1, -40, 0, 24), Position = UDim2.fromOffset(20, 66), Parent = tipBody, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
 tipHolder.Visible = false
 
 -- ===== Panels =====
 local panels, renderers = {}, {}
-local function panel(key, title)
-	local holder, body = box({ Size = UDim2.fromOffset(980, 680), Position = UDim2.fromOffset(960, 560), AnchorPoint = Vector2.new(0.5, 0.5), Parent = root, Name = key, ZIndex = 10 }, U.Panel, U.Panel, 40, 3, U.Line)
+local function panel(key, title, colors)
+	local holder, body = box({ Size = UDim2.fromOffset(980, 680), Position = UDim2.fromOffset(490, 345), AnchorPoint = Vector2.new(0.5, 0.5), Parent = center, Name = key, ZIndex = 10 }, CREAM[1], CREAM[2], 40, 6)
 	holder.Visible = false
-	text(title, 50, WHITE, { Size = UDim2.new(1, -160, 0, 70), Position = UDim2.fromOffset(40, 16), Parent = body, TextXAlignment = Enum.TextXAlignment.Left })
-	local sub = text("", 24, U.Muted, { Size = UDim2.new(1, -160, 0, 30), Position = UDim2.fromOffset(42, 86), Parent = body, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
-	button({ Size = UDim2.fromOffset(64, 60), Position = UDim2.fromOffset(888, 24), Parent = body, Radius = 20 }, U.Red, "X", 30, function() holder.Visible = false end)
+	-- title ribbon in the colour of the menu button, a light stripe of polka dots for a playful touch
+	local _, ribbon = box({ Size = UDim2.new(1, 24, 0, 92), Position = UDim2.fromOffset(-12, -28), Parent = body }, colors[1], colors[2], 30, 5)
+	for k = 0, 9 do
+		new("Frame", { Size = UDim2.fromOffset(14, 14), Position = UDim2.new(0, 330 + k * 46, 0, k % 2 == 0 and 16 or 58), BackgroundColor3 = WHITE, BackgroundTransparency = 0.7, Parent = ribbon }, { corner(7) })
+	end
+	text(title, 56, WHITE, { Size = UDim2.new(1, -160, 1, 0), Position = UDim2.fromOffset(34, 0), Parent = ribbon, TextXAlignment = Enum.TextXAlignment.Left })
+	local sub = text("", 26, MUTED, { Size = UDim2.new(1, -80, 0, 30), Position = UDim2.fromOffset(40, 80), Parent = body, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
+	button({ Size = UDim2.fromOffset(74, 68), Position = UDim2.fromOffset(900, -16), Parent = body, Radius = 24 }, U.Red, "X", 34, function() holder.Visible = false end)
 	local content = new("Frame", { Size = UDim2.fromOffset(900, 530), Position = UDim2.fromOffset(40, 130), BackgroundTransparency = 1, Parent = body })
 	panels[key] = { holder = holder, content = content, sub = sub }
 end
@@ -241,7 +266,7 @@ local function clear(f)
 end
 local function scroller(parent, pos, size, cell, pad)
 	return new("ScrollingFrame", {
-		Position = pos, Size = size, BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8, ScrollBarImageColor3 = U.Line,
+		Position = pos, Size = size, BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8, ScrollBarImageColor3 = INK,
 		AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Parent = parent,
 	}, {
 		new("UIGridLayout", { CellSize = cell, CellPadding = UDim2.fromOffset(pad, pad), SortOrder = Enum.SortOrder.LayoutOrder }),
@@ -268,25 +293,26 @@ local function rerender() -- Settings is not rebuilt from server updates (it wou
 end
 
 -- --- Inventory ---
-panel("Inventory", "Inventory")
+local BALL_CAM = CFrame.lookAt(Vector3.new(0, 0.6, 3.4), Vector3.zero)
+panel("Inventory", "Inventory", { U.Menu[2][4], U.Menu[2][5] })
 local sortMode = "best"
-local TOTAL = #C.Characters * #C.Variants
+local TOTAL = #C.Balls * #C.Variants
 local function sellDialog()
 	local p = panels.Inventory
 	local counts = {}
 	for _, it in state.d.inv do
 		if not it.eq and (it.v or 1) < 4 then
-			local r = C.Characters[it.id].rarity
+			local r = it.id
 			counts[r] = counts[r] or { n = 0, cash = 0 }
 			counts[r].n += 1
 			counts[r].cash += C.ItemIncome(it) * 30
 		end
 	end
-	local holder, body = box({ Size = UDim2.fromOffset(580, 500), Position = UDim2.fromOffset(450, 260), AnchorPoint = Vector2.new(0.5, 0.5), Parent = p.content, ZIndex = 20 }, U.Panel, U.Panel, 30, 3, U.Line)
-	text("Sell unequipped", 36, WHITE, { Size = UDim2.new(1, -100, 0, 50), Position = UDim2.fromOffset(24, 12), Parent = body, TextXAlignment = Enum.TextXAlignment.Left })
-	text("Gold, Diamond, Galaxy and Rainbow are kept", 20, U.Muted, { Size = UDim2.new(1, -100, 0, 24), Position = UDim2.fromOffset(26, 60), Parent = body, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
+	local holder, body = box({ Size = UDim2.fromOffset(580, 500), Position = UDim2.fromOffset(450, 260), AnchorPoint = Vector2.new(0.5, 0.5), Parent = p.content, ZIndex = 20 }, CREAM[1], CREAM[2], 30, 5)
+	text("Sell unequipped", 36, INK, { Size = UDim2.new(1, -100, 0, 50), Position = UDim2.fromOffset(24, 12), Parent = body, TextXAlignment = Enum.TextXAlignment.Left })
+	text("Gold, Diamond, Galaxy and Rainbow are kept", 20, MUTED, { Size = UDim2.new(1, -100, 0, 24), Position = UDim2.fromOffset(26, 60), Parent = body, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
 	button({ Size = UDim2.fromOffset(56, 50), Position = UDim2.fromOffset(504, 16), Parent = body, Radius = 18 }, U.Red, "X", 26, function() holder:Destroy() end)
-	local list = new("ScrollingFrame", { Size = UDim2.fromOffset(540, 390), Position = UDim2.fromOffset(20, 96), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8, ScrollBarImageColor3 = U.Line, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Parent = body }, {
+	local list = new("ScrollingFrame", { Size = UDim2.fromOffset(540, 390), Position = UDim2.fromOffset(20, 96), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8, ScrollBarImageColor3 = INK, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Parent = body }, {
 		new("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
 		new("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingRight = UDim.new(0, 10) }),
 	})
@@ -298,7 +324,7 @@ local function sellDialog()
 			local rar = C.Rarities[r]
 			local row = card({ Size = UDim2.new(1, 0, 0, 60), LayoutOrder = r, Parent = list }, 16)
 			new("Frame", { Size = UDim2.fromOffset(10, 40), Position = UDim2.fromOffset(12, 10), BackgroundColor3 = rar[2], Parent = row }, { corner(5) })
-			text(rar[1] .. "  x" .. c.n, 26, WHITE, { Size = UDim2.fromOffset(260, 60), Position = UDim2.fromOffset(34, 0), Parent = row, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
+			text(rar[1] .. "  x" .. c.n, 26, INK, { Size = UDim2.fromOffset(260, 60), Position = UDim2.fromOffset(34, 0), Parent = row, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
 			button({ Size = UDim2.fromOffset(200, 46), Position = UDim2.fromOffset(310, 7), Parent = row, Radius = 16 }, U.Action, "Sell $" .. C.Short(c.cash), 22, function()
 				if call("SellRarity", r) then
 					holder:Destroy()
@@ -307,7 +333,7 @@ local function sellDialog()
 			end)
 		end
 	end
-	if not any then text("Nothing to sell: everyone is on the base.", 24, U.Muted, { Size = UDim2.new(1, 0, 0, 80), Parent = list, TextWrapped = true, NoStroke = true }) end
+	if not any then text("Nothing to sell: every ball is on your table.", 24, MUTED, { Size = UDim2.new(1, 0, 0, 80), Parent = list, TextWrapped = true, NoStroke = true }) end
 end
 renderers.Inventory = function()
 	local p = panels.Inventory
@@ -318,7 +344,7 @@ renderers.Inventory = function()
 		if it.eq then on += 1 end
 	end
 	for _ in d.found or {} do found += 1 end
-	p.sub.Text = string.format("%d / %d characters   %d / %d on the base   %d / %d found", #d.inv, C.MaxInventory, on, C.MaxEquipped, found, TOTAL)
+	p.sub.Text = string.format("%d / %d balls   %d / %d on the table   %d / %d found", #d.inv, C.MaxInventory, on, C.MaxEquipped, found, TOTAL)
 	local _, setCap = bar(p.content, UDim2.fromOffset(0, 4), UDim2.fromOffset(470, 14))
 	setCap(#d.inv / C.MaxInventory, #d.inv >= C.MaxInventory * 0.9 and U.Bad or GREEN[2])
 	button({ Size = UDim2.fromOffset(160, 46), Position = UDim2.fromOffset(500, -12), Parent = p.content }, GREEN, "Equip best", 22, function()
@@ -329,9 +355,9 @@ renderers.Inventory = function()
 		sortMode = sortMode == "best" and "new" or "best"
 		renderers.Inventory()
 	end)
-	local list = scroller(p.content, UDim2.fromOffset(0, 46), UDim2.fromOffset(900, 484), UDim2.fromOffset(285, 220), 16)
+	local list = scroller(p.content, UDim2.fromOffset(0, 46), UDim2.fromOffset(900, 484), UDim2.fromOffset(285, 250), 16)
 	if #d.inv == 0 then
-		text("No characters yet.\nHold SHOOT to hunt billiard pros.", 30, U.Muted, { Size = UDim2.fromOffset(880, 160), Parent = list, TextWrapped = true, NoStroke = true })
+		text("No balls yet.\nHold SHOOT to win your first ball.", 30, MUTED, { Size = UDim2.fromOffset(880, 160), Parent = list, TextWrapped = true, NoStroke = true })
 		list.UIGridLayout.CellSize = UDim2.fromOffset(880, 160)
 		return
 	end
@@ -343,36 +369,33 @@ renderers.Inventory = function()
 	end)
 	for order, i in rank do
 		local it = d.inv[i]
-		local ch = C.Characters[it.id]
+		local ch = C.Balls[it.id]
 		local rar = C.Rarities[ch.rarity]
 		local V = C.Variants[it.v or 1]
 		local inc = C.ItemIncome(it)
-		local c = card({ Size = UDim2.fromOffset(285, 220), LayoutOrder = order, Parent = list }, 22)
-		local ribbon = new("Frame", { Size = UDim2.new(1, 0, 0, 44), BackgroundColor3 = rar[2], Parent = c }, { corner(22) })
-		new("Frame", { Size = UDim2.new(1, 0, 0, 20), Position = UDim2.fromOffset(0, 24), BackgroundColor3 = rar[2], BorderSizePixel = 0, Parent = ribbon })
-		text(string.upper(rar[1]), 22, nil, { Size = UDim2.fromScale(1, 1), Parent = ribbon })
-		if V.color then -- variant badge
-			local vb = new("Frame", { Size = UDim2.fromOffset(120, 28), Position = UDim2.fromOffset(83, 50), BackgroundColor3 = V.color, Parent = c }, { corner(14), stroke(2, INK) })
-			text(string.upper(V.name) .. " x" .. V.mult, 18, nil, { Size = UDim2.fromScale(1, 1), Parent = vb })
-		elseif V.mult > 1 then
-			text(string.upper(V.name) .. " x" .. V.mult, 18, U.Title, { Size = UDim2.new(1, 0, 0, 28), Position = UDim2.fromOffset(0, 50), Parent = c, NoStroke = true })
+		local c = card({ Size = UDim2.fromOffset(285, 250), LayoutOrder = order, Parent = list }, 22)
+		local ribbon = new("Frame", { Size = UDim2.new(1, 0, 0, 40), BackgroundColor3 = rar[2], Parent = c }, { corner(20) })
+		new("Frame", { Size = UDim2.new(1, 0, 0, 20), Position = UDim2.fromOffset(0, 20), BackgroundColor3 = rar[2], BorderSizePixel = 0, Parent = ribbon })
+		text(string.upper(rar[1]), 24, nil, { Size = UDim2.fromScale(1, 1), Parent = ribbon })
+		viewport(c, { Size = UDim2.fromOffset(96, 96), Position = UDim2.fromOffset(10, 46) }, "PrizeBall", C.BallOverrides(it), "ball" .. it.id .. "_" .. (it.v or 1), BALL_CAM)
+		if V.mult > 1 then -- variant badge
+			local vb = new("Frame", { Size = UDim2.fromOffset(150, 30), Position = UDim2.fromOffset(118, 50), BackgroundColor3 = V.color or ORANGE[2], Parent = c }, { corner(15), stroke(2) })
+			text(string.upper(V.name) .. " x" .. V.mult, 20, nil, { Size = UDim2.fromScale(1, 1), Parent = vb })
 		end
-		text(ch.name, 28, WHITE, { Size = UDim2.new(1, -20, 0, 34), Position = UDim2.fromOffset(10, 80), Parent = c, TextScaled = true, NoStroke = true })
-		text("$" .. C.Short(inc) .. "/s", 24, U.Money, { Size = UDim2.new(1, 0, 0, 30), Position = UDim2.fromOffset(0, 116), Parent = c, NoStroke = true })
-		button({ Size = UDim2.fromOffset(150, 46), Position = UDim2.fromOffset(16, 158), Parent = c, Radius = 16 }, it.eq and U.Red or GREEN, it.eq and "Unequip" or "Equip", 22, function()
+		text(ch.name, 28, INK, { Size = UDim2.fromOffset(160, 30), Position = UDim2.fromOffset(114, 84), Parent = c, TextScaled = true, NoStroke = true, TextXAlignment = Enum.TextXAlignment.Left })
+		text("$" .. C.Short(inc) .. "/s", 26, MONEY, { Size = UDim2.fromOffset(160, 30), Position = UDim2.fromOffset(114, 114), Parent = c, NoStroke = true, TextXAlignment = Enum.TextXAlignment.Left })
+		button({ Size = UDim2.fromOffset(150, 52), Position = UDim2.fromOffset(14, 180), Parent = c, Radius = 18 }, it.eq and U.Red or GREEN, it.eq and "Remove" or "Place", 22, function()
 			if call("Equip", i) then renderers.Inventory() end
 		end)
-		button({ Size = UDim2.fromOffset(92, 46), Position = UDim2.fromOffset(178, 158), Parent = c, Radius = 16 }, U.Action, "Sell", 22, function()
+		button({ Size = UDim2.fromOffset(98, 52), Position = UDim2.fromOffset(174, 180), Parent = c, Radius = 18 }, U.Action, "Sell", 22, function()
 			if call("Sell", i) then renderers.Inventory() end
 		end)
-		if it.eq then
-			new("Frame", { Size = UDim2.fromOffset(14, 14), Position = UDim2.fromOffset(258, 56), BackgroundColor3 = GREEN[1], Parent = c }, { corner(7) })
-		end
+		if it.eq then text("ON TABLE", 18, MONEY, { Size = UDim2.fromOffset(160, 24), Position = UDim2.fromOffset(114, 146), Parent = c, NoStroke = true, TextXAlignment = Enum.TextXAlignment.Left }) end
 	end
 end
 
 -- --- Bonuses ---
-panel("Bonus", "Bonuses")
+panel("Bonus", "Bonuses", { U.Menu[3][4], U.Menu[3][5] })
 local bonusTick
 renderers.Bonus = function()
 	local p = panels.Bonus
@@ -386,11 +409,11 @@ renderers.Bonus = function()
 	for k = 1, #C.Daily do
 		local done = k < today or (claimedToday and k == today)
 		local isToday = k == today and not claimedToday
-		local tile = card({ Size = UDim2.fromOffset(118, 150), Position = UDim2.fromOffset((k - 1) * 130, 0), Parent = p.content }, 20, isToday and rgb(70, 52, 22) or U.Card)
-		if isToday then tile.UIStroke.Color, tile.UIStroke.Thickness = U.Title, 3 end
-		text("Day " .. k, 24, done and U.Muted or WHITE, { Size = UDim2.new(1, 0, 0, 34), Position = UDim2.fromOffset(0, 14), Parent = tile, NoStroke = true })
-		text("$" .. C.Short(C.Daily[k]), 32, done and U.Muted or U.Money, { Size = UDim2.new(1, 0, 0, 44), Position = UDim2.fromOffset(0, 56), Parent = tile, NoStroke = true })
-		text(done and "Claimed" or isToday and "Today" or "", 20, done and GREEN[1] or U.Title, { Size = UDim2.new(1, 0, 0, 28), Position = UDim2.fromOffset(0, 106), Parent = tile, NoStroke = true })
+		local tile = card({ Size = UDim2.fromOffset(118, 150), Position = UDim2.fromOffset((k - 1) * 130, 0), Parent = p.content }, 20, isToday and rgb(255, 236, 170) or done and rgb(220, 248, 214) or WHITE)
+		if isToday then tile.UIStroke.Thickness = 5 end
+		text("Day " .. k, 24, done and MUTED or INK, { Size = UDim2.new(1, 0, 0, 34), Position = UDim2.fromOffset(0, 14), Parent = tile, NoStroke = true })
+		text("$" .. C.Short(C.Daily[k]), 32, done and MUTED or MONEY, { Size = UDim2.new(1, 0, 0, 44), Position = UDim2.fromOffset(0, 56), Parent = tile, NoStroke = true })
+		text(done and "Claimed" or isToday and "Today" or "", 22, done and MONEY or ORANGE[2], { Size = UDim2.new(1, 0, 0, 28), Position = UDim2.fromOffset(0, 106), Parent = tile, NoStroke = true })
 	end
 	local _, _, _, setDailyBtn = button({ Size = UDim2.fromOffset(320, 64), Position = UDim2.fromOffset(290, 172), Parent = p.content, Radius = 24 }, { rgb(255, 158, 200), rgb(255, 92, 158) },
 		claimedToday and "Come back tomorrow" or "Claim day " .. today, 28, function()
@@ -401,9 +424,9 @@ renderers.Bonus = function()
 	for i, pt in C.Playtime do
 		local y = 266 + (i - 1) * 64
 		local row = card({ Size = UDim2.fromOffset(900, 54), Position = UDim2.fromOffset(0, y), Parent = p.content }, 16)
-		text(pt[1] .. " min", 24, WHITE, { Size = UDim2.fromOffset(160, 54), Position = UDim2.fromOffset(20, 0), Parent = row, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
+		text(pt[1] .. " min", 24, INK, { Size = UDim2.fromOffset(160, 54), Position = UDim2.fromOffset(20, 0), Parent = row, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
 		local _, setBar = bar(row, UDim2.fromOffset(180, 19), UDim2.fromOffset(460, 16))
-		text("$" .. C.Short(pt[2]), 24, U.Money, { Size = UDim2.fromOffset(110, 54), Position = UDim2.fromOffset(652, 0), Parent = row, NoStroke = true })
+		text("$" .. C.Short(pt[2]), 24, MONEY, { Size = UDim2.fromOffset(110, 54), Position = UDim2.fromOffset(652, 0), Parent = row, NoStroke = true })
 		local _, _, lbl, setBtn = button({ Size = UDim2.fromOffset(120, 42), Position = UDim2.fromOffset(770, 6), Parent = row, Radius = 16 }, GREEN, "Claim", 22, function()
 			if call("Playtime", i) then renderers.Bonus() end
 		end)
@@ -430,12 +453,12 @@ renderers.Bonus = function()
 end
 
 -- --- Donate shop ---
-panel("Shop", "Shop")
+panel("Shop", "Shop", { U.Menu[4][4], U.Menu[4][5] })
 renderers.Shop = function()
 	local p = panels.Shop
 	clear(p.content)
 	p.sub.Text = "Game Passes and cash packs"
-	local list = new("ScrollingFrame", { Size = UDim2.fromOffset(900, 530), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8, ScrollBarImageColor3 = U.Line, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Parent = p.content })
+	local list = new("ScrollingFrame", { Size = UDim2.fromOffset(900, 530), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8, ScrollBarImageColor3 = INK, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Parent = p.content })
 	local y = 0
 	for i, gp in C.GamePasses do
 		local owned = state.passes[gp.key]
@@ -444,24 +467,24 @@ renderers.Shop = function()
 		local c = card({ Size = UDim2.fromOffset(436, 136), Position = UDim2.fromOffset(x, y), Parent = list }, 22)
 		local disc = new("Frame", { Size = UDim2.fromOffset(96, 96), Position = UDim2.fromOffset(18, 20), BackgroundColor3 = WHITE, Parent = c }, { corner(48), grad(rgb(255, 227, 138), rgb(255, 174, 31)), stroke(3) })
 		text(gp.badge, 32, nil, { Size = UDim2.fromScale(1, 1), Parent = disc })
-		text(gp.name, 30, WHITE, { Size = UDim2.fromOffset(300, 40), Position = UDim2.fromOffset(130, 12), Parent = c, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
-		text(gp.desc, 19, U.Muted, { Size = UDim2.fromOffset(290, 40), Position = UDim2.fromOffset(130, 48), Parent = c, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, NoStroke = true })
+		text(gp.name, 30, INK, { Size = UDim2.fromOffset(300, 40), Position = UDim2.fromOffset(130, 12), Parent = c, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
+		text(gp.desc, 19, MUTED, { Size = UDim2.fromOffset(290, 40), Position = UDim2.fromOffset(130, 48), Parent = c, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, NoStroke = true })
 		local _, _, _, setBtn = button({ Size = UDim2.fromOffset(160, 40), Position = UDim2.fromOffset(130, 88), Parent = c, Radius = 14 }, U.Red, owned and "Owned" or "Buy", 22, function()
 			if not owned then call("Pass", gp.key) end
 		end)
 		setBtn(not owned)
 	end
 	y += 160
-	text("Cash packs", 30, WHITE, { Size = UDim2.fromOffset(400, 40), Position = UDim2.fromOffset(0, y), Parent = list, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
+	text("Cash packs", 30, INK, { Size = UDim2.fromOffset(400, 40), Position = UDim2.fromOffset(0, y), Parent = list, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
 	for i, pr in C.Products do
 		local c = card({ Size = UDim2.fromOffset(286, 130), Position = UDim2.fromOffset((i - 1) * 302, y + 48), Parent = list }, 22)
-		text("$" .. C.Short(pr.cash), 40, U.Money, { Size = UDim2.new(1, 0, 0, 60), Position = UDim2.fromOffset(0, 8), Parent = c })
+		text("$" .. C.Short(pr.cash), 40, MONEY, { Size = UDim2.new(1, 0, 0, 60), Position = UDim2.fromOffset(0, 8), Parent = c })
 		button({ Size = UDim2.fromOffset(170, 42), Position = UDim2.fromOffset(58, 74), Parent = c, Radius = 14 }, U.Red, "Buy", 22, function() call("Product", i) end)
 	end
 end
 
 -- --- Cue shop (opened at the kiosk): every cue in one horizontal list ---
-panel("Cues", "Cue Shop")
+panel("Cues", "Cue Shop", U.Cues)
 local function cueOverrides(def)
 	local o = {}
 	for slot, field in C.CueParts do o[slot] = def[field] end
@@ -473,9 +496,9 @@ renderers.Cues = function()
 	clear(p.content)
 	local d = state.d
 	local nextTier = d.cue + 1
-	p.sub.Text = string.format("Shot power x%s   Start luck %.2fX   Each upgrade replaces your cue", C.CueMult(d, state.passes), C.StartLuck(d, state.passes))
+	p.sub.Text = string.format("Shot power x%s   Every upgrade makes your shots go further", C.CueMult(d, state.passes))
 	local list = new("ScrollingFrame", {
-		Size = UDim2.fromOffset(900, 440), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8, ScrollBarImageColor3 = U.Line,
+		Size = UDim2.fromOffset(900, 440), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8, ScrollBarImageColor3 = INK,
 		ScrollingDirection = Enum.ScrollingDirection.X, AutomaticCanvasSize = Enum.AutomaticSize.X, CanvasSize = UDim2.new(), Parent = p.content,
 	}, {
 		new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 14), SortOrder = Enum.SortOrder.LayoutOrder }),
@@ -483,18 +506,18 @@ renderers.Cues = function()
 	})
 	for k, cue in C.Cues do
 		local owned, isNow, isNext = k < d.cue, k == d.cue, k == nextTier
-		local c = card({ Size = UDim2.fromOffset(210, 410), LayoutOrder = k, Parent = list }, 22, isNow and rgb(28, 60, 44) or U.Card)
-		if isNow or isNext then c.UIStroke.Color, c.UIStroke.Thickness = isNow and GREEN[1] or U.Title, 3 end
-		text("TIER " .. k, 18, U.Muted, { Size = UDim2.new(1, 0, 0, 24), Position = UDim2.fromOffset(0, 12), Parent = c, NoStroke = true })
-		text(cue[1], 30, WHITE, { Size = UDim2.new(1, -16, 0, 36), Position = UDim2.fromOffset(8, 34), Parent = c, TextScaled = true, NoStroke = true })
+		local c = card({ Size = UDim2.fromOffset(210, 410), LayoutOrder = k, Parent = list }, 22, isNow and rgb(214, 250, 210) or isNext and rgb(255, 240, 190) or WHITE)
+		if isNow or isNext then c.UIStroke.Thickness = 5 end
+		text("TIER " .. k, 18, MUTED, { Size = UDim2.new(1, 0, 0, 24), Position = UDim2.fromOffset(0, 12), Parent = c, NoStroke = true })
+		text(cue[1], 30, INK, { Size = UDim2.new(1, -16, 0, 36), Position = UDim2.fromOffset(8, 34), Parent = c, TextScaled = true, NoStroke = true })
 		local vp = viewport(c, { Size = UDim2.fromOffset(190, 180), Position = UDim2.fromOffset(10, 74) }, "Cue", cueOverrides(cue), "cue" .. k, CUE_CAM)
-		if k > nextTier then vp.ImageTransparency, vp.ImageColor3 = 0.2, rgb(90, 84, 120) end
-		text("x" .. cue[2] .. " distance", 22, WHITE, { Size = UDim2.new(1, 0, 0, 28), Position = UDim2.fromOffset(0, 262), Parent = c, NoStroke = true })
-		text(cue.luck > 0 and string.format("+%.2f start luck", cue.luck) or "no luck bonus", 20, cue.luck > 0 and PURPLE[1] or U.Muted, { Size = UDim2.new(1, 0, 0, 26), Position = UDim2.fromOffset(0, 292), Parent = c, NoStroke = true })
+		if k > nextTier then vp.ImageTransparency, vp.ImageColor3 = 0.2, rgb(150, 140, 160) end
+		text("x" .. cue[2], 40, ORANGE[2], { Size = UDim2.new(1, 0, 0, 46), Position = UDim2.fromOffset(0, 258), Parent = c })
+		text("shot power", 20, MUTED, { Size = UDim2.new(1, 0, 0, 24), Position = UDim2.fromOffset(0, 304), Parent = c, NoStroke = true })
 		if isNow then
-			text("EQUIPPED", 24, GREEN[1], { Size = UDim2.new(1, 0, 0, 50), Position = UDim2.fromOffset(0, 340), Parent = c, NoStroke = true })
+			text("EQUIPPED", 26, MONEY, { Size = UDim2.new(1, 0, 0, 50), Position = UDim2.fromOffset(0, 340), Parent = c, NoStroke = true })
 		elseif owned then
-			text("OWNED", 22, U.Muted, { Size = UDim2.new(1, 0, 0, 50), Position = UDim2.fromOffset(0, 340), Parent = c, NoStroke = true })
+			text("OWNED", 22, MUTED, { Size = UDim2.new(1, 0, 0, 50), Position = UDim2.fromOffset(0, 340), Parent = c, NoStroke = true })
 		elseif isNext then
 			local can = d.cash >= cue[3]
 			local _, _, _, setBtn = button({ Size = UDim2.fromOffset(178, 50), Position = UDim2.fromOffset(16, 342), Parent = c, Radius = 18 }, GREEN, "$" .. C.Short(cue[3]), 26, function()
@@ -502,33 +525,34 @@ renderers.Cues = function()
 			end)
 			setBtn(can)
 		else
-			text("$" .. C.Short(cue[3]), 24, U.Muted, { Size = UDim2.new(1, 0, 0, 50), Position = UDim2.fromOffset(0, 340), Parent = c, NoStroke = true })
+			text("$" .. C.Short(cue[3]), 24, MUTED, { Size = UDim2.new(1, 0, 0, 50), Position = UDim2.fromOffset(0, 340), Parent = c, NoStroke = true })
 		end
 	end
 	task.defer(function() -- show the current cue and the next one
 		list.CanvasPosition = Vector2.new(math.max(0, (d.cue - 2) * 224), 0)
 	end)
 	local nxt = C.Cues[nextTier]
-	local msg = nxt and (d.cash >= nxt[3] and ("Next: " .. nxt[1] .. "  x" .. nxt[2] .. " distance") or ("Need $" .. C.Short(nxt[3] - d.cash) .. " more for the " .. nxt[1] .. " cue")) or "You own the best cue"
-	text(msg, 26, nxt and WHITE or U.Title, { Size = UDim2.fromOffset(900, 40), Position = UDim2.fromOffset(0, 470), Parent = p.content, NoStroke = true })
+	local msg = nxt and (d.cash >= nxt[3] and ("Next: " .. nxt[1] .. "  x" .. nxt[2] .. " power") or ("Need $" .. C.Short(nxt[3] - d.cash) .. " more for the " .. nxt[1] .. " cue")) or "You own the best cue"
+	text(msg, 28, INK, { Size = UDim2.fromOffset(900, 40), Position = UDim2.fromOffset(0, 470), Parent = p.content, NoStroke = true })
 end
 
 -- --- Gym (opened by stepping into the ring in front of the dumbbell) ---
-panel("Gym", "Gym")
+panel("Gym", "Gym", GREEN)
 local PLATE_NAMES = { "Iron", "Steel", "Red", "Blue", "Gold", "Diamond", "Galaxy" }
 local BELL_CAM = CFrame.lookAt(Vector3.new(6, 4, 10), Vector3.new(0, 0, 0))
 renderers.Gym = function()
 	local p = panels.Gym
 	clear(p.content)
 	local d = state.d
-	p.sub.Text = "Strength makes every shot longer. Train at your dumbbell."
+	p.sub.Text = state.training and string.format("Training: %d reps, +%s strength per second", state.reps or 0, C.Short(C.RepStrength(d.dumbLevel) / C.TrainRep))
+		or "Strength makes every shot longer. Train at your dumbbell."
 	local info = card({ Size = UDim2.fromOffset(900, 230), Position = UDim2.fromOffset(0, 0), Parent = p.content }, 26)
 	local color, _, band = C.DumbbellLook(d.dumbLevel)
 	viewport(info, { Size = UDim2.fromOffset(300, 210), Position = UDim2.fromOffset(10, 10) }, "Dumbbell", { Plate = color }, "bell" .. band, BELL_CAM)
-	text("Dumbbell  Lv." .. d.dumbLevel, 40, WHITE, { Size = UDim2.fromOffset(560, 54), Position = UDim2.fromOffset(320, 24), Parent = info, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
-	text(PLATE_NAMES[band] .. " plates   new look every 5 levels", 22, U.Muted, { Size = UDim2.fromOffset(560, 30), Position = UDim2.fromOffset(322, 80), Parent = info, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
-	text("Strength " .. C.Short(d.strength), 30, ORANGE[1], { Size = UDim2.fromOffset(560, 40), Position = UDim2.fromOffset(322, 124), Parent = info, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
-	text(string.format("+%s per rep, one rep every %.1f s", C.Short(C.RepStrength(d.dumbLevel)), C.TrainRep), 24, WHITE, { Size = UDim2.fromOffset(560, 32), Position = UDim2.fromOffset(322, 168), Parent = info, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
+	text("Dumbbell  Lv." .. d.dumbLevel, 40, INK, { Size = UDim2.fromOffset(560, 54), Position = UDim2.fromOffset(320, 24), Parent = info, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
+	text(PLATE_NAMES[band] .. " plates   new look every 5 levels", 22, MUTED, { Size = UDim2.fromOffset(560, 30), Position = UDim2.fromOffset(322, 80), Parent = info, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
+	text("Strength " .. C.Short(d.strength), 32, ORANGE[2], { Size = UDim2.fromOffset(560, 40), Position = UDim2.fromOffset(322, 124), Parent = info, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
+	text(string.format("+%s per rep, one rep every %.1f s", C.Short(C.RepStrength(d.dumbLevel)), C.TrainRep), 24, INK, { Size = UDim2.fromOffset(560, 32), Position = UDim2.fromOffset(322, 168), Parent = info, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
 	local cost = C.LiftCost(d.dumbLevel)
 	local can = d.cash >= cost
 	local _, _, _, setBtn = button({ Size = UDim2.fromOffset(430, 84), Position = UDim2.fromOffset(0, 266), Parent = p.content, Radius = 28 }, ORANGE,
@@ -543,12 +567,12 @@ renderers.Gym = function()
 				p.holder.Visible = false -- close the menu to watch the reps
 			end
 		end)
-	text(string.format("Next level: +%s per rep", C.Short(C.RepStrength(d.dumbLevel + 1))), 24, U.Muted, { Size = UDim2.fromOffset(430, 36), Position = UDim2.fromOffset(0, 370), Parent = p.content, NoStroke = true })
-	text("Stand on the TRAIN spot", 24, U.Muted, { Size = UDim2.fromOffset(430, 36), Position = UDim2.fromOffset(470, 370), Parent = p.content, NoStroke = true })
+	text(string.format("Next level: +%s per rep", C.Short(C.RepStrength(d.dumbLevel + 1))), 24, MUTED, { Size = UDim2.fromOffset(430, 36), Position = UDim2.fromOffset(0, 370), Parent = p.content, NoStroke = true })
+	text("Stand on the TRAIN spot", 24, MUTED, { Size = UDim2.fromOffset(430, 36), Position = UDim2.fromOffset(470, 370), Parent = p.content, NoStroke = true })
 end
 
 -- --- Settings (saved to the account) ---
-panel("Settings", "Settings")
+panel("Settings", "Settings", { U.Menu[1][4], U.Menu[1][5] })
 local settings = { music = 0.5, sfx = 0.7, shake = true, short = false }
 local saveQueued = false
 local function applySettings()
@@ -575,10 +599,10 @@ renderers.Settings = function()
 	local rowsDef = { { "Music", "music", "slider" }, { "Sound effects", "sfx", "slider" }, { "Camera shake", "shake", "toggle" }, { "Short cinematics only", "short", "toggle" } }
 	for i, def in rowsDef do
 		local row = card({ Size = UDim2.fromOffset(900, 90), Position = UDim2.fromOffset(0, 10 + (i - 1) * 110), Parent = p.content }, 22)
-		text(def[1], 32, WHITE, { Size = UDim2.fromOffset(420, 90), Position = UDim2.fromOffset(30, 0), Parent = row, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
+		text(def[1], 32, INK, { Size = UDim2.fromOffset(420, 90), Position = UDim2.fromOffset(30, 0), Parent = row, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
 		local key = def[2]
 		if def[3] == "slider" then
-			local track = new("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(380, 16), Position = UDim2.fromOffset(470, 37), BackgroundColor3 = rgb(16, 12, 30), Parent = row }, { corner(8) })
+			local track = new("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(380, 16), Position = UDim2.fromOffset(470, 37), BackgroundColor3 = GREY[1], Parent = row }, { corner(8), stroke(2) })
 			local fill = new("Frame", { Size = UDim2.fromScale(settings[key], 1), BackgroundColor3 = rgb(111, 130, 255), Parent = track }, { corner(8) })
 			local knob = new("Frame", { Size = UDim2.fromOffset(36, 40), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(settings[key], 0, 0.5, 0), BackgroundColor3 = WHITE, ZIndex = 3, Parent = track }, { corner(18), stroke(4) })
 			local dragging = false
@@ -603,7 +627,7 @@ renderers.Settings = function()
 			end))
 		else
 			local on = settings[key]
-			local sw = new("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(110, 50), Position = UDim2.fromOffset(760, 20), BackgroundColor3 = on and GREEN[2] or rgb(16, 12, 30), Parent = row }, { corner(25), stroke(3, U.Line) })
+			local sw = new("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(110, 50), Position = UDim2.fromOffset(760, 20), BackgroundColor3 = on and GREEN[2] or GREY[1], Parent = row }, { corner(25), stroke(3) })
 			new("Frame", { Size = UDim2.fromOffset(42, 42), Position = UDim2.fromOffset(on and 64 or 4, 4), BackgroundColor3 = WHITE, Parent = sw }, { corner(21) })
 			sw.Activated:Connect(function()
 				settings[key] = not settings[key]
@@ -705,7 +729,7 @@ local function updateTrainButton()
 	local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
 	local near = spot and hrp and (hrp.Position - spot.Position).Magnitude <= C.GymRange + 4
 	trainHolder.Visible = (state.training or near) and hud.Visible or false
-	trainLabel.Text = state.training and "STOP TRAINING" or "START TRAINING"
+	trainLabel.Text = state.training and ("STOP   " .. (state.reps or 0) .. " REPS") or "START TRAINING"
 end
 
 -- ===== Shooting: charge, live preview of where the ball will land =====
@@ -766,7 +790,7 @@ RunService.Heartbeat:Connect(function(dt) -- smooth cash count-up
 end)
 
 local firstState = true
-Fx.OnClientEvent:Connect(function(kind, a, b)
+Fx.OnClientEvent:Connect(function(kind, a, b, c)
 	if kind == "State" then
 		state = a
 		_G.MySlot, _G.MyCue = a.slot, a.d.cue
@@ -791,11 +815,11 @@ Fx.OnClientEvent:Connect(function(kind, a, b)
 		updateKioskTag()
 		if panels.Bonus.holder.Visible and bonusTick then bonusTick() end
 	elseif kind == "Train" then
-		if state then state.training = a == true end
+		if state then state.training, state.reps = a == true, 0 end
 		updateTrainButton()
 		if panels.Gym.holder.Visible then renderers.Gym() end
 	elseif kind == "Rep" then
-		if state then state.d.strength = a end
+		if state then state.d.strength, state.reps = a, c end
 		renderStats()
 		strScale.Scale = 1.12
 		tween(strScale, 0.3, { Scale = 1 }, Enum.EasingStyle.Back)

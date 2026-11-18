@@ -4,7 +4,6 @@ local DataStoreService = game:GetService("DataStoreService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local RS = game:GetService("ReplicatedStorage")
 local C = require(RS.Shared.Config)
-local Avatars = require(RS.Shared.Avatars)
 local Map = require(script.Parent.Map).Build()
 
 -- In Studio without publishing / API Services the DataStore throws: keep playing, just don't save
@@ -27,18 +26,11 @@ local taken = {} -- base slot -> player
 local throwCounter = 0
 local rng = Random.new()
 local N = #C.Rarities
-local byRarity = {}
-for id, ch in C.Characters do
-	byRarity[ch.rarity] = byRarity[ch.rarity] or {}
-	table.insert(byRarity[ch.rarity], id)
-end
 local CollectionService = game:GetService("CollectionService")
 local passByKey = {}
 for _, gp in C.GamePasses do passByKey[gp.key] = gp end
 
-local ANIM = { Idle = "rbxassetid://507766666", Cheer = "rbxassetid://507770677", Wave = "rbxassetid://507770239" }
-
-local DATA_VERSION = 4
+local DATA_VERSION = 5
 local function default()
 	return {
 		version = DATA_VERSION, cash = 0, strength = 0, dumbLevel = 1, cue = 1,
@@ -61,9 +53,20 @@ local function sanitize(saved)
 	d.dumbLevel = math.floor(num(saved.dumbLevel, 1, 200, 1))
 	d.cue = math.floor(num(saved.cue, 1, #C.Cues, 1))
 	d.best = math.floor(num(saved.best, 0, N, 0))
+	-- v5: prize balls (one per rarity). Older saves stored characters: 6 per rarity (v4) or 4 (v3 and older).
+	local version = tonumber(saved.version) or 0
+	local perRarity = version >= 5 and 1 or version == 4 and 6 or 4
+	local function ballOf(id)
+		id = tonumber(id)
+		if not id or id < 1 then return nil end
+		local b = math.ceil(id / perRarity)
+		return C.Balls[b] and b or nil
+	end
 	if type(saved.found) == "table" then
 		for k in saved.found do
-			if type(k) == "string" and k:match("^%d+_%d$") then d.found[k] = true end
+			local id, v = type(k) == "string" and k:match("^(%d+)_(%d)$")
+			local b = ballOf(id)
+			if b and C.Variants[tonumber(v)] then d.found[b .. "_" .. v] = true end
 		end
 	end
 	d.tutorial = math.floor(num(saved.tutorial, 1, 4, 4)) -- existing players skip the tutorial
@@ -82,12 +85,13 @@ local function sanitize(saved)
 	local equipped = 0
 	if type(saved.inv) == "table" then
 		for _, it in saved.inv do
-			if type(it) == "table" and C.Characters[tonumber(it.id) or 0] and #d.inv < C.MaxInventory then
+			local b = type(it) == "table" and ballOf(it.id)
+			if b and #d.inv < C.MaxInventory then
 				local eq = it.eq == true and equipped < C.MaxEquipped
 				if eq then equipped += 1 end
 				local v = math.floor(num(it.v, 1, #C.Variants, 1))
-				table.insert(d.inv, { id = tonumber(it.id), v = v, eq = eq })
-				d.found[it.id .. "_" .. v] = true
+				table.insert(d.inv, { id = b, v = v, eq = eq })
+				d.found[b .. "_" .. v] = true
 			end
 		end
 	end
@@ -110,61 +114,11 @@ local function sync(plr)
 	plr.leaderstats.Cash.Value = math.floor(s.d.cash)
 end
 
--- ===== Characters: Roblox avatars dressed in real catalog items (Shared/Avatars) + cue in hand + aura =====
-local SKIN = { Color3.fromRGB(255, 214, 170), Color3.fromRGB(234, 184, 146), Color3.fromRGB(198, 140, 100), Color3.fromRGB(124, 84, 62) }
-local ACCESSORY_TYPE = {
-	[8] = Enum.AccessoryType.Hat, [41] = Enum.AccessoryType.Hair, [42] = Enum.AccessoryType.Face, [43] = Enum.AccessoryType.Neck,
-	[44] = Enum.AccessoryType.Shoulder, [45] = Enum.AccessoryType.Front, [46] = Enum.AccessoryType.Back, [47] = Enum.AccessoryType.Waist,
-}
-
-local function describe(info, level)
-	-- level 2: full outfit, 1: clothes only, 0: plain body (fallbacks if a catalog item fails to load)
-	local desc = Instance.new("HumanoidDescription")
-	local skin = SKIN[(info.title - 1) % #SKIN + 1]
-	desc.HeadColor, desc.TorsoColor, desc.LeftArmColor, desc.RightArmColor, desc.LeftLegColor, desc.RightLegColor = skin, skin, skin, skin, skin, skin
-	local k = 1 + info.rarity * 0.006
-	desc.HeightScale, desc.WidthScale, desc.DepthScale, desc.HeadScale = k, k, k, 1
-	desc.BodyTypeScale, desc.ProportionScale = 0.15, 0
-	local looks = Avatars[info.rarity]
-	local look = looks[(info.title - 1) % #looks + 1]
-	if level >= 1 then
-		desc.Shirt, desc.Pants = look.shirt, look.pants
-	end
-	if level >= 2 then
-		local list = {}
-		for i, a in look.accessories do
-			table.insert(list, { AssetId = a[1], AccessoryType = ACCESSORY_TYPE[a[2]], Order = i, IsLayered = false })
-		end
-		desc:SetAccessories(list, true) -- true = include rigid (non-layered) accessories
-	end
-	return desc
-end
-
-local function buildAvatar(info)
-	for level = 2, 0, -1 do
-		local ok, m = pcall(Players.CreateHumanoidModelFromDescription, Players, describe(info, level), Enum.HumanoidRigType.R15)
-		if ok and m then return m end
-		warn("[Avatar] level", level, "failed for", info.name, m)
-	end
-end
-
+-- ===== Prize balls on the base table =====
 local function weldTo(base, p)
 	p.Anchored, p.CanCollide, p.Massless = false, false, true
 	local w = Instance.new("WeldConstraint")
 	w.Part0, w.Part1, w.Parent = base, p, p
-end
-
-local function play(hum, id, looped)
-	local a = Instance.new("Animation")
-	a.AnimationId = id
-	local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator")
-	animator.Parent = hum
-	local ok, track = pcall(function() return animator:LoadAnimation(a) end)
-	if ok and track then
-		track.Looped = looped
-		track:Play()
-	end
-	return ok and track
 end
 
 -- a cue part the client turns into the Blender cue: tier colours + tier effects (Shared/CueFx)
@@ -183,37 +137,19 @@ local function cuePart(cue, tier, cf)
 	return p
 end
 
-local VARIANT_MAT = { Gold = Enum.Material.Metal, Diamond = Enum.Material.Glass, Galaxy = Enum.Material.ForceField, Rainbow = Enum.Material.SmoothPlastic }
-
 local function emitter(parent, color, rate, size, speed)
 	local e = Instance.new("ParticleEmitter")
-	e.Color, e.LightEmission, e.Rate, e.Lifetime = ColorSequence.new(color, Color3.new(1, 1, 1)), 0.8, rate, NumberRange.new(1, 1.8)
+	e.Color, e.LightEmission, e.Rate, e.Lifetime = ColorSequence.new(color, Color3.new(1, 1, 1)), 0.8, rate, NumberRange.new(0.8, 1.4)
 	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, size), NumberSequenceKeypoint.new(1, 0) })
 	e.Speed, e.SpreadAngle, e.Transparency = NumberRange.new(speed * 0.5, speed), Vector2.new(180, 180), NumberSequence.new(0.2, 1)
 	e.Parent = parent
 	return e
 end
 
--- Gold / Diamond / Galaxy / Rainbow: the whole avatar becomes a statue of that material
-local function paintVariant(m, V)
-	for _, d in m:GetDescendants() do
-		if d:IsA("Clothing") or d:IsA("ShirtGraphic") or d:IsA("BodyColors") then
-			d:Destroy()
-		elseif d:IsA("SpecialMesh") then
-			d.TextureId = ""
-		elseif d:IsA("BasePart") and d.Name ~= "HumanoidRootPart" then
-			if d:IsA("MeshPart") then d.TextureID = "" end
-			d.Color, d.Material, d.Reflectance = V.color, VARIANT_MAT[V.name], V.name == "Gold" and 0.25 or V.name == "Diamond" and 0.35 or 0
-		end
-	end
-	if V.name == "Rainbow" then CollectionService:AddTag(m, "Rainbow") end -- client cycles the hue
-	emitter(m.HumanoidRootPart, V.color, 14, 0.35, 2)
-end
-
--- glowing ring (Blender torus) lying on the floor, around the body or above the head
+-- glowing ring (Blender torus) lying flat or tilted around the ball
 local function ring(m, cf, size, color, spin)
 	local p = Instance.new("Part")
-	p.Name, p.Size, p.Color, p.Material = "Ring", Vector3.new(size, 0.3, size), color, Enum.Material.Neon
+	p.Name, p.Size, p.Color, p.Material = "Ring", Vector3.new(size, 0.2, size), color, Enum.Material.Neon
 	p.Transparency, p.CFrame, p.Anchored, p.CanCollide, p.CanQuery, p.CastShadow = 1, cf, true, false, false, false
 	local tag = Instance.new("StringValue")
 	tag.Name, tag.Value, tag.Parent = "Mesh", "Ring", p
@@ -229,61 +165,61 @@ local function ring(m, cf, size, color, spin)
 	return p
 end
 
--- rarity bands: 1-10 floor ring, 11-25 double ring, 26-40 + orbiting rings, 41-50 + halo and light pillar
-local function rarityFx(m, cf, rarity, color, height)
-	local floor = cf * CFrame.new(0, 0.12, 0)
-	ring(m, floor, 5, color, 0.4)
-	if rarity > 10 then ring(m, floor, 7, Color3.new(1, 1, 1):Lerp(color, 0.5), -0.25) end
+-- rarity bands: 1-10 one ring on the felt, 11-25 two rings, 26-40 + two orbiting rings, 41-50 + halo and light pillar
+local function rarityFx(m, cf, rarity, color, size)
+	local felt = cf * CFrame.new(0, -size / 2 - 0.25, 0)
+	ring(m, felt, size * 1.5, color, 0.6)
+	if rarity > 10 then ring(m, felt, size * 1.9, Color3.new(1, 1, 1):Lerp(color, 0.5), -0.4) end
 	if rarity > 25 then
 		for k = 1, 2 do
-			ring(m, cf * CFrame.new(0, height * 0.55, 0) * CFrame.Angles(math.rad(k == 1 and 65 or -65), 0, 0), 4.6, color, k == 1 and 1.2 or -1.2)
+			ring(m, cf * CFrame.Angles(math.rad(k == 1 and 65 or -65), 0, 0), size * 1.45, color, k == 1 and 1.4 or -1.4)
 		end
 	end
 	if rarity > 40 then
-		ring(m, cf * CFrame.new(0, height + 0.8, 0), 1.8, Color3.fromRGB(255, 235, 140), 0.8)
+		ring(m, cf * CFrame.new(0, size * 0.85, 0), size * 0.7, Color3.fromRGB(255, 235, 140), 0.8)
 		local pillar = Instance.new("Part")
-		pillar.Shape, pillar.Size, pillar.Color, pillar.Material = Enum.PartType.Cylinder, Vector3.new(40, 5, 5), color, Enum.Material.ForceField
-		pillar.CFrame = cf * CFrame.new(0, 20, 0) * CFrame.Angles(0, 0, math.pi / 2)
+		pillar.Shape, pillar.Size, pillar.Color, pillar.Material = Enum.PartType.Cylinder, Vector3.new(24, size * 1.2, size * 1.2), color, Enum.Material.ForceField
+		pillar.CFrame = cf * CFrame.new(0, 12, 0) * CFrame.Angles(0, 0, math.pi / 2)
 		pillar.Transparency, pillar.Anchored, pillar.CanCollide, pillar.CanQuery, pillar.CastShadow = 0.4, true, false, false, false
 		pillar.Parent = m
 	end
 end
 
-local function makeNPC(it, cf, gold, fresh)
-	local info = C.Characters[it.id]
-	local r = C.Rarities[info.rarity]
+-- A prize ball hovering over its spot on the base table. The client swaps the part for the Blender ball mesh,
+-- makes it bob and spin, and applies the variant material (Gold / Diamond / Galaxy / Rainbow).
+local function makeBall(it, spot)
+	local ball = C.Balls[it.id]
+	local r = C.Rarities[ball.rarity]
 	local V = C.Variants[it.v or 1]
-	local m = buildAvatar(info)
-	m.Name = info.name
-	local hum = m.Humanoid
-	hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-	m.HumanoidRootPart.Anchored = true
-	if V.color then paintVariant(m, V) end
-	if V.scale ~= 1 then m:ScaleTo(V.scale) end
-	m:PivotTo(cf * CFrame.new(0, hum.HipHeight + m.HumanoidRootPart.Size.Y / 2, 0))
-	local _, size = m:GetBoundingBox()
-
-	-- cue held like a staff: NPC cue tier follows the rarity, the Golden Stick pass makes it gold
-	local tier = C.CueTierOf(info.rarity)
-	local hand = m.RightHand
-	local stick = cuePart(gold and C.Cues[6] or C.Cues[tier], tier, hand.CFrame * CFrame.Angles(math.rad(-12), 0, 0) * CFrame.new(0, 2.2 * V.scale, 0))
-	if V.scale ~= 1 then
-		stick.Size *= V.scale
-		local sc = Instance.new("NumberValue")
-		sc.Name, sc.Value, sc.Parent = "Scale", V.scale, stick
+	local size = C.BallSize * V.scale
+	local m = Instance.new("Model")
+	m.Name = ball.name
+	local cf = spot * CFrame.new(0, size / 2 + 0.25, 0)
+	local p = Instance.new("Part")
+	p.Name, p.Shape, p.Size, p.Color, p.Material = "Ball", Enum.PartType.Ball, Vector3.one * size, V.color or ball.body, Enum.Material.SmoothPlastic
+	p.CFrame, p.Anchored, p.CanCollide, p.CanQuery = cf, true, false, false
+	local tag = Instance.new("StringValue")
+	tag.Name, tag.Value, tag.Parent = "Mesh", "PrizeBall", p
+	for k, c in C.BallOverrides(it) do
+		local v = Instance.new("Color3Value")
+		v.Name, v.Value, v.Parent = k, c, p
 	end
-	weldTo(hand, stick)
-	stick.Parent = m
-
-	emitter(m.HumanoidRootPart, r[2], 6 + info.rarity, 0.3 + info.rarity * 0.02, 2)
+	local sc = Instance.new("NumberValue")
+	sc.Name, sc.Value, sc.Parent = "Scale", size, p
+	p:SetAttribute("Variant", V.name)
+	p:SetAttribute("Number", ball.rarity)
+	CollectionService:AddTag(p, "Hover")
+	p.Parent = m
+	m.PrimaryPart = p
+	if V.color then emitter(p, V.color, 10, 0.25, 1.5) end
+	emitter(p, r[2], 4 + ball.rarity * 0.3, 0.15 + ball.rarity * 0.006, 1)
 	local glow = Instance.new("PointLight")
-	glow.Color, glow.Range, glow.Brightness, glow.Parent = r[2], 8 + info.rarity * 0.2, 1.2, m.HumanoidRootPart
-	rarityFx(m, cf, info.rarity, r[2], size.Y)
+	glow.Color, glow.Range, glow.Brightness, glow.Parent = r[2], 5 + ball.rarity * 0.1, 0.8, p
+	rarityFx(m, cf, ball.rarity, r[2], size)
 
 	local bb = Instance.new("BillboardGui")
-	bb.Size, bb.StudsOffset, bb.AlwaysOnTop, bb.MaxDistance = UDim2.fromOffset(220, 66), Vector3.new(0, 3.2, 0), false, 40
-	local lines = { { C.ItemName(it), V.color or Color3.new(1, 1, 1) }, { r[1] .. "  $" .. C.Short(C.ItemIncome(it)) .. "/s", r[2] } }
-	for i, t in lines do
+	bb.Size, bb.StudsOffset, bb.AlwaysOnTop, bb.MaxDistance = UDim2.fromOffset(200, 56), Vector3.new(0, size / 2 + 1.4, 0), false, 32
+	for i, t in { { C.ItemName(it), V.color or Color3.new(1, 1, 1) }, { r[1] .. "  $" .. C.Short(C.ItemIncome(it)) .. "/s", r[2] } } do
 		local l = Instance.new("TextLabel")
 		l.Size, l.Position, l.BackgroundTransparency = UDim2.fromScale(1, 0.5), UDim2.fromScale(0, (i - 1) * 0.5), 1
 		l.FontFace, l.TextScaled, l.Text, l.TextColor3 = C.UI.Font, true, t[1], t[2]
@@ -291,17 +227,9 @@ local function makeNPC(it, cf, gold, fresh)
 		st.Thickness, st.Color, st.Parent = 2.5, C.UI.Ink, l
 		l.Parent = bb
 	end
-	bb.Parent = m.Head
-	m:SetAttribute("CharId", it.id)
+	bb.Parent = p
+	m:SetAttribute("BallId", it.id)
 	m:SetAttribute("Variant", it.v or 1)
-
-	task.defer(function() -- animations need the rig parented
-		if fresh then
-			local t = play(hum, ANIM.Cheer, false)
-			if t then t.Stopped:Wait() end
-		end
-		if m.Parent then play(hum, ANIM.Idle, true) end
-	end)
 	return m
 end
 
@@ -321,17 +249,17 @@ local function refreshBase(plr)
 	for _, npc in bySlot do
 		local slot = npc:GetAttribute("Slot")
 		local it = slot and items[slot]
-		if not it or it.id ~= npc:GetAttribute("CharId") or (it.v or 1) ~= npc:GetAttribute("Variant") then
+		if not it or it.id ~= npc:GetAttribute("BallId") or (it.v or 1) ~= npc:GetAttribute("Variant") then
 			npc:Destroy()
 			bySlot[slot or 0] = nil
 		end
 	end
 	for i, it in items do
 		if not bySlot[i] then
-			local npc = makeNPC(it, base.slots[i], s.passes.GoldStick, true)
+			local npc = makeBall(it, base.slots[i])
 			npc:SetAttribute("Slot", i)
 			if it.tid then
-				npc:SetAttribute("ThrowId", it.tid) -- the client plays the reveal cinematic on this NPC
+				npc:SetAttribute("ThrowId", it.tid) -- the client plays the landing animation on this ball
 				it.tid = nil
 			end
 			npc.Parent = base.chars
@@ -416,8 +344,7 @@ function actions.Throw(plr, s, power)
 	local full = rarity >= C.FullCinematicRarity and rarity >= s.d.best - 2 -- the big show only for top pulls
 	s.d.best = math.max(s.d.best, rarity)
 	s.nextThrow = os.clock() + C.ThrowTime(dist, full) + C.ThrowCooldown
-	local pool = byRarity[rarity]
-	local it = { id = pool[rng:NextInteger(1, #pool)], v = C.RollVariant(rng:NextNumber()) }
+	local it = { id = rarity, v = C.RollVariant(rng:NextNumber()) }
 	throwCounter += 1
 	it.eq = equippedCount(s.d) < C.MaxEquipped
 	it.tid = it.eq and throwCounter or nil
@@ -452,12 +379,14 @@ function actions.TrainStart(plr, s)
 	if s.training then return true end
 	if not near(plr, s) then return false, "Go to the dumbbell at your base" end
 	s.training = true
+	s.trainId = (s.trainId or 0) + 1
+	local id, reps = s.trainId, 0 -- a quick Stop + Start never runs two rep loops
 	Map.Bases[s.slot].trainPrompt.ActionText = "Stop training"
 	Fx:FireClient(plr, "Train", true, Map.Bases[s.slot].gym.CFrame, Map.Bases[s.slot].dumbbell)
 	task.spawn(function()
-		while s.training and sessions[plr] == s do
+		while s.training and s.trainId == id and sessions[plr] == s do
 			task.wait(C.TrainRep)
-			if not (s.training and sessions[plr] == s) then break end
+			if not (s.training and s.trainId == id and sessions[plr] == s) then break end
 			if not near(plr, s) then
 				stopTraining(plr, s)
 				break
@@ -468,7 +397,8 @@ function actions.TrainStart(plr, s)
 				s.d.tutorial = 3
 				sync(plr)
 			end
-			Fx:FireClient(plr, "Rep", s.d.strength, gain)
+			reps += 1
+			Fx:FireClient(plr, "Rep", s.d.strength, gain, reps)
 		end
 	end)
 	return true
@@ -535,7 +465,7 @@ function actions.SellRarity(_, s, rarity)
 	if type(rarity) ~= "number" or not C.Rarities[rarity] then return false end
 	local total, kept, n = 0, {}, 0
 	for _, it in s.d.inv do
-		if not it.eq and (it.v or 1) < 4 and C.Characters[it.id].rarity == rarity then
+		if not it.eq and (it.v or 1) < 4 and it.id == rarity then
 			total += C.ItemIncome(it) * 30
 			n += 1
 		else
@@ -730,10 +660,7 @@ MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(plr, id, boug
 			key = gp.key
 		end
 	end
-	if key == "GoldStick" then -- NPCs get golden sticks
-		Map.Bases[s.slot].chars:ClearAllChildren()
-		refreshBase(plr)
-	elseif key == "DragonCue" then
+	if key == "DragonCue" then
 		giveCue(plr, true)
 	end
 	sync(plr)

@@ -61,31 +61,32 @@ local R = {
 	{ "Supreme", rgb(255, 215, 0), "Sovereign" }, { "Eternal", rgb(240, 240, 255), "Immortal" },
 	{ "Transcendent", rgb(255, 180, 255), "Ascended" }, { "Legend", rgb(255, 60, 160), "Cue Master" },
 }
-C.Titles = { "Young", "Swift", "Pro", "Master", "Grand", "Elite" }
-
-C.Rarities, C.Characters = {}, {} -- C.Rarities[i] = { name, colour, base income }; 50 x 6 = 300 characters
+-- 50 prize balls, one per rarity: odd rarities are solid balls, even ones striped (like a real set); the white
+-- spot carries the number. C.Rarities[i] = { name, colour, base income }.
+C.Rarities, C.Balls = {}, {}
 for r, v in R do
 	local inc = math.floor(2.2 ^ (r - 1))
 	C.Rarities[r] = { v[1], v[2], inc }
-	for i, t in C.Titles do
-		table.insert(C.Characters, {
-			name = t .. " " .. v[3],
-			rarity = r,
-			title = i,
-			income = math.floor(inc * (1 + (i - 1) * 0.2)),
-		})
-	end
+	local h, sat, val = v[2]:ToHSV()
+	C.Balls[r] = {
+		name = v[3] .. " Ball",
+		rarity = r,
+		income = inc,
+		body = r % 2 == 1 and v[2] or Color3.fromRGB(250, 248, 240),
+		band = v[2],
+		ring = Color3.fromHSV((h + 0.5) % 1, math.min(1, sat + 0.2), math.max(0.6, val)), -- complementary trim
+	}
 end
 
--- Variants rolled on every pull (like Big / Huge / Gold ... animals): 300 characters x 7 variants = 2100 to collect
-C.Variants = { -- name, income multiplier, chance (1 in N, nil = default), body scale
+-- Variants rolled on every pull (like Big / Huge / Gold ... animals): 50 balls x 7 variants = 350 to collect
+C.Variants = { -- name, income multiplier, chance (1 in N, nil = default), size
 	{ name = "Normal", mult = 1, scale = 1 },
 	{ name = "Big", mult = 2, oneIn = 6, scale = 1.3 },
 	{ name = "Huge", mult = 5, oneIn = 30, scale = 1.7 },
-	{ name = "Gold", mult = 10, oneIn = 100, scale = 1, color = rgb(255, 200, 50) },
-	{ name = "Diamond", mult = 25, oneIn = 400, scale = 1, color = rgb(150, 235, 255) },
-	{ name = "Galaxy", mult = 60, oneIn = 1500, scale = 1.1, color = rgb(90, 40, 170) },
-	{ name = "Rainbow", mult = 150, oneIn = 6000, scale = 1.1, color = rgb(255, 120, 220) },
+	{ name = "Gold", mult = 10, oneIn = 100, scale = 1, color = rgb(255, 200, 50), material = "Foil" },
+	{ name = "Diamond", mult = 25, oneIn = 400, scale = 1, color = rgb(150, 235, 255), material = "Glass" },
+	{ name = "Galaxy", mult = 60, oneIn = 1500, scale = 1.1, color = rgb(90, 40, 170), material = "ForceField" },
+	{ name = "Rainbow", mult = 150, oneIn = 6000, scale = 1.1, color = rgb(255, 120, 220), material = "SmoothPlastic" },
 }
 function C.RollVariant(roll) -- roll in [0, 1); rarest first
 	local acc = 0
@@ -95,22 +96,35 @@ function C.RollVariant(roll) -- roll in [0, 1); rarest first
 	end
 	return 1
 end
-function C.ItemIncome(it) return C.Characters[it.id].income * C.Variants[it.v or 1].mult end
+-- mesh colours of a prize ball (PrizeBall palette): variants recolour the whole ball, the trim keeps the rarity hint
+function C.BallOverrides(it)
+	local b, V = C.Balls[it.id], C.Variants[it.v or 1]
+	return {
+		Body = V.color or b.body,
+		Band = V.color and V.color:Lerp(Color3.new(1, 1, 1), 0.3) or b.band,
+		Trim = b.ring,
+		Spot = Color3.fromRGB(250, 248, 240),
+	}
+end
+function C.ItemIncome(it) return C.Balls[it.id].income * C.Variants[it.v or 1].mult end
 function C.ItemName(it)
 	local v = C.Variants[it.v or 1]
-	return (v.name ~= "Normal" and string.upper(v.name) .. " " or "") .. C.Characters[it.id].name
+	return (v.name ~= "Normal" and string.upper(v.name) .. " " or "") .. C.Balls[it.id].name
 end
 
 C.Table = { Length = 4000, Width = 36, StartZ = 80, Lanes = 4 } -- tools/place.py reads these values
+-- Play area (tools/place.py builds floors/colliders from it, Map.luau surrounds it with Terrain block mountains)
+C.Arena = { HallHalfWidth = 120, HallBack = -64, CorridorHalfWidth = 34 }
 C.ThrowCooldown = 1
-C.MaxEquipped = 8
+C.MaxEquipped = 8 -- balls on the base table
+C.BallSize = 1.3 -- prize ball diameter on the table (Big / Huge variants scale it)
 C.MaxInventory = 150
 
--- Luck grows along the ball's path: start luck from the cue (and the x2 Luck pass), every table crossed adds a
+-- Luck grows along the ball's path: every shot starts at 1 (2 with the x2 Luck pass), every table crossed adds a
 -- little, sometimes a "lucky table" adds a lot. The final value L upgrades the rarity:
 -- +1 with chance 1 - 1/L, +2 with 1 - 5/L (L >= 5), +3 with 1 - 20/L (L >= 20).
 function C.StartLuck(d, passes)
-	return (1 + C.Cues[d.cue].luck) * ((passes and passes.Luck2x) and 2 or 1)
+	return (passes and passes.Luck2x) and 2 or 1
 end
 function C.LuckTrack(start, tables, rnd) -- rnd() -> [0, 1); returns luck after each table and the lucky tables
 	local track, lucky, L = {}, {}, start
@@ -145,34 +159,32 @@ end
 C.Tables = {}
 for r, v in R do C.Tables[r] = { v[1] .. " Table", v[2] } end
 
--- 15 cue tiers: name, distance multiplier, price, start-luck bonus, colours (shaft, butt, inlay, wrap, joint)
+-- 15 cue tiers: name, shot power multiplier, price, colours (shaft, butt, inlay, wrap, joint). Cues only add power.
 C.Cues = {}
 for i, c in {
-	{ "Wooden", 1, 0, 0, rgb(222, 184, 128), rgb(110, 64, 32), rgb(240, 225, 200), rgb(60, 50, 45), rgb(190, 190, 195) },
-	{ "Maple", 1.2, 400, 0.05, rgb(240, 214, 160), rgb(70, 40, 22), rgb(255, 245, 225), rgb(40, 40, 50), rgb(200, 200, 205) },
-	{ "Ash", 1.4, 8e3, 0.1, rgb(214, 196, 160), rgb(40, 40, 44), rgb(230, 60, 60), rgb(30, 30, 34), rgb(210, 210, 215) },
-	{ "Carbon", 1.65, 1.5e5, 0.15, rgb(55, 55, 62), rgb(25, 25, 28), rgb(0, 200, 255), rgb(20, 20, 24), rgb(150, 150, 160) },
-	{ "Ebony", 1.9, 3e6, 0.22, rgb(235, 215, 175), rgb(28, 18, 14), rgb(255, 215, 120), rgb(110, 20, 30), rgb(230, 190, 90) },
-	{ "Golden", 2.2, 6e7, 0.3, rgb(255, 210, 90), rgb(160, 110, 20), rgb(255, 245, 200), rgb(80, 50, 10), rgb(255, 225, 120) },
-	{ "Ivory", 2.55, 1.2e9, 0.4, rgb(250, 245, 230), rgb(200, 180, 150), rgb(60, 140, 120), rgb(140, 110, 80), rgb(225, 225, 235) },
-	{ "Crystal", 2.95, 2.5e10, 0.5, rgb(190, 240, 255), rgb(80, 160, 220), rgb(255, 255, 255), rgb(40, 90, 150), rgb(220, 245, 255) },
-	{ "Inferno", 3.4, 5e11, 0.65, rgb(255, 140, 50), rgb(90, 15, 10), rgb(255, 220, 80), rgb(40, 10, 8), rgb(255, 120, 40) },
-	{ "Frost", 3.9, 1e13, 0.8, rgb(200, 240, 255), rgb(40, 90, 160), rgb(150, 220, 255), rgb(20, 50, 100), rgb(230, 250, 255) },
-	{ "Storm", 4.5, 2e14, 1, rgb(220, 220, 255), rgb(50, 40, 120), rgb(255, 240, 90), rgb(30, 25, 70), rgb(200, 200, 255) },
-	{ "Shadow", 5.2, 4e15, 1.25, rgb(70, 50, 100), rgb(15, 10, 20), rgb(170, 90, 255), rgb(10, 8, 14), rgb(120, 80, 170) },
-	{ "Celestial", 6, 8e16, 1.5, rgb(255, 250, 225), rgb(240, 200, 90), rgb(120, 220, 255), rgb(255, 255, 255), rgb(255, 230, 150) },
-	{ "Cosmic", 7, 2e18, 1.8, rgb(120, 70, 240), rgb(20, 10, 50), rgb(255, 130, 230), rgb(40, 20, 90), rgb(200, 160, 255) },
-	{ "Legend", 8, 5e19, 2.2, rgb(255, 60, 160), rgb(40, 0, 30), rgb(255, 230, 120), rgb(255, 215, 90), rgb(255, 215, 90) },
+	{ "Wooden", 1, 0, rgb(222, 184, 128), rgb(110, 64, 32), rgb(240, 225, 200), rgb(60, 50, 45), rgb(190, 190, 195) },
+	{ "Maple", 1.2, 400, rgb(240, 214, 160), rgb(70, 40, 22), rgb(255, 245, 225), rgb(40, 40, 50), rgb(200, 200, 205) },
+	{ "Ash", 1.4, 8e3, rgb(214, 196, 160), rgb(40, 40, 44), rgb(230, 60, 60), rgb(30, 30, 34), rgb(210, 210, 215) },
+	{ "Carbon", 1.65, 1.5e5, rgb(55, 55, 62), rgb(25, 25, 28), rgb(0, 200, 255), rgb(20, 20, 24), rgb(150, 150, 160) },
+	{ "Ebony", 1.9, 3e6, rgb(235, 215, 175), rgb(28, 18, 14), rgb(255, 215, 120), rgb(110, 20, 30), rgb(230, 190, 90) },
+	{ "Golden", 2.2, 6e7, rgb(255, 210, 90), rgb(160, 110, 20), rgb(255, 245, 200), rgb(80, 50, 10), rgb(255, 225, 120) },
+	{ "Ivory", 2.55, 1.2e9, rgb(250, 245, 230), rgb(200, 180, 150), rgb(60, 140, 120), rgb(140, 110, 80), rgb(225, 225, 235) },
+	{ "Crystal", 2.95, 2.5e10, rgb(190, 240, 255), rgb(80, 160, 220), rgb(255, 255, 255), rgb(40, 90, 150), rgb(220, 245, 255) },
+	{ "Inferno", 3.4, 5e11, rgb(255, 140, 50), rgb(90, 15, 10), rgb(255, 220, 80), rgb(40, 10, 8), rgb(255, 120, 40) },
+	{ "Frost", 3.9, 1e13, rgb(200, 240, 255), rgb(40, 90, 160), rgb(150, 220, 255), rgb(20, 50, 100), rgb(230, 250, 255) },
+	{ "Storm", 4.5, 2e14, rgb(220, 220, 255), rgb(50, 40, 120), rgb(255, 240, 90), rgb(30, 25, 70), rgb(200, 200, 255) },
+	{ "Shadow", 5.2, 4e15, rgb(70, 50, 100), rgb(15, 10, 20), rgb(170, 90, 255), rgb(10, 8, 14), rgb(120, 80, 170) },
+	{ "Celestial", 6, 8e16, rgb(255, 250, 225), rgb(240, 200, 90), rgb(120, 220, 255), rgb(255, 255, 255), rgb(255, 230, 150) },
+	{ "Cosmic", 7, 2e18, rgb(120, 70, 240), rgb(20, 10, 50), rgb(255, 130, 230), rgb(40, 20, 90), rgb(200, 160, 255) },
+	{ "Legend", 8, 5e19, rgb(255, 60, 160), rgb(40, 0, 30), rgb(255, 230, 120), rgb(255, 215, 90), rgb(255, 215, 90) },
 } do
-	C.Cues[i] = { c[1], c[2], c[3], luck = c[4], shaft = c[5], butt = c[6], inlay = c[7], wrap = c[8], joint = c[9] }
-	C.Cues[i][4] = c[5] -- legacy colour slot = shaft colour
+	C.Cues[i] = { c[1], c[2], c[3], c[4], shaft = c[4], butt = c[5], inlay = c[6], wrap = c[7], joint = c[8] }
 end
 C.DragonCue = { -- game pass: x3 until you own a better cue
-	"Dragon", 3, 0, rgb(80, 220, 120), luck = 0.3, tier = 9,
+	"Dragon", 3, 0, rgb(80, 220, 120), tier = 9,
 	shaft = rgb(80, 220, 120), butt = rgb(20, 60, 30), inlay = rgb(255, 210, 60), wrap = rgb(10, 30, 15), joint = rgb(255, 210, 60),
 }
 C.CueParts = { Shaft = "shaft", Butt = "butt", Inlay = "inlay", Wrap = "wrap", Joint = "joint" } -- mesh palette slot -> cue field
-function C.CueTierOf(rarity) return math.clamp(math.ceil(rarity * #C.Cues / #C.Rarities), 1, #C.Cues) end -- NPC cues
 
 -- Dumbbell looks better every 5 levels: plate colour + size
 local PLATES = { rgb(70, 70, 78), rgb(165, 170, 180), rgb(220, 50, 50), rgb(50, 110, 230), rgb(255, 200, 50), rgb(150, 235, 255), rgb(120, 60, 220) }
@@ -208,10 +220,10 @@ function C.ZoneOf(dist) return math.clamp(math.ceil(dist / (C.Table.Length / #C.
 
 -- Replace 0 with real IDs from the Creator Dashboard (Monetization → Passes / Developer Products)
 C.GamePasses = {
-	{ key = "Cash2x", id = 0, badge = "2X", name = "x2 Cash", desc = "Double income from every character" },
+	{ key = "Cash2x", id = 0, badge = "2X", name = "x2 Cash", desc = "Double income from every ball" },
 	{ key = "Luck2x", id = 0, badge = "2X", name = "x2 Luck", desc = "Every shot starts with double luck" },
 	{ key = "DragonCue", id = 0, badge = "3X", name = "Dragon Cue", desc = "x3 shot distance until you own a better cue" },
-	{ key = "GoldStick", id = 0, badge = "+50%", name = "Golden Stick", desc = "+50% income, your characters hold gold cues" },
+	{ key = "GoldStick", id = 0, badge = "+50%", name = "Income Boost", desc = "+50% income from every ball" },
 	{ key = "GoldenBall", id = 0, badge = "GOLD", name = "Golden Ball", desc = "Your shot ball turns gold with a sparkle trail" },
 }
 C.Products = {

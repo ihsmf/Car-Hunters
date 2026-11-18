@@ -103,7 +103,7 @@ def check(path, cfg_keys):
 def config_keys():
     src = open(os.path.join(ROOT, "src/shared/Config.luau"), encoding="utf-8").read()
     c = set(re.findall(r"^C\.(\w+)\s*=", src, re.M)) | set(re.findall(r"^function C\.(\w+)", src, re.M))
-    c |= {"Rarities", "Characters"}  # assigned as "C.Rarities, C.Characters = {}, {}"
+    c |= {"Rarities", "Balls"}  # assigned as "C.Rarities, C.Balls = {}, {}"
     ui_block = src[src.index("C.UI = {"):src.index("\n}\n", src.index("C.UI = {"))]
     ui = set(re.findall(r"^\t(\w+)\s*=", ui_block, re.M))
     return {"C": c, "UI": ui}

@@ -130,18 +130,22 @@ def pool_table():
             cyl(0.5, 1.4, (x, 0.95, z), M["WoodDark"], d2=0.72, verts=16)
             sphere(0.8, (x, 1.75, z), M["WoodDark"], 16, 8)
             cyl(0.7, 0.55, (x, 2.2, z), M["WoodDark"], d2=0.55, verts=16)
-    # rack: apex on the foot spot, 1 at the apex, 8 in the middle, mixed solids/stripes; cue ball on the head spot
-    order = [1, 9, 2, 10, 8, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15]
-    colors = [(250, 200, 30), (30, 80, 200), (220, 40, 40), (110, 40, 170), (255, 120, 20), (20, 140, 70), (130, 30, 30), (18, 18, 20)]
-    white = mat("BallWhite", (250, 248, 240), rough=0.15)
-    d, k = 0.42, 0
-    for row in range(5):
-        for j in range(row + 1):
-            n = order[k]; k += 1
-            body = mat(f"Ball{(n - 1) % 8 + 1}", colors[(n - 1) % 8], rough=0.15)
-            ball_mesh(d, ((j - row / 2) * d * 1.01, top + d / 2, -L / 4 - row * d * 0.875), body, white, n > 8,
-                      (math.radians(30 + 37 * n), math.radians(20 * n), 0))
-    sphere(d, (0.4, top + d / 2, L / 4 + 0.6), white, 16, 10)
+
+
+def prize_ball():
+    """Prize ball, diameter 1: body, equator band (stripe balls), white number spots front/back with a coloured trim.
+    Palette Body / Band / Spot / Trim is recoloured per ball and variant."""
+    M = [mat(n, c, 0, 0.12) for n, c in (("Body", (230, 60, 60)), ("Band", (230, 60, 60)), ("Spot", (250, 248, 240)), ("Trim", (40, 40, 60)))]
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=32, v_segments=20, radius=0.5)
+    me = bpy.data.meshes.new("prize"); bm.to_mesh(me); bm.free()
+    o = bpy.data.objects.new("prize", me); bpy.context.scene.collection.objects.link(o)
+    for m in M:
+        o.data.materials.append(m)
+    for f in me.polygons:  # Blender Z = Roblox up; Blender Y = Roblox -Z (front/back)
+        c = f.center
+        f.material_index = 2 if abs(c.y) > 0.44 else 3 if abs(c.y) > 0.4 else 1 if abs(c.z) < 0.22 else 0
+        f.use_smooth = True
 
 
 def cue():
@@ -249,19 +253,15 @@ def gym_set():
 
 
 def fence():
-    """Club rope barrier segment, 30 long: brass stanchions every 6 studs + sagging red velvet rope."""
-    M = {k: mat(k, v, 1 if k == "Post" else 0, 0.3) for k, v in dict(Post=(230, 180, 70), Rope=(170, 20, 40)).items()}
+    """Rustic wooden fence segment, 30 long: posts with pointed caps every 6 studs, two rails across the full length."""
+    M = {k: mat(k, v, 0, 0.6) for k, v in dict(Wood=(150, 96, 52), WoodDark=(104, 64, 34)).items()}
     for i in range(5):  # posts at -12..12: adjacent segments keep the 6-stud rhythm without doubled posts
         x = -12 + i * 6
-        cyl(1.4, 0.2, (x, 0.1, 0), M["Post"], verts=20, bevel=0.06)
-        cyl(0.9, 0.3, (x, 0.35, 0), M["Post"], d2=0.4, verts=20)
-        cyl(0.26, 3.2, (x, 2.1, 0), M["Post"], verts=12)
-        sphere(0.55, (x, 3.85, 0), M["Post"], 14, 8)
-    xs = [-15 + k * 0.75 for k in range(41)]  # rope sags between posts; the segment ends are span centres
-    pts = [(x, 3.35 - 0.6 * (1 - (min(abs(x - c) for c in range(-15, 16, 6)) / 3) ** 2)) for x in xs]
-    for (xa, ya), (xb, yb) in zip(pts, pts[1:]):
-        o = cyl(0.22, math.hypot(xb - xa, yb - ya) + 0.04, ((xa + xb) / 2, (ya + yb) / 2, 0), M["Rope"], "X", verts=8, bevel=0)
-        o.rotation_euler = (0, math.pi / 2 - math.atan2(yb - ya, xb - xa), 0)
+        box((0.7, 3.4, 0.7), (x, 1.7, 0), M["WoodDark"], 0.08)
+        o = cyl(0.98, 0.5, (x, 3.65, 0), M["WoodDark"], d2=0.05, verts=4, bevel=0)
+        o.rotation_euler = (0, 0, math.pi / 4)
+    for y in (1.2, 2.6):
+        box((30, 0.42, 0.28), (0, y, 0.38), M["Wood"], 0.06)
 
 
 def mountain(seed):
@@ -764,7 +764,7 @@ def cue_shop():
     cyl(0.12, 1.2, (0, 10.8, 0.8), M["Trim"], verts=6)
 
 
-CORE = [("BasePlatform", base_platform), ("CueShop", cue_shop), ("PoolTable", pool_table), ("Cue", cue), ("Ball", ball),
+CORE = [("PrizeBall", prize_ball), ("CueShop", cue_shop), ("PoolTable", pool_table), ("Cue", cue), ("Ball", ball),
         ("Dumbbell", dumbbell), ("Fence", fence), ("TableSegment", table_segment), ("Ring", ring), ("GymSet", gym_set)]
 PROPS = [("Mountain", lambda: mountain(3)), ("Peak", lambda: mountain(11)), ("Pine", pine), ("Tree", tree), ("Palm", palm),
          ("Cactus", cactus), ("Rock", rock), ("Dune", dune), ("Crystal", crystal), ("Volcano", volcano), ("Tower", tower),

@@ -8,9 +8,8 @@ cfg = open(os.path.join(ROOT, "src/shared/Config.luau"), encoding="utf-8").read(
 N = len(re.findall(r'\{ "[^"]+", rgb\(\d+, \d+, \d+\), "', cfg))
 LENGTH = float(re.search(r"Length = (\d+)", cfg).group(1))
 ZONE = LENGTH / N
-CUES = [(float(m), float(p), float(l)) for m, p, l in re.findall(r'\{ "\w+", ([\d.]+), ([\de.]+), ([\d.]+), rgb', cfg)]
+CUES = [(float(m), float(p)) for m, p in re.findall(r'\{ "\w+", ([\d.]+), ([\de.]+), rgb', cfg)]
 VARIANTS = [(1, None)] + [(int(m), int(o)) for m, o in re.findall(r"mult = (\d+), oneIn = (\d+)", cfg)]
-TITLES = 6
 TRAIN_REP = 1.2
 
 
@@ -73,11 +72,11 @@ def simulate(hours=80, seed=1):
             power = min(1, max(0.3, rnd.gauss(0.85, 0.1)))
             dist = distance(power, strength, cue)
             zone = max(1, min(N, math.ceil(dist / ZONE)))
-            L = luck_track(1 + CUES[cue - 1][2], zone, rnd)
+            L = luck_track(1, zone, rnd)
             rarity = min(N, zone + luck_bonus(L, rnd))
-            title, v = rnd.randrange(TITLES), variant(rnd)
-            found.add((rarity, title, v))
-            income = math.floor(2.2 ** (rarity - 1)) * (1 + title * 0.2) * VARIANTS[v][0]
+            v = variant(rnd)
+            found.add((rarity, v))
+            income = math.floor(2.2 ** (rarity - 1)) * VARIANTS[v][0]
             team = sorted(team + [income], reverse=True)[:8]
             full = rarity >= 4 and rarity >= best - 2
             best = max(best, rarity)
@@ -96,4 +95,4 @@ if __name__ == "__main__":
     for z in sorted(reached):
         m = reached[z] / 60
         print(f"{z:5d}  {m:8.1f} min" if m < 120 else f"{z:5d}  {m / 60:8.1f} h")
-    print(f"after 80 h: cue tier {cue}, dumbbell lvl {dumb}, strength {strength:.3g}, collection {found} / {N * TITLES * len(VARIANTS)}")
+    print(f"after 80 h: cue tier {cue}, dumbbell lvl {dumb}, strength {strength:.3g}, collection {found} / {N * len(VARIANTS)}")

@@ -27,11 +27,9 @@ function Map.Build()
 	local world = workspace:WaitForChild("World")
 	for i = 1, 4 do
 		local base = world["Base" .. i]
-		local center = base.PoolTable.MeshPivot.Position
 		local slots = {}
 		for s = 1, C.MaxEquipped do
-			local p = base.Slots["Slot" .. s].Position + Vector3.new(0, 0.1, 0) -- top of the gold spot
-			slots[s] = CFrame.lookAt(p, Vector3.new(center.X, p.Y, center.Z))
+			slots[s] = base.Slots["Slot" .. s].CFrame -- spots on the felt of the base table
 		end
 		local gym = base.Gym
 		local board = ownerBoard(base.AvatarAnchor)
@@ -49,9 +47,56 @@ function Map.Build()
 		for _, p in { gym.TrainSpot.Prompt, base.CueShop.Prompt } do p.RequiresLineOfSight = false end
 		Map.SetOwner(i, nil)
 	end
+	task.spawn(Map.Mountains)
 	local clouds = Instance.new("Clouds")
 	clouds.Cover, clouds.Density, clouds.Parent = 0.5, 0.5, workspace.Terrain
 	return Map
+end
+
+-- Blocky "square mountains" of Terrain all around the hall and along both sides of the long table:
+-- stacked boxes that shrink as they rise, grass at the bottom, rock in the middle, snow on the tallest tops.
+function Map.Mountains()
+	local terrain, A, T = workspace.Terrain, C.Arena, C.Table
+	local rng = Random.new(7)
+	local far = T.StartZ + T.Length + 800
+	local function mountain(x, z, w, d, h)
+		local step = 8
+		local tiers = math.max(2, math.floor(h / step))
+		for k = 0, tiers - 1 do
+			local f = 1 - k / (tiers + 1)
+			local y = k * step
+			local mat = (h > 70 and k >= tiers - 2) and Enum.Material.Snow or k <= 1 and Enum.Material.Grass or Enum.Material.Rock
+			local ox, oz = rng:NextNumber(-3, 3) * k * 0.3, rng:NextNumber(-3, 3) * k * 0.3 -- slightly uneven steps
+			terrain:FillBlock(CFrame.new(x + ox, y + step / 2 - 2, z + oz), Vector3.new(w * f, step, d * f), mat)
+		end
+	end
+	local function row(x0, x1, z0, z1, along) -- a ridge of mountains filling a strip
+		local pos = along == "z" and z0 or x0
+		local stop = along == "z" and z1 or x1
+		while pos < stop do
+			local size = rng:NextNumber(36, 64)
+			local h = rng:NextNumber(36, 96)
+			if along == "z" then
+				mountain(rng:NextNumber(x0, x1), pos + size / 2, rng:NextNumber(40, 70), size, h)
+			else
+				mountain(pos + size / 2, rng:NextNumber(z0, z1), size, rng:NextNumber(40, 70), h)
+			end
+			pos += size * 0.7
+			task.wait()
+		end
+	end
+	-- ridge centres sit at least 36 studs (half the largest mountain) outside the play area
+	local hx, cx, m = A.HallHalfWidth, A.CorridorHalfWidth, 36
+	row(-hx - 80, hx + 80, A.HallBack - m - 30, A.HallBack - m, "x") -- behind the bases
+	for _, sx in { -1, 1 } do
+		local function xs(a, b) return sx > 0 and a or -b, sx > 0 and b or -a end
+		local x0, x1 = xs(hx + m, hx + m + 30)
+		row(x0, x1, A.HallBack - m, T.StartZ, "z") -- hall sides
+		x0, x1 = xs(cx + m, hx + m)
+		row(x0, x1, T.StartZ + m, T.StartZ + m + 20, "x") -- hall front, beside the table
+		x0, x1 = xs(cx + m, cx + m + 30)
+		row(x0, x1, T.StartZ + m, far, "z") -- along the long table
+	end
 end
 
 function Map.SetOwner(i, plr)
