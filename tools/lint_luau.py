@@ -9,7 +9,7 @@ GLOBALS = set("""game workspace script Instance Vector3 Vector2 CFrame Color3 UD
 ColorSequenceKeypoint NumberSequence NumberSequenceKeypoint NumberRange Random Font Content math string table os task
 typeof type pairs ipairs next print warn error pcall xpcall tostring tonumber select require setmetatable getmetatable
 rawget rawset rawequal _G unpack bit32 utf8 coroutine tick time debug buffer PhysicalProperties Ray RaycastParams
-BrickColor DateTime self""".split())
+BrickColor DateTime self assert""".split())
 KEYWORDS = set("and break do else elseif end false for function if in local nil not or repeat return then true until while continue".split())
 TOKEN = re.compile(r"""
  (?P<lcomment>--\[(?P<eq1>=*)\[.*?\](?P=eq1)\]) |

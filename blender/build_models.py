@@ -764,6 +764,138 @@ def cue_shop():
     cyl(0.12, 1.2, (0, 10.8, 0.8), M["Trim"], verts=6)
 
 
+# ---------- Grand finale scenery (played as a real-time scene on the last table) ----------
+def finale_computer():
+    """Gaming desk: wooden desk, monitor (screen centre (0, 6.2, -1.56), 6.8 x 3.82, facing +Z), RGB keyboard,
+    mouse + pad, glass-side PC tower with fans, speakers and a mug. Desk top at y = 3.375."""
+    C_ = dict(Wood=(120, 78, 46), Metal=(40, 42, 48), Bezel=(22, 22, 26), Screen=(8, 10, 16), Glow=(120, 80, 255),
+              KeyBase=(30, 30, 36), Key=(58, 58, 66), KeyAccent=(255, 90, 160), Mouse=(36, 36, 42), Pad=(24, 24, 60),
+              Case=(28, 28, 34), Glass=(90, 110, 140), Fan=(80, 230, 255), Speaker=(34, 34, 40), Mug=(235, 235, 230))
+    M = {k: mat(k, v, 0.6 if k in ("Metal", "Case") else 0, 0.35) for k, v in C_.items()}
+    box((12, 0.35, 5.5), (0, 3.2, 0), M["Wood"], 0.06)
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            box((0.4, 3.0, 0.4), (sx * 5.6, 1.5, sz * 2.45), M["Metal"], 0.04)
+    box((2.2, 0.12, 1.4), (0, 3.44, -1.4), M["Metal"], 0.04)  # monitor stand
+    box((0.42, 2.1, 0.3), (0, 4.45, -1.62), M["Metal"], 0.04)
+    box((7.2, 4.3, 0.3), (0, 6.2, -1.75), M["Bezel"], 0.08)
+    box((6.8, 3.82, 0.05), (0, 6.2, -1.585), M["Screen"], 0)
+    box((7.0, 0.08, 0.06), (0, 4.03, -1.6), M["Glow"], 0)  # ambient light strip
+    box((4.4, 0.18, 1.5), (0, 3.46, 0.9), M["KeyBase"], 0.05)
+    for row in range(4):
+        for col in range(14):
+            accent = (row, col) in ((1, 2), (2, 1), (2, 2), (2, 3))  # glowing WASD
+            box((0.25, 0.1, 0.26), (-1.95 + col * 0.3, 3.6, 0.45 + row * 0.31), M["KeyAccent" if accent else "Key"], 0.02)
+    box((2.2, 0.04, 1.8), (3.3, 3.37, 0.8), M["Pad"], 0.01)
+    sphere(0.55, (3.3, 3.5, 0.8), M["Mouse"], 12, 8, (1, 0.45, 1.5))
+    box((1.6, 4.4, 4.2), (-4.9, 5.58, -0.3), M["Case"], 0.06)  # tower on the desk
+    box((0.05, 3.8, 3.6), (-4.08, 5.58, -0.3), M["Glass"], 0)
+    for k in range(3):
+        torus(0.95, 0.12, (-4.0, 4.3 + k * 1.25, -0.3), M["Fan"], "X")
+    for sx in (-1, 1):  # speakers
+        box((0.9, 1.6, 0.9), (sx * 4.35 + (0.9 if sx < 0 else 0), 4.18, -1.6), M["Speaker"], 0.06)
+        cyl(0.6, 0.06, (sx * 4.35 + (0.9 if sx < 0 else 0), 4.4, -1.13), M["Metal"], "Z", verts=16)
+    cyl(0.6, 0.75, (2.4, 3.75, -0.7), M["Mug"], verts=16)
+    torus(0.42, 0.09, (2.75, 3.78, -0.7), M["Mug"], "X")
+
+
+def nature_height(x, z):
+    """Rolling hills around a lake basin at (0, 30); peaks towards the edges."""
+    r = math.hypot(x, z - 30)
+    h = 6 + 7 * math.sin(x * 0.031) * math.cos(z * 0.027) + 5 * math.sin((x + z) * 0.052)
+    h += max(0, (r - 70) * 0.22) + 18 * max(0, (math.hypot(x, z) - 140) / 40)
+    return h - 14 * max(0, 1 - r / 55)
+
+
+def finale_nature():
+    """Valley 360 x 360: faceted hills coloured by height, a lake, pines, oaks and rocks."""
+    C_ = dict(Grass=(110, 180, 80), GrassDark=(78, 146, 64), Rock=(128, 120, 112), Snow=(244, 248, 252), Sand=(222, 206, 150),
+              Water=(70, 150, 210), Trunk=(110, 74, 44), Pine=(42, 110, 70), Leaves=(96, 168, 70))
+    M = {k: mat(k, v, 0, 0.6) for k, v in C_.items()}
+    n, size = 34, 360
+    bm = bmesh.new()
+    grid = [[bm.verts.new(rb(-size / 2 + i * size / n, nature_height(-size / 2 + i * size / n, -size / 2 + j * size / n), -size / 2 + j * size / n))
+             for j in range(n + 1)] for i in range(n + 1)]
+    faces = []
+    for i in range(n):
+        for j in range(n):
+            a, b_, c, d = grid[i][j], grid[i + 1][j], grid[i + 1][j + 1], grid[i][j + 1]
+            for tri in ((a, b_, c), (a, c, d)):
+                y = sum(v.co.z for v in tri) / 3
+                cx, cz = sum(v.co.x for v in tri) / 3, sum(v.co.y for v in tri) / 3
+                meadow = "GrassDark" if math.sin(cx * 0.045) + math.cos(cz * 0.06) + 0.5 * math.sin((cx - cz) * 0.11) > 0.6 else "Grass"
+                faces.append((bm.faces.new(tri), "Sand" if y < 1.5 else "Snow" if y > 38 else "Rock" if y > 26 else meadow))
+    me = bpy.data.meshes.new("valley"); bm.to_mesh(me); bm.free()
+    o = bpy.data.objects.new("valley", me); bpy.context.scene.collection.objects.link(o)
+    names = list(C_)
+    for k in names:
+        o.data.materials.append(M[k])
+    for (f, k), poly in zip(faces, me.polygons):
+        poly.material_index = names.index(k)
+    box((104, 0.2, 96), (0, -1.2, 30), M["Water"], 0)
+    rnd = __import__("random").Random(11)
+    placed = 0
+    while placed < 70:
+        x, z = rnd.uniform(-160, 160), rnd.uniform(-160, 160)
+        y = nature_height(x, z)
+        if math.hypot(x, z - 30) < 62 or y > 26 or y < 2:
+            continue
+        placed += 1
+        if rnd.random() < 0.6:  # pine
+            k = rnd.uniform(0.8, 1.5)
+            cyl(1.2 * k, 3 * k, (x, y + 1.5 * k, z), M["Trunk"], verts=5, bevel=0)
+            for t in range(2):
+                cyl((7 - t * 2.4) * k, 5.5 * k, (x, y + (4.5 + t * 3.6) * k, z), M["Pine"], d2=0.2, verts=7, bevel=0)
+        else:  # oak
+            k = rnd.uniform(0.9, 1.6)
+            cyl(1.3 * k, 5 * k, (x, y + 2.5 * k, z), M["Trunk"], verts=5, bevel=0)
+            sphere(8 * k, (x, y + 7.5 * k, z), M["Leaves"], 7, 5)
+    for _ in range(14):
+        x, z = rnd.uniform(-150, 150), rnd.uniform(-150, 150)
+        sphere(rnd.uniform(3, 7), (x, nature_height(x, z) + 1, z), M["Rock"], 6, 4, (1, 0.7, 1.2))
+
+
+def finale_city():
+    """City 320 x 320 at dusk: 5 x 5 blocks between roads, towers with lit window bands, rooftops, street lamps."""
+    C_ = dict(Asphalt=(46, 48, 56), Line=(240, 220, 120), Sidewalk=(150, 148, 146), Concrete=(170, 166, 160), Glass=(80, 120, 160),
+              Brick=(150, 82, 64), Window=(255, 214, 120), WindowCool=(150, 210, 255), Roof=(70, 70, 78), Lamp=(255, 236, 180), Pole=(50, 52, 58))
+    M = {k: mat(k, v, 0.3 if k == "Glass" else 0, 0.5) for k, v in C_.items()}
+    rnd = __import__("random").Random(5)
+    box((320, 1, 320), (0, -0.5, 0), M["Asphalt"], 0)
+    centres = [-128, -64, 0, 64, 128]
+    for road in (-96, -32, 32, 96):  # dashed centre lines
+        for k in range(10):
+            t = -144 + k * 32
+            box((0.4, 0.05, 8), (road, 0.03, t), M["Line"], 0)
+            box((8, 0.05, 0.4), (t, 0.03, road), M["Line"], 0)
+    for bx in centres:
+        for bz in centres:
+            box((48, 0.4, 48), (bx, 0.2, bz), M["Sidewalk"], 0)
+            centre = 1.6 - math.hypot(bx, bz) / 140  # taller towers downtown
+            for qx, qz, w, d in ((-11, -11, 20, 20), (11, -11, 20, 20), (-11, 11, 20, 20), (11, 11, 20, 20)) if rnd.random() < 0.7 else ((0, 0, 40, 40),):
+                if rnd.random() < 0.15:
+                    continue
+                h = rnd.uniform(16, 50) * centre + rnd.uniform(0, 30) * centre
+                skin = rnd.choice(("Concrete", "Glass", "Brick", "Glass"))
+                x, z = bx + qx, bz + qz
+                box((w, h, d), (x, h / 2 + 0.4, z), M[skin], 0)
+                warm = rnd.random() < 0.65
+                for y in range(5, int(h) - 2, 7):
+                    if rnd.random() < 0.5:
+                        box((w + 0.12, 1.4, d + 0.12), (x, y + 0.4, z), M["Window" if warm else "WindowCool"], 0)
+                box((w * 0.8, 1, d * 0.8), (x, h + 0.9, z), M["Roof"], 0)
+                if h > 60 and rnd.random() < 0.6:
+                    cyl(0.6, 10, (x, h + 6, z), M["Pole"], verts=6, bevel=0)
+            for sx in (-1, 1):  # street lamps on the block corners
+                for sz in (-1, 1):
+                    x, z = bx + sx * 23, bz + sz * 23
+                    cyl(0.35, 7, (x, 3.9, z), M["Pole"], verts=6, bevel=0)
+                    sphere(1.1, (x, 7.6, z), M["Lamp"], 6, 4)
+
+
+FINALE = [("FinaleComputer", finale_computer), ("FinaleNature", finale_nature), ("FinaleCity", finale_city)]
+
+
 CORE = [("PrizeBall", prize_ball), ("CueShop", cue_shop), ("PoolTable", pool_table), ("Cue", cue), ("Ball", ball),
         ("Dumbbell", dumbbell), ("Fence", fence), ("TableSegment", table_segment), ("Ring", ring), ("GymSet", gym_set)]
 PROPS = [("Mountain", lambda: mountain(3)), ("Peak", lambda: mountain(11)), ("Pine", pine), ("Tree", tree), ("Palm", palm),
@@ -856,6 +988,19 @@ def render_group(names, filename, cols, cell=12, dummy=False):
 
 
 def main():
+    import sys
+    if "finale" in sys.argv:  # only the finale scenery, added next to the existing meshes
+        for name, fn in FINALE:
+            reset()
+            fn()
+            o = join_triangulate(name)
+            bpy.ops.export_scene.fbx(filepath=os.path.join(OUT, name + ".fbx"), apply_unit_scale=True, axis_forward="-Z", axis_up="Y")
+            text, n = luau_mesh(o)
+            with open(os.path.join(LUAU_DIR, name + ".luau"), "w", encoding="utf-8") as fh:
+                fh.write("-- AUTO-GENERATED by blender/build_models.py — do not edit by hand.\n"
+                         "-- Roblox axes, studs; vertices centred on bbox, `center` = offset from the model origin.\n" + text)
+            print(f"{name}: {n} triangles, {len(o.data.vertices)} vertices")
+        return
     chunks = []
     for name, fn in MODELS:
         reset()
