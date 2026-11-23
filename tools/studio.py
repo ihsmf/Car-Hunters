@@ -13,6 +13,7 @@ SRC = os.path.join(STUDIO, "src")
 MESH_DIR = os.path.join(ROOT, "src", "shared", "Meshes")
 EDITED = ["Config", "UI", "Throw", "HeavenlyBreak"]
 MESHES = ["FinaleComputer", "FinaleCity", "FinaleNature"]
+NEW = {"CameraDirector": ("LocalScript", "UI")}  # scripts we add: class, inserted next to this existing script
 
 
 def item_re(name):  # one script Item by its (unique) Name; group 2 = the Source payload
@@ -33,7 +34,7 @@ def encode(src):
 def extract():
     x = open(PLACE, encoding="utf-8").read()
     os.makedirs(SRC, exist_ok=True)
-    for n in EDITED:
+    for n in EDITED + [k for k in NEW if item_re(k).search(x)]:
         ms = list(item_re(n).finditer(x))
         assert len(ms) == 1, f"{n}: {len(ms)} matches"
         open(os.path.join(SRC, n + ".luau"), "w", encoding="utf-8").write(decode(ms[0].group(2)))
@@ -48,6 +49,17 @@ def pack():
         assert k == 1, f"{n}: replaced {k} times"
     folder = re.search(r'<Item class="Folder" referent="[^"]*"><Properties><string name="Name">Meshes</string></Properties>', x)
     assert folder, "Shared.Meshes folder not found"
+    for n, (cls, sibling) in NEW.items():
+        src = open(os.path.join(SRC, n + ".luau"), encoding="utf-8").read()
+        x, k = item_re(n).subn(lambda m: m.group(1) + encode(src) + m.group(3), x)
+        if k == 0:  # first pack: insert the new script right before its sibling, i.e. into the same folder
+            sib = item_re(sibling).search(x)
+            assert sib, f"{sibling} not found"
+            new = (f'<Item class="{cls}" referent="RBXDirector{n}"><Properties><string name="Name">{n}</string>'
+                   f'<ProtectedString name="Source">{encode(src)}</ProtectedString></Properties></Item>')
+            x = x[:sib.start()] + new + x[sib.start():]
+        else:
+            assert k == 1, f"{n}: {k} copies"
     for n in MESHES:
         src = open(os.path.join(MESH_DIR, n + ".luau"), encoding="utf-8").read()
         x, k = item_re(n).subn(lambda m: m.group(1) + encode(src) + m.group(3), x)
@@ -66,7 +78,7 @@ def pack():
         for f in sorted(os.listdir(os.path.join(STUDIO, "Audio"))):
             z.write(os.path.join(STUDIO, "Audio", f), "Audio/" + f)
         z.write(os.path.join(STUDIO, "README.txt"), "README.txt")
-    print("packed", len(EDITED), "scripts,", len(MESHES), "meshes ->", os.path.relpath(out, ROOT), f"{os.path.getsize(out) / 1e6:.1f} MB")
+    print("packed", len(EDITED) + len(NEW), "scripts,", len(MESHES), "meshes ->", os.path.relpath(out, ROOT), f"{os.path.getsize(out) / 1e6:.1f} MB")
 
 
 if __name__ == "__main__":

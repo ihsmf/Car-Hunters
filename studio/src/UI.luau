@@ -936,10 +936,16 @@ renderers.Settings = function()
 		end
 	end
  if state and state.ownerEligible then
+  local function cameraMode() -- owner camera: free flight, orbit, cinematic shots, film filters (Shift+C)
+   for _,q in panels do q.holder.Visible=false end
+   if _G.ToggleCameraMode then _G.ToggleCameraMode() end
+  end
   if state.god then
-   button({Size=UDim2.fromOffset(435,60),Position=UDim2.fromOffset(0,382),Parent=p.content},U.Cues,"Cue: "..C.Cues[state.d.cue][1].."  ›",23,function() call("GodGear","cue") end)
-   button({Size=UDim2.fromOffset(435,60),Position=UDim2.fromOffset(460,382),Parent=p.content},ORANGE,"Dumbbell "..state.d.dumbLevel.."  ›",23,function() call("GodGear","bell") end)
+   button({Size=UDim2.fromOffset(290,60),Position=UDim2.fromOffset(0,382),Parent=p.content},U.Cues,"Cue: "..C.Cues[state.d.cue][1].."  ›",23,function() call("GodGear","cue") end)
+   button({Size=UDim2.fromOffset(290,60),Position=UDim2.fromOffset(305,382),Parent=p.content},ORANGE,"Dumbbell "..state.d.dumbLevel.."  ›",23,function() call("GodGear","bell") end)
+   button({Size=UDim2.fromOffset(290,60),Position=UDim2.fromOffset(610,382),Parent=p.content},PURPLE,"Camera mode",23,cameraMode)
   else
+   button({Size=UDim2.fromOffset(435,60),Position=UDim2.fromOffset(0,382),Parent=p.content},PURPLE,"Camera mode",23,cameraMode)
    button({Size=UDim2.fromOffset(435,65),Position=UDim2.fromOffset(0,452),Parent=p.content},state.ownerBoost and GREEN or U.Cues,state.ownerBoost and "Owner boost  ·  ON" or "Owner boost  ·  OFF",27,function() call("OwnerBoost",not state.ownerBoost) end)
   end
   button({Size=UDim2.fromOffset(435,65),Position=UDim2.fromOffset(460,452),Parent=p.content},state.god and GREEN or ORANGE,state.god and "God Mode  ·  ON" or "God Mode  ·  OFF",30,function() call("GodMode",not state.god) end)
@@ -1159,6 +1165,7 @@ Fx.OnClientEvent:Connect(function(kind, a, b, c)
         trainingBar.Visible=a.training==true
         if a.training then panels.Gym.holder.Visible=false end
 		_G.MySlot, _G.MyCue = a.slot, a.d.cue
+		_G.OwnerEligible = a.ownerEligible == true -- unlocks the owner camera mode (CameraDirector)
 		targetCash = a.d.cash
 		if firstState then
 			firstState = false
