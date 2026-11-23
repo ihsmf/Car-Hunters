@@ -893,6 +893,154 @@ def finale_city():
                     sphere(1.1, (x, 7.6, z), M["Lamp"], 6, 4)
 
 
+# ---------- Long-table hall: wall + ceiling segments (80 studs, one per table) and a themed prop kit ----------
+def hall_wall():
+    """Left-hand wall segment at the origin, inner face towards +X: pilasters framing the table's painted
+    backdrop (which sits at x = 1.5, y 0..24), brass picture rail, upper panels with frames, cornice, sconces."""
+    M = {k: mat(k, v, 0.8 if k == "Brass" else 0, 0.45) for k, v in dict(Wall=(122, 52, 60), WallDark=(78, 30, 38), Trim=(236, 224, 200),
+                                                                        Brass=(226, 178, 84), Frame=(96, 62, 34), Panel=(48, 92, 70), Glow=(255, 222, 150)).items()}
+    box((1.2, 12, 80), (-0.6, 30, 0), M["Wall"], 0)  # upper wall band above the backdrop
+    box((0.35, 0.5, 80), (0.15, 24.3, 0), M["Brass"], 0.08)  # picture rail
+    box((1.6, 1.1, 80.2), (0.2, 35.5, 0), M["Trim"], 0.2)  # cornice
+    box((1.0, 0.5, 80.2), (0.4, 34.7, 0), M["Trim"], 0.1)
+    for z in (-26.7, 0, 26.7):  # framed upper panels
+        box((0.3, 7.6, 20), (0.05, 29.8, z), M["Frame"], 0.12)
+        box((0.32, 6.4, 18.6), (0.1, 29.8, z), M["Panel"], 0.05)
+        box((0.36, 0.25, 12), (0.2, 31.6, z), M["Brass"], 0.04)
+    for z in (-40, 40):  # pilasters at the table joints (shared by neighbours)
+        box((2.4, 36, 2.8), (0.6, 18, z), M["WallDark"], 0.15)
+        box((2.8, 1.2, 3.4), (0.7, 0.6, z), M["Trim"], 0.15)
+        box((2.9, 1.0, 3.5), (0.8, 33.6, z), M["Trim"], 0.15)
+        for y in range(4, 32, 4):
+            box((2.5, 0.25, 2.9), (0.65, y, z), M["Frame"], 0.04)
+        box((0.6, 1.4, 0.8), (2.0, 18, z), M["Brass"], 0.1)  # sconce
+        cyl(1.1, 1.2, (2.6, 19.3, z), M["Glow"], d2=0.7, verts=10)
+
+
+def hall_ceiling():
+    """Ceiling over one table (x -35..35, at y 36): coffers between beams, a long central beam and three green
+    billiard lamps hanging over the felt (shade bottom at y 17)."""
+    M = {k: mat(k, v, 0.8 if k == "Brass" else 0, 0.45) for k, v in dict(Ceiling=(232, 220, 196), Beam=(92, 56, 32), Coffer=(198, 176, 140),
+                                                                        Brass=(226, 178, 84), Shade=(28, 110, 64), Glow=(255, 236, 180)).items()}
+    box((70, 1, 80), (0, 36.5, 0), M["Ceiling"], 0)
+    for x in (-23.3, 0, 23.3):
+        for z in (-26.7, 0, 26.7):
+            box((20, 0.3, 24), (x, 35.9, z), M["Coffer"], 0.1)
+    for x in (-11.7, 11.7, -35, 35):
+        box((1.6, 1.4, 80), (x, 35.3, 0), M["Beam"], 0.15)
+    for z in (-40, -13.3, 13.3, 40):
+        box((70, 1.4, 1.6), (0, 35.3, z), M["Beam"], 0.15)
+    for z in (-26.7, 0, 26.7):  # billiard lamps
+        cyl(0.2, 15.5, (0, 27.6, z), M["Brass"], verts=6, bevel=0)
+        cyl(1.8, 0.5, (0, 35.2, z), M["Brass"], verts=12)
+        cyl(3.6, 2.4, (0, 18.2, z), M["Shade"], d2=1.2, verts=16)  # green conical shade
+        torus(3.6, 0.18, (0, 17.0, z), M["Brass"])
+        sphere(1.3, (0, 17.4, z), M["Glow"], 10, 6)
+
+
+def deco_props():
+    """Each prop is its own model; returned as (name, builder) pairs. Sizes fit a rail (about 2 studs wide)."""
+    def P(name, rgb, metal=0, rough=0.45):
+        return mat(name, rgb, metal, rough)
+    def lantern():
+        M = dict(Main=P("Main", (200, 40, 40)), Accent=P("Accent", (230, 180, 80), 0.8), Glow=P("Glow", (255, 220, 140)))
+        cyl(0.3, 0.6, (0, 0.3, 0), M["Accent"], verts=8); sphere(1.6, (0, 1.4, 0), M["Main"], 12, 8, (1, 1.2, 1))
+        cyl(0.5, 0.3, (0, 2.45, 0), M["Accent"], verts=8); sphere(0.8, (0, 1.4, 0), M["Glow"], 8, 6)
+    def crystal():
+        M = dict(Main=P("Main", (130, 210, 255), 0, 0.1), Accent=P("Accent", (220, 245, 255), 0, 0.1), Glow=P("Glow", (90, 160, 255)))
+        cyl(1.8, 0.4, (0, 0.2, 0), M["Glow"], verts=6)
+        for a, h, s in ((0, 3.4, 0.9), (2.1, 2.4, 0.6), (4.2, 2.0, 0.55)):
+            o = cyl(s, h, (math.cos(a) * 0.4, h / 2 + 0.3, math.sin(a) * 0.4), M["Main" if a == 0 else "Accent"], d2=0.05, verts=6, bevel=0)
+            o.rotation_euler = (math.radians(10) * math.cos(a), math.radians(10) * math.sin(a), 0)
+    def gift():
+        M = dict(Main=P("Main", (220, 40, 60)), Accent=P("Accent", (255, 215, 90), 0.6), Glow=P("Glow", (255, 255, 255)))
+        box((1.6, 1.4, 1.6), (0, 0.7, 0), M["Main"], 0.08); box((1.7, 1.5, 0.3), (0, 0.72, 0), M["Accent"], 0.02)
+        box((0.3, 1.5, 1.7), (0, 0.72, 0), M["Accent"], 0.02)
+        for sx in (-1, 1): torus(0.6, 0.16, (sx * 0.3, 1.6, 0), M["Accent"], "X")
+    def xmas_tree():
+        M = dict(Main=P("Main", (30, 120, 60)), Accent=P("Accent", (110, 70, 40)), Glow=P("Glow", (255, 220, 80)))
+        cyl(0.5, 0.8, (0, 0.4, 0), M["Accent"], verts=8)
+        for k in range(3): cyl(3.0 - k * 0.8, 1.9, (0, 1.6 + k * 1.3, 0), M["Main"], d2=0.3, verts=10)
+        cyl(0.7, 0.5, (0, 5.0, 0), M["Glow"], d2=0.05, verts=5); sphere(0.5, (0, 5.0, 0), M["Glow"], 8, 4)
+        for k, (x, y, z) in enumerate(((0.9, 1.4, 0.6), (-0.8, 2.1, 0.5), (0.5, 2.8, -0.7), (-0.4, 3.4, -0.4), (0.7, 2.0, -0.6), (-0.9, 1.2, -0.3))):
+            sphere(0.3, (x, y, z), mat(f"Bauble{k}", [(230, 40, 50), (255, 210, 60), (60, 120, 230)][k % 3], 0.6, 0.2), 8, 6)
+    def snowman():
+        M = dict(Main=P("Main", (248, 250, 255)), Accent=P("Accent", (230, 60, 40)), Glow=P("Glow", (30, 30, 36)))
+        sphere(1.8, (0, 0.85, 0), M["Main"], 12, 8); sphere(1.3, (0, 2.2, 0), M["Main"], 12, 8); sphere(0.95, (0, 3.25, 0), M["Main"], 10, 6)
+        cyl(0.18, 0.6, (0, 3.25, -0.6), M["Accent"], "Z", d2=0.02, verts=6); torus(1.1, 0.2, (0, 2.75, 0), M["Accent"])
+        cyl(1.0, 0.1, (0, 3.68, 0), M["Glow"], verts=12); cyl(0.65, 0.7, (0, 4.0, 0), M["Glow"], verts=12)
+    def candy_cane():
+        M = dict(Main=P("Main", (250, 250, 250)), Accent=P("Accent", (220, 30, 50)), Glow=P("Glow", (255, 255, 255)))
+        for k in range(8): cyl(0.4, 0.38, (0, 0.19 + k * 0.38, 0), M["Main" if k % 2 else "Accent"], verts=8, bevel=0)
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.5, minor_radius=0.2, major_segments=12, minor_segments=6, location=rb(0.5, 3.1, 0), rotation=(math.pi / 2, 0, 0))
+        finish(bpy.context.object, M["Accent"])
+    def mushroom():
+        M = dict(Main=P("Main", (230, 50, 60)), Accent=P("Accent", (250, 240, 220)), Glow=P("Glow", (255, 255, 255)))
+        cyl(0.7, 1.4, (0, 0.7, 0), M["Accent"], d2=0.55, verts=10); sphere(2.2, (0, 1.6, 0), M["Main"], 12, 6, (1, 0.6, 1))
+        for a in range(5): sphere(0.35, (math.cos(a * 1.3) * 0.7, 2.15, math.sin(a * 1.3) * 0.7), M["Glow"], 6, 4, (1, 0.4, 1))
+    def cactus():
+        M = dict(Main=P("Main", (70, 160, 80)), Accent=P("Accent", (200, 120, 70)), Glow=P("Glow", (255, 120, 170)))
+        cyl(1.4, 0.7, (0, 0.35, 0), M["Accent"], d2=1.1, verts=10); cyl(0.8, 2.8, (0, 2.0, 0), M["Main"], verts=10)
+        sphere(0.8, (0, 3.4, 0), M["Main"], 10, 6)
+        for sx in (-1, 1):
+            cyl(0.45, 1.0, (sx * 0.55, 1.9, 0), M["Main"], "X", verts=8); cyl(0.45, 1.0, (sx * 0.95, 2.4, 0), M["Main"], verts=8)
+        sphere(0.4, (0, 3.85, 0), M["Glow"], 8, 4)
+    def shell():
+        M = dict(Main=P("Main", (255, 190, 170)), Accent=P("Accent", (255, 240, 225)), Glow=P("Glow", (255, 255, 255)))
+        for k in range(7):
+            o = cyl(0.35, 2.0, (0, 0.9, 0), M["Main" if k % 2 else "Accent"], d2=0.05, verts=6, bevel=0)
+            o.rotation_euler = (0, math.radians(-60 + k * 20), math.radians(60))
+        sphere(0.6, (0, 0.3, 0), M["Accent"], 8, 6)
+    def gear():
+        M = dict(Main=P("Main", (190, 130, 60), 0.8), Accent=P("Accent", (110, 110, 120), 0.8), Glow=P("Glow", (255, 200, 90)))
+        box((1.6, 0.4, 1.0), (0, 0.2, 0), M["Accent"], 0.05); cyl(2.2, 0.4, (0, 1.6, 0), M["Main"], "Z", verts=16)
+        for k in range(10): box((0.4, 0.5, 0.4), (math.cos(k * 0.628) * 1.2, 1.6 + math.sin(k * 0.628) * 1.2, 0), M["Main"], 0.03)
+        cyl(0.6, 0.6, (0, 1.6, 0), M["Glow"], "Z", verts=10)
+    def planet():
+        M = dict(Main=P("Main", (240, 170, 90)), Accent=P("Accent", (250, 230, 200)), Glow=P("Glow", (150, 200, 255)))
+        cyl(0.2, 1.0, (0, 0.5, 0), M["Accent"], verts=6); sphere(1.8, (0, 1.9, 0), M["Main"], 14, 10)
+        o = torus(2.8, 0.14, (0, 1.9, 0), M["Accent"]); o.rotation_euler = (0.4, 0, 0.2)
+        sphere(0.4, (1.4, 2.8, 0), M["Glow"], 8, 6)
+    def palm():
+        M = dict(Main=P("Main", (60, 170, 80)), Accent=P("Accent", (150, 100, 60)), Glow=P("Glow", (120, 80, 40)))
+        for k in range(5): cyl(0.5 - k * 0.04, 0.85, (k * 0.08, 0.42 + k * 0.8, 0), M["Accent"], verts=7)
+        for a in range(6):
+            o = box((2.6, 0.12, 0.7), (math.cos(a * 1.05) * 1.1, 4.0, math.sin(a * 1.05) * 1.1), M["Main"], 0.05)
+            o.rotation_euler = (0, -a * 1.05, math.radians(-25))
+        for k in range(3): sphere(0.4, (math.cos(k * 2) * 0.35, 3.75, math.sin(k * 2) * 0.35), M["Glow"], 6, 4)
+    def torch():
+        M = dict(Main=P("Main", (90, 60, 40)), Accent=P("Accent", (230, 180, 80), 0.8), Glow=P("Glow", (255, 150, 40)))
+        cyl(0.4, 2.4, (0, 1.2, 0), M["Main"], d2=0.3, verts=8); cyl(0.8, 0.5, (0, 2.6, 0), M["Accent"], d2=0.6, verts=10)
+        cyl(0.9, 1.4, (0, 3.4, 0), M["Glow"], d2=0.05, verts=8)
+    def trophy():
+        M = dict(Main=P("Main", (240, 190, 70), 0.9, 0.25), Accent=P("Accent", (70, 40, 30)), Glow=P("Glow", (255, 240, 200)))
+        box((1.4, 0.5, 1.4), (0, 0.25, 0), M["Accent"], 0.05); cyl(0.3, 0.8, (0, 0.9, 0), M["Main"], verts=8)
+        cyl(1.5, 1.4, (0, 2.0, 0), M["Main"], d2=0.6 / 1.5 * 1.5, verts=14)
+        for sx in (-1, 1): torus(0.6, 0.12, (sx * 0.85, 2.1, 0), M["Main"], "X")
+        sphere(0.35, (0, 2.85, 0), M["Glow"], 6, 4)
+    def lotus():
+        M = dict(Main=P("Main", (255, 150, 190)), Accent=P("Accent", (70, 160, 90)), Glow=P("Glow", (255, 230, 120)))
+        cyl(2.2, 0.15, (0, 0.08, 0), M["Accent"], verts=14)
+        for k in range(8):
+            o = sphere(1.0, (math.cos(k * 0.785) * 0.55, 0.6, math.sin(k * 0.785) * 0.55), M["Main"], 8, 5, (0.45, 1, 0.25))
+            o.rotation_euler = (0, 0, k * 0.785)
+        sphere(0.45, (0, 0.6, 0), M["Glow"], 8, 5)
+    def garland():
+        """12-stud string of lights sagging between two hooks (hangs on the New Year table rails)."""
+        M = dict(Main=P("Main", (30, 110, 60)), Accent=P("Accent", (255, 80, 80)), Glow=P("Glow", (255, 220, 90)))
+        pts = [(x, 1.2 - 0.6 * (1 - (x / 6) ** 2), 0) for x in [-6 + k * 0.5 for k in range(25)]]
+        for (xa, ya, _), (xb, yb, _) in zip(pts, pts[1:]):
+            o = cyl(0.28, math.hypot(xb - xa, yb - ya) + 0.05, ((xa + xb) / 2, (ya + yb) / 2, 0), M["Main"], "X", verts=6, bevel=0)
+            o.rotation_euler = (0, math.pi / 2 - math.atan2(yb - ya, xb - xa), 0)
+        for k, (x, y, z) in enumerate(pts[1::2]): sphere(0.32, (x, y - 0.25, z), M["Accent" if k % 2 else "Glow"], 6, 4)
+    return [("DecoLantern", lantern), ("DecoCrystal", crystal), ("DecoGift", gift), ("DecoTree", xmas_tree), ("DecoSnowman", snowman),
+            ("DecoCandyCane", candy_cane), ("DecoMushroom", mushroom), ("DecoCactus", cactus), ("DecoShell", shell), ("DecoGear", gear),
+            ("DecoPlanet", planet), ("DecoPalm", palm), ("DecoTorch", torch), ("DecoTrophy", trophy), ("DecoLotus", lotus), ("DecoGarland", garland)]
+
+
+HALL = [("HallWall", hall_wall), ("HallCeiling", hall_ceiling)] + deco_props()
+
+
 FINALE = [("FinaleComputer", finale_computer), ("FinaleNature", finale_nature), ("FinaleCity", finale_city)]
 
 
@@ -989,8 +1137,8 @@ def render_group(names, filename, cols, cell=12, dummy=False):
 
 def main():
     import sys
-    if "finale" in sys.argv:  # only the finale scenery, added next to the existing meshes
-        for name, fn in FINALE:
+    if "finale" in sys.argv or "hall" in sys.argv:  # only these sets, added next to the existing meshes
+        for name, fn in (FINALE if "finale" in sys.argv else HALL):
             reset()
             fn()
             o = join_triangulate(name)

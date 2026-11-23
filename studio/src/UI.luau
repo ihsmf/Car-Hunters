@@ -164,7 +164,7 @@ local function button(props, colors, label, size, onClick)
 	local shine = new("Frame", { Name = "CandyGloss", Size = UDim2.new(1,-20,.38,0),
 		Position = UDim2.fromOffset(10,5), BackgroundColor3 = WHITE, BackgroundTransparency = .62,
 		BorderSizePixel = 0, Parent = body }, { corner(math.max(6,(props.Radius or 18)-6)) })
-	shine.Visible = not props.Hud
+	shine.Visible = true -- candy gloss on every button (Figma v4)
  local hit = new("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "",
 		Name = label ~= "" and (label or "Action") or "MenuAction", ZIndex = 5, AutoButtonColor = false, Parent = holder })
 	local scale = new("UIScale", { Parent = holder })
@@ -217,7 +217,7 @@ local function button(props, colors, label, size, onClick)
 		if enabled == on and colorKey == c then return end
 		enabled, colorKey, hit.Selectable = on, c, on
 		body.UIGradient.Color = ColorSequence.new(c[1],c[2])
-		shine.Visible = on and not props.Hud
+		shine.Visible = on
 		lbl.TextTransparency = on and 0 or .24
 		if not on then focus.Transparency = 1 end
 	end
@@ -374,16 +374,17 @@ button({Size=UDim2.fromOffset(350,82),Parent=trainingBar,Icon="Train",Radius=30}
 end)
 -- ===== HUD =====
 local function pill(name,x,w,colors)
- local holder,body=box({Name=name,Size=UDim2.fromOffset(w,82),Position=UDim2.fromOffset(x,5),Parent=topBar},colors[1],colors[2],42,4)
+ local holder,body=box({Name=name,Size=UDim2.fromOffset(w,96),Position=UDim2.fromOffset(x,0),Parent=topBar},colors[1],colors[2],48,5)
+ text(string.upper(name),17,WHITE,{Size=UDim2.fromOffset(w-96,20),Position=UDim2.fromOffset(84,8),Parent=body,TextXAlignment=Enum.TextXAlignment.Left,NoStroke=true,TextTransparency=.08})
  new("Frame",{Name="Gloss",Size=UDim2.new(1,-30,0,24),Position=UDim2.fromOffset(15,5),BackgroundColor3=WHITE,BackgroundTransparency=.68,BorderSizePixel=0,Parent=body},{corner(12)})
- new("Frame",{Name="IconChip",Size=UDim2.fromOffset(58,58),Position=UDim2.fromOffset(15,12),BackgroundColor3=WHITE,BackgroundTransparency=.1,Parent=body},{corner(29),stroke(3)})
- hudIcon(body,name,42,UDim2.fromOffset(23,20)).ZIndex=3
+ new("Frame",{Name="IconChip",Size=UDim2.fromOffset(70,70),Position=UDim2.fromOffset(11,13),BackgroundColor3=WHITE,BackgroundTransparency=.05,Parent=body},{corner(35),stroke(4)})
+ hudIcon(body,name,46,UDim2.fromOffset(23,25)).ZIndex=3
  return holder,body
 end
 local _,cashBody=pill("Cash",26,378,GREEN)
 local strHolder,strBody=pill("Strength",426,188,ORANGE)
 local function statLabel(parent,x,width,size)
- return text("",size,WHITE,{Size=UDim2.fromOffset(width,66),Position=UDim2.fromOffset(x,8),TextScaled=true,Parent=parent})
+ return text("",size,WHITE,{Size=UDim2.fromOffset(width,56),Position=UDim2.fromOffset(x+12,30),TextScaled=true,Parent=parent})
 end
 local cashLabel=statLabel(cashBody,72,145,38)
 local incomeLabel=statLabel(cashBody,229,133,23)
@@ -391,25 +392,25 @@ local strLabel=statLabel(strBody,73,100,38)
 for _,pair in {{cashLabel,38},{incomeLabel,23},{strLabel,38}} do
  new("UITextSizeConstraint",{MaxTextSize=pair[2],Parent=pair[1]})
 end
-local _,cueBody=box({Size=UDim2.fromOffset(496,50),Position=UDim2.fromOffset(72,108),Parent=topBar},CREAM[1],CREAM[2],25,3)
+local _,cueBody=box({Size=UDim2.fromOffset(496,50),Position=UDim2.fromOffset(72,112),Parent=topBar},CREAM[1],CREAM[2],25,4)
 local cueLabel=text("",25,rgb(255,189,54),{Size=UDim2.fromScale(1,1),Parent=cueBody})
 local strScale = new("UIScale", { Parent = strHolder })
 
 -- left menu with badges
 local menu = new("Frame", { Size = UDim2.fromOffset(150, 532), BackgroundTransparency = 1, Parent = leftBar }, {
-	new("UIListLayout", { Padding = UDim.new(0, 24), SortOrder = Enum.SortOrder.LayoutOrder }),
+	new("UIListLayout", { Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder }),
 })
 local badges = {}
 local open -- forward
 
 -- shot area: live preview, power bar, SHOOT
-local previewHolder, previewBody = box({ Size = UDim2.fromOffset(396, 50), Position = UDim2.fromOffset(320, 0), AnchorPoint = Vector2.new(0.5, 0), Parent = shotBar }, rgb(255, 227, 138), rgb(255, 184, 48), 28, 3)
+local previewHolder, previewBody = box({ Size = UDim2.fromOffset(460, 56), Position = UDim2.fromOffset(320, 0), AnchorPoint = Vector2.new(0.5, 0), Parent = shotBar }, rgb(255, 227, 138), rgb(255, 184, 48), 28, 4)
 local previewLabel = text("TABLE 1", 32, nil, { Size = UDim2.fromScale(1, 1), Parent = previewBody })
 local powerFrame = new("Frame", { Size = UDim2.fromOffset(640, 44), Position = UDim2.fromOffset(0, 66), BackgroundColor3 = INK, Parent = shotBar }, { corner(22), stroke(4) })
 local powerFill = new("Frame", { Size = UDim2.new(0, 0, 1, -12), Position = UDim2.fromOffset(6, 6), BackgroundColor3 = WHITE, Parent = powerFrame }, {
 	corner(16), new("UIGradient", { Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, rgb(90, 220, 90)), ColorSequenceKeypoint.new(0.6, rgb(255, 220, 40)), ColorSequenceKeypoint.new(1, rgb(255, 60, 60)) }) }),
 })
-local _, _, shootLabel, setShootEnabled, shootHit = button({ Size = UDim2.fromOffset(356, 99), Position = UDim2.fromOffset(142, 130), Parent = shotBar, Radius = 36, Hud = true, Icon = "Shot" }, U.Red, "SHOOT!", 46)
+local _, _, shootLabel, setShootEnabled, shootHit = button({ Size = UDim2.fromOffset(400, 118), Position = UDim2.fromOffset(120, 122), Parent = shotBar, Radius = 44, Hud = true, Icon = "Shot" }, U.Red, "SHOOT!", 52)
 shotBar.Visible = false
 local hint = text("Tap at the right moment", 21, WHITE, { Size = UDim2.fromOffset(640, 26), Position = UDim2.fromOffset(0, 244), Parent = shotBar })
 
@@ -423,7 +424,7 @@ tipHolder.Visible = false
 -- ===== Panels =====
 local panels, renderers = {}, {}
 local function panel(key, title, colors)
-	local holder, body = box({ Size = UDim2.fromOffset(980, 680), Position = UDim2.fromOffset(490, 345), AnchorPoint = Vector2.new(0.5, 0.5), Parent = center, Name = key, ZIndex = 10 }, CREAM[1], CREAM[2], 40, 6)
+	local holder, body = box({ Size = UDim2.fromOffset(980, 680), Position = UDim2.fromOffset(490, 345), AnchorPoint = Vector2.new(0.5, 0.5), Parent = center, Name = key, ZIndex = 10 }, CREAM[1], CREAM[2], 44, 6)
 	holder.Visible = false
 	-- title ribbon in the colour of the menu button, a light stripe of polka dots for a playful touch
 	for i = 0, 13 do -- soft polka dots on the cream body (Figma v4 panel)
@@ -433,11 +434,11 @@ local function panel(key, title, colors)
 			end
 		end
 	end
-	local _, ribbon = box({ Size = UDim2.new(1, 24, 0, 92), Position = UDim2.fromOffset(-12, -28), Parent = body }, colors[1], colors[2], 30, 5)
+	local _, ribbon = box({ Size = UDim2.new(1, 24, 0, 104), Position = UDim2.fromOffset(-12, -32), Parent = body }, colors[1], colors[2], 34, 6)
 	new("Frame", { Name = "Gloss", Size = UDim2.new(1, -28, 0, 30), Position = UDim2.fromOffset(14, 7), BackgroundColor3 = WHITE, BackgroundTransparency = .7, BorderSizePixel = 0, Parent = ribbon }, { corner(15) })
 	local artKey=({Cues="Shop",Gym="Strength"})[key] or key
  hudIcon(ribbon,artKey,60,UDim2.fromOffset(28,16))
- text(title,54,WHITE,{Size=UDim2.new(1,-220,1,0),Position=UDim2.fromOffset(104,0),Parent=ribbon,TextXAlignment=Enum.TextXAlignment.Left})
+ text(title,58,WHITE,{Size=UDim2.new(1,-220,1,0),Position=UDim2.fromOffset(104,0),Parent=ribbon,TextXAlignment=Enum.TextXAlignment.Left})
  local sub = text("", 26, MUTED, { Size = UDim2.new(1, -80, 0, 30), Position = UDim2.fromOffset(40, 80), Parent = body, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
 	button({ Size = UDim2.fromOffset(74, 68), Position = UDim2.fromOffset(900, -16), Parent = body, Radius = 24, Icon = "Close" }, U.Red, "X", 34, function() holder.Visible = false end)
 	local content = new("Frame", { Size = UDim2.fromOffset(900, 530), Position = UDim2.fromOffset(40, 130), BackgroundTransparency = 1, Parent = body })
@@ -977,7 +978,7 @@ end
 
 -- menu buttons (Figma component "MenuButton": icon + label) with badges
 for i, m in U.Menu do
-	local holder, body = button({ Hud = true, Size = UDim2.fromOffset(134, 115), LayoutOrder = i, Parent = menu, Radius = 30 }, { m[4], m[5] }, "", 1, function() open(m[1]) end)
+	local holder, body = button({ Hud = true, Size = UDim2.fromOffset(132, 124), LayoutOrder = i, Parent = menu, Radius = 38 }, { m[4], m[5] }, "", 1, function() open(m[1]) end)
 	local glyph = hudIcon(body,m[1],61,UDim2.new(.5,0,0,12))
 	glyph.AnchorPoint = Vector2.new(.5,0)
 	local caption=text(m[3],25,WHITE,{Size=UDim2.new(1,-14,0,35),Position=UDim2.fromOffset(7,74),TextScaled=true,Parent=body})

@@ -279,7 +279,7 @@ C.Tables = {
 { "Waffle Market", Color3.fromHex("edff73") },
 { "Pearl Lagoon", Color3.fromHex("ff9862") },
 { "Joshua Dunes", Color3.fromHex("fff659") },
-{ "Icebound Harbour", Color3.fromHex("c1f3ff") },
+{ "New Year Square", Color3.fromHex("ff4f6a") },
 { "Obsidian Foundry", Color3.fromHex("ffec2f") },
 { "Koi Pavilion", Color3.fromHex("ffff55") },
 { "Meteor Camp", Color3.fromHex("a5f3ff") },

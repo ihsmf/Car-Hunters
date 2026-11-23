@@ -12,7 +12,9 @@ PLACE = os.path.join(STUDIO, "BilliardHunters.rbxlx")
 SRC = os.path.join(STUDIO, "src")
 MESH_DIR = os.path.join(ROOT, "src", "shared", "Meshes")
 EDITED = ["Config", "UI", "Throw", "HeavenlyBreak"]
-MESHES = ["FinaleComputer", "FinaleCity", "FinaleNature"]
+MESHES = ["FinaleComputer", "FinaleCity", "FinaleNature", "HallWall", "HallCeiling", "DecoLantern", "DecoCrystal", "DecoGift",
+          "DecoTree", "DecoSnowman", "DecoCandyCane", "DecoMushroom", "DecoCactus", "DecoShell", "DecoGear", "DecoPlanet",
+          "DecoPalm", "DecoTorch", "DecoTrophy", "DecoLotus", "DecoGarland"]
 NEW = {"CameraDirector": ("LocalScript", "UI")}  # scripts we add: class, inserted next to this existing script
 
 
@@ -39,6 +41,30 @@ def extract():
         assert len(ms) == 1, f"{n}: {len(ms)} matches"
         open(os.path.join(SRC, n + ".luau"), "w", encoding="utf-8").write(decode(ms[0].group(2)))
         print("extracted", n)
+
+
+def item_end(x, start):  # index just after the </Item> that closes the <Item at `start`
+    depth, i = 0, start
+    while True:
+        a, b = x.find("<Item ", i), x.find("</Item>", i)
+        if a != -1 and a < b:
+            depth, i = depth + 1, a + 6
+        else:
+            depth, i = depth - 1, b + 7
+            if depth == 0:
+                return i
+
+
+def inject_hall(x):
+    """World.TableHall (tools/hall.py): replaced on every pack."""
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import hall
+    old = x.find('<Item class="Folder" referent="RBXHall0">')
+    if old != -1:
+        x = x[:old] + x[item_end(x, old):]
+    world = re.search(r'<Item class="Folder" referent="[^"]*"><Properties><string name="Name">World</string></Properties>', x)
+    assert world, "World folder not found"
+    return x[:world.end()] + hall.build_xml() + x[world.end():]
 
 
 def pack():
@@ -70,6 +96,7 @@ def pack():
             x = x[:folder.end()] + new + x[folder.end():]
         else:
             assert k == 1, f"{n}: {k} copies"
+    x = inject_hall(x)
     ET.fromstring(x)  # the place must still be valid XML
     open(PLACE, "w", encoding="utf-8").write(x)
     out = os.path.join(STUDIO, "BilliardHunters-Studio-Full.zip")

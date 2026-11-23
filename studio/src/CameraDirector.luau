@@ -171,30 +171,138 @@ end
 
 -- ===== cinematic shots (computed from the live map) =====
 local function boxOf(name)
-	local m = workspace:FindFirstChild("World") and workspace.World:FindFirstChild(name, true)
+	local world = workspace:FindFirstChild("World")
+	local m = world and world:FindFirstChild(name, true)
 	if not m then return nil end
-	local cf = m:IsA("Model") and m:GetBoundingBox() or m.CFrame
-	return cf.Position
+	if m:IsA("Model") then return m:GetBoundingBox() end
+	return m.CFrame, m.Size
 end
+
+-- Safe box: shots may only move inside the hall or under the long-table ceiling (never outside the place).
+local HALL = { x = C.Arena.HallHalfWidth - 9, z0 = C.Arena.HallBack + 6, z1 = C.Table.StartZ - 6, y1 = 30 }
+local LANE_END = C.Table.StartZ + C.Table.Length - 6
+local function safe(p)
+	if p.Z < HALL.z1 then
+		return V(math.clamp(p.X, -HALL.x, HALL.x), math.clamp(p.Y, 2, HALL.y1), math.clamp(p.Z, HALL.z0, HALL.z1))
+	end
+	return V(math.clamp(p.X, -28, 28), math.clamp(p.Y, 2, 32), math.clamp(p.Z, C.Table.StartZ - 6, LANE_END))
+end
+local function tableZ(k) return C.Table.StartZ + (k - 0.5) * C.Table.SegmentLength end
+
+-- local props of the current shot (cue, balls), destroyed when the shot ends
+local shotProps = Instance.new("Folder")
+shotProps.Name = "DirectorProps"
+local function localBall(color, size, at)
+	local b = Instance.new("Part")
+	b.Shape, b.Size, b.Color, b.Material = Enum.PartType.Ball, Vector3.one * size, color, Enum.Material.SmoothPlastic
+	b.Anchored, b.CanCollide, b.CanQuery, b.CanTouch, b.CFrame = true, false, false, false, CFrame.new(at)
+	b.Parent = shotProps
+	return b
+end
+local BALL_COLORS = { Color3.fromRGB(250, 200, 30), Color3.fromRGB(30, 80, 200), Color3.fromRGB(220, 40, 40), Color3.fromRGB(110, 40, 170),
+	Color3.fromRGB(255, 120, 20), Color3.fromRGB(20, 140, 70), Color3.fromRGB(130, 30, 30), Color3.fromRGB(20, 20, 22) }
+
+-- Each shot: seconds, FOV, optional setup(), and frame(u, dt) -> eye, look-at (u = 0..1 over the shot)
 local function buildShots()
 	local T = C.Table
-	local mine = boxOf("Base" .. (_G.MySlot or 1)) or V(0, 0, 0)
-	local hall = Vector3.zero
-	local n = 0
-	for i = 1, 4 do
-		local p = boxOf("Base" .. i)
-		if p then hall += p; n += 1 end
+	local rnd = Random.new()
+	local baseCf = boxOf("Base" .. (_G.MySlot or 1))
+	local mine = baseCf and baseCf.Position or V(0, 0, 0)
+	local tableCf, tableSize
+	local poolModel = workspace:FindFirstChild("World") and workspace.World:FindFirstChild("Base" .. (_G.MySlot or 1))
+	poolModel = poolModel and poolModel:FindFirstChild("PoolTable")
+	if poolModel then tableCf, tableSize = poolModel:GetBoundingBox() end
+	local shots = {}
+	local function add(sec, fovv, frame, setup) table.insert(shots, { sec = sec, fov = fovv, frame = frame, setup = setup }) end
+
+	-- 1 your base: slow orbit around the pool table
+	add(7, 42, function(u)
+		local a = 0.6 + u * 1.6
+		return mine + V(math.cos(a) * 15, 6.5, math.sin(a) * 15), mine + V(0, 2.5, 0)
+	end)
+	-- 2 balls rolling on your base table (local balls, bouncing on the felt)
+	if tableCf then
+		local top = tableCf.Position.Y + tableSize.Y / 2 - 0.4
+		local half = V(tableSize.X * 0.36, 0, tableSize.Z * 0.36)
+		local balls = {}
+		add(8, 38, function(u, dt)
+			for _, b in balls do
+				b.pos += b.vel * dt
+				if math.abs(b.pos.X - tableCf.Position.X) > half.X then b.vel = V(-b.vel.X, 0, b.vel.Z) end
+				if math.abs(b.pos.Z - tableCf.Position.Z) > half.Z then b.vel = V(b.vel.X, 0, -b.vel.Z) end
+				b.vel *= 1 - 0.12 * dt
+				b.rot = CFrame.fromAxisAngle(Vector3.yAxis:Cross(b.vel.Magnitude > 0 and b.vel.Unit or Vector3.xAxis), b.vel.Magnitude * dt / 0.5) * b.rot
+				b.part.CFrame = CFrame.new(b.pos) * b.rot
+			end
+			local a = u * 2.4
+			local c = tableCf.Position
+			return c + V(math.cos(a) * 11, 4.5, math.sin(a) * 11), c + V(0, 0.5, 0)
+		end, function()
+			table.clear(balls)
+			for k, col in BALL_COLORS do
+				local pos = tableCf.Position + V(rnd:NextNumber(-half.X, half.X), 0, rnd:NextNumber(-half.Z, half.Z))
+				pos = V(pos.X, top + 0.5, pos.Z)
+				local a = rnd:NextNumber(0, math.pi * 2)
+				balls[k] = { part = localBall(col, 1, pos), pos = pos, vel = V(math.cos(a), 0, math.sin(a)) * rnd:NextNumber(6, 12), rot = CFrame.new() }
+			end
+		end)
 	end
-	hall = n > 0 and hall / n or mine
-	local deck = V(0, C.ShotZone.LowY + 4, C.ShotZone.EndZ - 4)
-	return { -- eye from, look-at from, eye to, look-at to, seconds, FOV
-		{ mine + V(16, 7, 16), mine, mine + V(10, 4, -14), mine + V(0, 2, 0), 7, 40 },
-		{ hall + V(0, 8, 70), hall, hall + V(0, 75, 45), hall + V(0, 0, -10), 8, 55 },
-		{ V(0, 10, T.StartZ - 12), V(0, 6, T.StartZ + 60), V(0, 10, T.StartZ + 520), V(0, 6, T.StartZ + 600), 9, 55 },
-		{ V(C.LaneX(2), T.FeltY + 1.3, T.StartZ + 25), V(C.LaneX(2), T.FeltY + 1, T.StartZ + 60), V(C.LaneX(3), T.FeltY + 1.3, T.StartZ + 320), V(C.LaneX(3), T.FeltY + 1, T.StartZ + 360), 7, 35 },
-		{ V(-70, 150, T.StartZ + 180), V(0, 0, T.StartZ + 900), V(70, 175, T.StartZ + 520), V(0, 0, T.StartZ + 1300), 8, 50 },
-		{ deck + V(0, 6, -34), deck, deck + V(0, 3, -10), deck + V(0, 1, 6), 6, 45 },
-	}
+	-- 3 the strike: a cue hits the cue ball, the camera chases it down the lane
+	local lane = C.LaneX(2)
+	local ballY = T.FeltY + 1.1
+	local start = V(lane, ballY, T.StartZ + 12)
+	local cueBall, cue
+	add(7, 50, function(u)
+		local t = u * 7
+		local pull = 1.6 * smooth(t / 1.1) * (1 - smooth((t - 1.2) / 0.12))
+		local hit = t >= 1.3
+		local roll = hit and (1 - (1 - math.clamp((t - 1.3) / 5.4, 0, 1)) ^ 2) * 150 or 0
+		local bpos = start + V(0, 0, roll)
+		cueBall.CFrame = CFrame.new(bpos) * CFrame.Angles(roll / 1.1, 0, 0)
+		local centre = start + V(0, 0.3, -(6.1 + pull)) -- 10-stud cue: its tip touches the ball when pull = 0
+		cue.CFrame = CFrame.lookAt(centre, centre + V(0, -0.03, 1))
+		if t < 1.3 then
+			return start + V(4, 3, -9), start + V(0, 0.5, 2)
+		end
+		return bpos + V(2.5, 5, -12), bpos + V(0, 0.5, 6)
+	end, function()
+		cueBall = localBall(Color3.fromRGB(250, 248, 240), 2.2, start)
+		cue = Instance.new("Part")
+		cue.Size, cue.Color, cue.Material = V(0.35, 0.35, 10), Color3.fromRGB(222, 184, 128), Enum.Material.Wood
+		cue.Anchored, cue.CanCollide, cue.CanQuery, cue.CanTouch = true, false, false, false
+		cue.Parent = shotProps
+	end)
+	-- 4 dolly over the long table under the lamps
+	add(9, 55, function(u)
+		local z = T.StartZ - 4 + u * 520
+		return V(7, 21, z), V(0, 6, z + 60) -- beside the lamp rods, never through them
+	end)
+	-- 5 low glide along the felt
+	add(7, 36, function(u)
+		local z = T.StartZ + 20 + u * 300
+		return V(C.LaneX(3), T.FeltY + 1.4, z), V(C.LaneX(3), T.FeltY + 1, z + 40)
+	end)
+	-- 6 the New Year table, then two random themed tables: slow pans past the rails and the scenery
+	local picks = { 21, rnd:NextInteger(2, 20), rnd:NextInteger(22, #C.Tables) }
+	for n, k in picks do
+		local zc = tableZ(k)
+		local sideX = n % 2 == 0 and 1 or -1
+		add(7, 45, function(u)
+			return V(sideX * 7, 9 - 2 * u, zc - 34 + 56 * u), V(sideX * 22, 5, zc - 10 + 40 * u)
+		end)
+	end
+	-- 7 crane in the hall towards the long table
+	add(8, 55, function(u)
+		return V(0, 6 + 20 * smooth(u), HALL.z0 + 10 + 30 * u), V(0, 4, T.StartZ + 40)
+	end)
+	return shots
+end
+
+local function startShot(k)
+	shotProps:ClearAllChildren()
+	shot.idx, shot.t0 = k, os.clock()
+	local s = shot.list[k]
+	if s.setup then s.setup() end
 end
 
 -- ===== enter / leave =====
@@ -227,7 +335,9 @@ local function setMode(m)
 		local root = hrp()
 		orbit.center = root and root.Position or cam.CFrame.Position + cam.CFrame.LookVector * 20
 	else
-		shot.list, shot.idx, shot.t0 = buildShots(), 1, os.clock()
+		shotProps.Parent = workspace
+		shot.list = buildShots()
+		startShot(1)
 	end
 	refreshStatus()
 end
@@ -235,6 +345,8 @@ end
 local function leave()
 	if not active then return end
 	active = false
+	shotProps:ClearAllChildren()
+	shotProps.Parent = nil
 	Run:UnbindFromRenderStep("CameraDirector")
 	for _, e in fx do e:Destroy() end
 	table.clear(fx)
@@ -381,15 +493,16 @@ update = function(dt)
 		cam.CFrame = CFrame.lookAt(eye, c + V(0, 2, 0)) * CFrame.Angles(0, 0, roll)
 	else
 		local s = shot.list[shot.idx]
-		local u = (os.clock() - shot.t0) / s[5]
+		local u = (os.clock() - shot.t0) / s.sec
 		if u >= 1 then
-			shot.idx, shot.t0 = shot.idx % #shot.list + 1, os.clock()
+			if shot.idx == #shot.list then shot.list = buildShots() end -- new random tables every round
+			startShot(shot.idx % #shot.list + 1)
 			s, u = shot.list[shot.idx], 0
 		end
-		local e = smooth(u)
-		cam.CFrame = CFrame.lookAt(s[1]:Lerp(s[3], e), s[2]:Lerp(s[4], e)) * CFrame.Angles(0, 0, roll)
-		fade.BackgroundTransparency = math.min(1, math.min(u, 1 - u) * s[5] / 0.5) -- dip to black between shots
-		cam.FieldOfView = s[6] * fov / 70
+		local eye, at = s.frame(u, dt)
+		cam.CFrame = CFrame.lookAt(safe(eye), at) * CFrame.Angles(0, 0, roll)
+		fade.BackgroundTransparency = math.min(1, math.min(u, 1 - u) * s.sec / 0.5) -- dip to black between shots
+		cam.FieldOfView = s.fov * fov / 70
 	end
 	if mode ~= 3 then
 		fade.BackgroundTransparency = 1
