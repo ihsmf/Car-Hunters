@@ -15,6 +15,9 @@ EDITED = ["Config", "UI", "Throw", "HeavenlyBreak"]
 MESHES = ["FinaleComputer", "FinaleCity", "FinaleNature", "HallWall", "HallCeiling", "DecoLantern", "DecoCrystal", "DecoGift",
           "DecoTree", "DecoSnowman", "DecoCandyCane", "DecoMushroom", "DecoCactus", "DecoShell", "DecoGear", "DecoPlanet",
           "DecoPalm", "DecoTorch", "DecoTrophy", "DecoLotus", "DecoGarland"]
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+import landscape  # noqa: E402
+MESHES += [f[2] for f in landscape.FAMILIES]
 NEW = {"CameraDirector": ("LocalScript", "UI")}  # scripts we add: class, inserted next to this existing script
 
 
@@ -97,6 +100,7 @@ def pack():
         else:
             assert k == 1, f"{n}: {k} copies"
     x = inject_hall(x)
+    x = landscape.apply(x)
     ET.fromstring(x)  # the place must still be valid XML
     open(PLACE, "w", encoding="utf-8").write(x)
     out = os.path.join(STUDIO, "BilliardHunters-Studio-Full.zip")

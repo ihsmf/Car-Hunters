@@ -1005,8 +1005,8 @@ def deco_props():
         M = dict(Main=P("Main", (60, 170, 80)), Accent=P("Accent", (150, 100, 60)), Glow=P("Glow", (120, 80, 40)))
         for k in range(5): cyl(0.5 - k * 0.04, 0.85, (k * 0.08, 0.42 + k * 0.8, 0), M["Accent"], verts=7)
         for a in range(6):
-            o = box((2.6, 0.12, 0.7), (math.cos(a * 1.05) * 1.1, 4.0, math.sin(a * 1.05) * 1.1), M["Main"], 0.05)
-            o.rotation_euler = (0, -a * 1.05, math.radians(-25))
+            o = box((2.6, 0.12, 0.7), (math.cos(a * 1.05) * 1.1, 4.0, -math.sin(a * 1.05) * 1.1), M["Main"], 0.05)
+            o.rotation_euler = (0, math.radians(25), a * 1.05)
         for k in range(3): sphere(0.4, (math.cos(k * 2) * 0.35, 3.75, math.sin(k * 2) * 0.35), M["Glow"], 6, 4)
     def torch():
         M = dict(Main=P("Main", (90, 60, 40)), Accent=P("Accent", (230, 180, 80), 0.8), Glow=P("Glow", (255, 150, 40)))
@@ -1039,6 +1039,220 @@ def deco_props():
 
 
 HALL = [("HallWall", hall_wall), ("HallCeiling", hall_ceiling)] + deco_props()
+
+
+# ---------- Scenery beside the long table: stylised-realistic replacements for the block-built props ----------
+# Base at y = 0 (gem: centred), the side facing the table is +X. Palette Main / Accent / Detail / Glow.
+def land_kit():
+    rnd = __import__("random").Random(3)
+    def M4(main, accent, detail, glow, metal=0.0):
+        return dict(Main=mat("Main", main, metal, 0.5), Accent=mat("Accent", accent, metal, 0.5), Detail=mat("Detail", detail, 0, 0.35), Glow=mat("Glow", glow, 0, 0.2))
+    def bumpy(o, amount, seed):  # irregular, hand-made look
+        r = __import__("random").Random(seed)
+        for v in o.data.vertices:
+            v.co += v.co.normalized() * r.uniform(-amount, amount) if v.co.length > 0 else v.co * 0
+        return o
+    def tree():
+        M = M4((60, 160, 90), (120, 80, 50), (230, 60, 60), (255, 230, 120))
+        lathe([(0.95, 0), (0.75, 0.6), (0.6, 2.5), (0.5, 4.6), (0.35, 5.6)], (0, 0, 0), M["Accent"], 10)
+        for a, y, l in ((0.5, 4.4, 2.2), (2.6, 4.9, 2.0), (4.4, 4.2, 1.9)):  # branches
+            o = cyl(0.35, l, (math.cos(a) * 0.7, y, math.sin(a) * 0.7), M["Accent"], d2=0.18, verts=6, bevel=0)
+            o.rotation_euler = (math.sin(a) * 0.9, -math.cos(a) * 0.9, 0)
+        for k, (x, y, z, d) in enumerate(((0, 7.6, 0, 5.4), (1.9, 6.8, 0.9, 3.6), (-1.8, 6.9, -0.8, 3.8), (0.6, 6.6, -2.0, 3.4), (-0.7, 6.4, 2.0, 3.4), (0.2, 9.4, 0.2, 3.2))):
+            bumpy(sphere(d, (x, y, z), M["Main"], 10, 7), 0.12 * d, k)
+        for k in range(14):  # fruit on the leaf surface
+            a, b = rnd.uniform(0, 6.28), rnd.uniform(-0.6, 0.9)
+            sphere(0.7, (math.cos(a) * math.cos(b) * 3.2, 7.4 + math.sin(b) * 2.6, math.sin(a) * math.cos(b) * 3.2), M["Detail"], 8, 6)
+    def bridge():
+        M = M4((150, 140, 130), (110, 100, 95), (240, 200, 120), (70, 190, 235))
+        box((8, 0.4, 12), (0, 0.2, 0), M["Glow"], 0.1)  # water
+        for r in (1.2, 2.2, 3.2):
+            torus(r * 2, 0.06, (1.6, 0.42, -2.6), M["Detail"])
+        for sz in (-1, 1):  # banks + piers
+            box((7, 1.2, 2.4), (0, 0.6, sz * 5.4), M["Accent"], 0.2)
+        for sz in (-1, 1):
+            box((2.8, 6.4, 1.4), (0, 3.2, sz * 4.1), M["Main"], 0.1)  # stone piers up to the deck
+            box((3.2, 0.6, 1.8), (0, 3.8, sz * 4.1), M["Accent"], 0.08)
+        box((2.6, 0.9, 6.8), (0, 5.95, 0), M["Accent"], 0.15)  # beam under the deck
+        box((3.0, 0.5, 9.4), (0, 6.65, 0), M["Main"], 0.1)  # deck
+        for sx in (-1, 1):
+            for k in range(6): cyl(0.22, 0.9, (sx * 1.3, 7.3, -4 + k * 1.6), M["Accent"], verts=6)
+            box((0.3, 0.2, 9.4), (sx * 1.3, 7.8, 0), M["Detail"], 0.05)
+    def lollipop():
+        M = M4((255, 120, 170), (255, 255, 255), (255, 210, 60), (255, 255, 255))
+        cyl(0.6, 9.2, (0, 4.6, 0), M["Accent"], verts=10)
+        for k in range(8):
+            cyl(0.66, 0.35, (0, 0.6 + k * 1.1, 0), M["Main"], verts=10, bevel=0)  # candy stripes
+        cyl(6.0, 1.3, (0, 10.0, 0), M["Accent"], "X", verts=28)
+        for k, r in enumerate((2.75, 2.15, 1.55, 0.95)):
+            torus(r * 2, 0.32, (0.62, 10.0, 0), M["Main" if k % 2 == 0 else "Detail"], "X")
+            torus(r * 2, 0.32, (-0.62, 10.0, 0), M["Main" if k % 2 == 0 else "Detail"], "X")
+        o = torus(1.8, 0.5, (0, 7.3, 0), M["Main"], "X")  # ribbon bow knot
+    def coral():
+        M = M4((255, 110, 100), (240, 220, 200), (255, 248, 225), (255, 200, 180))
+        def branch(x, y, z, ax, az, l, d, depth):
+            o = cyl(d, l, (x, y + l / 2, z), M["Main"], d2=d * 0.7, verts=8, bevel=0)
+            o.rotation_euler = (az, -ax, 0)
+            tip = (x + math.sin(ax) * l, y + math.cos(ax) * math.cos(az) * l, z + math.sin(az) * l)
+            sphere(d * 0.85, tip, M["Main"], 8, 5)
+            if depth:
+                for s in (-1, 1):
+                    branch(*tip, ax + s * 0.45, az + s * 0.25, l * 0.68, d * 0.72, depth - 1)
+        branch(0, 0, 0, 0, 0, 3.4, 1.3, 2)
+        branch(0.3, 0.5, 0.4, 0.5, -0.3, 2.6, 0.9, 1)
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=1.4, segments=12, ring_count=8, location=rb(1.6, 0.6, -1.8))  # open clam
+        o = bpy.context.object; o.scale = (1, 1, 0.35); finish(o, M["Accent"])
+        sphere(1.4, (1.6, 1.2, -1.8), M["Detail"], 10, 8)
+    def mesa():
+        M = M4((220, 120, 70), (190, 90, 55), (240, 190, 130), (255, 220, 160))
+        for k, (r, y, h) in enumerate(((5.4, 0, 2.2), (4.3, 2.2, 2.0), (3.0, 4.2, 1.9))):
+            bpy.ops.mesh.primitive_cylinder_add(vertices=11, radius=r, depth=h, location=rb(0, y + h / 2, 0))
+            o = bpumpy = bpy.context.object; finish(o, M["Main" if k % 2 == 0 else "Accent"], 0.15)
+            bumpy(o, 0.35, k)
+            box((r * 1.7, 0.15, 0.4), (0, y + h * 0.4, r * 0.8), M["Detail"], 0)
+        for k in range(5):
+            sphere(rnd.uniform(0.8, 1.4), (rnd.uniform(-5, 5), 0.4, rnd.uniform(-5, 5)), M["Accent"], 7, 5, (1, 0.6, 1))
+    def ice_spire():
+        M = M4((120, 200, 240), (200, 240, 255), (80, 150, 220), (220, 250, 255))
+        for k, (x, z, h, w, tilt) in enumerate(((0, 0, 8.6, 1.6, 0), (1.3, 0.6, 6.0, 1.2, 0.3), (-1.0, 1.0, 5.2, 1.1, -0.35),
+                                                (0.4, -1.3, 4.4, 1.0, 0.25), (-1.4, -0.8, 3.4, 0.9, -0.3))):
+            o = cyl(w, h * 0.8, (x, h * 0.4, z), M["Main" if k % 2 == 0 else "Accent"], verts=6, bevel=0)
+            t = cyl(w, h * 0.25, (x, h * 0.8 + h * 0.12, z), M["Accent" if k % 2 == 0 else "Main"], d2=0.05, verts=6, bevel=0)
+            for ob in (o, t): ob.rotation_euler = (tilt * 0.6, tilt, 0)
+        cyl(4.4, 0.4, (0, 0.2, 0), M["Detail"], verts=12)
+    def basalt():
+        M = M4((70, 50, 60), (50, 36, 44), (255, 140, 40), (255, 200, 80))
+        bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=1, depth=0.4, location=rb(0, 0.2, 0))
+        o = bpy.context.object; o.scale = (4, 5.5, 1); finish(o, M["Glow"])  # lava pool
+        for k in range(11):
+            a, r = k * 0.6, 0.6 + (k % 4) * 0.55
+            h = rnd.uniform(3.0, 7.2)
+            cyl(1.15, h, (math.cos(a) * r, h / 2, math.sin(a) * r), M["Main" if k % 2 else "Accent"], verts=6, bevel=0.04)
+            cyl(1.0, 0.12, (math.cos(a) * r, h + 0.02, math.sin(a) * r), M["Detail"], verts=6, bevel=0)  # glowing tops
+        for k in range(6):  # lava cracks
+            box((0.25, 0.1, rnd.uniform(2, 4)), (rnd.uniform(-2.5, 2.5), 0.45, rnd.uniform(-3, 3)), M["Detail"], 0)
+    def bamboo():
+        M = M4((90, 170, 80), (210, 200, 110), (60, 140, 60), (200, 240, 160))
+        for k, (x, z, h) in enumerate(((0, 0, 9.2), (0.9, 0.7, 7.8), (-0.8, 0.5, 8.4), (0.3, -0.9, 6.6))):
+            n = int(h / 1.5)
+            for j in range(n):
+                cyl(0.62, 1.4, (x, 0.75 + j * 1.5, z), M["Main"], verts=8, bevel=0)
+                cyl(0.72, 0.16, (x, 1.48 + j * 1.5, z), M["Accent"], verts=8, bevel=0)
+            for j in range(3):  # leaf sprays: tilted down, fanned around the stalk
+                yaw = (k * 3 + j) * 2.1
+                o = box((2.4, 0.06, 0.5), (x + math.cos(yaw) * 1.1, h - j * 1.4, z - math.sin(yaw) * 1.1), M["Detail"], 0.03)
+                o.rotation_euler = (0, math.radians(25), yaw)
+    def moon_rock():
+        M = M4((210, 215, 235), (90, 80, 130), (120, 110, 170), (200, 230, 255))
+        bpy.ops.mesh.primitive_torus_add(major_radius=3.6, minor_radius=0.9, major_segments=18, minor_segments=6, location=rb(0, 0.3, 0))
+        o = bpy.context.object; o.scale = (1, 1, 0.6); finish(o, M["Accent"]); bumpy(o, 0.3, 4)
+        cyl(6.4, 0.2, (0, 0.1, 0), M["Detail"], verts=18)
+        sphere(6, (0, 8, 0), M["Main"], 18, 12)
+        for k in range(9):  # craters on the moon
+            a, b = rnd.uniform(0, 6.28), rnd.uniform(-1.1, 1.1)
+            n = (math.cos(a) * math.cos(b), math.sin(b), math.sin(a) * math.cos(b))
+            sphere(rnd.uniform(0.8, 1.6), (n[0] * 2.85, 8 + n[1] * 2.85, n[2] * 2.85), M["Detail"], 8, 5, (1, 1, 1))
+        for k in range(3):
+            bumpy(sphere(rnd.uniform(1.0, 1.8), (2.6 + k * 0.4, 4.6 - k * 1.4, 2.4 - k * 2.2), M["Accent"], 7, 5), 0.25, 9 + k)
+    def flywheel():
+        M = M4((80, 220, 210), (200, 140, 60), (60, 64, 72), (255, 230, 140), 0.6)
+        for sz in (-1, 1):  # A-frame stand
+            for sy in (-1, 1):
+                o = box((0.5, 5.2, 0.5), (0, 2.3, sz * 1.6 + sy * 0.9), M["Detail"], 0.05)
+                o.rotation_euler = (sy * 0.33, 0, 0)
+            box((1.6, 0.4, 3.2), (0, 0.2, sz * 1.6), M["Detail"], 0.05)
+        bpy.ops.mesh.primitive_torus_add(major_radius=3.2, minor_radius=0.35, major_segments=28, minor_segments=6, location=rb(0, 4.0, 0), rotation=(0, math.pi / 2, 0))
+        finish(bpy.context.object, M["Main"])
+        for k in range(16):  # teeth
+            a = k * math.pi / 8
+            box((1.2, 0.7, 0.7), (0, 4.0 + math.sin(a) * 3.65, math.cos(a) * 3.65), M["Main"], 0.05)
+        cyl(5.6, 0.25, (0, 4.0, 0), M["Accent"], "X", verts=28)  # wheel web
+        for k in range(6):  # lightening holes in the web
+            a = k * math.pi / 3
+            cyl(1.2, 0.32, (0, 4.0 + math.sin(a) * 1.8, math.cos(a) * 1.8), M["Detail"], "X", verts=10, bevel=0)
+        cyl(1.4, 1.2, (0, 4.0, 0), M["Glow"], "X", verts=14)
+        cyl(0.5, 3.6, (0, 4.0, 0), M["Accent"], "X", verts=10)
+    def storm_cloud():
+        M = M4((200, 205, 240), (150, 155, 200), (90, 90, 120), (255, 235, 70))
+        for k, (x, y, z, d) in enumerate(((0, 9.4, 0, 5.2), (0, 9.0, 2.8, 4.0), (0, 9.0, -2.8, 4.2), (0.6, 10.6, 1.2, 3.6), (-0.4, 10.4, -1.4, 3.4), (0, 8.2, 0, 4.4))):
+            bumpy(sphere(d, (x, y, z), M["Main" if k < 3 else "Accent"], 10, 7), 0.1 * d, 20 + k)
+        pts = [(0, 7.2, 0.2), (0, 5.6, -0.8), (0, 4.6, 0.4), (0, 2.8, -0.6), (0, 0.4, 0.2)]  # zig-zag bolt
+        for a, b in zip(pts, pts[1:]):
+            o = cyl(0.45, math.dist(a, b) + 0.15, ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2), M["Glow"], verts=4, bevel=0)
+            o.rotation_euler = (math.atan2(b[2] - a[2], b[1] - a[1]), 0, 0)
+        cyl(3.2, 0.1, (0, 0.05, 0), M["Detail"], verts=14)
+    def lotus():
+        M = M4((40, 160, 120), (255, 140, 190), (255, 220, 90), (255, 235, 245))
+        bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=4.5, depth=0.25, location=rb(0, 0.8, 0))
+        pad = bpy.context.object; finish(pad, M["Main"])
+        for k in range(7): box((0.12, 0.05, 4.2), (math.cos(k * 0.9) * 2, 0.95, math.sin(k * 0.9) * 2), M["Detail"], 0).rotation_euler = (0, 0, -k * 0.9)
+        for ring, (n, r, tilt, size) in enumerate(((8, 1.3, 0.9, 1.6), (6, 0.7, 0.45, 1.4))):
+            for k in range(n):
+                a = k * 2 * math.pi / n + ring * 0.4
+                o = sphere(size, (math.cos(a) * r, 1.9 + ring * 0.4, math.sin(a) * r), M["Accent" if ring == 0 else "Glow"], 8, 6, (0.45, 1.25, 0.25))
+                o.rotation_euler = (0, -a, tilt)
+        sphere(1.1, (0, 2.1, 0), M["Detail"], 10, 6, (1, 0.6, 1))
+    def pixel():
+        M = M4((130, 80, 220), (90, 50, 170), (50, 255, 230), (200, 255, 250))
+        for k, (x, y, z) in enumerate(((0, 1.5, 0), (1.0, 4.5, 2.0), (-1.0, 7.5, 4.0))):
+            for dx in (-0.75, 0.75):
+                for dy in (-0.75, 0.75):
+                    for dz in (-0.75, 0.75):
+                        box((1.44, 1.44, 1.44), (x + dx, y + dy, z + dz), M["Main" if (dx + dy + dz) > 0 else "Accent"], 0.08)
+        o = box((3, 3, 3), (3.0, 10, 3), M["Detail"], 0.25); o.rotation_euler = (0.6, 0.6, 0.6)
+        o = box((3.4, 0.2, 0.2), (3.0, 10, 3), M["Glow"], 0); o.rotation_euler = (0.6, 0.6, 0.6)
+    def planet():
+        M = M4((70, 90, 180), (255, 210, 100), (240, 240, 255), (150, 220, 255))
+        bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=24, v_segments=16, radius=2.8)
+        me = bpy.data.meshes.new("pl"); bm.to_mesh(me); bm.free()
+        o = bpy.data.objects.new("pl", me); bpy.context.scene.collection.objects.link(o)
+        o.data.materials.append(M["Main"]); o.data.materials.append(M["Glow"])
+        for f in me.polygons:
+            f.material_index = int(math.sin(f.center.z * 2.6) > 0.4); f.use_smooth = True
+        o.location = rb(0, 5.6, 0)
+        bpy.ops.mesh.primitive_torus_add(major_radius=4.3, minor_radius=0.5, major_segments=40, minor_segments=4, location=rb(0, 5.6, 0))
+        r = bpy.context.object; r.scale = (1, 1, 0.12); r.rotation_euler = (0.35, 0.25, 0); finish(r, M["Accent"])
+        sphere(1.6, (3.2, 9.2, 1.8), M["Detail"], 10, 8)
+        cyl(0.3, 2.8, (0, 1.4, 0), M["Accent"], verts=8); cyl(2.4, 0.4, (0, 0.2, 0), M["Accent"], verts=12)
+    def throne():
+        M = M4((200, 70, 160), (255, 215, 100), (120, 40, 100), (120, 230, 255), 0.4)
+        for k, (r, y) in enumerate(((3.6, 0.6), (3.0, 1.8), (2.4, 3.0))):
+            cyl(r * 2, 1.2, (0, y, 0), M["Main" if k % 2 == 0 else "Detail"], verts=20, bevel=0.06)
+            torus(r * 2, 0.12, (0, y + 0.6, 0), M["Accent"])
+        cyl(3.0, 1.0, (0, 6.0, 0), M["Accent"], verts=20)  # crown band
+        for k in range(8):
+            a = k * math.pi / 4
+            cyl(0.9, 2.2, (math.cos(a) * 1.35, 7.6, math.sin(a) * 1.35), M["Accent"], d2=0.05, verts=4, bevel=0)
+            sphere(0.45, (math.cos(a) * 1.55, 6.0, math.sin(a) * 1.55), M["Glow"], 8, 6)
+        cyl(2.6, 0.3, (0, 5.4, 0), M["Detail"], verts=20)
+    def hills():
+        M = M4((100, 160, 110), (70, 120, 90), (230, 240, 250), (150, 200, 150))
+        for k, (z, h, w) in enumerate(((-12, 9, 18), (0, 13, 22), (13, 10, 18), (-4, 6, 26), (8, 7, 22))):
+            bpy.ops.mesh.primitive_uv_sphere_add(radius=1, segments=16, ring_count=8, location=rb(-0.2 * k, 0, z))
+            o = bpy.context.object; o.scale = (0.8, w / 2, h); finish(o, M["Main" if k < 3 else "Accent"]); bumpy(o, 0.06, 30 + k)
+        for z, h in ((0, 13), (-12, 9)):
+            cyl(3.0, 2.0, (0.2, h - 0.6, z), M["Detail"], d2=0.2, verts=8, bevel=0)  # snow caps
+    def gem():
+        M = M4((80, 200, 255), (220, 250, 255), (40, 120, 220), (255, 255, 255))
+        cyl(1.2, 0.6, (0, 0.3, 0), M["Accent"], d2=0.05, verts=8, bevel=0)
+        cyl(1.2, 0.9, (0, -0.45, 0), M["Main"], d2=0.05, verts=8, bevel=0).rotation_euler = (math.pi, 0, 0)
+    def beacon():
+        M = M4((236, 228, 210), (220, 170, 80), (70, 60, 80), (255, 230, 140), 0.3)
+        box((2.4, 0.8, 2.4), (0, 0.4, 0), M["Detail"], 0.1); box((1.9, 0.6, 1.9), (0, 1.1, 0), M["Accent"], 0.08)
+        lathe([(0.75, 1.4), (0.62, 3), (0.5, 13.5), (0.62, 14)], (0, 0, 0), M["Main"], 12)
+        for y in (4, 8, 12): torus(1.15, 0.12, (0, y, 0), M["Accent"])
+        cyl(1.6, 0.4, (0, 14.3, 0), M["Accent"], verts=12)
+        for k in range(4):
+            box((0.12, 2.4, 0.12), (math.cos(k * 1.57) * 0.62, 15.7, math.sin(k * 1.57) * 0.62), M["Accent"], 0)
+        sphere(1.1, (0, 15.7, 0), M["Glow"], 12, 8)
+        cyl(1.7, 1.0, (0, 17.4, 0), M["Accent"], d2=0.1, verts=12)
+    return [("LandTree", tree), ("LandBridge", bridge), ("LandLollipop", lollipop), ("LandCoral", coral), ("LandMesa", mesa),
+            ("LandIceSpire", ice_spire), ("LandBasalt", basalt), ("LandBamboo", bamboo), ("LandMoonRock", moon_rock),
+            ("LandFlywheel", flywheel), ("LandStormCloud", storm_cloud), ("LandLotus", lotus), ("LandPixel", pixel),
+            ("LandPlanet", planet), ("LandThrone", throne), ("LandHills", hills), ("LandGem", gem), ("LandBeacon", beacon)]
+
+
+LAND = land_kit()
 
 
 FINALE = [("FinaleComputer", finale_computer), ("FinaleNature", finale_nature), ("FinaleCity", finale_city)]
@@ -1137,8 +1351,8 @@ def render_group(names, filename, cols, cell=12, dummy=False):
 
 def main():
     import sys
-    if "finale" in sys.argv or "hall" in sys.argv:  # only these sets, added next to the existing meshes
-        for name, fn in (FINALE if "finale" in sys.argv else HALL):
+    if "finale" in sys.argv or "hall" in sys.argv or "land" in sys.argv:  # only these sets, next to the existing meshes
+        for name, fn in (FINALE if "finale" in sys.argv else HALL if "hall" in sys.argv else LAND):
             reset()
             fn()
             o = join_triangulate(name)
