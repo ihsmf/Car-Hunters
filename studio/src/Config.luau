@@ -3,7 +3,7 @@ local C = {}
 local rgb = Color3.fromRGB
 
 C.UI = {
-	Font = Font.fromEnum(Enum.Font.GothamBold),
+	Font = Font.fromEnum(Enum.Font.FredokaOne), -- rounded cartoon type, same family as the Figma v4 frames
 	Ink = rgb(40, 20, 60),
 	Panel = rgb(27, 21, 48), -- dark panel background (#1B1530)
 	Card = rgb(42, 34, 69), -- cards / rows inside panels (#2A2245)

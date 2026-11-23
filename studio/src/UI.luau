@@ -95,7 +95,7 @@ end
 -- cartoon box: gradient body, outline, hard shadow 6 px below
 local function box(props, top, bottom, radius, strokeW, strokeColor)
 	local holder = new("Frame", { Size = props.Size, Position = props.Position or UDim2.new(), AnchorPoint = props.AnchorPoint or Vector2.zero, BackgroundTransparency = 1, LayoutOrder = props.LayoutOrder or 0, Name = props.Name or "Box", ZIndex = props.ZIndex or 1, Parent = props.Parent })
-	new("Frame", { Name = "Shadow", Size = UDim2.fromScale(1, 1), Position = UDim2.fromOffset(0, strokeW == 0 and 0 or 6), BackgroundColor3 = INK, BackgroundTransparency = strokeW == 0 and 1 or 0, Parent = holder }, { corner(radius) })
+	new("Frame", { Name = "Shadow", Size = UDim2.fromScale(1, 1), Position = UDim2.fromOffset(0, strokeW == 0 and 0 or 7), BackgroundColor3 = INK, BackgroundTransparency = strokeW == 0 and 1 or 0, Parent = holder }, { corner(radius) })
 	local body = new("Frame", { Name = "Body", Size = UDim2.fromScale(1, 1), BackgroundColor3 = WHITE, Parent = holder }, { corner(radius), grad(top, bottom) })
 	if strokeW ~= 0 then stroke(strokeW or 4, strokeColor).Parent = body end
 	return holder, body
@@ -103,8 +103,10 @@ end
 -- white cartoon card inside a panel: ink outline, soft cream gradient
 local function card(props, radius, color)
 	local f = new("Frame", { Size = props.Size, Position = props.Position or UDim2.new(), LayoutOrder = props.LayoutOrder or 0, BackgroundColor3 = WHITE, Name = props.Name or "Card", Parent = props.Parent }, {
-		corner(radius or 20), stroke(3), grad(color or WHITE, (color or WHITE):Lerp(CREAM[2], 0.5)),
+		corner(radius or 20), stroke(4), grad(color or WHITE, (color or WHITE):Lerp(CREAM[2], 0.55)),
 	})
+	new("Frame", { Name = "Gloss", Size = UDim2.new(1, -20, 0, 10), Position = UDim2.fromOffset(10, 5), BackgroundColor3 = WHITE,
+		BackgroundTransparency = 0.25, BorderSizePixel = 0, ZIndex = 0, Parent = f }, { corner(5) })
 	return f
 end
 
@@ -159,9 +161,9 @@ end
 
 local function button(props, colors, label, size, onClick)
 	local holder, body = box(props, colors[1], colors[2], props.Radius or 18, 3)
-	local shine = new("Frame", { Name = "EnamelHighlight", Size = UDim2.new(.56,0,0,3),
-		Position = UDim2.fromOffset(11,4), BackgroundColor3 = WHITE, BackgroundTransparency = .35,
-		BorderSizePixel = 0, Parent = body }, { corner(2) })
+	local shine = new("Frame", { Name = "CandyGloss", Size = UDim2.new(1,-20,.38,0),
+		Position = UDim2.fromOffset(10,5), BackgroundColor3 = WHITE, BackgroundTransparency = .62,
+		BorderSizePixel = 0, Parent = body }, { corner(math.max(6,(props.Radius or 18)-6)) })
 	shine.Visible = not props.Hud
  local hit = new("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "",
 		Name = label ~= "" and (label or "Action") or "MenuAction", ZIndex = 5, AutoButtonColor = false, Parent = holder })
@@ -179,7 +181,7 @@ local function button(props, colors, label, size, onClick)
 		local glyph = icon(body, "Close", 34, UDim2.fromScale(.5,.5), INK)
 		glyph.AnchorPoint = Vector2.new(.5,.5)
 	end
-	local big = math.floor((size or 24) * 1.22)
+	local big = math.floor((size or 24) * 1.32)
 	local lbl = text(props.Icon == "Close" and "" or label or "", big, INK, {
 		Size = UDim2.new(1, -inset - 10, 1, -8),
 		Position = UDim2.fromOffset(inset,4), Parent = body, TextScaled = true, NoStroke = true,
@@ -304,7 +306,10 @@ local topBar = group("Top", Vector2.new(640, 110), Vector2.new(0.5, 0), UDim2.ne
 local leftBar = group("Left", Vector2.new(150, 532), Vector2.new(0, 0.5), UDim2.new(0, 12, 0.5, 0))
 local shotBar = group("Shot", Vector2.new(640, 280), Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -6))
 local cornerBar = group("Corner", Vector2.new(460, 230), Vector2.new(1, 1), UDim2.new(1, -12, 1, -12))
+local backdrop = new("TextButton", { Name = "Backdrop", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = rgb(20, 10, 40),
+	BackgroundTransparency = 0.5, Visible = false, ZIndex = 4, Parent = root }) -- dims the game behind an open menu; tap closes it
 local center = group("Panels", Vector2.new(980, 690), Vector2.new(0.5, 0.5), UDim2.fromScale(0.5, 0.52), root)
+center.ZIndex = 5
 local trainingBar=group("TrainingControls",Vector2.new(350,88),Vector2.new(.5,1),UDim2.new(.5,0,1,-20))
 trainingBar.Visible=false
 local function rescale()
@@ -370,7 +375,9 @@ end)
 -- ===== HUD =====
 local function pill(name,x,w,colors)
  local holder,body=box({Name=name,Size=UDim2.fromOffset(w,82),Position=UDim2.fromOffset(x,5),Parent=topBar},colors[1],colors[2],42,4)
- hudIcon(body,name,42,UDim2.fromOffset(23,20))
+ new("Frame",{Name="Gloss",Size=UDim2.new(1,-30,0,24),Position=UDim2.fromOffset(15,5),BackgroundColor3=WHITE,BackgroundTransparency=.68,BorderSizePixel=0,Parent=body},{corner(12)})
+ new("Frame",{Name="IconChip",Size=UDim2.fromOffset(58,58),Position=UDim2.fromOffset(15,12),BackgroundColor3=WHITE,BackgroundTransparency=.1,Parent=body},{corner(29),stroke(3)})
+ hudIcon(body,name,42,UDim2.fromOffset(23,20)).ZIndex=3
  return holder,body
 end
 local _,cashBody=pill("Cash",26,378,GREEN)
@@ -419,7 +426,15 @@ local function panel(key, title, colors)
 	local holder, body = box({ Size = UDim2.fromOffset(980, 680), Position = UDim2.fromOffset(490, 345), AnchorPoint = Vector2.new(0.5, 0.5), Parent = center, Name = key, ZIndex = 10 }, CREAM[1], CREAM[2], 40, 6)
 	holder.Visible = false
 	-- title ribbon in the colour of the menu button, a light stripe of polka dots for a playful touch
+	for i = 0, 13 do -- soft polka dots on the cream body (Figma v4 panel)
+		for j = 0, 7 do
+			if (i + j) % 2 == 0 then
+				new("Frame", { Size = UDim2.fromOffset(10, 10), Position = UDim2.fromOffset(40 + i * 68, 150 + j * 64), BackgroundColor3 = rgb(243, 217, 178), BackgroundTransparency = .55, BorderSizePixel = 0, Parent = body }, { corner(5) })
+			end
+		end
+	end
 	local _, ribbon = box({ Size = UDim2.new(1, 24, 0, 92), Position = UDim2.fromOffset(-12, -28), Parent = body }, colors[1], colors[2], 30, 5)
+	new("Frame", { Name = "Gloss", Size = UDim2.new(1, -28, 0, 30), Position = UDim2.fromOffset(14, 7), BackgroundColor3 = WHITE, BackgroundTransparency = .7, BorderSizePixel = 0, Parent = ribbon }, { corner(15) })
 	local artKey=({Cues="Shop",Gym="Strength"})[key] or key
  hudIcon(ribbon,artKey,60,UDim2.fromOffset(28,16))
  text(title,54,WHITE,{Size=UDim2.new(1,-220,1,0),Position=UDim2.fromOffset(104,0),Parent=ribbon,TextXAlignment=Enum.TextXAlignment.Left})
@@ -454,6 +469,14 @@ function open(key, force)
 	sc.Scale = 0.6
 	tween(sc, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
 end
+backdrop.Activated:Connect(function()
+	for _, q in panels do q.holder.Visible = false end
+end)
+RunService.Heartbeat:Connect(function()
+	local any = false
+	for _, q in panels do any = any or q.holder.Visible end
+	backdrop.Visible = any
+end)
 local function rerender() -- Settings is not rebuilt from server updates (it would interrupt a slider drag)
 	for k, p in panels do
 		if p.holder.Visible and k ~= "Settings" then renderers[k]() end

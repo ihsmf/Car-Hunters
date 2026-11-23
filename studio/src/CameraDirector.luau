@@ -4,6 +4,8 @@
 --   2 Orbit: smooth circle around your character, wheel = distance, W/S = height.
 --   3 Shots: an automatic director cycles beautiful preset shots of the map.
 --   F = next filter (Film, Golden hour, Noir, Dream, Off), H = hide/show this toolbar, Shift+C = leave.
+-- Phone: left joystick = move (orbit: height / turn), drag anywhere else = look, pinch = zoom, buttons on the right =
+--   up / down / speed / zoom. Gamepad: left stick move, right stick look, L2 / R2 down / up.
 -- Everything is client-side: new Lighting effects and a ScreenGui, all removed when the mode is left.
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -75,6 +77,64 @@ local corner = Instance.new("TextButton") -- tapping the top-right corner brings
 corner.Size, corner.AnchorPoint, corner.Position, corner.BackgroundTransparency, corner.Text = UDim2.fromOffset(90, 90), Vector2.new(1, 0), UDim2.fromScale(1, 0), 1, ""
 corner.Activated:Connect(function() bar.Visible = true end)
 corner.Parent = gui
+-- ===== touch controls (phones / tablets) =====
+local touch = { stick = Vector2.zero, input = nil, hold = {}, pad = Vector2.zero, look = Vector2.zero, trig = 0 }
+local pad = Instance.new("Frame")
+pad.Name, pad.Size, pad.BackgroundTransparency, pad.Visible, pad.Parent = "TouchControls", UDim2.fromScale(1, 1), 1, false, gui
+local stickBase = Instance.new("Frame")
+stickBase.Size, stickBase.AnchorPoint, stickBase.Position = UDim2.fromOffset(200, 200), Vector2.new(0, 1), UDim2.new(0, 36, 1, -36)
+stickBase.BackgroundColor3, stickBase.BackgroundTransparency, stickBase.Active, stickBase.ZIndex = Color3.new(), 0.55, true, 20
+Instance.new("UICorner", stickBase).CornerRadius = UDim.new(1, 0)
+local ring = Instance.new("UIStroke")
+ring.Thickness, ring.Color, ring.Transparency, ring.Parent = 3, WHITE, 0.4, stickBase
+stickBase.Parent = pad
+local knob = Instance.new("Frame")
+knob.Size, knob.AnchorPoint, knob.Position = UDim2.fromOffset(86, 86), Vector2.new(0.5, 0.5), UDim2.fromScale(0.5, 0.5)
+knob.BackgroundColor3, knob.BackgroundTransparency, knob.ZIndex = WHITE, 0.15, 21
+Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+knob.Parent = stickBase
+local function setKnob()
+	knob.Position = UDim2.new(0.5, touch.stick.X * 57, 0.5, -touch.stick.Y * 57)
+end
+stickBase.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Touch and not touch.input then touch.input = input end
+end)
+local side = Instance.new("Frame")
+side.Size, side.AnchorPoint, side.Position, side.BackgroundTransparency = UDim2.fromOffset(176, 330), Vector2.new(1, 1), UDim2.new(1, -24, 1, -30), 1
+side.Parent = pad
+local grid = Instance.new("UIGridLayout")
+grid.CellSize, grid.CellPadding, grid.SortOrder, grid.Parent = UDim2.fromOffset(80, 74), UDim2.fromOffset(12, 10), Enum.SortOrder.LayoutOrder, side
+local function padButton(order, text, onHold, onTap)
+	local b = Instance.new("TextButton")
+	b.LayoutOrder, b.Text, b.FontFace, b.TextScaled, b.ZIndex = order, text, C.UI.Font, true, 20
+	b.BackgroundColor3, b.BackgroundTransparency, b.TextColor3, b.AutoButtonColor = Color3.new(), 0.45, WHITE, false
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 18)
+	local st = Instance.new("UIStroke")
+	st.Thickness, st.Color, st.Transparency, st.ApplyStrokeMode, st.Parent = 2, WHITE, 0.5, Enum.ApplyStrokeMode.Border, b
+	local tp = Instance.new("UIPadding")
+	tp.PaddingTop, tp.PaddingBottom, tp.PaddingLeft, tp.PaddingRight, tp.Parent = UDim.new(0, 14), UDim.new(0, 14), UDim.new(0, 8), UDim.new(0, 8), b
+	b.InputBegan:Connect(function(input)
+		if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+		b.BackgroundTransparency = 0.15
+		if onHold then touch.hold[onHold] = true end
+		if onTap then onTap() end
+	end)
+	b.InputEnded:Connect(function(input)
+		if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+		b.BackgroundTransparency = 0.45
+		if onHold then touch.hold[onHold] = nil end
+	end)
+	b.Parent = side
+end
+local refreshStatus -- forward (defined below)
+padButton(1, "UP", "up")
+padButton(2, "ZOOM +", "zoomIn")
+padButton(3, "DOWN", "down")
+padButton(4, "ZOOM −", "zoomOut")
+padButton(5, "SPEED +", nil, function() baseSpeed = math.clamp(math.floor(baseSpeed * 1.4 + 0.5), 2, 600); refreshStatus() end)
+padButton(6, "SPEED −", nil, function() baseSpeed = math.clamp(math.floor(baseSpeed / 1.4 + 0.5), 2, 600); refreshStatus() end)
+padButton(7, "TILT ⟲", "rollL")
+padButton(8, "TILT ⟳", "rollR")
 gui.Parent = plr:WaitForChild("PlayerGui")
 
 -- ===== filters =====
@@ -105,7 +165,7 @@ local function applyFilter()
 	end
 end
 
-local function refreshStatus()
+function refreshStatus()
 	status.Text = string.format("CAMERA  ·  %s  ·  %s  ·  speed %d  ·  FOV %d", MODES[mode], FILTERS[filterIdx].name, baseSpeed, fov)
 end
 
@@ -206,6 +266,7 @@ local function enter()
 	cam.CameraType = Enum.CameraType.Scriptable
 	fov, roll = cam.FieldOfView, 0
 	gui.Enabled, bar.Visible = true, true
+	pad.Visible = UIS.TouchEnabled
 	setMode(1)
 	Run:BindToRenderStep("CameraDirector", Enum.RenderPriority.Camera.Value + 2, update)
 end
@@ -239,6 +300,10 @@ UIS.InputBegan:Connect(function(input, processed)
 	end
 end)
 UIS.InputEnded:Connect(function(input)
+	if input == touch.input then
+		touch.input, touch.stick = nil, Vector2.zero
+		setKnob()
+	end
 	if input.UserInputType == Enum.UserInputType.MouseButton2 and active then
 		looking = false
 		UIS.MouseBehavior = Enum.MouseBehavior.Default
@@ -247,6 +312,21 @@ end)
 UIS.InputChanged:Connect(function(input, processed)
 	if not active then return end
 	local t = input.UserInputType
+	if input == touch.input then -- the joystick
+		local c = stickBase.AbsolutePosition + stickBase.AbsoluteSize / 2
+		local d = Vector2.new(input.Position.X, input.Position.Y) - c
+		d = d.Magnitude > 57 and d.Unit * 57 or d
+		touch.stick = Vector2.new(d.X, -d.Y) / 57
+		setKnob()
+		return
+	end
+	if t == Enum.UserInputType.Gamepad1 then
+		if input.KeyCode == Enum.KeyCode.Thumbstick1 then touch.pad = Vector2.new(input.Position.X, input.Position.Y)
+		elseif input.KeyCode == Enum.KeyCode.Thumbstick2 then touch.look = Vector2.new(input.Position.X, input.Position.Y)
+		elseif input.KeyCode == Enum.KeyCode.ButtonR2 then touch.trig = input.Position.Z
+		elseif input.KeyCode == Enum.KeyCode.ButtonL2 then touch.trig = -input.Position.Z end
+		return
+	end
 	if (t == Enum.UserInputType.MouseMovement and looking) or (t == Enum.UserInputType.Touch and not processed) then
 		local k = (t == Enum.UserInputType.Touch and 0.006 or 0.0035) * fov / 70
 		tYaw -= input.Delta.X * k
@@ -258,6 +338,13 @@ UIS.InputChanged:Connect(function(input, processed)
 		refreshStatus()
 	end
 end)
+local pinchFov
+UIS.TouchPinch:Connect(function(_, scale, _, state, processed) -- two fingers: zoom
+	if not active or processed then return end
+	if state == Enum.UserInputState.Begin then pinchFov = fov end
+	if pinchFov then fov = math.clamp(pinchFov / scale, 20, 100); refreshStatus() end
+	if state == Enum.UserInputState.End then pinchFov = nil end
+end)
 plr.CharacterRemoving:Connect(leave)
 
 -- ===== per frame =====
@@ -266,21 +353,29 @@ update = function(dt)
 	if _G.ThrowBusy then leave(); return end -- a shot cinematic takes the camera
 	local K = Enum.KeyCode
 	-- zoom and tilt (all modes)
-	local z = key(K.X) - key(K.Z)
+	local h = touch.hold
+	local z = key(K.X) - key(K.Z) + (h.zoomOut and 1 or 0) - (h.zoomIn and 1 or 0)
 	if z ~= 0 then fov = math.clamp(fov + z * 40 * dt, 20, 100); refreshStatus() end
-	roll = roll + (key(K.T) - key(K.R)) * 0.6 * dt
+	roll = roll + (key(K.T) - key(K.R) + (h.rollR and 1 or 0) - (h.rollL and 1 or 0)) * 0.6 * dt
+	local stick = touch.stick + (touch.pad.Magnitude > 0.15 and touch.pad or Vector2.zero) -- joystick + gamepad
+	if touch.look.Magnitude > 0.15 then -- gamepad right stick looks around
+		tYaw -= touch.look.X * 2.2 * dt
+		tPitch = math.clamp(tPitch + touch.look.Y * 1.6 * dt, -1.45, 1.45)
+	end
+	local lift = (h.up and 1 or 0) - (h.down and 1 or 0) + (math.abs(touch.trig) > 0.1 and touch.trig or 0)
 	if mode == 1 then
 		yaw += (tYaw - yaw) * math.min(1, dt * 14) -- damped look: no jitter
 		pitch += (tPitch - pitch) * math.min(1, dt * 14)
 		local rot = CFrame.fromOrientation(pitch, yaw, 0)
-		local move = rot:VectorToWorldSpace(V(key(K.D) - key(K.A), 0, key(K.S) - key(K.W))) + V(0, key(K.E) - key(K.Q), 0)
+		local move = rot:VectorToWorldSpace(V(key(K.D) - key(K.A) + stick.X, 0, key(K.S) - key(K.W) - stick.Y)) + V(0, key(K.E) - key(K.Q) + lift, 0)
 		local speed = baseSpeed * (UIS:IsKeyDown(K.LeftShift) and 4 or 1) * (UIS:IsKeyDown(K.LeftAlt) and 0.25 or 1)
-		vel = vel:Lerp(move.Magnitude > 0 and move.Unit * speed or Vector3.zero, math.min(1, dt * 6)) -- smooth start/stop
+		local amount = math.min(1, move.Magnitude) -- a half-pushed joystick flies at half speed
+		vel = vel:Lerp(move.Magnitude > 0.01 and move.Unit * speed * amount or Vector3.zero, math.min(1, dt * 6)) -- smooth start/stop
 		pos += vel * dt
 		cam.CFrame = CFrame.new(pos) * rot * CFrame.Angles(0, 0, roll)
 	elseif mode == 2 then
-		orbit.angle += dt * 0.22
-		orbit.height = math.clamp(orbit.height + (key(K.W) - key(K.S)) * 20 * dt, -10, 200)
+		orbit.angle += dt * (0.22 + stick.X * 0.8)
+		orbit.height = math.clamp(orbit.height + (key(K.W) - key(K.S) + stick.Y + lift) * 20 * dt, -10, 200)
 		local c = orbit.center
 		local eye = c + V(math.cos(orbit.angle) * orbit.dist, orbit.height, math.sin(orbit.angle) * orbit.dist)
 		cam.CFrame = CFrame.lookAt(eye, c + V(0, 2, 0)) * CFrame.Angles(0, 0, roll)
