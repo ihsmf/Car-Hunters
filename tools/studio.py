@@ -11,13 +11,15 @@ STUDIO = os.path.join(ROOT, "studio")
 PLACE = os.path.join(STUDIO, "BilliardHunters.rbxlx")
 SRC = os.path.join(STUDIO, "src")
 MESH_DIR = os.path.join(ROOT, "src", "shared", "Meshes")
-EDITED = ["Config", "UI", "Throw", "HeavenlyBreak"]
+EDITED = ["Config", "UI", "Throw", "HeavenlyBreak", "MeshBuilder", "Visuals"]
 MESHES = ["FinaleComputer", "FinaleCity", "FinaleNature", "HallWall", "HallCeiling", "DecoLantern", "DecoCrystal", "DecoGift",
           "DecoTree", "DecoSnowman", "DecoCandyCane", "DecoMushroom", "DecoCactus", "DecoShell", "DecoGear", "DecoPlanet",
           "DecoPalm", "DecoTorch", "DecoTrophy", "DecoLotus", "DecoGarland"]
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 import landscape  # noqa: E402
 MESHES += [f[2] for f in landscape.FAMILIES]
+THEME_PARTS = ("Wall", "Backdrop", "Ceiling", "Hero", "Mid", "Rail", "Hang")  # blender/themes.py kits
+MESHES += sorted(f[:-5] for f in os.listdir(MESH_DIR) if f.endswith(".luau") and f.startswith(THEME_PARTS) and f[:-5] not in MESHES)
 NEW = {"CameraDirector": ("LocalScript", "UI")}  # scripts we add: class, inserted next to this existing script
 
 
@@ -67,7 +69,7 @@ def inject_hall(x):
         x = x[:old] + x[item_end(x, old):]
     world = re.search(r'<Item class="Folder" referent="[^"]*"><Properties><string name="Name">World</string></Properties>', x)
     assert world, "World folder not found"
-    return x[:world.end()] + hall.build_xml() + x[world.end():]
+    return x[:world.end()] + hall.build_xml(x) + x[world.end():]
 
 
 def pack():
@@ -101,6 +103,8 @@ def pack():
             assert k == 1, f"{n}: {k} copies"
     x = inject_hall(x)
     x = landscape.apply(x)
+    import bake
+    x = bake.apply(x)  # uploaded meshes -> real MeshParts
     ET.fromstring(x)  # the place must still be valid XML
     open(PLACE, "w", encoding="utf-8").write(x)
     out = os.path.join(STUDIO, "BilliardHunters-Studio-Full.zip")

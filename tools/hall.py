@@ -11,32 +11,34 @@ START_Z, SEG = 80, 80
 RAIL_X, RAIL_TOP = 15.17, 4.53
 NEW_YEAR = 21
 
-# props per theme: first keyword that appears in the table name wins
+# props per theme: first keyword that appears in the table name wins (Deco* rail props + the Blender theme kit
+# from blender/themes.py: Wall/Backdrop/Ceiling/Hero/Mid/Rail/Hang<Theme>)
 KITS = [
-    (("new year",), ["DecoTree", "DecoGift", "DecoSnowman", "DecoCandyCane"]),
-    (("apple", "orchard", "acorn", "maple", "grove", "blossom"), ["DecoMushroom", "DecoLantern"]),
-    (("candy", "waffle", "macaron", "sugar"), ["DecoCandyCane", "DecoGift"]),
-    (("coral", "pearl", "seahorse", "jellyfish", "reef", "lagoon", "nautilus", "tidal"), ["DecoShell", "DecoCrystal"]),
-    (("saguaro", "joshua", "agave", "mesa", "dunes", "sandstone", "sun arch"), ["DecoCactus", "DecoTorch"]),
-    (("frost", "ice", "glacier", "polar", "aurora"), ["DecoCrystal", "DecoSnowman"]),
-    (("ember", "obsidian", "magma", "firebird", "solar", "forge"), ["DecoTorch", "DecoCrystal"]),
-    (("bamboo", "koi", "tea", "bonsai", "jade", "lantern", "pagoda"), ["DecoLantern", "DecoLotus"]),
-    (("crater", "meteor", "comet", "lunar", "orbital", "saturn", "nebula", "galaxy", "saucer", "eclipse", "astral"), ["DecoPlanet", "DecoCrystal"]),
-    (("brass", "pendulum", "copper", "chronometer", "clock", "windmill"), ["DecoGear", "DecoTrophy"]),
-    (("lotus", "waterlily", "dragonfly", "bloom", "rain"), ["DecoLotus", "DecoMushroom"]),
-    (("pixel", "joystick", "hologram", "synthwave", "prism"), ["DecoCrystal", "DecoGear"]),
-    (("cloud", "storm", "thunder", "tempest", "kites", "sail"), ["DecoLantern", "DecoPlanet"]),
-    (("royal", "sapphire", "ruby", "opal", "crown", "gallery", "bastion"), ["DecoTrophy", "DecoCrystal"]),
-    (("canal", "wharf", "beacon", "loft", "harbour"), ["DecoLantern", "DecoShell"]),
+    (("new year",), ["DecoTree", "DecoGift", "DecoSnowman", "DecoCandyCane"], "NewYear"),
+    (("apple", "orchard", "acorn", "maple", "grove", "blossom"), ["DecoMushroom", "DecoLantern"], "Orchard"),
+    (("candy", "waffle", "macaron", "sugar"), ["DecoCandyCane", "DecoGift"], "Candy"),
+    (("coral", "pearl", "seahorse", "jellyfish", "reef", "lagoon", "nautilus", "tidal"), ["DecoShell", "DecoCrystal"], "Reef"),
+    (("saguaro", "joshua", "agave", "mesa", "dunes", "sandstone", "sun arch"), ["DecoCactus", "DecoTorch"], "Desert"),
+    (("frost", "ice", "glacier", "polar", "aurora"), ["DecoCrystal", "DecoSnowman"], "Ice"),
+    (("ember", "obsidian", "magma", "firebird", "solar", "forge"), ["DecoTorch", "DecoCrystal"], "Fire"),
+    (("bamboo", "koi", "tea", "bonsai", "jade", "lantern", "pagoda"), ["DecoLantern", "DecoLotus"], "Zen"),
+    (("crater", "meteor", "comet", "lunar", "orbital", "saturn", "nebula", "galaxy", "saucer", "eclipse", "astral"), ["DecoPlanet", "DecoCrystal"], "Space"),
+    (("brass", "pendulum", "copper", "chronometer", "clock", "windmill"), ["DecoGear", "DecoTrophy"], "Clock"),
+    (("lotus", "waterlily", "dragonfly", "bloom", "rain"), ["DecoLotus", "DecoMushroom"], "Garden"),
+    (("pixel", "joystick", "hologram", "synthwave", "prism"), ["DecoCrystal", "DecoGear"], "Pixel"),
+    (("cloud", "storm", "thunder", "tempest", "kites", "sail"), ["DecoLantern", "DecoPlanet"], "Sky"),
+    (("royal", "sapphire", "ruby", "opal", "crown", "gallery", "bastion"), ["DecoTrophy", "DecoCrystal"], "Royal"),
+    (("canal", "wharf", "beacon", "loft", "harbour"), ["DecoLantern", "DecoShell"], "Harbour"),
 ]
-DEFAULT_KIT = ["DecoTrophy", "DecoPalm"]
+DEFAULT_KIT = (["DecoTrophy", "DecoPalm"], "Club")
 
 
 def kit(name):
+    """(Deco rail props, Blender theme) for a table name."""
     low = name.lower()
-    for words, props in KITS:
+    for words, deco, theme in KITS:
         if any(w in low for w in words):
-            return props
+            return deco, theme
     return DEFAULT_KIT
 
 
@@ -112,10 +114,10 @@ def xml(i):
     return f'<Item class="{i.cls}" referent="RBXHall{next(ref)}"><Properties>{props(i)}</Properties>{"".join(xml(k) for k in i.kids)}</Item>'
 
 
-def prop(parent, mesh, at, size, color, scale):
+def prop(parent, mesh, at, size, color, scale, **colors):
     """Blender prop: an invisible pivot at the prop's base (mesh origin) + a simple block as the fallback look."""
     m = I("Model", mesh, parent)
-    tag(part(m, (0.2, 0.2, 0.2), at, (255, 255, 255), transparency=1, name="MeshPivot"), mesh, scale)
+    tag(part(m, (0.2, 0.2, 0.2), at, (255, 255, 255), transparency=1, name="MeshPivot"), mesh, scale, **colors)
     x, y, z = at[:3]
     part(m, size, (x, y + size[1] / 2) + at[2:], color)
     return m
@@ -131,40 +133,90 @@ WALL_STYLES = [((122, 52, 60), (78, 30, 38), (48, 92, 70)), ((40, 70, 110), (24,
                ((150, 110, 70), (96, 66, 40), (40, 60, 100)), ((40, 40, 50), (24, 24, 30), (120, 30, 60))]
 
 
-def build():
+def free_slots(taken, side, need, lo=-36, hi=36):
+    """z offsets (table-local) on one side, at least `need` studs from the scenery already standing there."""
+    out = []
+    for z in [lo + k * 0.5 for k in range(int((hi - lo) / 0.5) + 1)]:
+        if all(abs(z - t) >= need for t in taken):
+            out.append(z)
+    best, picked = None, []
+    for z in sorted(out, key=lambda z: min([abs(z - t) for t in taken] or [99]), reverse=True):  # widest gaps first
+        if all(abs(z - p) >= need for p in picked):
+            picked.append(z)
+    return sorted(picked)
+
+
+def scenery(x):
+    """{table index: {side: [z offsets]}} of the Land scenery between the table and the backdrop."""
+    if not x:
+        return {}
+    import landscape
+    anchors = {f[0] for f in landscape.FAMILIES if f[2] not in ("LandHills",)}
+    out = {}
+    for m in re.finditer(r'<string name="Name">(' + "|".join(re.escape(a) for a in anchors) + r')</string>(?:<token name="shape">\d</token>)?<CoordinateFrame name="CFrame"><X>([^<]*)</X><Y>[^<]*</Y><Z>([^<]*)</Z>', x):
+        px, pz = float(m.group(2)), float(m.group(3))
+        k = int((pz - START_Z) // SEG) + 1
+        if 1 <= k <= len(TABLES) and 16 < abs(px) < 31:
+            out.setdefault(k, {}).setdefault(1 if px > 0 else -1, []).append(pz - (START_Z + (k - 0.5) * SEG))
+    return out
+
+
+def build(x=None):
     hall = I("Folder", "TableHall")
+    occupied = scenery(x)
     for k, (name, hexcol) in enumerate(TABLES, 1):
         zc = START_Z + (k - 0.5) * SEG
         style = WALL_STYLES[(k - 1) % len(WALL_STYLES)]
+        tcol = tuple(int(hexcol[i:i + 2], 16) for i in (0, 2, 4))
+        accent = mix(tcol, (255, 255, 255), 0.15)
+        deco_kit, theme = kit("New Year Square" if k == NEW_YEAR else name)
         seg = I("Model", f"Hall{k:02d}", hall)
-        for side in (-1, 1):  # walls: Blender segment, part fallback (upper band, cornice, pilasters)
+        for side in (-1, 1):  # walls + backdrop diorama: Blender, part fallback (upper band, cornice, pilasters)
+            yaw = 0 if side < 0 else math.pi
             wall = I("Model", "Wall", seg)
-            pv = part(wall, (0.2, 0.2, 0.2), cf(side * 33.5, 0, zc, 0 if side < 0 else math.pi), (255, 255, 255), transparency=1, name="MeshPivot")
-            tag(pv, "HallWall", Wall=style[0], WallDark=style[1], Panel=style[2])
+            pv = part(wall, (0.2, 0.2, 0.2), cf(side * 33.5, 0, zc, yaw), (255, 255, 255), transparency=1, name="MeshPivot")
+            tag(pv, "Wall" + theme, Accent=accent)
             part(wall, (1.2, 12, 80), cf(side * 34.1, 30, zc), style[0])
             part(wall, (1.6, 1.1, 80.2), cf(side * 33.3, 35.5, zc), (236, 224, 200))
             part(wall, (2.4, 36, 2.8), cf(side * 32.9, 18, zc - 40), style[1])
-        ceil = I("Model", "Ceiling", seg)  # ceiling with three billiard lamps
+            back = I("Model", "Backdrop", seg)
+            pv = part(back, (0.2, 0.2, 0.2), cf(side * 31.35, 0, zc, yaw), (255, 255, 255), transparency=1, name="MeshPivot")
+            tag(pv, "Backdrop" + theme, Accent=accent)
+            part(back, (0.4, 24, 80), cf(side * 31.3, 12, zc), mix(tcol, (255, 255, 255), 0.5))
+        ceil = I("Model", "Ceiling", seg)  # themed ceiling with three billiard lamps
         pv = part(ceil, (0.2, 0.2, 0.2), cf(0, 0, zc), (255, 255, 255), transparency=1, name="MeshPivot")
-        tag(pv, "HallCeiling", Beam=mix(style[1], (92, 56, 32), 0.5))
+        tag(pv, "Ceiling" + theme, Accent=accent)
         part(ceil, (70, 1, 80), cf(0, 36.5, zc), (232, 220, 196))
         for dz in (-26.7, 0, 26.7):
             shade = part(ceil, (3.6, 2.4, 3.6), cf(0, 18.2, zc + dz), (28, 110, 64), name="LampShade")
             if dz == 0:  # one real light per table keeps the light count low
                 I("SpotLight", "LampLight", shade, color=(255, 226, 170), range=30, brightness=2.4, angle=75)
-        theme = "New Year Square" if k == NEW_YEAR else name
-        props_ = kit(theme)
         deco = I("Folder", "Deco", seg)
-        for n, dz in enumerate((-33, -20, 20, 33)):  # props on both rails, clear of the pockets
+        for n, dz in enumerate((-34, -21, -13, 13, 21, 34)):  # rails: theme piece / Deco prop, clear of pockets and sights
             for side in (-1, 1):
-                mesh = props_[(n + (side > 0)) % len(props_)]
-                prop(deco, mesh, cf(side * RAIL_X, RAIL_TOP, zc + dz + side * 2, k * 0.7 + n), (1.4, 2.6, 1.4),
-                     mix(tuple(int(hexcol[i:i + 2], 16) for i in (0, 2, 4)), (255, 255, 255), 0.3), 1.25)
+                z = zc + dz * -side  # mirrored, so the two rails differ
+                if (n + (side > 0)) % 2:
+                    prop(deco, "Rail" + theme, cf(side * RAIL_X, RAIL_TOP, z, k * 0.9 + n), (1.2, 1.4, 1.2), accent, 1.15, Accent=accent)
+                else:
+                    mesh = deco_kit[(n // 2 + (side > 0)) % len(deco_kit)]
+                    prop(deco, mesh, cf(side * RAIL_X, RAIL_TOP, z, k * 0.7 + n), (1.4, 2.6, 1.4), mix(tcol, (255, 255, 255), 0.3), 1.25)
+        for side in (-1, 1):  # floor: hero piece + mid pieces in the gaps between the Land scenery
+            yaw = 0 if side < 0 else math.pi
+            taken = list(occupied.get(k, {}).get(side, []))
+            spots = free_slots(taken, side, 6.5)
+            if spots:
+                hz = min(spots, key=lambda z: abs(z - side * 10))
+                prop(deco, "Hero" + theme, cf(side * 25.5, 0, zc + hz, yaw), (4, 8, 4), accent, 1.0, Accent=accent)
+                taken.append(hz)
+            for mz in free_slots(taken, side, 4.5)[:4]:
+                prop(deco, "Mid" + theme, cf(side * 24.5, 0, zc + mz, yaw + (mz % 3 - 1) * 0.4), (2.4, 3.5, 2.4), accent, 1.0, Accent=accent)
+            for n, dz in enumerate((-30, -10, 10, 30)):  # hangers under the ceiling, over the scenery
+                prop(deco, "Hang" + theme, cf(side * (22 + (n % 2) * 4), 35.6, zc + dz, n * 0.8), (0.3, 0.3, 0.3), accent, 1.0, Accent=accent)
         if k == NEW_YEAR:  # the New Year set: big tree, gifts, snowmen, garlands, snowfall
             ny = I("Folder", "NewYear", seg)
             prop(ny, "DecoTree", cf(-25, 0, zc + 14), (5, 12, 5), (30, 120, 60), 2.6)
-            for g, (x, z) in enumerate(((-21.5, 10), (-22, 18.5), (-28.5, 18), (-28, 9.5))):
-                prop(ny, "DecoGift", cf(x, 0, zc + z, g), (2, 2, 2), (220, 40, 60), 1.4)
+            for g, (gx, gz) in enumerate(((-21.5, 10), (-22, 18.5), (-28.5, 18), (-28, 9.5))):
+                prop(ny, "DecoGift", cf(gx, 0, zc + gz, g), (2, 2, 2), (220, 40, 60), 1.4)
             prop(ny, "DecoSnowman", cf(25, 0, zc - 12, math.pi), (3.5, 8, 3.5), (248, 250, 255), 2.1)
             prop(ny, "DecoCandyCane", cf(24, 0, zc + 16), (1.2, 6, 1.2), (220, 30, 50), 1.8)
             for side in (-1, 1):  # light garlands along the outside of both rails
@@ -175,10 +227,10 @@ def build():
     return hall
 
 
-def build_xml():
+def build_xml(x=None):
     global ref
     ref = iter(range(10 ** 7))
-    return xml(build())
+    return xml(build(x))
 
 
 if __name__ == "__main__":

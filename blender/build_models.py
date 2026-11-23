@@ -1351,8 +1351,13 @@ def render_group(names, filename, cols, cell=12, dummy=False):
 
 def main():
     import sys
-    if "finale" in sys.argv or "hall" in sys.argv or "land" in sys.argv:  # only these sets, next to the existing meshes
-        for name, fn in (FINALE if "finale" in sys.argv else HALL if "hall" in sys.argv else LAND):
+    if "theme" in sys.argv:  # themed hall kits (blender/themes.py); optional theme names after "theme"
+        import themes
+        sets = themes.kit(set(sys.argv[sys.argv.index("theme") + 1:]) or None)
+    elif "finale" in sys.argv or "hall" in sys.argv or "land" in sys.argv:
+        sets = FINALE if "finale" in sys.argv else HALL if "hall" in sys.argv else LAND
+    if "theme" in sys.argv or "finale" in sys.argv or "hall" in sys.argv or "land" in sys.argv:  # only these sets, next to the existing meshes
+        for name, fn in sets:
             reset()
             fn()
             o = join_triangulate(name)
@@ -1381,4 +1386,5 @@ def main():
                      "-- Roblox axes, studs; vertices centred on bbox, `center` = offset from the model origin.\n" + text)
     render_group([n for n, _ in CORE], "models.png", 3)
 
-main()
+if __name__ == "__main__":
+    main()

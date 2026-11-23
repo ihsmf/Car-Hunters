@@ -100,6 +100,30 @@ local function box(props, top, bottom, radius, strokeW, strokeColor)
 	if strokeW ~= 0 then stroke(strokeW or 4, strokeColor).Parent = body end
 	return holder, body
 end
+-- UI v5: a light sweep travels across buttons, pills and ribbons; one Heartbeat drives them all
+local shimmers = {}
+local function shimmer(body, radius, period)
+	local o = new("Frame", { Name = "Shimmer", Size = UDim2.fromScale(1, 1), BackgroundColor3 = WHITE, BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = 4, Parent = body }, { corner(radius) })
+	local g = new("UIGradient", { Rotation = 18, Offset = Vector2.new(-1.2, 0), Parent = o,
+		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.42, 1), NumberSequenceKeypoint.new(0.5, 0.25), NumberSequenceKeypoint.new(0.58, 1), NumberSequenceKeypoint.new(1, 1) }) })
+	table.insert(shimmers, { g = g, period = period or 3.2, phase = math.random() * 3 })
+	-- depth: darker lower third and a crisp top highlight line
+	new("Frame", { Name = "Depth", Size = UDim2.new(1, 0, 0.34, 0), Position = UDim2.fromScale(0, 0.66), BackgroundColor3 = INK, BackgroundTransparency = 0.86, BorderSizePixel = 0, ZIndex = 0, Parent = body }, { corner(radius) })
+	return o
+end
+RunService.Heartbeat:Connect(function()
+	local t = os.clock()
+	for i = #shimmers, 1, -1 do
+		local s = shimmers[i]
+		if not s.g.Parent or not s.g.Parent.Parent then
+			table.remove(shimmers, i)
+		else
+			local u = ((t + s.phase) % s.period) / 0.9 -- sweep takes 0.9 s, then rests
+			s.g.Offset = Vector2.new(u <= 1 and -1.2 + u * 2.4 or 1.2, 0)
+		end
+	end
+end)
+
 -- white cartoon card inside a panel: ink outline, soft cream gradient
 local function card(props, radius, color)
 	local f = new("Frame", { Size = props.Size, Position = props.Position or UDim2.new(), LayoutOrder = props.LayoutOrder or 0, BackgroundColor3 = WHITE, Name = props.Name or "Card", Parent = props.Parent }, {
@@ -107,6 +131,16 @@ local function card(props, radius, color)
 	})
 	new("Frame", { Name = "Gloss", Size = UDim2.new(1, -20, 0, 10), Position = UDim2.fromOffset(10, 5), BackgroundColor3 = WHITE,
 		BackgroundTransparency = 0.25, BorderSizePixel = 0, ZIndex = 0, Parent = f }, { corner(5) })
+	local lift = new("UIScale", { Parent = f })
+	local edge = f:FindFirstChildOfClass("UIStroke")
+	f.MouseEnter:Connect(function()
+		tween(lift, 0.15, { Scale = 1.03 })
+		if edge then tween(edge, 0.15, { Color = rgb(255, 170, 40) }) end
+	end)
+	f.MouseLeave:Connect(function()
+		tween(lift, 0.15, { Scale = 1 })
+		if edge then tween(edge, 0.15, { Color = INK }) end
+	end)
 	return f
 end
 
@@ -165,6 +199,7 @@ local function button(props, colors, label, size, onClick)
 		Position = UDim2.fromOffset(10,5), BackgroundColor3 = WHITE, BackgroundTransparency = .62,
 		BorderSizePixel = 0, Parent = body }, { corner(math.max(6,(props.Radius or 18)-6)) })
 	shine.Visible = true -- candy gloss on every button (Figma v4)
+	local sweep = props.Icon ~= "Close" and shimmer(body, props.Radius or 18, props.Hud and 2.2 or 3.4)
  local hit = new("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "",
 		Name = label ~= "" and (label or "Action") or "MenuAction", ZIndex = 5, AutoButtonColor = false, Parent = holder })
 	local scale = new("UIScale", { Parent = holder })
@@ -218,6 +253,7 @@ local function button(props, colors, label, size, onClick)
 		enabled, colorKey, hit.Selectable = on, c, on
 		body.UIGradient.Color = ColorSequence.new(c[1],c[2])
 		shine.Visible = on
+		if sweep then sweep.Visible = on end
 		lbl.TextTransparency = on and 0 or .24
 		if not on then focus.Transparency = 1 end
 	end
@@ -379,6 +415,7 @@ local function pill(name,x,w,colors)
  new("Frame",{Name="Gloss",Size=UDim2.new(1,-30,0,24),Position=UDim2.fromOffset(15,5),BackgroundColor3=WHITE,BackgroundTransparency=.68,BorderSizePixel=0,Parent=body},{corner(12)})
  new("Frame",{Name="IconChip",Size=UDim2.fromOffset(70,70),Position=UDim2.fromOffset(11,13),BackgroundColor3=WHITE,BackgroundTransparency=.05,Parent=body},{corner(35),stroke(4)})
  hudIcon(body,name,46,UDim2.fromOffset(23,25)).ZIndex=3
+ shimmer(body,48,5)
  return holder,body
 end
 local _,cashBody=pill("Cash",26,378,GREEN)
@@ -411,6 +448,15 @@ local powerFill = new("Frame", { Size = UDim2.new(0, 0, 1, -12), Position = UDim
 	corner(16), new("UIGradient", { Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, rgb(90, 220, 90)), ColorSequenceKeypoint.new(0.6, rgb(255, 220, 40)), ColorSequenceKeypoint.new(1, rgb(255, 60, 60)) }) }),
 })
 local _, _, shootLabel, setShootEnabled, shootHit = button({ Size = UDim2.fromOffset(400, 118), Position = UDim2.fromOffset(120, 122), Parent = shotBar, Radius = 44, Hud = true, Icon = "Shot" }, U.Red, "SHOOT!", 52)
+do -- SHOOT halo: a golden ring breathes around the button while it can be pressed
+	local halo = new("UIStroke", { Color = rgb(255, 214, 90), Thickness = 0, Transparency = 0.2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = shootHit.Parent:FindFirstChild("Body") })
+	RunService.Heartbeat:Connect(function()
+		if not shotBar.Visible then return end
+		local k = (math.sin(os.clock() * 4) + 1) / 2
+		halo.Thickness = shootHit.Selectable and 4 + k * 6 or 0
+		halo.Transparency = 0.15 + k * 0.5
+	end)
+end
 shotBar.Visible = false
 local hint = text("Tap at the right moment", 21, WHITE, { Size = UDim2.fromOffset(640, 26), Position = UDim2.fromOffset(0, 244), Parent = shotBar })
 
@@ -436,6 +482,7 @@ local function panel(key, title, colors)
 	end
 	local _, ribbon = box({ Size = UDim2.new(1, 24, 0, 104), Position = UDim2.fromOffset(-12, -32), Parent = body }, colors[1], colors[2], 34, 6)
 	new("Frame", { Name = "Gloss", Size = UDim2.new(1, -28, 0, 30), Position = UDim2.fromOffset(14, 7), BackgroundColor3 = WHITE, BackgroundTransparency = .7, BorderSizePixel = 0, Parent = ribbon }, { corner(15) })
+	shimmer(ribbon, 34, 4)
 	local artKey=({Cues="Shop",Gym="Strength"})[key] or key
  hudIcon(ribbon,artKey,60,UDim2.fromOffset(28,16))
  text(title,58,WHITE,{Size=UDim2.new(1,-220,1,0),Position=UDim2.fromOffset(104,0),Parent=ribbon,TextXAlignment=Enum.TextXAlignment.Left})
@@ -465,6 +512,10 @@ function open(key, force)
 	if not show then return end
 	p.holder.Visible = true
 	renderers[key]()
+	local home = p.holder:GetAttribute("Home") or p.holder.Position
+	p.holder:SetAttribute("Home", home)
+	p.holder.Position = home + UDim2.fromOffset(0, 70) -- slides up into place
+	tween(p.holder, 0.32, { Position = home }, Enum.EasingStyle.Back)
  if key=="Cues" then return end
 	local sc = p.holder:FindFirstChild("Pop") or new("UIScale", { Name = "Pop", Parent = p.holder })
 	sc.Scale = 0.6
@@ -473,10 +524,16 @@ end
 backdrop.Activated:Connect(function()
 	for _, q in panels do q.holder.Visible = false end
 end)
+local menuBlur = new("BlurEffect", { Name = "MenuBlur", Size = 0, Parent = game:GetService("Lighting") })
+local blurred = false
 RunService.Heartbeat:Connect(function()
 	local any = false
 	for _, q in panels do any = any or q.holder.Visible end
 	backdrop.Visible = any
+	if any ~= blurred then -- the game softly blurs behind an open menu
+		blurred = any
+		tween(menuBlur, 0.25, { Size = any and 14 or 0 })
+	end
 end)
 local function rerender() -- Settings is not rebuilt from server updates (it would interrupt a slider drag)
 	for k, p in panels do
@@ -1174,6 +1231,19 @@ local function renderStats()
  incomeLabel.Text = "+$" .. C.Short(state.income) .. "/s"
 	strLabel.Text = C.Short(state.d.strength)
 end
+local cashPop = new("UIScale", { Parent = cashBody.Parent })
+local lastGain = 0
+local function cashGain(amount) -- bounce the cash pill and let the gain drift out of it
+	if amount <= 0 or os.clock() - lastGain < 0.35 then return end
+	lastGain = os.clock()
+	cashPop.Scale = 1.1
+	tween(cashPop, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
+	local f = text("+$" .. C.Short(amount), 34, rgb(150, 255, 140), { Size = UDim2.fromOffset(260, 44), Position = UDim2.fromOffset(120, 70), Parent = cashBody, ZIndex = 8 })
+	tween(f, 1.1, { Position = UDim2.fromOffset(120, 120), TextTransparency = 1 })
+	local st = f:FindFirstChildOfClass("UIStroke")
+	if st then tween(st, 1.1, { Transparency = 1 }) end
+	task.delay(1.2, function() f:Destroy() end)
+end
 RunService.Heartbeat:Connect(function(dt) -- smooth cash count-up
 	shownCash += (targetCash - shownCash) * math.min(1, dt * 8)
 	if math.abs(targetCash - shownCash) < 1 then shownCash = targetCash end
@@ -1190,6 +1260,7 @@ Fx.OnClientEvent:Connect(function(kind, a, b, c)
         if a.training then panels.Gym.holder.Visible=false end
 		_G.MySlot, _G.MyCue = a.slot, a.d.cue
 		_G.OwnerEligible = a.ownerEligible == true -- unlocks the owner camera mode (CameraDirector)
+		if not firstState and a.d.cash > targetCash then cashGain(a.d.cash - targetCash) end
 		targetCash = a.d.cash
 		if firstState then
 			firstState = false

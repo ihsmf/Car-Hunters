@@ -25,11 +25,23 @@ FAMILIES = [
     ("Pixel stair", ["Pixel stair", "Power cube"], "LandPixel", 4.5, {"Main": "Pixel stair", "Detail": "Power cube"}),
     ("Planet", ["Equatorial disc", "Satellite"], "LandPlanet", 4, {"Main": "Planet", "Accent": "Equatorial disc", "Detail": "Satellite"}),
     ("Royal dais", ["Crown point"], "LandThrone", 3, {"Main": "Royal dais", "Accent": "Crown point"}),
-    ("Distant hills", [], "LandHills", 0, {"Main": "Distant hills"}),
     ("Floating jewel", [], "LandGem", 0, {"Main": "Floating jewel"}),
     ("Beacon", [], "LandBeacon", 0, {"Glow": "Beacon"}),
 ]
 CENTRED = {"LandGem"}  # pivot at the object's centre instead of its base
+# flat decor on the old painted backdrop, now covered by the Blender diorama (tools/hall.py Backdrop<Theme>)
+HIDE = {"Cyclorama", "Sun disc", "Moonrise", "Orbit glint", "Star", "Heraldic panel", "Sky ribbon", "Celestial lintel",
+        "Faceted horizon", "Peak line", "Distant hills"}
+
+
+def hide(item):
+    t = prop(item, "Transparency")
+    if t is None:
+        t = ET.SubElement(item.find("Properties"), "float", {"name": "Transparency"})
+    t.text = "1"
+    c = prop(item, "CanCollide")
+    if c is not None:
+        c.text = "false"
 
 
 def mesh_box(name):
@@ -96,7 +108,15 @@ def process(table, boxes, report):
             if name_of(k) != "MeshPivot":
                 table.append(k)
         table.remove(m)
-    parts = [k for k in table.findall("Item") if k.get("class") == "Part"]
+    for k in table.findall("Item"):
+        n = name_of(k)
+        if k.get("class") == "Part" and n in HIDE:
+            hide(k)
+        elif k.get("class") == "Model" and not n.startswith("Land:") and not n.startswith("ClubTable"):
+            for d in k.iter("Item"):  # the block-built theme composition: replaced by the Blender theme kit
+                if d.get("class") in ("Part", "WedgePart", "CornerWedgePart", "UnionOperation"):
+                    hide(d)
+    parts = [k for k in table.findall("Item") if k.get("class") == "Part" and name_of(k) not in HIDE]
     info = {id(p): part_info(p) for p in parts}
     used = set()
     for anchor, companions, mesh, radius, slots in FAMILIES:

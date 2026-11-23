@@ -20,16 +20,17 @@ local V = Vector3.new
 local WHITE = Color3.new(1, 1, 1)
 local function smooth(x) x = math.clamp(x, 0, 1); return x * x * (3 - 2 * x) end
 
-local FILTERS = {
-	{ name = "Film", tint = Color3.fromRGB(255, 243, 230), contrast = 0.16, saturation = 0.1, brightness = 0.02, bloom = { 0.55, 28, 0.95 }, rays = 0.07, dof = { 0.35, 0.15 }, blur = 0, bars = true, vignette = 0.45 },
-	{ name = "Golden hour", tint = Color3.fromRGB(255, 214, 172), contrast = 0.12, saturation = 0.2, brightness = 0.04, bloom = { 0.8, 36, 0.85 }, rays = 0.12, dof = { 0.3, 0.12 }, blur = 0, bars = true, vignette = 0.4 },
-	{ name = "Noir", tint = WHITE, contrast = 0.35, saturation = -1, brightness = -0.02, bloom = { 0.2, 20, 1.2 }, rays = 0, dof = { 0.4, 0.2 }, blur = 0, bars = true, vignette = 0.65 },
-	{ name = "Dream", tint = Color3.fromRGB(255, 236, 250), contrast = -0.05, saturation = 0.25, brightness = 0.06, bloom = { 1.4, 56, 0.7 }, rays = 0.1, dof = { 0.55, 0.25 }, blur = 3, bars = false, vignette = 0.3 },
+local FILTERS = { -- soft grades: bloom only on real highlights (threshold > 1.8), never brighter than the scene
+	{ name = "Film", tint = Color3.fromRGB(255, 249, 242), contrast = 0.1, saturation = 0.04, brightness = -0.02, exposure = -0.1, bloom = { 0.2, 18, 2 }, rays = 0.015, dof = { 0.25, 0.1 }, blur = 0, bars = true, vignette = 0.45 },
+	{ name = "Golden hour", tint = Color3.fromRGB(255, 234, 212), contrast = 0.08, saturation = 0.1, brightness = -0.03, exposure = -0.15, bloom = { 0.25, 20, 1.9 }, rays = 0.02, dof = { 0.22, 0.08 }, blur = 0, bars = true, vignette = 0.4 },
+	{ name = "Noir", tint = WHITE, contrast = 0.12, saturation = -1, brightness = -0.02, exposure = -0.05, bloom = { 0.12, 16, 2.4 }, rays = 0, dof = { 0.3, 0.12 }, blur = 0, bars = true, vignette = 0.6 },
+	{ name = "Dream", tint = Color3.fromRGB(252, 244, 255), contrast = 0, saturation = 0.12, brightness = -0.02, exposure = -0.12, bloom = { 0.3, 24, 1.8 }, rays = 0.02, dof = { 0.25, 0.1 }, blur = 0, bars = false, vignette = 0.3 },
 	{ name = "Off" },
 }
 local MODES = { "Free flight", "Orbit", "Shots" }
 
 local active, mode, filterIdx = false, 1, 1
+local baseExposure -- Lighting.ExposureCompensation before the camera mode
 local fx, hiddenGuis, savedAnchor = {}, {}, nil
 local pos, yaw, pitch, tYaw, tPitch, roll, fov = Vector3.zero, 0, 0, 0, 0, 0, 70
 local vel, baseSpeed, looking = Vector3.zero, 40, false
@@ -155,6 +156,8 @@ local function applyFilter()
 		fx.dof.FarIntensity, fx.dof.NearIntensity = f.dof[1], f.dof[2]
 		fx.blur.Size = f.blur
 	end
+	if baseExposure == nil then baseExposure = Lighting.ExposureCompensation end
+	Lighting.ExposureCompensation = baseExposure + (on and f.exposure or 0)
 	local view = cam.ViewportSize
 	local barH = (on and f.bars) and math.max(0, (1 - (view.X / 2.39) / view.Y) / 2) or 0 -- 2.39:1 cinema frame
 	for _, b in bars do b.Size = UDim2.fromScale(1, barH) end
@@ -349,6 +352,7 @@ local function leave()
 	shotProps.Parent = nil
 	Run:UnbindFromRenderStep("CameraDirector")
 	for _, e in fx do e:Destroy() end
+	if baseExposure ~= nil then Lighting.ExposureCompensation, baseExposure = baseExposure, nil end
 	table.clear(fx)
 	gui.Enabled = false
 	setOthers(true)
