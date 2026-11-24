@@ -417,16 +417,16 @@ function C.ZoneOf(dist) return math.clamp(math.ceil(dist / C.Table.SegmentLength
 
 -- Replace 0 with real IDs from the Creator Dashboard (Monetization → Passes / Developer Products)
 C.GamePasses = {
-	{ key = "Cash2x", id = 0, badge = "2X", name = "x2 Cash", desc = "Double income from every ball" },
-	{ key = "Luck2x", id = 0, badge = "2X", name = "x2 Luck", desc = "Every shot starts with double luck" },
-	{ key = "DragonCue", id = 0, badge = "3X", name = "Dragon Cue", desc = "x3 shot distance until you own a better cue" },
-	{ key = "GoldStick", id = 0, badge = "+50%", name = "Income Boost", desc = "+50% income from every ball" },
-	{ key = "GoldenBall", id = 0, badge = "GOLD", name = "Golden Ball", desc = "Your shot ball turns gold with a sparkle trail" },
+	{ key = "Cash2x", id = 2099489194, price = 150, icon = 74725431217335, badge = "2X", name = "x2 Cash", desc = "Double income from every ball" },
+	{ key = "Luck2x", id = 2100329187, price = 200, icon = 133905656914705, badge = "2X", name = "x2 Luck", desc = "Every shot starts with double luck" },
+	{ key = "DragonCue", id = 2098835237, price = 149, icon = 109145037344576, badge = "3X", name = "Dragon Cue", desc = "x3 shot distance until you own a better cue" },
+	{ key = "GoldStick", id = 2099225218, price = 99, icon = 99663605548256, badge = "+50%", name = "Income Boost", desc = "+50% income from every ball" },
+	{ key = "GoldenBall", id = 2101996436, price = 49, icon = 101379168764855, badge = "GOLD", name = "Golden Ball", desc = "Your shot ball turns gold with a sparkle trail" },
 }
 C.Products = {
-	{ id = 0, cash = 5000 },
-	{ id = 0, cash = 50000 },
-	{ id = 0, cash = 500000 },
+	{ id = 3735875943, cash = 5000, price = 5, icon = 88301982801043 },
+	{ id = 3735875963, cash = 50000, price = 20, icon = 138719939374729 },
+	{ id = 3735875983, cash = 500000, price = 80, icon = 106638642206997 },
 }
 
 C.Daily = { 100, 250, 500, 1000, 2500, 5000, 15000 }

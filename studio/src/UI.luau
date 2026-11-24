@@ -728,8 +728,13 @@ renderers.Shop = function()
 		local x = ((i - 1) % 2) * 450
 		y = ((i - 1) // 2) * 150
 		local c = card({ Size = UDim2.fromOffset(436, 136), Position = UDim2.fromOffset(x, y), Parent = list }, 22)
-		local disc = new("Frame", { Size = UDim2.fromOffset(96, 96), Position = UDim2.fromOffset(18, 20), BackgroundColor3 = WHITE, Parent = c }, { corner(48), grad(rgb(255, 227, 138), rgb(255, 174, 31)), stroke(3) })
-		text(gp.badge, 32, nil, { Size = UDim2.fromScale(1, 1), Parent = disc })
+		local pic = new("ImageLabel", { Size = UDim2.fromOffset(104, 104), Position = UDim2.fromOffset(14, 16), BackgroundColor3 = WHITE, -- the rendered icon of what you get
+			Image = (gp.icon or 0) > 0 and ("rbxassetid://" .. gp.icon) or "", ScaleType = Enum.ScaleType.Crop, Parent = c }, { corner(24), stroke(3) })
+		if (gp.icon or 0) == 0 then text(gp.badge, 32, INK, { Size = UDim2.fromScale(1, 1), Parent = pic }) end
+		if gp.price then
+			local tag = new("Frame", { Size = UDim2.fromOffset(110, 34), Position = UDim2.fromOffset(310, 92), BackgroundColor3 = rgb(40, 180, 90), Parent = c }, { corner(17), stroke(3) })
+			text("R$ " .. gp.price, 22, WHITE, { Size = UDim2.fromScale(1, 1), Parent = tag })
+		end
 		text(gp.name, 30, INK, { Size = UDim2.fromOffset(300, 40), Position = UDim2.fromOffset(130, 12), Parent = c, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
 		text(gp.desc, 19, MUTED, { Size = UDim2.fromOffset(290, 40), Position = UDim2.fromOffset(130, 48), Parent = c, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, NoStroke = true })
 		local _, _, _, setBtn = button({ Size = UDim2.fromOffset(160, 40), Position = UDim2.fromOffset(130, 88), Parent = c, Radius = 14 }, U.Red, owned and "Owned" or "Buy", 22, function()
@@ -745,8 +750,11 @@ renderers.Shop = function()
   end
   packs += 1
   local c = card({ Size = UDim2.fromOffset(286, 130), Position = UDim2.fromOffset(((packs-1)%3)*302, y+48+math.floor((packs-1)/3)*144), Parent = list }, 22)
-		text("$" .. C.Short(pr.cash), 40, MONEY, { Size = UDim2.new(1, 0, 0, 60), Position = UDim2.fromOffset(0, 8), Parent = c })
-		button({ Size = UDim2.fromOffset(170, 42), Position = UDim2.fromOffset(58, 74), Parent = c, Radius = 14 }, U.Red, "Buy", 22, function() call("Product", i) end)
+		if (pr.icon or 0) > 0 then
+			new("ImageLabel", { Size = UDim2.fromOffset(98, 98), Position = UDim2.fromOffset(12, 16), BackgroundColor3 = WHITE, Image = "rbxassetid://" .. pr.icon, ScaleType = Enum.ScaleType.Crop, Parent = c }, { corner(22), stroke(3) })
+		end
+		text("$" .. C.Short(pr.cash), 36, MONEY, { Size = UDim2.fromOffset(160, 50), Position = UDim2.fromOffset(118, 10), Parent = c })
+		button({ Size = UDim2.fromOffset(150, 46), Position = UDim2.fromOffset(124, 70), Parent = c, Radius = 14 }, U.Red, pr.price and ("R$ " .. pr.price) or "Buy", 22, function() call("Product", i) end)
 	end
  if passes+packs==0 then p.sub.Text="No offers available right now" end
 end
