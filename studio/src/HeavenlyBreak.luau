@@ -42,6 +42,11 @@ return function(it, ctx)
 	local atmoDensity = atmosphere and atmosphere.Density
 	local cc = Instance.new("ColorCorrectionEffect")
 	cc.Parent = Lighting
+	local bloom = Instance.new("BloomEffect") -- glow on the neon nebulae, the core, the comet
+	bloom.Intensity, bloom.Size, bloom.Threshold, bloom.Parent = 0.7, 32, 1.25, Lighting
+	local sky = Lighting:FindFirstChildOfClass("Sky")
+	local skyStars = sky and sky.StarCount
+	if sky then sky.StarCount = 5000 end
 	local blur = Instance.new("BlurEffect")
 	blur.Size, blur.Parent = 0, Lighting
 	local gui = Instance.new("ScreenGui")
@@ -215,6 +220,24 @@ return function(it, ctx)
 		for k = 1, 26 do -- speed lines around the camera during the flight
 			streaks[k] = { p = part(V(0.12, 0.12, 14), CFrame.new(SPACE0), WHITE, Enum.Material.Neon), off = V(rnd:NextNumber(-9, 9), rnd:NextNumber(-6, 6), rnd:NextNumber(0, 60)) }
 		end
+		local NEBULA = { Color3.fromRGB(170, 80, 255), Color3.fromRGB(60, 140, 255), Color3.fromRGB(255, 80, 180), Color3.fromRGB(80, 230, 255), Color3.fromRGB(255, 160, 60) }
+		for k = 1, 14 do -- huge glowing nebula clouds behind the planets
+			local base = k <= 9 and PL or O.home
+			local d = V(rnd:NextNumber(-1, 1), rnd:NextNumber(-0.5, 0.6), rnd:NextNumber(-1, 1)).Unit
+			local n = part(V(1, 1, 1) * rnd:NextNumber(260, 520), CFrame.new(base + d * rnd:NextNumber(700, 1100) + V(0, 0, -400)), NEBULA[k % #NEBULA + 1], Enum.Material.Neon, Enum.PartType.Ball)
+			n.Transparency = rnd:NextNumber(0.86, 0.93)
+		end
+		local starSun = part(V(70, 70, 70), CFrame.new(PL + V(500, 260, -900)), Color3.fromRGB(255, 240, 200), Enum.Material.Neon, Enum.PartType.Ball)
+		starSun.Transparency = 0.1
+		local dustAnchor = part(V(1, 1, 1), CFrame.new(PL), WHITE)
+		dustAnchor.Transparency = 1
+		local dust = Instance.new("ParticleEmitter") -- star dust rushing past the camera in space
+		dust.Color, dust.LightEmission, dust.Rate = ColorSequence.new(WHITE, Color3.fromRGB(180, 200, 255)), 1, 0
+		dust.Size = NumberSequence.new(0.25, 0)
+		dust.Lifetime, dust.Speed, dust.SpreadAngle = NumberRange.new(0.6, 1.2), NumberRange.new(0, 2), Vector2.new(180, 180)
+		dust.Shape, dust.Parent = Enum.ParticleEmitterShape.Sphere, dustAnchor
+		dustAnchor.Size = V(60, 60, 60)
+		local fireball -- expanding white-hot flash of the explosion
 		local chunks, wave = {}, nil
 		local tunnel = {}
 		for k = 1, 10 do -- fire rings on the dive into the core
@@ -410,8 +433,8 @@ return function(it, ctx)
 			t -= 1.5 -- the rest of the film is timed after the god scene
 			if t < 6 then -- ===== 2. the ball flies through space into the super-planet
 				if stage ~= 2 then stage = 2; cut() end
-				set({ ClockTime = 0, Brightness = 0, Ambient = Color3.fromRGB(30, 30, 60), OutdoorAmbient = Color3.fromRGB(20, 20, 40) })
-				cc.TintColor, cc.Saturation, cc.Contrast, cc.Brightness = Color3.fromRGB(220, 225, 255), 0.25, 0.15, 0
+				set({ ClockTime = 0, Brightness = 2.4, Ambient = Color3.fromRGB(150, 135, 200), OutdoorAmbient = Color3.fromRGB(160, 150, 215), ExposureCompensation = 0.45, FogEnd = 100000 })
+				cc.TintColor, cc.Saturation, cc.Contrast, cc.Brightness = Color3.fromRGB(235, 232, 255), 0.45, 0.12, 0.04
 				local e = seg(t, 3.5, 6) ^ 2
 				local b = SPACE0:Lerp(IMPACT, e)
 				cueBall.CFrame = CFrame.new(b)
@@ -446,6 +469,16 @@ return function(it, ctx)
 						chunks[k] = { p = c, v = d * rnd:NextNumber(50, 150), r = V(rnd:NextNumber(-2, 2), rnd:NextNumber(-2, 2), rnd:NextNumber(-2, 2)) }
 					end
 					wave = ring(CFrame.new(PL), 130, Color3.fromRGB(255, 220, 170))
+					fireball = part(V(130, 130, 130), CFrame.new(PL), Color3.fromRGB(255, 230, 170), Enum.Material.Neon, Enum.PartType.Ball)
+					for _, c in chunks do -- burning debris trails
+						if c.p.Material == Enum.Material.Neon or rnd:NextNumber() < 0.4 then
+							local e = Instance.new("ParticleEmitter")
+							e.Color, e.LightEmission, e.Rate = ColorSequence.new(Color3.fromRGB(255, 220, 140), Color3.fromRGB(255, 80, 30)), 1, 30
+							e.Size, e.Transparency = NumberSequence.new(5, 0), NumberSequence.new(0.1, 1)
+							e.Lifetime, e.Speed = NumberRange.new(0.4, 0.8), NumberRange.new(0, 3)
+							e.Parent = c.p
+						end
+					end
 				end
 				local u = seg(t, 6, 8)
 				for _, c in chunks do
@@ -453,7 +486,12 @@ return function(it, ctx)
 				end
 				if wave then grow(wave, CFrame.new(PL) * CFrame.Angles(0.3, 0, 0.2), (130 + 900 * smooth(u)) / 130, u) end
 				core.Size = V(36, 36, 36) * (1 + 0.15 * math.sin(t * 20))
-				set({ ClockTime = 0, Brightness = 0.5, Ambient = Color3.fromRGB(120, 70, 50) })
+				if fireball then
+					fireball.Size = V(1, 1, 1) * (130 + 520 * smooth(seg(t, 6, 7.2)))
+					fireball.Transparency = smooth(seg(t, 6.1, 7.4))
+					fireball.Color = Color3.fromRGB(255, 240, 200):Lerp(Color3.fromRGB(255, 110, 40), seg(t, 6, 7))
+				end
+				set({ ClockTime = 0, Brightness = 2.8, Ambient = Color3.fromRGB(235, 160, 120), OutdoorAmbient = Color3.fromRGB(220, 150, 130), ExposureCompensation = 0.6 })
 				cc.TintColor, cc.Contrast = Color3.fromRGB(255, 220, 200), 0.2
 				eye, at, fov = PL + V(-300 - 120 * u, 70, 210 + 60 * u), PL, 62
 			elseif t < 9.2 then -- ===== 4. the camera plunges into the burning core
@@ -470,7 +508,7 @@ return function(it, ctx)
 			elseif t < 15 then -- ===== 5. inside the core: the computer, the glitch, the silhouette
 				if stage ~= 5 then stage = 5; cut(Color3.fromRGB(255, 150, 60)) end
 				local u = t - 9.2
-				set({ ClockTime = 0, Brightness = 0.4, Ambient = Color3.fromRGB(110, 50, 30), OutdoorAmbient = Color3.fromRGB(80, 40, 30) })
+				set({ ClockTime = 0, Brightness = 1.8, Ambient = Color3.fromRGB(200, 140, 115), OutdoorAmbient = Color3.fromRGB(170, 120, 100), ExposureCompensation = 0.35 })
 				cc.TintColor, cc.Saturation, cc.Contrast, cc.Brightness = Color3.fromRGB(255, 225, 205), 0.15, 0.1, 0
 				-- the game on the screen
 				local pull = 0.8 * smooth(seg(u, 0, 0.6)) * (1 - smooth(seg(u, 0.6, 0.75)))
@@ -566,7 +604,7 @@ return function(it, ctx)
 				comet.Size = V(5, 5, 5)
 				fire.Enabled = true
 				eye, at, fov = PL + V(-120, 40, 150), p, 60
-				set({ ClockTime = 0, Brightness = 0.3, Ambient = Color3.fromRGB(110, 60, 50) })
+				set({ ClockTime = 0, Brightness = 2.4, Ambient = Color3.fromRGB(210, 150, 140), OutdoorAmbient = Color3.fromRGB(190, 150, 170), ExposureCompensation = 0.45 })
 			elseif t < 20 then -- ===== 7. the ball streaks towards the home planet
 				if stage ~= 7 then stage = 7; cut() end
 				local u = seg(t, 17, 20)
@@ -575,7 +613,7 @@ return function(it, ctx)
 				comet.CFrame = CFrame.new(p)
 				fire.Rate = 120 + 400 * u -- atmosphere entry
 				eye, at, fov = p + V(-20, 7, 10), HP, 60 + 15 * u
-				set({ ClockTime = 0, Brightness = 0.6, Ambient = Color3.fromRGB(60, 70, 110) })
+				set({ ClockTime = 0, Brightness = 2.6, Ambient = Color3.fromRGB(160, 180, 235), OutdoorAmbient = Color3.fromRGB(170, 190, 240), ExposureCompensation = 0.5 })
 				cc.TintColor = WHITE:Lerp(Color3.fromRGB(255, 200, 150), u)
 				shake = math.max(shake, 0.3 * u)
 				if t > 19.7 then flash.BackgroundColor3, flash.BackgroundTransparency = WHITE, 0 end
@@ -627,6 +665,8 @@ return function(it, ctx)
 				fov = 62
 			end
 			end
+			dustAnchor.CFrame = camera.CFrame
+			dust.Rate = ((t >= 3.5 and t < 8) or (t >= 15 and t < 20)) and 260 or 0 -- space shots only (t is the film time)
 			-- remove dead lightning, apply camera + shake
 			for k = #bolts, 1, -1 do
 				if os.clock() > bolts[k].dies then
@@ -652,6 +692,8 @@ return function(it, ctx)
 	gui:Destroy()
 	cc:Destroy()
 	blur:Destroy()
+	bloom:Destroy()
+	if sky then sky.StarCount = skyStars end
 	for k, v in saved do Lighting[k] = v end
 	if atmosphere then atmosphere.Density = atmoDensity end
 	if not ok then warn("Grand finale:", err) end

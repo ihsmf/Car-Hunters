@@ -1344,6 +1344,22 @@ def join_triangulate(name):
     return o
 
 
+def clip(o, z=40.0, x_range=None):
+    """Cut the mesh to |Roblox z| <= z (Blender y) and optionally to a Roblox x range, dropping what is outside, so
+    a segment never spills into the neighbouring table or the spawn area in front of the first table."""
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    planes = [((0, z, 0), (0, 1, 0)), ((0, -z, 0), (0, -1, 0))]
+    if x_range:
+        planes += [((x_range[0], 0, 0), (-1, 0, 0)), ((x_range[1], 0, 0), (1, 0, 0))]
+    for co, no in planes:
+        geom = bm.verts[:] + bm.edges[:] + bm.faces[:]
+        bmesh.ops.bisect_plane(bm, geom=geom, plane_co=co, plane_no=no, clear_outer=True)
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    bm.to_mesh(o.data)
+    bm.free()
+
+
 def luau_mesh(o):
     """Vertices are centred on the bounding box; `center` restores the model origin."""
     me = o.data
@@ -1418,6 +1434,8 @@ def main():
             reset()
             fn()
             o = join_triangulate(name)
+            if name.startswith(("Wall", "Backdrop", "Ceiling")):  # stay inside the table's 80-stud segment
+                clip(o, x_range=(-1.5, 4.0) if name.startswith("Backdrop") else None)
             bpy.ops.export_scene.fbx(filepath=os.path.join(OUT, name + ".fbx"), apply_unit_scale=True, axis_forward="-Z", axis_up="Y")
             text, n = luau_mesh(o)
             with open(os.path.join(LUAU_DIR, name + ".luau"), "w", encoding="utf-8") as fh:
