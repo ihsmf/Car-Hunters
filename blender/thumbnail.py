@@ -44,7 +44,7 @@ def emit(name, color, strength):
     return m
 
 
-THEMES = ["Space", "Reef", "Candy", "NewYear", "Royal", "Ice"]
+THEMES = ["Space", "Candy", "NewYear", "Royal"]
 for k, t in enumerate(THEMES):
     zc = 40 + k * 80
     place("TableSegment", (0, 2.3, zc))
@@ -55,10 +55,11 @@ for k, t in enumerate(THEMES):
         place("Mid" + t, (side * 24.5, 0, zc - side * 22), 0 if side < 0 else math.pi)
         for dz in (-34, -13, 13, 34):
             place("Rail" + t, (side * 15.17, 4.53, zc + dz), dz * 0.1, 1.15)
-    place("Ceiling" + t, (0, 0, zc))
+    if k < len(THEMES) - 1:  # the last segment is open to the sky so the god can tower over the hall
+        place("Ceiling" + t, (0, 0, zc))
 
 # the god of billiards at the far end, giant and glowing
-GZ, GS = 40 + len(THEMES) * 80 - 10, 2.2
+GZ, GS = 40 + len(THEMES) * 80 + 40, 2.6
 for name in ("GodTemple", "GodBody", "GodHead", "GodArmR", "GodArmL"):
     bpy.ops.import_scene.gltf(filepath=os.path.join(E, name + ".glb"))
     o = bpy.context.selected_objects[0]
@@ -99,7 +100,7 @@ for k in range(9):  # god rays
     r.data.materials.append(mm)
 
 # foreground: glowing cue ball streaking down the felt, a rainbow prize ball, the legend cue
-FELT = 2.3 + 2.0
+FELT = 5.4
 bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, segments=48, ring_count=24, location=rb(1.5, FELT + 1.0, 52))
 cb = bpy.context.object
 cb.data.materials.append(emit("CueBall", (1, 0.97, 0.9), 6))
@@ -141,33 +142,38 @@ bpy.ops.import_scene.fbx(filepath=os.path.join(E, "Cue.fbx"))
 cue = bpy.context.selected_objects[0]
 cue.location, cue.rotation_euler, cue.scale = rb(4.5, FELT + 2.5, 34), (math.radians(80), 0, math.radians(8)), (1.3, 1.3, 1.3)
 
+gl = bpy.data.objects.new("GodLight", bpy.data.lights.new("GodLight", "AREA"))
+gl.data.energy, gl.data.size, gl.data.color = 250000, 40, (1, 0.9, 0.7)
+gl.location = rb(0, 60, GZ - 60)
+gl.rotation_euler = (Vector(rb(0, 30, GZ)) - gl.location).to_track_quat("-Z", "Y").to_euler()
+sc.collection.objects.link(gl)
 # lights: warm lamps over every table, a cool fill, the world
 for k in range(len(THEMES)):
     l = bpy.data.objects.new("L", bpy.data.lights.new("L", "AREA"))
-    l.data.energy, l.data.size, l.data.color = 9000, 10, (1, 0.9, 0.75)
+    l.data.energy, l.data.size, l.data.color = 16000, 14, (1, 0.9, 0.75)
     l.location = rb(0, 17, 40 + k * 80)
     sc.collection.objects.link(l)
 sun = bpy.data.objects.new("S", bpy.data.lights.new("S", "SUN"))
-sun.data.energy, sun.data.color = 1.6, (0.85, 0.9, 1)
+sun.data.energy, sun.data.color = 3.0, (1, 0.92, 0.8)
 sun.rotation_euler = (math.radians(60), 0, math.radians(20))
 sc.collection.objects.link(sun)
 w = bpy.data.worlds.new("w")
 sc.world = w
 w.use_nodes = True
-w.node_tree.nodes["Background"].inputs[0].default_value = (0.25, 0.22, 0.4, 1)
-w.node_tree.nodes["Background"].inputs[1].default_value = 0.6
+w.node_tree.nodes["Background"].inputs[0].default_value = (1.0, 0.72, 0.45, 1)  # golden heaven behind the god
+w.node_tree.nodes["Background"].inputs[1].default_value = 1.4
 
 cam = bpy.data.objects.new("C", bpy.data.cameras.new("C"))
 sc.collection.objects.link(cam)
 sc.camera = cam
-cam.location = rb(7, 11, 22)
-cam.rotation_euler = (Vector(rb(-1, 13, 240)) - cam.location).to_track_quat("-Z", "Y").to_euler()
-cam.data.lens = 22
+cam.location = rb(3, 13, 14)
+cam.rotation_euler = (Vector(rb(0, 15, 300)) - cam.location).to_track_quat("-Z", "Y").to_euler()
+cam.data.lens = 20
 cam.data.dof.use_dof = True
-cam.data.dof.focus_distance = 22
+cam.data.dof.focus_distance = 30
 cam.data.dof.aperture_fstop = 5.6
 sc.render.engine = "CYCLES"
-sc.cycles.samples = 96
+sc.cycles.samples = 64
 sc.cycles.use_denoising = True
 sc.render.resolution_x, sc.render.resolution_y = 1920, 1080
 sc.view_settings.view_transform = "AgX" if "AgX" in [i.identifier for i in sc.view_settings.bl_rna.properties["view_transform"].enum_items] else "Filmic"
