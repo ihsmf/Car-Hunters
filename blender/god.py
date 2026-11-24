@@ -394,6 +394,7 @@ def arm(M, side):
     def prof(t):  # deltoid -> biceps -> elbow -> forearm -> wrist
         return 0.3 + 0.05 * math.exp(-((t - 0.25) / 0.12) ** 2) - 0.07 * math.exp(-((t - 0.5) / 0.05) ** 2) + 0.03 * math.exp(-((t - 0.62) / 0.08) ** 2) - 0.14 * t
     parts = [sweep("Arm", [sh + Vector((0, 0, 0.05)), sh.lerp(elbow, 0.5), elbow, elbow.lerp(wrist, 0.5), wrist], prof, M["Skin"], 32, 12, flat=0.92)]
+    parts.append(assign(ellipsoid("Shoulder", tuple(sh + Vector((0, 0, 0.02))), (0.36, 0.38, 0.36), 32, 20), M["Skin"]))  # rounded deltoid closes the arm
     cue_dir = (Vector(HANDS["GodArmL"]) - Vector(HANDS["GodArmR"])).normalized()
     palm = ellipsoid("Palm", tuple(hand), (0.14, 0.11, 0.16), 24, 16)
     parts.append(assign(palm, M["Skin"]))
