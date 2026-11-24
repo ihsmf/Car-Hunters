@@ -1,4 +1,4 @@
-# Billiard Hunters (Roblox)
+# CUE HUNTERS (Roblox)
 
 > **Актуальная версия — `studio/`** (загруженный Studio-плейс). Скрипты правятся в `studio/src/*.luau`, затем
 > `python3 tools/studio.py pack` вписывает их в `studio/BilliardHunters.rbxlx` и собирает `studio/BilliardHunters-Studio-Full.zip`.

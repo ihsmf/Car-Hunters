@@ -1,4 +1,4 @@
--- Billiard Hunters interface, using the Figma button and icon components.
+-- CUE HUNTERS interface, using the Figma button and icon components.
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")

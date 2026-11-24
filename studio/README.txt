@@ -1,4 +1,4 @@
-Распакуйте архив и откройте BilliardHunters.rbxlx через File → Open from File в Roblox Studio. Нажмите Play (F5). Для локального запуска публикация не требуется.
+Распакуйте архив и откройте CueHunters.rbxlx через File → Open from File в Roblox Studio. Нажмите Play (F5). Для локального запуска публикация не требуется.
 
 Audio содержит десять WAV. Preview.mp3 позволяет прослушать подборку. Пока в SoundService → ClubAudio не указаны Roblox SoundId, игра использует звуки из своей резервной библиотеки.
 

@@ -1,4 +1,4 @@
-"""Billiard Hunters — 3D models.
+"""Cue Hunters — 3D models.
     python3 blender/build_models.py        (or: blender -b -P blender/build_models.py)
 Builds PoolTable, Cue, Ball, Dumbbell, Fence and writes:
   * blender/export/<Name>.fbx           — for manual import in Studio (optional)
@@ -1255,7 +1255,64 @@ def land_kit():
 LAND = land_kit()
 
 
-FINALE = [("FinaleComputer", finale_computer), ("FinaleNature", finale_nature), ("FinaleCity", finale_city)]
+def finale_god():
+    """Colossal god on clouds, facing +X, hands forward at about y 17 where the Legend cue is held."""
+    import themes
+    M = themes.mats(Robe=(250, 246, 235), Skin=(255, 214, 170), Beard=(245, 245, 250), Gold=(255, 205, 80), Glow=(255, 240, 180), Cloud=(235, 240, 255))
+    for k in range(14):  # cloud bank
+        a = k * 2 * math.pi / 14
+        themes.leafball(7 + (k % 3) * 1.5, (math.cos(a) * 7, 1.5 + (k % 2), math.sin(a) * 7), M["Cloud"], k)
+    lathe([(5.6, 0), (5.2, 3), (4.2, 8), (3.6, 12), (3.9, 15), (3.4, 17.5), (1.6, 19), (0, 19.2)], (0, 0, 0), M["Robe"], 20)  # robe
+    torus(7.4, 0.5, (0, 3.2, 0), M["Gold"]); torus(7.0, 0.35, (0, 15, 0), M["Gold"])
+    box((0.3, 9, 1.0), (3.75, 9, 0), M["Gold"], 0.1)  # sash
+    sphere(4.2, (0, 21.5, 0), M["Skin"], 16, 12)  # head
+    lathe([(2.0, 18.4), (2.2, 19.6), (1.6, 16.5), (0.6, 14.6), (0, 14.2)], (0.9, 0, 0), M["Beard"], 14)  # beard
+    sphere(4.6, (-0.4, 22.6, 0), M["Beard"], 14, 10, (1, 0.7, 1.05))  # hair
+    for s in (-1, 1):
+        sphere(0.5, (1.9, 21.9, s * 0.75), M["Glow"], 8, 5)  # glowing eyes
+        o = cyl(1.8, 7, (2.2, 16.6, s * 3.2), M["Robe"], d2=1.3, verts=12); themes.rot(o, rz=-70)  # arms forward
+        sphere(1.6, (5.6, 15.6, s * 1.2), M["Skin"], 10, 8)  # hands meeting in front
+    torus(7.5, 0.5, (-1.6, 23.5, 0), M["Gold"], "X")  # halo behind the head
+    for k in range(10):
+        a = k * math.pi / 5
+        o = box((0.3, 2.4, 0.4), (-1.7, 23.5 + math.sin(a) * 5.2, math.cos(a) * 5.2), M["Glow"], 0.05); themes.rot(o, rx=-math.degrees(a) + 90)
+
+
+def finale_planet():
+    """Super-planet (diameter 120): banded giant with molten cracks and a ring, centred on the origin."""
+    import themes
+    M = themes.mats(Band1=(120, 70, 160), Band2=(200, 110, 190), Band3=(70, 40, 120), Crack=(255, 150, 60), Ring=(220, 200, 255))
+    o = sphere(120, (0, 0, 0), M["Band1"], 48, 24)
+    for k, (y, h, m) in enumerate(((30, 8, "Band2"), (8, 6, "Band3"), (-14, 9, "Band2"), (-36, 6, "Band3"))):
+        prof = [(math.sqrt(max(1, 60 ** 2 - yy ** 2)) + 0.5, yy) for yy in (y - h / 2 + j * h / 6 for j in range(7))]
+        lathe(prof, (0, 0, 0), M[m], 48)  # bands hug the sphere
+    rr = themes.R
+    for k in range(26):  # glowing fault lines
+        a, b = rr.uniform(0, 6.28), rr.uniform(-1.1, 1.1)
+        c = (math.cos(a) * math.cos(b) * 60.5, math.sin(b) * 60.5, math.sin(a) * math.cos(b) * 60.5)
+        o = box((0.8, 1.2, rr.uniform(8, 18)), c, M["Crack"], 0); themes.rot(o, ry=-math.degrees(a), rx=rr.uniform(-40, 40))
+    o = lathe([(80, -0.4), (102, -0.4), (102, 0.4), (80, 0.4), (80, -0.4)], (0, 0, 0), M["Ring"], 64); themes.rot(o, rz=18)
+
+
+def finale_roblox_planet():
+    """Home planet (diameter 90): blue ocean, green continents, a tilted square plateau, clouds."""
+    import themes
+    M = themes.mats(Ocean=(50, 120, 220), Land=(80, 170, 90), Plateau=(235, 235, 240), Cloud=(250, 250, 255), Accent=(30, 30, 40))
+    sphere(90, (0, 0, 0), M["Ocean"], 40, 20)
+    rr = themes.R
+    for k in range(9):
+        a, b = rr.uniform(0, 6.28), rr.uniform(-0.9, 0.9)
+        c = (math.cos(a) * math.cos(b) * 43, math.sin(b) * 43, math.sin(a) * math.cos(b) * 43)
+        o = sphere(rr.uniform(16, 26), c, M["Land"], 12, 8, (1, 0.35, 1)); themes.rot(o, ry=-math.degrees(a))
+    o = box((24, 4, 24), (44.5, 0, 0), M["Plateau"], 0.6); themes.rot(o, rx=15, rz=90)  # tilted square facing +X
+    o = box((8, 4.4, 8), (45.0, 0, 0), M["Accent"], 0.3); themes.rot(o, rx=15, rz=90)
+    for k in range(12):
+        a, b = rr.uniform(0, 6.28), rr.uniform(-1.2, 1.2)
+        c = (math.cos(a) * math.cos(b) * 48, math.sin(b) * 48, math.sin(a) * math.cos(b) * 48)
+        themes.leafball(rr.uniform(6, 10), c, M["Cloud"], k)
+
+
+FINALE = [("FinaleComputer", finale_computer), ("FinaleGod", finale_god), ("FinalePlanet", finale_planet), ("FinaleRobloxPlanet", finale_roblox_planet)]
 
 
 CORE = [("PrizeBall", prize_ball), ("CueShop", cue_shop), ("PoolTable", pool_table), ("Cue", cue), ("Ball", ball),

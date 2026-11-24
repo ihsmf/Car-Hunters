@@ -1,18 +1,18 @@
-"""Round-trip scripts of the Studio place (studio/BilliardHunters.rbxlx), which is the game's source of truth.
+"""Round-trip scripts of the Studio place (studio/CueHunters.rbxlx), which is the game's source of truth.
     python3 tools/studio.py extract   -> studio/src/<Name>.luau for the scripts listed in EDITED
     python3 tools/studio.py pack      -> writes studio/src back into the place, adds/updates the Blender meshes in
                                          MESHES under ReplicatedStorage.Shared.Meshes, checks the XML and builds
-                                         studio/BilliardHunters-Studio-Full.zip (same layout as the original upload)"""
+                                         studio/CueHunters-Studio-Full.zip (same layout as the original upload)"""
 import html, os, re, sys, zipfile
 import xml.etree.ElementTree as ET
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STUDIO = os.path.join(ROOT, "studio")
-PLACE = os.path.join(STUDIO, "BilliardHunters.rbxlx")
+PLACE = os.path.join(STUDIO, "CueHunters.rbxlx")
 SRC = os.path.join(STUDIO, "src")
 MESH_DIR = os.path.join(ROOT, "src", "shared", "Meshes")
-EDITED = ["Config", "UI", "Throw", "HeavenlyBreak", "MeshBuilder", "Visuals"]
-MESHES = ["FinaleComputer", "FinaleCity", "FinaleNature", "HallWall", "HallCeiling", "DecoLantern", "DecoCrystal", "DecoGift",
+EDITED = ["Config", "UI", "Throw", "HeavenlyBreak", "MeshBuilder", "Visuals", "Main"]
+MESHES = ["FinaleComputer", "FinaleCity", "FinaleNature", "FinaleGod", "FinalePlanet", "FinaleRobloxPlanet", "HallWall", "HallCeiling", "DecoLantern", "DecoCrystal", "DecoGift",
           "DecoTree", "DecoSnowman", "DecoCandyCane", "DecoMushroom", "DecoCactus", "DecoShell", "DecoGear", "DecoPlanet",
           "DecoPalm", "DecoTorch", "DecoTrophy", "DecoLotus", "DecoGarland"]
 sys.path.insert(0, os.path.join(ROOT, "tools"))
@@ -101,15 +101,16 @@ def pack():
             x = x[:folder.end()] + new + x[folder.end():]
         else:
             assert k == 1, f"{n}: {k} copies"
+    x = x.replace("BILLIARD HUNTERS", "CUE HUNTERS").replace("Billiard Hunters", "Cue Hunters")  # the game is CUE HUNTERS
     x = inject_hall(x)
     x = landscape.apply(x)
     import bake
     x = bake.apply(x)  # uploaded meshes -> real MeshParts
     ET.fromstring(x)  # the place must still be valid XML
     open(PLACE, "w", encoding="utf-8").write(x)
-    out = os.path.join(STUDIO, "BilliardHunters-Studio-Full.zip")
+    out = os.path.join(STUDIO, "CueHunters-Studio-Full.zip")
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
-        z.write(PLACE, "BilliardHunters.rbxlx")
+        z.write(PLACE, "CueHunters.rbxlx")
         for f in sorted(os.listdir(os.path.join(STUDIO, "Audio"))):
             z.write(os.path.join(STUDIO, "Audio", f), "Audio/" + f)
         z.write(os.path.join(STUDIO, "README.txt"), "README.txt")

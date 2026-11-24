@@ -730,12 +730,25 @@ end
 
 -- ===== The shot =====
 local function setLuck(v) -- the number is written every frame while the ball rolls
-	luckLabel.Text = "LUCK ×" .. C.FullNumber(v)
+	luckLabel.Text = "LUCK ×" .. C.LuckText(v)
 	luckGrad.Enabled = v >= 5
 	luckLabel.TextColor3 = v >= 5 and WHITE or C.UI.Title
 end
-local function showLuck(v, lucky)
-	setLuck(v)
+-- The shown luck never jumps: it counts up ×1.00, ×1.01, ×1.02 ... towards the target. The further behind and the
+-- bigger the luck, the faster it climbs (multiplicative speed), so huge values still arrive in a couple of seconds.
+local luckShown, luckTarget, luckClock = 1, 1, os.clock()
+local function luckStep(dt)
+	local now = os.clock()
+	dt, luckClock = dt or math.min(0.1, now - luckClock), now
+	if luckShown >= luckTarget then return true end
+	local gap = math.log10(luckTarget / luckShown)
+	local rate = 0.35 + 1.6 * gap + 0.25 * math.log10(luckShown + 1)
+	luckShown = math.min(luckTarget, math.max(luckShown + 0.01, luckShown * (1 + rate * dt)))
+	setLuck(luckShown)
+	return luckShown >= luckTarget
+end
+local function showLuck(v, lucky) -- a new target (a table was crossed): pop, the number keeps counting up
+	luckTarget = math.max(luckTarget, v)
 	pop(luckScale, lucky and 1.8 or 1.25)
 end
 
@@ -815,7 +828,9 @@ Fx.OnClientEvent:Connect(function(kind, p)
 
 	if mine then
 		setCinema(true)
-		showLuck(p.luck0)
+		luckShown, luckTarget, luckClock = 1, p.luck0, os.clock() -- counts up from ×1 to the cue's luck, then on along the tables
+		setLuck(1)
+		pop(luckScale, 1.25)
 	end
 	local power = math.clamp(dist / T.Length, 0, 1)
 	windup(start, mine, p)
@@ -866,7 +881,8 @@ Fx.OnClientEvent:Connect(function(kind, p)
 			local k = math.min(math.floor(zf), zone)
 			local a = k == 0 and p.luck0 or p.track[k]
 			local nextL = p.track[math.min(k + 1, zone)] or a
-			setLuck(k >= zone and p.track[zone] or a * (nextL / a) ^ (zf - k))
+			luckTarget = math.max(luckTarget, k >= zone and p.track[zone] or a * (nextL / a) ^ (zf - k))
+			luckStep(skip and 99 or nil)
 		end
 		local zn = zoneAt(z)
 		if zn ~= lastZone then -- entering a new table: the luck of the table just crossed is added
@@ -898,7 +914,14 @@ Fx.OnClientEvent:Connect(function(kind, p)
 		RunService.RenderStepped:Wait()
 	until t >= 1
 	local finalL = p.track[zone] or p.luck0
-	if mine then showLuck(finalL, luckyAt[zone]) end
+	if mine then -- finish the count (it accelerates), then the final pop
+		showLuck(finalL, luckyAt[zone])
+		local t0 = os.clock()
+		while not luckStep(skip and 99 or nil) and os.clock() - t0 < 4 do RunService.RenderStepped:Wait() end
+		luckShown = finalL
+		setLuck(finalL)
+		pop(luckScale, 1.6)
+	end
 
 	-- slide into the zone pocket: zoom in, dim, blur, then fade to black
 	local side = slot%2==0 and 1 or -1

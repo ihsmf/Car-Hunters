@@ -1,6 +1,6 @@
 """Upload every Blender mesh of the place to Roblox as mesh assets, so the game uses real MeshParts.
     python3 tools/meshassets.py <creatorUserId>
-Each mesh (Shared.Meshes ModuleScript in studio/BilliardHunters.rbxlx) is split per palette slot (one colour each,
+Each mesh (Shared.Meshes ModuleScript in studio/CueHunters.rbxlx) is split per palette slot (one colour each,
 max 9000 triangles per piece, both windings so it renders double-sided), written as GLB, uploaded through Open Cloud
 (assetType Model), and the MeshId of the imported MeshPart is read back from the asset. Results are cached in
 tools/mesh_assets.json: pieces per mesh (slot, offset from the model origin, size) + GLB hash -> [MeshId, InitialSize], so a re-run
@@ -12,7 +12,7 @@ sys.path.insert(0, TOOLS)
 import meshdata, rbxm  # noqa: E402
 
 ROOT = os.path.dirname(TOOLS)
-PLACE = os.path.join(ROOT, "studio", "BilliardHunters.rbxlx")
+PLACE = os.path.join(ROOT, "studio", "CueHunters.rbxlx")
 CACHE = os.path.join(TOOLS, "mesh_assets.json")
 API = "https://apis.roblox.com"
 MAX_TRIS = 9000
@@ -84,7 +84,7 @@ def call(url, data=None, headers=None, method=None):
 
 def upload(name, blob, creator):
     b = uuid.uuid4().hex
-    req = json.dumps({"assetType": "Model", "displayName": name[:50], "description": "Billiard Hunters mesh",
+    req = json.dumps({"assetType": "Model", "displayName": name[:50], "description": "Cue Hunters mesh",
                       "creationContext": {"creator": {"userId": str(creator)}}})
     body = (f"--{b}\r\nContent-Disposition: form-data; name=\"request\"\r\nContent-Type: application/json\r\n\r\n{req}\r\n"
             f"--{b}\r\nContent-Disposition: form-data; name=\"fileContent\"; filename=\"{name}.glb\"\r\n"

@@ -1,12 +1,14 @@
--- Grand finale of the last table (~23 s, ~10 s with "short cinematics", Skip works). Real-time scene far from the map,
--- scenery modelled in Blender (Shared/Meshes: FinaleNature, FinaleCity, FinaleComputer), camera fully scripted:
---   1 darkness: the cue strikes in a black void, lightning rips around the ball   0 - 3.2 s
---   2 hallucination: a kaleidoscope tunnel of rings and balls, colours melt        3.2 - 6 s
---   3 nature: flight over a valley with a lake, birds                              6 - 9.5 s
---   4 city: dusk dolly between the towers, cars, then a crane over the skyline     9.5 - 13 s
---   5 the sun: straight into a burning sun, white-out                             13 - 16 s
---   6 a computer: on its screen a billiard game is played, the won ball drops, the
---     "1 in N" recount runs, the screen shatters and the ball flies out to you     16 - 23 s
+-- CUE HUNTERS grand finale of the last table (~24 s, ~10 s with "short cinematics", Skip works). Real-time scenes far
+-- from the map, models from Blender (Shared/Meshes: FinaleGod, FinalePlanet, FinaleComputer, FinaleRobloxPlanet):
+--   1 the god of billiards strikes the cue ball with the Legend cue, heaven thunders          0 - 3.5 s
+--   2 the ball flies through space into a super-planet                                     3.5 - 6 s
+--   3 the planet explodes (chunks, shock wave, burning core)                               6 - 8 s
+--   4 the camera plunges into the core                                                     8 - 9.2 s
+--   5 inside: a computer plays the game, the screen glitches, the black silhouette with
+--     white edges of the mightiest ball appears, "1 in N", the ball breaks the screen       9.2 - 15 s
+--   6 the ball bursts out of the core and the debris                                       15 - 17 s
+--   7 it streaks towards the home planet, atmosphere entry                                17 - 20 s
+--   8 back at the long table: the ball lands in front of the player, super aura           20 - 24 s
 -- Contract (used by Throw): return function(it, ctx) -> ok; ctx = { skipped(), sound(name), caption(), luck, odds(L, s) }
 local Run = game:GetService("RunService")
 local RS = game:GetService("ReplicatedStorage")
@@ -21,10 +23,9 @@ local WHITE = Color3.new(1, 1, 1)
 local function smooth(x) x = math.clamp(x, 0, 1); return x * x * (3 - 2 * x) end
 local function seg(t, a, b) return math.clamp((t - a) / (b - a), 0, 1) end
 
-local DURATION, SHORT_SPEED = 23, 2.3
+local DURATION, SHORT_SPEED = 24, 2.3
 local O = { -- scene origins, far away from the map and from each other
-	dark = V(6000, 600, 0), trip = V(6000, 600, -500), nature = V(6000, 600, -1300),
-	city = V(6000, 600, -2200), sun = V(6000, 900, -3400), room = V(6000, 600, -4600),
+	god = V(6000, 600, 0), space = V(7200, 600, -900), room = V(6000, 600, -4600), home = V(6000, 900, -2600),
 }
 local LIGHTING_KEYS = { "ClockTime", "Brightness", "Ambient", "OutdoorAmbient", "ExposureCompensation", "FogEnd", "FogColor" }
 
@@ -90,6 +91,16 @@ return function(it, ctx)
 			m.Parent = scene
 			return m
 		end
+		local ringBase = {}
+		local function grow(r, cf, k, fade) -- scale a ring() around its centre (MeshPart or block model)
+			if r:IsA("BasePart") then
+				ringBase[r] = ringBase[r] or r.Size
+				r.Size, r.CFrame, r.Transparency = ringBase[r] * k, cf, fade
+			else
+				r:ScaleTo(math.max(0.01, k))
+				r:PivotTo(cf)
+			end
+		end
 		local function light(p, color, brightness, range)
 			local l = Instance.new("PointLight")
 			l.Color, l.Brightness, l.Range, l.Parent = color, brightness, range, p
@@ -117,90 +128,68 @@ return function(it, ctx)
 			table.insert(bolts, { f = f, dies = os.clock() + life })
 		end
 
-		-- ===== 1. darkness =====
-		local D = O.dark
-		local felt = part(V(34, 1, 18), CFrame.new(D + V(0, -1.6, 0)), Color3.fromRGB(16, 92, 60), Enum.Material.Fabric)
-		for _, sx in { -1, 1 } do
-			part(V(1.4, 1.6, 20), CFrame.new(D + V(sx * 17.7, -1, 0)), Color3.fromRGB(70, 34, 18), Enum.Material.Wood)
-			part(V(36.8, 1.6, 1.4), CFrame.new(D + V(0, -1, sx * 9.7)), Color3.fromRGB(70, 34, 18), Enum.Material.Wood)
+		-- ===== 1. the god of billiards =====
+		local G = O.god
+		mesh("FinaleGod", CFrame.new(G), nil, 1, function()
+			part(V(9, 18, 9), CFrame.new(G + V(0, 9, 0)), Color3.fromRGB(250, 246, 235), nil, Enum.PartType.Cylinder)
+			part(V(4.2, 4.2, 4.2), CFrame.new(G + V(0, 21.5, 0)), Color3.fromRGB(255, 214, 170), nil, Enum.PartType.Ball)
+		end)
+		for k = 1, 10 do -- sunlit cloud floor around the god
+			local a = k * math.pi / 5
+			part(V(1, 1, 1) * rnd:NextNumber(10, 18), CFrame.new(G + V(math.cos(a) * 18, -2, math.sin(a) * 18)), Color3.fromRGB(240, 244, 255), nil, Enum.PartType.Ball)
 		end
-		local cueBall = part(V(1.9, 1.9, 1.9), CFrame.new(D + V(-8, -0.15, 0)), WHITE, nil, Enum.PartType.Ball)
-		local cue = Art.Fallback("Cue15", CFrame.new(D), 1.35) or part(V(0.35, 0.35, 12), CFrame.new(D), Color3.fromRGB(230, 200, 140), Enum.Material.Wood)
+		local hands = G + V(5.6, 15.6, 0)
+		local BALL0 = hands + V(9, 0, 0)
+		local cueBall = part(V(1.9, 1.9, 1.9), CFrame.new(BALL0), WHITE, nil, Enum.PartType.Ball)
+		local CS = 2 -- the Legend cue, twice the normal size in the god's hands
+		local cue = Art.Fallback("Cue" .. #C.Cues, CFrame.new(G), CS) or part(V(0.5, 0.5, 18), CFrame.new(G), Color3.fromRGB(255, 220, 120), Enum.Material.Neon)
 		cue.Parent = scene
-		local glow = light(cueBall, Color3.fromRGB(150, 200, 255), 0, 30)
+		local glow = light(cueBall, Color3.fromRGB(255, 230, 160), 0, 40)
+		local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
+		a0.Position, a1.Position, a0.Parent, a1.Parent = V(0, 0.8, 0), V(0, -0.8, 0), cueBall, cueBall
+		local trail = Instance.new("Trail")
+		trail.Attachment0, trail.Attachment1, trail.LightEmission, trail.Lifetime = a0, a1, 1, 0.5
+		trail.Color, trail.Transparency, trail.Parent = ColorSequence.new(WHITE, Color3.fromRGB(255, 200, 90)), NumberSequence.new(0, 1), cueBall
 
-		-- ===== 2. hallucination tunnel =====
-		local T = O.trip
+		-- ===== 2-4. the super-planet, its explosion and core =====
+		local PL = O.space
+		local planet
+		planet = mesh("FinalePlanet", CFrame.new(PL), nil, 1, function()
+			planet = part(V(120, 120, 120), CFrame.new(PL), Color3.fromRGB(120, 70, 160), nil, Enum.PartType.Ball)
+		end) or planet
+		local core = part(V(36, 36, 36), CFrame.new(PL), Color3.fromRGB(255, 120, 40), Enum.Material.Neon, Enum.PartType.Ball)
+		light(core, Color3.fromRGB(255, 140, 60), 8, 120)
+		local SPACE0 = PL + V(-700, 50, 120)
+		local IMPACT = PL + V(-58, 6, 6)
+		local streaks = {}
+		for k = 1, 26 do -- speed lines around the camera during the flight
+			streaks[k] = { p = part(V(0.12, 0.12, 14), CFrame.new(SPACE0), WHITE, Enum.Material.Neon), off = V(rnd:NextNumber(-9, 9), rnd:NextNumber(-6, 6), rnd:NextNumber(0, 60)) }
+		end
+		local chunks, wave = {}, nil
 		local tunnel = {}
-		for k = 1, 34 do
-			local r = ring(CFrame.new(T + V(0, 0, -k * 9)) * CFrame.Angles(math.pi / 2, 0, 0), 26 - (k % 3) * 3, Color3.fromHSV(k / 34, 0.8, 1))
-			tunnel[k] = { r = r, k = k }
-		end
-		local dream = {}
-		for k = 1, 18 do
-			local p = part(V(2.6, 2.6, 2.6), CFrame.new(T), Color3.fromHSV(k / 18, 0.7, 1), Enum.Material.Neon, Enum.PartType.Ball)
-			dream[k] = p
-		end
-		local mirror = {}
-		for k = 1, 4 do
-			local m = BallArt.Make(it, 3)
-			m.Parent = scene
-			mirror[k] = m
+		for k = 1, 10 do -- fire rings on the dive into the core
+			tunnel[k] = ring(CFrame.new(PL + V(-150 + k * 12, 0, 0)) * CFrame.Angles(0, 0, math.pi / 2), 26 - k, Color3.fromRGB(255, 120 + k * 10, 40))
 		end
 
-		-- ===== 3. nature =====
-		local N = O.nature
-		mesh("FinaleNature", CFrame.new(N), nil, 1, function()
-			part(V(360, 2, 360), CFrame.new(N + V(0, 5, 0)), Color3.fromRGB(110, 180, 80), Enum.Material.Grass)
-			part(V(100, 0.4, 90), CFrame.new(N + V(0, 6.2, 30)), Color3.fromRGB(70, 150, 210), Enum.Material.Glass)
+		-- ===== 7. the home planet =====
+		local HP = O.home
+		mesh("FinaleRobloxPlanet", CFrame.new(HP), nil, 1, function()
+			part(V(90, 90, 90), CFrame.new(HP), Color3.fromRGB(50, 120, 220), nil, Enum.PartType.Ball)
 		end)
-		local birds = {}
-		for k = 1, 7 do
-			local body = part(V(0.6, 0.5, 1.6), CFrame.new(N), Color3.fromRGB(40, 40, 48))
-			local wings = {}
-			for s = 1, 2 do wings[s] = part(V(2.4, 0.12, 0.9), CFrame.new(N), Color3.fromRGB(56, 56, 64)) end
-			birds[k] = { body = body, wings = wings, off = V(k * 5 - 20, (k % 3) * 3, (k % 2) * 6) }
-		end
-
-		-- ===== 4. city =====
-		local Ci = O.city
-		mesh("FinaleCity", CFrame.new(Ci), nil, 1, function()
-			part(V(320, 1, 320), CFrame.new(Ci + V(0, -0.5, 0)), Color3.fromRGB(46, 48, 56))
-			for k = 1, 30 do
-				local h = rnd:NextNumber(20, 110)
-				part(V(18, h, 18), CFrame.new(Ci + V(rnd:NextInteger(-6, 6) * 22, h / 2, rnd:NextInteger(-6, 6) * 22)), Color3.fromRGB(120, 130, 150))
-			end
-		end)
-		local cars = {}
-		for k = 1, 12 do
-			local lane = ({ -96, -32, 32, 96 })[k % 4 + 1] + (k % 2 == 0 and 3 or -3)
-			local car = part(V(3, 1.6, 6), CFrame.new(Ci), Color3.fromHSV(k / 12, 0.6, 0.9))
-			local lamp = part(V(2.4, 0.4, 0.2), CFrame.new(Ci), Color3.fromRGB(255, 240, 200), Enum.Material.Neon)
-			cars[k] = { car = car, lamp = lamp, x = lane, z0 = rnd:NextNumber(-150, 150), dir = k % 2 == 0 and 1 or -1, speed = rnd:NextNumber(30, 55) }
-		end
-
-		-- ===== 5. the sun =====
-		local S = O.sun
-		local sun = part(V(220, 220, 220), CFrame.new(S), Color3.fromRGB(255, 196, 70), Enum.Material.Neon, Enum.PartType.Ball)
-		local shells = {}
-		for k = 1, 2 do
-			shells[k] = part(V(1, 1, 1) * (240 + k * 40), CFrame.new(S), Color3.fromRGB(255, 140 - k * 30, 40), Enum.Material.ForceField, Enum.PartType.Ball)
-			shells[k].Transparency = 0.2 + k * 0.2
-		end
-		local corona = {}
-		for k = 1, 3 do corona[k] = ring(CFrame.new(S), 300 + k * 50, Color3.fromRGB(255, 170 + k * 20, 60)) end
-		local flare = Instance.new("ParticleEmitter")
-		flare.Color = ColorSequence.new(Color3.fromRGB(255, 230, 140), Color3.fromRGB(255, 90, 30))
-		flare.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 18), NumberSequenceKeypoint.new(1, 60) })
-		flare.Transparency = NumberSequence.new(0.2, 1)
-		flare.LightEmission, flare.Rate, flare.Lifetime, flare.Speed = 1, 40, NumberRange.new(1.5, 2.5), NumberRange.new(40, 90)
-		flare.SpreadAngle, flare.Parent = Vector2.new(180, 180), sun
+		local comet = part(V(5, 5, 5), CFrame.new(HP + V(-400, 0, 0)), Color3.fromRGB(255, 245, 220), Enum.Material.Neon, Enum.PartType.Ball)
+		light(comet, Color3.fromRGB(255, 210, 140), 6, 60)
+		local fire = Instance.new("ParticleEmitter")
+		fire.Color = ColorSequence.new(Color3.fromRGB(255, 240, 180), Color3.fromRGB(255, 90, 30))
+		fire.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 4), NumberSequenceKeypoint.new(1, 10) })
+		fire.Transparency, fire.LightEmission, fire.Rate = NumberSequence.new(0.1, 1), 1, 120
+		fire.Lifetime, fire.Speed, fire.SpreadAngle = NumberRange.new(0.3, 0.6), NumberRange.new(2, 6), Vector2.new(25, 25)
+		fire.Parent = comet
 
 		-- ===== 6. the computer room =====
 		local P = O.room
 		part(V(46, 1, 34), CFrame.new(P + V(0, -0.5, 2)), Color3.fromRGB(96, 66, 46), Enum.Material.WoodPlanks)
 		part(V(46, 24, 1), CFrame.new(P + V(0, 12, -6)), Color3.fromRGB(44, 46, 70))
-		local window = part(V(14, 9, 0.2), CFrame.new(P + V(-12, 13, -5.4)), Color3.fromRGB(20, 30, 80), Enum.Material.Glass)
+		local window = part(V(14, 9, 0.2), CFrame.new(P + V(-12, 13, -5.4)), Color3.fromRGB(255, 110, 40), Enum.Material.Neon) -- the burning core outside
 		window.Transparency = 0.1
 		for k = 1, 14 do -- stars in the window
 			part(V(0.18, 0.18, 0.05), CFrame.new(P + V(-12 + rnd:NextNumber(-6.5, 6.5), 13 + rnd:NextNumber(-4, 4), -5.25)), WHITE, Enum.Material.Neon)
@@ -223,7 +212,7 @@ return function(it, ctx)
 		bg.Size, bg.BackgroundColor3, bg.BorderSizePixel, bg.Parent = UDim2.fromScale(1, 1), Color3.fromRGB(12, 14, 24), 0, sg
 		local bar = Instance.new("TextLabel")
 		bar.Size, bar.BackgroundColor3, bar.BorderSizePixel = UDim2.fromScale(1, 0.09), Color3.fromRGB(32, 34, 48), 0
-		bar.Text = "  BILLIARD HUNTERS   ·   " .. string.upper(plr.DisplayName) .. " IS PLAYING"
+		bar.Text = "  CUE HUNTERS   ·   " .. string.upper(plr.DisplayName) .. " IS PLAYING"
 		bar.TextColor3, bar.TextScaled, bar.FontFace, bar.TextXAlignment, bar.Parent = Color3.fromRGB(220, 225, 240), true, C.UI.Font, Enum.TextXAlignment.Left, bg
 		local vp = Instance.new("ViewportFrame")
 		vp.Size, vp.Position, vp.BackgroundTransparency, vp.Parent = UDim2.fromScale(1, 0.91), UDim2.fromScale(0, 0.09), 1, bg
@@ -263,6 +252,31 @@ return function(it, ctx)
 		local os_ = Instance.new("UIStroke")
 		os_.Thickness, os_.Color, os_.Parent = 3, C.UI.Ink, odds
 		odds.Parent = bg
+		local glitch = {} -- RGB tear bars for the glitch
+		for k = 1, 14 do
+			local f = Instance.new("Frame")
+			f.BorderSizePixel, f.Visible, f.ZIndex = 0, false, 5
+			f.BackgroundColor3 = ({ Color3.fromRGB(255, 40, 80), Color3.fromRGB(40, 255, 160), Color3.fromRGB(60, 120, 255), WHITE, Color3.new() })[k % 5 + 1]
+			f.Parent = bg
+			glitch[k] = f
+		end
+		local silhouette = Instance.new("Frame") -- the mightiest ball: black disc with a white rim and glow
+		silhouette.AnchorPoint, silhouette.Position, silhouette.BackgroundColor3 = Vector2.new(0.5, 0.5), UDim2.fromScale(0.5, 0.45), Color3.new()
+		silhouette.Visible, silhouette.ZIndex, silhouette.Parent = false, 4, bg
+		local square = Instance.new("UIAspectRatioConstraint")
+		square.AspectRatio, square.Parent = 1, silhouette
+		local corner_ = Instance.new("UICorner")
+		corner_.CornerRadius, corner_.Parent = UDim.new(1, 0), silhouette
+		local rim = Instance.new("UIStroke")
+		rim.Color, rim.Thickness, rim.Parent = WHITE, 5, silhouette
+		local auraTitle = Instance.new("TextLabel") -- big caption when the ball reaches the player
+		auraTitle.Size, auraTitle.Position, auraTitle.BackgroundTransparency = UDim2.fromScale(0.9, 0.09), UDim2.fromScale(0.05, 0.72), 1
+		auraTitle.Text, auraTitle.TextScaled, auraTitle.FontFace, auraTitle.TextColor3 = "SUPER AURA UNLOCKED", true, C.UI.Font, WHITE
+		auraTitle.Visible, auraTitle.TextTransparency, auraTitle.Parent = false, 1, gui
+		local auraStroke = Instance.new("UIStroke")
+		auraStroke.Thickness, auraStroke.Color, auraStroke.Parent = 4, C.UI.Ink, auraTitle
+		local auraGrad = Instance.new("UIGradient")
+		auraGrad.Color, auraGrad.Parent = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 90, 90)), ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 230, 80)), ColorSequenceKeypoint.new(0.66, Color3.fromRGB(90, 230, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 110, 255)) }), auraTitle
 
 		-- the prize that bursts out of the screen + glass shards
 		local reward = BallArt.Make(it, 2.2)
@@ -279,6 +293,7 @@ return function(it, ctx)
 		local t0 = os.clock()
 		local shake, last = 0, 0
 		local hit, thunder, shattered, captioned = false, {}, false, false
+		local stage, glitched, landedFx, auraFx = 1, false, false, false
 		local finalL = math.max(1, ctx.luck or 1)
 		repeat
 			if ctx.skipped() then break end
@@ -288,127 +303,122 @@ return function(it, ctx)
 			local t = math.min(DURATION, (now - t0) * speed)
 			local eye, at, fov = nil, nil, 50
 
-			if t < 3.2 then -- ===== 1. darkness and lightning
-				set({ ClockTime = 0, Brightness = 0.1, Ambient = Color3.fromRGB(10, 10, 18), OutdoorAmbient = Color3.fromRGB(8, 8, 14) })
+			local function cut(color) -- a hard cut between shots
+				flash.BackgroundColor3, flash.BackgroundTransparency = color or WHITE, 0
+				trail:Clear()
+			end
+			if t < 3.5 then -- ===== 1. the god strikes the cue ball with the Legend cue
+				set({ ClockTime = 14, Brightness = 3, Ambient = Color3.fromRGB(200, 190, 160), OutdoorAmbient = Color3.fromRGB(220, 210, 180) })
 				if atmosphere then atmosphere.Density = 0 end
-				cc.Brightness, cc.Contrast, cc.Saturation = -0.15, 0.35, -0.3
-				shade.BackgroundTransparency = math.max(0.15, 1 - t / 0.6) -- the world goes dark
-				local pull = 1.4 * smooth(seg(t, 0.2, 0.95))
-				local thrust = smooth(seg(t, 0.95, 1.12))
+				cc.TintColor, cc.Saturation, cc.Contrast, cc.Brightness = Color3.fromRGB(255, 236, 200), 0.15, 0.12, 0.02
+				shade.BackgroundTransparency = math.max(shade.BackgroundTransparency, smooth(seg(t, 0, 0.6))) -- out of black
+				local pull = smooth(seg(t, 0.3, 1.35))
+				local thrust = smooth(seg(t, 1.35, 1.5))
 				local aim = Vector3.xAxis
-				local tip = cueBall.Position - aim * (1.05 + (0.9 + pull) * (1 - thrust))
-				local cf = CFrame.fromMatrix(tip - aim * 6.21, Vector3.zAxis, aim)
-				if cue:IsA("Model") then -- Art cues are built along their local Y axis
+				local tip = BALL0 - aim * (1.1 + (1.4 + pull * 2.4) * (1 - thrust))
+				local cf = CFrame.fromMatrix(tip - aim * 4.6 * CS, Vector3.zAxis, aim)
+				if cue:IsA("Model") then
 					cue:PivotTo(cf)
 					if Art.PoseCue then Art.PoseCue(cue, t, thrust) end
 				else
-					cue.CFrame = CFrame.lookAt(tip - aim * 6, tip)
+					cue.CFrame = CFrame.lookAt(tip - aim * 9, tip)
 				end
-				if t >= 1.12 and not hit then
+				if t >= 1.5 and not hit then
 					hit = true
 					ctx.sound("Hit")
-					shake = 1.4
-					flash.BackgroundTransparency = 0.1
+					ctx.sound("Break")
+					shake = 1.6
+					flash.BackgroundTransparency = 0.05
 				end
-				if hit then cueBall.CFrame = CFrame.new(D + V(-8 + 26 * smooth(seg(t, 1.12, 3.2)), -0.15, 0)) * CFrame.Angles(0, 0, -t * 9) end
-				glow.Brightness = hit and 4 + math.sin(t * 40) * 2 or pull * 2
-				for _, at_ in { 1.15, 1.55, 1.9, 2.3, 2.6, 2.95 } do -- thunder strikes
+				local fly = smooth(seg(t, 1.5, 3.5)) ^ 1.6
+				cueBall.CFrame = CFrame.new(BALL0 + V(160 * fly, 8 * fly, 0)) * CFrame.Angles(0, 0, -t * 12)
+				glow.Brightness = hit and 6 or pull * 3
+				for _, at_ in { 1.5, 1.8, 2.2, 2.7 } do -- heaven thunders
 					if t >= at_ and not thunder[at_] then
 						thunder[at_] = true
-						local target = cueBall.Position + V(rnd:NextNumber(-6, 6), 0, rnd:NextNumber(-6, 6))
-						bolt(target + V(rnd:NextNumber(-10, 10), 46, rnd:NextNumber(-10, 10)), target, 0.45, Color3.fromRGB(190, 220, 255), 0.22)
-						bolt(cueBall.Position, cueBall.Position + V(rnd:NextNumber(-14, 14), rnd:NextNumber(2, 10), rnd:NextNumber(-14, 14)), 0.18, Color3.fromRGB(150, 120, 255), 0.18)
-						flash.BackgroundTransparency = 0.35
+						bolt(G + V(rnd:NextNumber(-20, 20), 90, rnd:NextNumber(-20, 20)), cueBall.Position, 0.5, Color3.fromRGB(255, 240, 190), 0.25)
+						flash.BackgroundTransparency = math.min(flash.BackgroundTransparency, 0.4)
 						shake = math.max(shake, 0.8)
-						ctx.sound("Break")
 					end
 				end
-				local b = cueBall.Position
-				eye, at, fov = b + V(-9 + 4 * smooth(seg(t, 1.1, 3.2)), 4.5, 10), b + V(1, 0, 0), 48 - 8 * smooth(seg(t, 1.1, 3.2))
-			elseif t < 6 then -- ===== 2. hallucination
-				local u = seg(t, 3.2, 6)
-				shade.BackgroundTransparency = 1
-				set({ ClockTime = 0, Brightness = 1, Ambient = Color3.fromRGB(90, 60, 120) })
-				cc.TintColor = Color3.fromHSV((t * 0.55) % 1, 0.55, 1)
-				cc.Saturation, cc.Contrast, cc.Brightness = 0.9, 0.3 + 0.2 * math.sin(t * 9), 0.05
-				blur.Size = 6 + 6 * math.sin(t * 5)
-				if math.sin(t * 13) > 0.97 then cc.TintColor = Color3.new(1 - cc.TintColor.R, 1 - cc.TintColor.G, 1 - cc.TintColor.B) end -- inverted blink
-				local z = -u * 280
-				for _, row in tunnel do
-					local cf = CFrame.new(T + V(0, 0, -row.k * 9)) * CFrame.Angles(math.pi / 2, t * (row.k % 2 == 0 and 0.8 or -0.8), 0)
-					if row.r:IsA("BasePart") then row.r.CFrame = cf else row.r:PivotTo(cf) end
+				if t < 1.5 then -- low angle on the god, slowly circling
+					local o = smooth(seg(t, 0, 1.5))
+					eye, at, fov = G + V(30 - 6 * o, 6 + 4 * o, 34 - 10 * o), G + V(4, 15, 0), 55
+				else
+					local b = cueBall.Position
+					eye, at, fov = b + V(-12, 3, 7), b + V(4, 0, 0), 60 + 20 * fly
 				end
-				for k, p in dream do -- balls swirling around the camera's path
-					local a = k * 2 * math.pi / #dream + t * 1.7
-					p.CFrame = CFrame.new(T + V(math.cos(a) * 7, math.sin(a) * 7, z - 26 - (k % 6) * 4))
+			elseif t < 6 then -- ===== 2. the ball flies through space into the super-planet
+				if stage ~= 2 then stage = 2; cut() end
+				set({ ClockTime = 0, Brightness = 0, Ambient = Color3.fromRGB(30, 30, 60), OutdoorAmbient = Color3.fromRGB(20, 20, 40) })
+				cc.TintColor, cc.Saturation, cc.Contrast, cc.Brightness = Color3.fromRGB(220, 225, 255), 0.25, 0.15, 0
+				local e = seg(t, 3.5, 6) ^ 2
+				local b = SPACE0:Lerp(IMPACT, e)
+				cueBall.CFrame = CFrame.new(b)
+				local dir = (IMPACT - SPACE0).Unit
+				eye = b - dir * 14 + V(0, 3.5, 0)
+				at = b:Lerp(PL, 0.15 + 0.5 * e)
+				fov = 70 + 25 * e
+				for _, s in streaks do -- speed lines rush past the camera
+					local z = (s.off.Z - t * 160) % 60
+					local p = eye + dir * (z - 10) + V(s.off.X, s.off.Y, 0)
+					s.p.CFrame = CFrame.lookAt(p, p + dir)
 				end
-				for k, m in mirror do -- the won ball, mirrored four times like a kaleidoscope
-					local a = k * math.pi / 2 + t * 1.2
-					m:PivotTo(CFrame.new(T + V(math.cos(a) * 3.4, math.sin(a) * 3.4, z - 18)) * CFrame.Angles(t * 2, t * 3, 0))
-				end
-				eye, at = T + V(0, 0, z), T + V(math.sin(t * 2) * 2, math.cos(t * 1.7) * 2, z - 30)
-				fov = 62 + 26 * math.sin(t * 3.1)
-				camera.CFrame = CFrame.lookAt(eye, at) * CFrame.Angles(0, 0, t * 0.9)
-			elseif t < 9.5 then -- ===== 3. nature
-				local u = seg(t, 6, 9.5)
-				blur.Size = 0
-				set({ ClockTime = 9.5, Brightness = 2.6, Ambient = Color3.fromRGB(120, 120, 130), OutdoorAmbient = Color3.fromRGB(140, 140, 150) })
-				cc.TintColor, cc.Saturation, cc.Contrast, cc.Brightness = Color3.fromRGB(255, 248, 236), 0.2, 0.05, 0
-				flash.BackgroundTransparency = math.min(flash.BackgroundTransparency, seg(t, 6, 6.6)) -- white cut into the valley
-				local e = smooth(u)
-				eye = N + V(-150 + 170 * e, 70 - 38 * e, 160 - 120 * e)
-				at = N + V(20 * e, 8, 30 - 60 * e)
-				for k, b in birds do
-					local p = N + V(-60 + 120 * u, 40, 40 - 50 * u) + b.off
-					b.body.CFrame = CFrame.lookAt(p, p + V(1, 0, -0.4))
-					local flap = math.sin(t * 14 + k) * 0.6
-					for s, w in b.wings do
-						local side = s == 1 and 1 or -1
-						w.CFrame = b.body.CFrame * CFrame.Angles(0, 0, side * flap) * CFrame.new(side * 1.3, 0, 0)
+				shake = math.max(shake, 0.2 + 0.5 * e)
+			elseif t < 8 then -- ===== 3. the planet explodes
+				if stage ~= 3 then
+					stage = 3
+					cut(Color3.fromRGB(255, 240, 220))
+					ctx.sound("Break")
+					ctx.sound("Pocket")
+					shake = 2.2
+					cueBall.Transparency = 1
+					for _, s in streaks do s.p.Transparency = 1 end
+					if planet then
+						for _, d in (planet:IsA("BasePart") and { planet } or {}) do d.Transparency = 1 end
+						for _, d in planet:GetDescendants() do if d:IsA("BasePart") then d.Transparency = 1 end end
 					end
+					local cols = { Color3.fromRGB(120, 70, 160), Color3.fromRGB(200, 110, 190), Color3.fromRGB(70, 40, 120), Color3.fromRGB(255, 150, 60) }
+					for k = 1, 60 do
+						local d = V(rnd:NextNumber(-1, 1), rnd:NextNumber(-1, 1), rnd:NextNumber(-1, 1)).Unit
+						local sz = rnd:NextNumber(6, 18)
+						local c = part(V(sz, sz * rnd:NextNumber(0.5, 1), sz * rnd:NextNumber(0.5, 1)), CFrame.new(PL + d * 52), cols[k % 4 + 1], k % 4 == 3 and Enum.Material.Neon or Enum.Material.Basalt)
+						chunks[k] = { p = c, v = d * rnd:NextNumber(50, 150), r = V(rnd:NextNumber(-2, 2), rnd:NextNumber(-2, 2), rnd:NextNumber(-2, 2)) }
+					end
+					wave = ring(CFrame.new(PL), 130, Color3.fromRGB(255, 220, 170))
 				end
-				fov = 55
-			elseif t < 13 then -- ===== 4. city at dusk
-				local u = seg(t, 9.5, 13)
-				set({ ClockTime = 18.2, Brightness = 1.6, Ambient = Color3.fromRGB(110, 80, 110), OutdoorAmbient = Color3.fromRGB(130, 90, 120) })
-				cc.TintColor, cc.Saturation, cc.Contrast = Color3.fromRGB(255, 205, 175), 0.3, 0.12
-				flash.BackgroundTransparency = math.min(flash.BackgroundTransparency, seg(t, 9.5, 10.1))
-				for _, c in cars do
-					local z = (c.z0 + c.dir * c.speed * t) % 300 - 150
-					local cf = CFrame.lookAt(Ci + V(c.x, 1.2, z), Ci + V(c.x, 1.2, z + c.dir))
-					c.car.CFrame, c.lamp.CFrame = cf, cf * CFrame.new(0, 0.1, -3.05)
+				local u = seg(t, 6, 8)
+				for _, c in chunks do
+					c.p.CFrame = (c.p.CFrame + c.v * dt) * CFrame.Angles(c.r.X * dt, c.r.Y * dt, c.r.Z * dt)
 				end
-				local dolly = smooth(seg(t, 9.5, 11.8))
-				local crane = smooth(seg(t, 11.4, 13))
-				eye = Ci + V(-32, 16 + 120 * crane, 140 - 220 * dolly + 40 * crane)
-				at = Ci + V(-32 + 40 * crane, 22 + 30 * crane, 60 - 220 * dolly - 60 * crane)
-				fov = 60 - 10 * crane
-			elseif t < 16 then -- ===== 5. into the sun
-				local u = seg(t, 13, 16)
-				set({ ClockTime = 12, Brightness = 3, Ambient = Color3.fromRGB(200, 160, 120) })
-				cc.TintColor, cc.Saturation, cc.Contrast, cc.Brightness = Color3.fromRGB(255, 225, 180), 0.35, 0.1, 0.25 * u
-				flash.BackgroundTransparency = math.min(1, 1 - smooth(seg(t, 15.3, 16))) -- white-out
-				for k, s in shells do s.CFrame = CFrame.new(S) * CFrame.Angles(0, t * 0.3 * k, 0) end
-				for k, r in corona do
-					local cf = CFrame.new(S) * CFrame.Angles(0.5 * k + t * 0.2, t * 0.15 * k, 0.3 * k)
+				if wave then grow(wave, CFrame.new(PL) * CFrame.Angles(0.3, 0, 0.2), (130 + 900 * smooth(u)) / 130, u) end
+				core.Size = V(36, 36, 36) * (1 + 0.15 * math.sin(t * 20))
+				set({ ClockTime = 0, Brightness = 0.5, Ambient = Color3.fromRGB(120, 70, 50) })
+				cc.TintColor, cc.Contrast = Color3.fromRGB(255, 220, 200), 0.2
+				eye, at, fov = PL + V(-300 - 120 * u, 70, 210 + 60 * u), PL, 62
+			elseif t < 9.2 then -- ===== 4. the camera plunges into the burning core
+				local u = smooth(seg(t, 8, 9.2))
+				eye, at, fov = (PL + V(-160, 4, 0)):Lerp(PL + V(-6, 0, 0), u), PL, 70 + 40 * u
+				for k, r in tunnel do
+					local cf = CFrame.new(PL + V(-150 + k * 12, 0, 0)) * CFrame.Angles(t * (k % 2 == 0 and 2 or -2), 0, math.pi / 2)
 					if r:IsA("BasePart") then r.CFrame = cf else r:PivotTo(cf) end
 				end
-				sun.Size = V(220, 220, 220) * (1 + 0.03 * math.sin(t * 6))
-				eye, at = S + V(0, 40 - 30 * u, 900 - 700 * smooth(u)), S
-				fov = 55 - 15 * u
-				shake = math.max(shake, 0.25 * u)
-			else -- ===== 6. the computer
-				local u = t - 16
-				set({ ClockTime = 0, Brightness = 0.4, Ambient = Color3.fromRGB(50, 50, 70), OutdoorAmbient = Color3.fromRGB(40, 40, 60) })
-				cc.TintColor, cc.Saturation, cc.Contrast, cc.Brightness = WHITE, 0.15, 0.08, 0
-				if u < 0.8 then flash.BackgroundTransparency = smooth(u / 0.8) end
+				for _, c in chunks do c.p.CFrame += c.v * dt end
+				cc.TintColor, cc.Saturation = Color3.fromRGB(255, 190, 140), 0.4
+				shake = math.max(shake, 0.5)
+				if t > 9.0 then flash.BackgroundColor3, flash.BackgroundTransparency = Color3.fromRGB(255, 150, 60), 0 end
+			elseif t < 15 then -- ===== 5. inside the core: the computer, the glitch, the silhouette
+				if stage ~= 5 then stage = 5; cut(Color3.fromRGB(255, 150, 60)) end
+				local u = t - 9.2
+				set({ ClockTime = 0, Brightness = 0.4, Ambient = Color3.fromRGB(110, 50, 30), OutdoorAmbient = Color3.fromRGB(80, 40, 30) })
+				cc.TintColor, cc.Saturation, cc.Contrast, cc.Brightness = Color3.fromRGB(255, 225, 205), 0.15, 0.1, 0
 				-- the game on the screen
 				local pull = 0.8 * smooth(seg(u, 0, 0.6)) * (1 - smooth(seg(u, 0.6, 0.75)))
 				miniCue.CFrame = CFrame.lookAt(prizeStart - V(3.4 + pull, -0.25, 0), prizeStart)
-				local roll = smooth(seg(u, 0.75, 2.7))
-				local sink = seg(u, 2.6, 2.95)
+				local roll = smooth(seg(u, 0.75, 2.4))
+				local sink = seg(u, 2.3, 2.6)
 				prize:PivotTo(CFrame.new(prizeStart:Lerp(prizeGoal, roll) - V(0, 0.5 * sink, 0)) * CFrame.Angles(0, 0, -roll * 20))
-				if u >= 0.75 and mini[1].vel.Magnitude == 0 and not mini.broke then -- break: rack balls fly apart
+				if u >= 0.75 and not mini.broke then
 					mini.broke = true
 					for k, b in mini do
 						if type(k) == "number" then b.vel = V(rnd:NextNumber(1, 5), 0, rnd:NextNumber(-4, 4)) end
@@ -424,24 +434,47 @@ return function(it, ctx)
 						b.p.CFrame = CFrame.new(p)
 					end
 				end
-				if u >= 2.95 then -- the recount runs on the screen: 1 in 1, 1 in 2 ... 1 in <final luck>
-					local e = seg(u, 2.95, 4.5)
+				-- glitch: the picture tears into colour bars, jumps and blinks
+				local g = u >= 2.7 and u < 3.9
+				for _, f in glitch do
+					f.Visible = g and rnd:NextNumber() < 0.45
+					if f.Visible then
+						f.Position = UDim2.fromScale(rnd:NextNumber(-0.2, 0.9), rnd:NextNumber(0, 0.95))
+						f.Size = UDim2.fromScale(rnd:NextNumber(0.2, 0.9), rnd:NextNumber(0.02, 0.12))
+					end
+				end
+				vp.Position = g and UDim2.fromScale(0.02 * rnd:NextNumber(-1, 1), 0.09 + 0.02 * rnd:NextNumber(-1, 1)) or UDim2.fromScale(0, 0.09)
+				vp.Visible = u < 3.6 or u >= 4.6
+				if g and not glitched then
+					glitched = true
+					ctx.sound("Cushion")
+				end
+				if g then shake = math.max(shake, 0.4) end
+				-- the silhouette of the mightiest ball: black with white edges, growing on the screen
+				if u >= 3.5 then
+					local e = smooth(seg(u, 3.5, 4.3))
+					silhouette.Visible = true
+					silhouette.Size = UDim2.fromScale(0.12 + 0.36 * e, (0.12 + 0.36 * e) * 1.78)
+					rim.Thickness = 4 + 3 * math.sin(u * 18)
+				end
+				if u >= 3.8 then -- the recount runs under it: 1 in 1, 1 in 2 ... 1 in <final luck>
+					local e = seg(u, 3.8, 5)
 					odds.Visible = true
 					odds.Text = "1 in " .. C.FullNumber(e >= 1 and finalL or finalL ^ (1 - (1 - e) ^ 3))
 					odds.TextColor3 = e >= 1 and WHITE or C.UI.Title
 				end
 				-- camera: wide on the desk, then push into the monitor; the glass breaks and the ball flies out
-				local push = smooth(seg(u, 3.9, 4.9))
+				local push = smooth(seg(u, 4.4, 5.2))
 				local screen = screenPart.Position
 				eye = (P + V(9, 9.5, 15)):Lerp(screen + V(0, 0, 2.2), push)
 				at = (P + V(0, 5.6, -1)):Lerp(screen, push)
 				fov = 50 - 12 * push
-				if u >= 4.9 and not shattered then
+				if u >= 5.2 and not shattered then
 					shattered = true
 					ctx.sound("Cushion")
 					ctx.sound("Reward")
 					shake = 1.2
-					flash.BackgroundTransparency = 0.2
+					flash.BackgroundColor3, flash.BackgroundTransparency = WHITE, 0.2
 					sg.Enabled = false
 					for k = 1, 26 do
 						local s = part(V(rnd:NextNumber(0.4, 1.2), rnd:NextNumber(0.4, 1.2), 0.05), CFrame.new(screen + V(rnd:NextNumber(-3, 3), rnd:NextNumber(-1.7, 1.7), 0.1)), Color3.fromRGB(190, 220, 255), Enum.Material.Glass)
@@ -449,20 +482,89 @@ return function(it, ctx)
 						shards[k] = { p = s, v = V(rnd:NextNumber(-6, 6), rnd:NextNumber(-2, 6), rnd:NextNumber(6, 16)), r = V(rnd:NextNumber(-6, 6), rnd:NextNumber(-6, 6), rnd:NextNumber(-6, 6)) }
 					end
 					reward.Parent = scene
-					if ctx.odds then closeOdds = ctx.odds(finalL, 0.9) end
 				end
 				for _, s in shards do
 					s.v += V(0, -18, 0) * dt
 					s.p.CFrame = (s.p.CFrame + s.v * dt) * CFrame.Angles(s.r.X * dt, s.r.Y * dt, s.r.Z * dt)
 				end
 				if shattered then
-					local fly = smooth(seg(u, 4.9, 5.8))
-					reward:PivotTo(CFrame.new(screen:Lerp(eye + (at - eye).Unit * 6, fly)) * CFrame.Angles(0.2, t * 2.2, 0))
-					if u >= 5.6 and not captioned then
-						captioned = true
-						ctx.caption()
+					local fly = smooth(seg(u, 5.2, 5.8))
+					reward:PivotTo(CFrame.new(screen:Lerp(eye + (at - eye).Unit * 3, fly)) * CFrame.Angles(0.2, t * 2.2, 0))
+				end
+			elseif t < 17 then -- ===== 6. the ball bursts out of the core and the planet's debris
+				if stage ~= 6 then
+					stage = 6
+					cut()
+					reward.Parent = nil
+					for _, c in chunks do c.p.CFrame = CFrame.new(PL + (c.p.Position - PL).Unit * 140) end
+					ctx.sound("Hit")
+				end
+				local u = seg(t, 15, 17)
+				for _, c in chunks do c.p.CFrame = (c.p.CFrame + c.v * dt * 0.3) * CFrame.Angles(c.r.X * dt, c.r.Y * dt, 0) end
+				local p = PL:Lerp(PL + V(-600, 90, -260), smooth(u) ^ 1.4)
+				comet.CFrame = CFrame.new(p)
+				comet.Size = V(5, 5, 5)
+				fire.Enabled = true
+				eye, at, fov = PL + V(-120, 40, 150), p, 60
+				set({ ClockTime = 0, Brightness = 0.3, Ambient = Color3.fromRGB(110, 60, 50) })
+			elseif t < 20 then -- ===== 7. the ball streaks towards the home planet
+				if stage ~= 7 then stage = 7; cut() end
+				local u = seg(t, 17, 20)
+				local from, to = HP + V(-420, 60, 40), HP + V(-46, 4, 0)
+				local p = from:Lerp(to, smooth(u) ^ 1.3)
+				comet.CFrame = CFrame.new(p)
+				fire.Rate = 120 + 400 * u -- atmosphere entry
+				eye, at, fov = p + V(-20, 7, 10), HP, 60 + 15 * u
+				set({ ClockTime = 0, Brightness = 0.6, Ambient = Color3.fromRGB(60, 70, 110) })
+				cc.TintColor = WHITE:Lerp(Color3.fromRGB(255, 200, 150), u)
+				shake = math.max(shake, 0.3 * u)
+				if t > 19.7 then flash.BackgroundColor3, flash.BackgroundTransparency = WHITE, 0 end
+			else -- ===== 8. back at the long table: the ball lands right in front of the player
+				local root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+				local base = root and root.Position or V(0, 5, 0)
+				if stage ~= 8 then
+					stage = 8
+					cut()
+					for k, v in saved do Lighting[k] = v end
+					if atmosphere then atmosphere.Density = atmoDensity end
+					cc.TintColor, cc.Saturation, cc.Contrast, cc.Brightness = WHITE, 0.1, 0.05, 0
+					comet.Transparency, fire.Enabled = 1, false
+					reward = BallArt.Make(it, 3)
+					reward.Parent = scene
+					light(reward.PrimaryPart, Color3.fromRGB(255, 230, 170), 4, 24)
+					sparks:Clone().Parent = reward.PrimaryPart
+				end
+				local u = t - 20
+				local spot = base + V(0, 1.5, 7) -- in front of the player, along the long table (+Z)
+				local drop = smooth(seg(u, 0, 0.7))
+				local landed = spot + V(0, 0.6 * math.sin(u * 3), 0)
+				reward:PivotTo(CFrame.new((spot + V(0, 70, 25)):Lerp(spot, drop ^ 2)):Lerp(CFrame.new(landed), seg(u, 0.7, 1.2)) * CFrame.Angles(0.2, t * 1.5, 0))
+				if u >= 0.7 and not landedFx then
+					landedFx = true
+					ctx.sound("Pocket")
+					ctx.sound("Reward")
+					shake = 1.5
+					flash.BackgroundTransparency = 0.3
+					wave = ring(CFrame.new(spot - V(0, 3.5, 0)), 4, Color3.fromRGB(255, 230, 160))
+					if ctx.odds then closeOdds = ctx.odds(finalL, 1.2) end
+				end
+				if wave and landedFx then grow(wave, CFrame.new(spot - V(0, 3.5, 0)), 1 + 15 * smooth(seg(u, 0.7, 1.8)), seg(u, 0.7, 1.8)) end
+				if u >= 1.6 and not captioned then
+					captioned = true
+					ctx.caption()
+					auraTitle.Visible = true
+				end
+				if root and u >= 1.6 and not auraFx then -- the super aura flares up on the player right away
+					auraFx = true
+					for _, e in { sparks:Clone(), sparks:Clone() } do
+						e.Rate, e.Speed, e.Parent = 60, NumberRange.new(5, 10), root
+						task.delay(6, e.Destroy, e)
 					end
 				end
+				auraTitle.TextTransparency = math.max(0, 1 - seg(u, 1.6, 2.1))
+				eye = base + V(-3, 5.5, -12)
+				at = base + V(0, 3, 30)
+				fov = 62
 			end
 			-- remove dead lightning, apply camera + shake
 			for k = #bolts, 1, -1 do
@@ -472,7 +574,7 @@ return function(it, ctx)
 				end
 			end
 			flash.BackgroundTransparency = math.min(1, flash.BackgroundTransparency + dt * 2.2)
-			if eye and not (t >= 3.2 and t < 6) then camera.CFrame = CFrame.lookAt(eye, at) end
+			if eye then camera.CFrame = CFrame.lookAt(eye, at) end
 			camera.FieldOfView = fov
 			if shake > 0.01 then
 				camera.CFrame *= CFrame.new(rnd:NextNumber(-1, 1) * shake * 0.3, rnd:NextNumber(-1, 1) * shake * 0.3, 0) * CFrame.Angles(0, 0, rnd:NextNumber(-1, 1) * shake * 0.02)

@@ -1,4 +1,4 @@
--- Game constants + UI tokens (mirrors the Figma file "Billiard Hunters — UI")
+-- CUE HUNTERS: game constants + UI tokens (mirrors the Figma UI file)
 local C = {}
 local rgb = Color3.fromRGB
 
@@ -217,6 +217,11 @@ function C.FullNumber(n)
  exp=tonumber(exp)
  if #digits>exp+1 then digits=digits:sub(1,exp+1) end
  return digits..string.rep("0",exp+1-#digits)
+end
+-- Live luck while the ball rolls: "1.01" below 1000 (so the count visibly creeps up), then whole digits
+function C.LuckText(n)
+ if n<1000 then return string.format("%.2f",math.floor(n*100)/100) end
+ return C.FullNumber(n)
 end
 -- Luck a cue adds over the previous tier (what the cue shop shows)
 function C.CueLuckGain(tier)
