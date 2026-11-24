@@ -44,7 +44,7 @@ def v3(name, v):
     return f'<Vector3 name="{name}"><X>{v[0]:.5f}</X><Y>{v[1]:.5f}</Y><Z>{v[2]:.5f}</Z></Vector3>'
 
 
-def meshpart(name, pos, rot, size, init, mesh_id, color, neon, shadow, attributes=None, anchored=True):
+def meshpart(name, pos, rot, size, init, mesh_id, color, neon, shadow, attributes=None, anchored=True, tex=None):
     ref[0] += 1
     col = 0xFF000000 | (color[0] << 16) | (color[1] << 8) | color[2]
     a = f'<BinaryString name="AttributesSerialize">{attrs(attributes)}</BinaryString>' if attributes else ""
@@ -52,6 +52,7 @@ def meshpart(name, pos, rot, size, init, mesh_id, color, neon, shadow, attribute
         f'<Item class="MeshPart" referent="RBXBake{ref[0]}"><Properties><string name="Name">{name}</string>'
         f'{cframe(pos, rot)}{v3("size", size)}{v3("InitialSize", init)}'
         f'<Content name="MeshId"><url>rbxassetid://{mesh_id}</url></Content>'
+        + (f'<Content name="TextureID"><url>rbxassetid://{tex}</url></Content>' if tex else "") +
         f'<Color3uint8 name="Color3uint8">{col}</Color3uint8><token name="Material">{288 if neon else 272}</token>'
         f'<bool name="Anchored">{str(anchored).lower()}</bool><bool name="CanCollide">false</bool><bool name="CanQuery">false</bool>'
         f'<bool name="CanTouch">false</bool><bool name="CastShadow">{str(shadow).lower()}</bool><bool name="Massless">true</bool>'
@@ -65,7 +66,8 @@ def load():
     ready = {}
     for name, pieces in c["meshes"].items():
         if pieces and all(p["hash"] in c["meshIds"] for p in pieces):
-            ready[name] = [dict(p, id=c["meshIds"][p["hash"]][0], init=c["meshIds"][p["hash"]][1]) for p in pieces]
+            ready[name] = [dict(p, id=c["meshIds"][p["hash"]][0], init=c["meshIds"][p["hash"]][1],
+                                tex=(c["meshIds"][p["hash"]] + [None])[2]) for p in pieces]
     return ready
 
 
@@ -91,7 +93,7 @@ def build(mesh, pieces, palette, pos, rot, scale, overrides, shadow_min=6):
         size = [p["size"][i] * scale[i] for i in range(3)]
         color = overrides.get(p["slot"]) or palette.get(p["slot"], (255, 255, 255))
         neon = p["slot"] in NEON_SLOTS and mesh not in NO_NEON
-        parts.append(meshpart(p["slot"], world, rot, size, p["init"], p["id"], color, neon, max(size) >= shadow_min))
+        parts.append(meshpart(p["slot"], world, rot, size, p["init"], p["id"], color, neon, max(size) >= shadow_min, tex=p.get("tex")))
     parts[0].find("Properties")[0].text = "MeshVisual"
     for p in parts[1:]:
         parts[0].append(p)
@@ -105,6 +107,8 @@ def apply(x):
         return x
     mods = meshdata.modules(x)
     palettes = {n: dict(meshdata.parse(s)["palette"]) for n, s in mods.items() if n in ready}
+    for n in ready:
+        palettes.setdefault(n, {})  # textured models (blender/god.py) have no module in the place
     ref[0] = 0
     # 1) ReplicatedStorage.MeshAssets templates
     old = x.find('<Item class="Folder" referent="RBXAssets0">')
@@ -118,7 +122,7 @@ def apply(x):
         for p in pieces:
             model.append(meshpart(p["slot"], p["offset"], ident, p["size"], p["init"], p["id"], palettes[mesh].get(p["slot"], (255, 255, 255)),
                                   p["slot"] in NEON_SLOTS and mesh not in NO_NEON, True,
-                                  {"Slot": p["slot"], "Offset": p["offset"], "Volume": p["size"][0] * p["size"][1] * p["size"][2]}))
+                                  {"Slot": p["slot"], "Offset": p["offset"], "Volume": p["size"][0] * p["size"][1] * p["size"][2]}, tex=p.get("tex")))
         folder.append(model)
     rs = re.search(r'<Item class="ReplicatedStorage" referent="[^"]*">\s*<Properties>.*?</Properties>', x, re.S)
     x = x[:rs.end()] + ET.tostring(folder, encoding="unicode") + x[rs.end():]

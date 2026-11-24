@@ -16,6 +16,7 @@ PLACE = os.path.join(ROOT, "studio", "CueHunters.rbxlx")
 CACHE = os.path.join(TOOLS, "mesh_assets.json")
 API = "https://apis.roblox.com"
 MAX_TRIS = 9000
+CREATOR = [None]
 
 
 def glb(tris):
@@ -112,8 +113,53 @@ def mesh_of(model_id):
     return ids[0].decode(), [rbxm.untrans_f(val[4 * i:4 * i + 4], 1)[0] for i in range(3)]
 
 
+TEXTURED = ["GodBody", "GodHead", "GodArmR", "GodArmL", "GodTemple"]  # blender/god.py: GLB with UVs + baked PNG
+
+
+def upload_image(name, png):
+    b = uuid.uuid4().hex
+    req = json.dumps({"assetType": "Decal", "displayName": name[:50], "description": "CUE HUNTERS texture",
+                      "creationContext": {"creator": {"userId": str(CREATOR[0])}}})
+    body = (f"--{b}\r\nContent-Disposition: form-data; name=\"request\"\r\nContent-Type: application/json\r\n\r\n{req}\r\n"
+            f"--{b}\r\nContent-Disposition: form-data; name=\"fileContent\"; filename=\"{name}.png\"\r\n"
+            f"Content-Type: image/png\r\n\r\n").encode() + png + f"\r\n--{b}--\r\n".encode()
+    op = json.loads(call(API + "/assets/v1/assets", body, {"Content-Type": f"multipart/form-data; boundary={b}"}, "POST"))
+    for _ in range(60):
+        if op.get("done"):
+            break
+        time.sleep(2)
+        op = json.loads(call(API + "/assets/v1/" + op["path"]))
+    decal = op["response"]["assetId"]
+    loc = json.loads(call(f"{API}/asset-delivery-api/v1/assetId/{decal}"))["location"]
+    raw = urllib.request.urlopen(urllib.request.Request(loc, headers={"Accept-Encoding": "gzip"}), timeout=120).read()
+    if raw[:2] == b"\x1f\x8b":
+        raw = gzip.decompress(raw)
+    return re.search(rb"asset/\?id=(\d+)", raw).group(1).decode()  # the image behind the decal
+
+
+def textured(cache, creator):
+    """God models: one textured piece each (offset/size from the luau fallback module)."""
+    export = os.path.join(ROOT, "blender", "export")
+    for name in TEXTURED:
+        glb_path, png_path = os.path.join(export, name + ".glb"), os.path.join(export, name + ".png")
+        if not os.path.exists(glb_path):
+            continue
+        glb, png = open(glb_path, "rb").read(), open(png_path, "rb").read()
+        src = open(os.path.join(ROOT, "src", "shared", "Meshes", name + ".luau"), encoding="utf-8").read()
+        vec = lambda k: [float(v) for v in re.search(k + r" = Vector3\.new\(([^)]*)\)", src).group(1).split(",")]
+        h = hashlib.sha1(glb + png).hexdigest()[:16]
+        cache["meshes"][name] = [{"slot": "Tex", "offset": vec("center"), "size": vec("size"), "hash": h}]
+        if h in cache["meshIds"]:
+            continue
+        mid, init = mesh_of(upload("CH_" + name, glb, creator))
+        tex = upload_image("CH_" + name + "_tex", png)
+        cache["meshIds"][h] = [mid, [round(k, 5) for k in init], tex]
+        print(name, mid, tex, flush=True)
+
+
 def main():
     creator = sys.argv[1]
+    CREATOR[0] = creator
     cache = json.load(open(CACHE)) if os.path.exists(CACHE) else {"meshIds": {}, "meshes": {}}
     x = open(PLACE, encoding="utf-8").read()
     mods = meshdata.modules(x)
@@ -131,6 +177,7 @@ def main():
                 todo.append((f"BH_{name}_{slot}", h, blob, size))
         cache["meshes"][name] = entry
     print(len(todo), "pieces to upload")
+    textured(cache, creator)
     import threading
     from concurrent.futures import ThreadPoolExecutor
     lock, done = threading.Lock(), [0]

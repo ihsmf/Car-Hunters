@@ -1,6 +1,7 @@
 -- CUE HUNTERS grand finale of the last table (~24 s, ~10 s with "short cinematics", Skip works). Real-time scenes far
--- from the map, models from Blender (Shared/Meshes: FinaleGod, FinalePlanet, FinaleComputer, FinaleRobloxPlanet):
---   1 the god of billiards strikes the cue ball with the Legend cue, heaven thunders          0 - 3.5 s
+-- from the map, models from Blender (Shared/Meshes: God* (blender/god.py, textured), FinalePlanet, FinaleComputer, FinaleRobloxPlanet):
+--   1 the god of billiards: clouds, his eyes ignite, wind-up, he strikes with the Legend cue 0 - 5 s (+1.5 s, later
+--     stages are timed without it)
 --   2 the ball flies through space into a super-planet                                     3.5 - 6 s
 --   3 the planet explodes (chunks, shock wave, burning core)                               6 - 8 s
 --   4 the camera plunges into the core                                                     8 - 9.2 s
@@ -128,22 +129,71 @@ return function(it, ctx)
 			table.insert(bolts, { f = f, dies = os.clock() + life })
 		end
 
-		-- ===== 1. the god of billiards =====
+		-- ===== 1. the god of billiards (blender/god.py: textured GodTemple / GodBody / GodHead / GodArmR / GodArmL) =====
 		local G = O.god
-		mesh("FinaleGod", CFrame.new(G), nil, 1, function()
-			part(V(9, 18, 9), CFrame.new(G + V(0, 9, 0)), Color3.fromRGB(250, 246, 235), nil, Enum.PartType.Cylinder)
-			part(V(4.2, 4.2, 4.2), CFrame.new(G + V(0, 21.5, 0)), Color3.fromRGB(255, 214, 170), nil, Enum.PartType.Ball)
+		mesh("GodTemple", CFrame.new(G), nil, 1, function()
+			part(V(48, 3.4, 48), CFrame.new(G + V(0, 1.7, 0)), Color3.fromRGB(240, 238, 232), Enum.Material.Marble, Enum.PartType.Cylinder)
 		end)
-		for k = 1, 10 do -- sunlit cloud floor around the god
-			local a = k * math.pi / 5
-			part(V(1, 1, 1) * rnd:NextNumber(10, 18), CFrame.new(G + V(math.cos(a) * 18, -2, math.sin(a) * 18)), Color3.fromRGB(240, 244, 255), nil, Enum.PartType.Ball)
+		for k = 1, 16 do -- a sea of clouds around the temple
+			local a = k * math.pi / 8
+			local d = rnd:NextNumber(30, 70)
+			part(V(1, 0.55, 1) * rnd:NextNumber(18, 34), CFrame.new(G + V(math.cos(a) * d, rnd:NextNumber(-6, 0), math.sin(a) * d)), Color3.fromRGB(244, 246, 255), nil, Enum.PartType.Ball)
 		end
-		local hands = G + V(5.6, 15.6, 0)
-		local BALL0 = hands + V(9, 0, 0)
+		local rays = {}
+		for k = 1, 7 do -- god rays falling on the temple
+			local r = part(V(rnd:NextNumber(3, 6), 140, rnd:NextNumber(3, 6)), CFrame.new(G), Color3.fromRGB(255, 236, 180), Enum.Material.Neon)
+			r.Transparency = 0.82
+			rays[k] = { p = r, a = k * 0.9, d = rnd:NextNumber(4, 20) }
+		end
+		local FEET = G + V(0, 3.36, 0) -- the god stands on the top step
+		local GOD = { -- studs, relative to the feet (Roblox axes), from blender/god.py (SCALE 3.2)
+			shoulderR = V(0, 19.68, 3.456), shoulderL = V(0, 19.68, -3.456), neck = V(0.26, 22.4, 0),
+			handR = V(1.984, 16.0, 1.024), handL = V(5.6, 17.024, -0.32), eyes = { V(1.376, 24.1, -0.544), V(1.376, 24.1, 0.544) },
+		}
+		local function godPiece(name, at, size, color) -- { obj, offset of obj from the piece's origin }
+			local origin = CFrame.new(FEET + at)
+			local m = mesh(name, origin, nil, 1, nil) or part(size, CFrame.new(FEET + at + V(0, size.Y / 2, 0)), color)
+			local cf = m:IsA("BasePart") and m.CFrame or m:GetPivot()
+			return { obj = m, off = origin:ToObjectSpace(cf) }
+		end
+		local godBody = godPiece("GodBody", V(), V(8, 22, 8), Color3.fromRGB(246, 242, 232))
+		local godHead = godPiece("GodHead", V(), V(3.4, 4, 3.4), Color3.fromRGB(232, 184, 150))
+		local godArmR = godPiece("GodArmR", GOD.shoulderR, V(1.5, 1.5, 6), Color3.fromRGB(232, 184, 150))
+		local godArmL = godPiece("GodArmL", GOD.shoulderL, V(1.5, 1.5, 6), Color3.fromRGB(232, 184, 150))
+		local godEyes = {}
+		for k, e in GOD.eyes do
+			godEyes[k] = part(V(0.32, 0.32, 0.32), CFrame.new(FEET + e), Color3.fromRGB(255, 214, 90), Enum.Material.Neon, Enum.PartType.Ball)
+			godEyes[k].Transparency = 1
+		end
+		local eyeLight = light(godEyes[1], Color3.fromRGB(255, 210, 120), 0, 26)
+		local CUE_DIR = (GOD.handL - GOD.handR).Unit
+		local BALL0 = FEET + GOD.handL + CUE_DIR * 7
 		local cueBall = part(V(1.9, 1.9, 1.9), CFrame.new(BALL0), WHITE, nil, Enum.PartType.Ball)
 		local CS = 2 -- the Legend cue, twice the normal size in the god's hands
 		local cue = Art.Fallback("Cue" .. #C.Cues, CFrame.new(G), CS) or part(V(0.5, 0.5, 18), CFrame.new(G), Color3.fromRGB(255, 220, 120), Enum.Material.Neon)
 		cue.Parent = scene
+		-- pose(lean, push, look): lean rotates the god about his feet (+ back / - forward), push slides arms + cue
+		-- along the cue line, look turns the head (radians, + towards the camera side)
+		local function pose(lean, push, look)
+			local root = CFrame.new(FEET) * CFrame.Angles(0, 0, lean)
+			local function place(piece, cf)
+				local obj = piece.obj
+				if obj:IsA("BasePart") then obj.CFrame = cf * piece.off else obj:PivotTo(cf * piece.off) end
+			end
+			place(godBody, root)
+			local neck = root * CFrame.new(GOD.neck) * CFrame.Angles(0, look, 0) * CFrame.new(-GOD.neck)
+			place(godHead, neck)
+			local slide = CUE_DIR * push
+			place(godArmR, root * CFrame.new(GOD.shoulderR + slide * 0.6))
+			place(godArmL, root * CFrame.new(GOD.shoulderL + slide * 0.6))
+			for k, e in godEyes do e.CFrame = neck * CFrame.new(GOD.eyes[k]) end
+			local tip = root * (GOD.handL + CUE_DIR * 4 + slide)
+			local aim = root:VectorToWorldSpace(CUE_DIR)
+			local cf = CFrame.fromMatrix(tip - aim * 4.6 * CS, aim:Cross(Vector3.yAxis).Unit, aim)
+			if cue:IsA("Model") then cue:PivotTo(cf) else cue.CFrame = CFrame.lookAt(tip - aim * 9, tip) end
+			return tip, aim
+		end
+		pose(0, 0, 0)
 		local glow = light(cueBall, Color3.fromRGB(255, 230, 160), 0, 40)
 		local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
 		a0.Position, a1.Position, a0.Parent, a1.Parent = V(0, 0.8, 0), V(0, -0.8, 0), cueBall, cueBall
@@ -300,55 +350,65 @@ return function(it, ctx)
 			local now = os.clock()
 			local dt = math.min(now - last, 0.1)
 			last = now
-			local t = math.min(DURATION, (now - t0) * speed)
+			local t = math.min(DURATION + 1.5, (now - t0) * speed) -- + the 1.5 s god scene
 			local eye, at, fov = nil, nil, 50
 
 			local function cut(color) -- a hard cut between shots
 				flash.BackgroundColor3, flash.BackgroundTransparency = color or WHITE, 0
 				trail:Clear()
 			end
-			if t < 3.5 then -- ===== 1. the god strikes the cue ball with the Legend cue
+			if t < 5 then -- ===== 1. the god of billiards: clouds, his eyes ignite, the wind-up, the strike
 				set({ ClockTime = 14, Brightness = 3, Ambient = Color3.fromRGB(200, 190, 160), OutdoorAmbient = Color3.fromRGB(220, 210, 180) })
 				if atmosphere then atmosphere.Density = 0 end
-				cc.TintColor, cc.Saturation, cc.Contrast, cc.Brightness = Color3.fromRGB(255, 236, 200), 0.15, 0.12, 0.02
+				cc.TintColor, cc.Saturation, cc.Contrast, cc.Brightness = Color3.fromRGB(255, 238, 205), 0.15, 0.12, 0.02
 				shade.BackgroundTransparency = math.max(shade.BackgroundTransparency, smooth(seg(t, 0, 0.6))) -- out of black
-				local pull = smooth(seg(t, 0.3, 1.35))
-				local thrust = smooth(seg(t, 1.35, 1.5))
-				local aim = Vector3.xAxis
-				local tip = BALL0 - aim * (1.1 + (1.4 + pull * 2.4) * (1 - thrust))
-				local cf = CFrame.fromMatrix(tip - aim * 4.6 * CS, Vector3.zAxis, aim)
-				if cue:IsA("Model") then
-					cue:PivotTo(cf)
-					if Art.PoseCue then Art.PoseCue(cue, t, thrust) end
-				else
-					cue.CFrame = CFrame.lookAt(tip - aim * 9, tip)
+				for k, r in rays do -- slowly sweeping god rays
+					local a = r.a + t * 0.15
+					r.p.CFrame = CFrame.new(FEET + V(math.cos(a) * r.d, 40, math.sin(a) * r.d)) * CFrame.Angles(0.35 * math.sin(a), 0, 0.3 * math.cos(a))
 				end
-				if t >= 1.5 and not hit then
+				local look = 0.45 * smooth(seg(t, 1.6, 2.1)) * (1 - smooth(seg(t, 2.6, 3.0))) -- turns to the camera, then to the ball
+				local wind = smooth(seg(t, 2.6, 3.4)) -- lean back + draw the cue
+				local strike = smooth(seg(t, 3.4, 3.55))
+				local lean = 0.07 * wind * (1 - strike) - 0.1 * strike
+				local tip = pose(lean, -3 * wind * (1 - strike) + 3.5 * strike, look)
+				local ignite = smooth(seg(t, 1.9, 2.15))
+				for _, e in godEyes do e.Transparency = 1 - ignite end
+				eyeLight.Brightness = 6 * ignite
+				if t >= 1.9 and not thunder.eyes then
+					thunder.eyes = true
+					ctx.sound("Reward")
+					flash.BackgroundColor3, flash.BackgroundTransparency = Color3.fromRGB(255, 230, 160), 0.55
+				end
+				if t >= 2.7 and t < 3.4 and rnd:NextNumber() < 0.25 then -- lightning gathers at the cue tip
+					bolt(tip + V(rnd:NextNumber(-16, 16), rnd:NextNumber(10, 30), rnd:NextNumber(-16, 16)), tip, 0.25, Color3.fromRGB(255, 240, 190), 0.12)
+				end
+				if t >= 3.55 and not hit then
 					hit = true
 					ctx.sound("Hit")
 					ctx.sound("Break")
-					shake = 1.6
-					flash.BackgroundTransparency = 0.05
+					shake = 1.8
+					flash.BackgroundColor3, flash.BackgroundTransparency = WHITE, 0.05
+					for _ = 1, 3 do bolt(G + V(rnd:NextNumber(-20, 20), 90, rnd:NextNumber(-20, 20)), cueBall.Position, 0.5, Color3.fromRGB(255, 240, 190), 0.25) end
 				end
-				local fly = smooth(seg(t, 1.5, 3.5)) ^ 1.6
-				cueBall.CFrame = CFrame.new(BALL0 + V(160 * fly, 8 * fly, 0)) * CFrame.Angles(0, 0, -t * 12)
-				glow.Brightness = hit and 6 or pull * 3
-				for _, at_ in { 1.5, 1.8, 2.2, 2.7 } do -- heaven thunders
-					if t >= at_ and not thunder[at_] then
-						thunder[at_] = true
-						bolt(G + V(rnd:NextNumber(-20, 20), 90, rnd:NextNumber(-20, 20)), cueBall.Position, 0.5, Color3.fromRGB(255, 240, 190), 0.25)
-						flash.BackgroundTransparency = math.min(flash.BackgroundTransparency, 0.4)
-						shake = math.max(shake, 0.8)
-					end
-				end
-				if t < 1.5 then -- low angle on the god, slowly circling
-					local o = smooth(seg(t, 0, 1.5))
-					eye, at, fov = G + V(30 - 6 * o, 6 + 4 * o, 34 - 10 * o), G + V(4, 15, 0), 55
-				else
+				local fly = smooth(seg(t, 3.55, 5)) ^ 1.6
+				cueBall.CFrame = CFrame.new(BALL0 + CUE_DIR * (180 * fly) + V(0, 10 * fly, 0)) * CFrame.Angles(0, 0, -t * 12)
+				glow.Brightness = hit and 6 or wind * 3
+				local face = FEET + GOD.neck + V(0, 1.6, 0)
+				if t < 1.6 then -- rising through the clouds towards the temple
+					local u = smooth(seg(t, 0, 1.6))
+					eye, at, fov = G + V(70 - 30 * u, -8 + 24 * u, 60 - 30 * u), FEET + V(0, 14 + 4 * u, 0), 55
+				elseif t < 2.6 then -- push in on his face: the eyes ignite
+					local u = smooth(seg(t, 1.6, 2.6))
+					eye, at, fov = face + V(14 - 5 * u, 1, 7 - 2 * u), face, 40 - 8 * u
+				elseif t < 3.55 then -- side view of the wind-up and the strike
+					eye, at, fov = FEET + V(10, 16, 34), FEET + V(6, 15, 0), 55
+				else -- chase the ball
 					local b = cueBall.Position
-					eye, at, fov = b + V(-12, 3, 7), b + V(4, 0, 0), 60 + 20 * fly
+					eye, at, fov = b - CUE_DIR * 12 + V(0, 3, 7), b + CUE_DIR * 4, 60 + 20 * fly
 				end
-			elseif t < 6 then -- ===== 2. the ball flies through space into the super-planet
+			else
+			t -= 1.5 -- the rest of the film is timed after the god scene
+			if t < 6 then -- ===== 2. the ball flies through space into the super-planet
 				if stage ~= 2 then stage = 2; cut() end
 				set({ ClockTime = 0, Brightness = 0, Ambient = Color3.fromRGB(30, 30, 60), OutdoorAmbient = Color3.fromRGB(20, 20, 40) })
 				cc.TintColor, cc.Saturation, cc.Contrast, cc.Brightness = Color3.fromRGB(220, 225, 255), 0.25, 0.15, 0
@@ -565,6 +625,7 @@ return function(it, ctx)
 				eye = base + V(-3, 5.5, -12)
 				at = base + V(0, 3, 30)
 				fov = 62
+			end
 			end
 			-- remove dead lightning, apply camera + shake
 			for k = #bolts, 1, -1 do
