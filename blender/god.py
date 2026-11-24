@@ -116,6 +116,9 @@ def join(name, objs):
         o.select_set(True)
     bpy.context.view_layer.objects.active = objs[0]
     bpy.ops.object.convert(target="MESH")
+    import build_models
+    meshes = [o for o in bpy.context.selected_objects if o.type == "MESH"]
+    build_models.separate_coplanar(meshes)
     if len(objs) > 1:
         bpy.ops.object.join()
     o = bpy.context.object

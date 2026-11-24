@@ -5,7 +5,7 @@ Builds PoolTable, Cue, Ball, Dumbbell, Fence and writes:
   * src/shared/Meshes.luau              — triangle data; the game turns it into MeshParts at runtime
   * blender/export/models.png           — preview render
 Units are studs. Modelled in Roblox axes (X right, Y up, Z back) and converted to Blender axes."""
-import bpy, bmesh, math, os
+import bpy, bmesh, math, os, mathutils
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "export")
@@ -1328,10 +1328,66 @@ ACCESSORIES = [("AccCap", acc_cap), ("AccFedora", acc_fedora), ("AccTopHat", acc
 MODELS = CORE  # props/accessories are kept as functions but not exported (the map no longer uses them)
 
 
+def separate_coplanar(objs, step=0.025):
+    """Anti z-fighting: faces of different parts that lie in the same plane and face the same way (crossing beams,
+    trims flush with a wall...) flicker once they are one MeshPart. Push the k-th part's faces in such a plane out
+    along the normal by k * step studs, so no two coincide. Returns the number of planes fixed."""
+    planes = {}
+    for oi, o in enumerate(objs):
+        mw = o.matrix_world
+        nm = mw.to_3x3().inverted().transposed()
+        for f in o.data.polygons:
+            n = (nm @ f.normal).normalized()
+            if n.length < 0.5:
+                continue
+            p = mw @ f.center
+            key = (round(n.x, 3), round(n.y, 3), round(n.z, 3), round(n.dot(p), 2))
+            planes.setdefault(key, {}).setdefault(oi, []).append(f.index)
+    fixed = 0
+    for key, by_obj in planes.items():
+        if len(by_obj) < 2:
+            continue
+        n = mathutils.Vector(key[:3])
+        boxes = {}
+        for oi, faces in by_obj.items():  # world bbox of this part's faces in the plane
+            mw = objs[oi].matrix_world
+            pts = [mw @ objs[oi].data.vertices[vi].co for fi in faces for vi in objs[oi].data.polygons[fi].vertices]
+            boxes[oi] = ([min(p[i] for p in pts) - 1e-3 for i in range(3)], [max(p[i] for p in pts) + 1e-3 for i in range(3)])
+        layer = {}
+        for oi in sorted(by_obj):  # greedy layers: only parts that really overlap get different offsets
+            lo, hi = boxes[oi]
+            used = {layer[oj] for oj in layer if all(lo[i] <= boxes[oj][1][i] and boxes[oj][0][i] <= hi[i] for i in range(3))}
+            layer[oi] = next(k for k in range(len(by_obj) + 1) if k not in used)
+        if max(layer.values()) == 0:
+            continue
+        fixed += 1
+        for oi, k in layer.items():
+            if k == 0:
+                continue
+            o = objs[oi]
+            local = o.matrix_world.to_3x3().inverted() @ (n * step * k)
+            moved = set()
+            for fi in by_obj[oi]:
+                for vi in o.data.polygons[fi].vertices:
+                    if vi not in moved:
+                        moved.add(vi)
+                        o.data.vertices[vi].co += local
+    for o in objs:
+        o.data.update()
+    return fixed
+
+
 def join_triangulate(name):
     bpy.ops.object.select_all(action="SELECT")
     bpy.context.view_layer.objects.active = bpy.context.selected_objects[0]
     bpy.ops.object.convert(target="MESH")
+    objs = [o for o in bpy.context.selected_objects if o.type == "MESH"]
+    for o in objs:  # meshes may share data (copies): make them single-user before moving vertices
+        if o.data.users > 1:
+            o.data = o.data.copy()
+    n = separate_coplanar(objs)
+    if n:
+        print(f"  {name}: separated {n} coplanar face planes")
     if len(bpy.context.selected_objects) > 1:
         bpy.ops.object.join()
     o = bpy.context.object
