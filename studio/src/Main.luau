@@ -997,6 +997,9 @@ end)
 
 -- ===== Super aura: owners of a grand-finale ball (last table) glow for everyone, on every character =====
 local function superAura(root)
+	for _, old in root:GetChildren() do -- replace an older version of the aura (incl. its attachments)
+		if old.Name == "SuperAura" or (old:IsA("Attachment") and old.Name:sub(1, 4) == "Aura") then old:Destroy() end
+	end
 	local f = Instance.new("Folder")
 	f.Name = "SuperAura"
 	local RAINBOW = ColorSequence.new({
@@ -1009,8 +1012,8 @@ local function superAura(root)
 	local core = Instance.new("Attachment")
 	core.Name, core.Parent = "AuraCore", root
 	local rise = Instance.new("ParticleEmitter") -- rainbow embers rising around the body
-	rise.Color, rise.LightEmission, rise.Rate = RAINBOW, 1, 45
-	rise.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0) })
+	rise.Color, rise.LightEmission, rise.Rate = RAINBOW, 1, 70
+	rise.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 0) })
 	rise.Transparency = NumberSequence.new(0.1, 1)
 	rise.Lifetime, rise.Speed = NumberRange.new(1, 1.8), NumberRange.new(4, 8)
 	rise.SpreadAngle, rise.Shape, rise.ShapeInOut = Vector2.new(8, 8), Enum.ParticleEmitterShape.Cylinder, Enum.ParticleEmitterShapeInOut.Outward
@@ -1022,18 +1025,14 @@ local function superAura(root)
 	spark.Parent = core
 	local light = Instance.new("PointLight")
 	light.Color, light.Brightness, light.Range, light.Parent = Color3.fromRGB(255, 220, 150), 2.5, 14, core
-	for k = 1, 2 do -- two curved rainbow arcs around the body
-		local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
-		a0.Position, a1.Position = Vector3.new(-2.2, -1.5 + k * 1.4, 0), Vector3.new(2.2, -1.5 + k * 1.4, 0)
-		a0.Parent, a1.Parent = root, root
-		local b = Instance.new("Beam")
-		b.Attachment0, b.Attachment1, b.Color, b.LightEmission = a0, a1, RAINBOW, 1
-		b.CurveSize0, b.CurveSize1, b.Width0, b.Width1, b.FaceCamera, b.Segments = 3, -3, 0.35, 0.35, true, 16
-		b.Transparency = NumberSequence.new(0.2)
-		b.TextureSpeed, b.Parent = 1, f
-		local mirror = b:Clone()
-		mirror.CurveSize0, mirror.CurveSize1, mirror.Parent = -3, 3, f
-	end
+	local ring = Instance.new("ParticleEmitter") -- a shimmering rainbow circle on the ground around the feet
+	ring.Color, ring.LightEmission, ring.Rate = RAINBOW, 1, 60
+	ring.Shape, ring.ShapeStyle, ring.ShapeInOut = Enum.ParticleEmitterShape.Disc, Enum.ParticleEmitterShapeStyle.Surface, Enum.ParticleEmitterShapeInOut.Outward
+	ring.ShapePartial = 0.85 -- only the rim of the disc
+	ring.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 0) })
+	ring.Transparency = NumberSequence.new(0.2, 1)
+	ring.Lifetime, ring.Speed, ring.SpreadAngle = NumberRange.new(0.4, 0.7), NumberRange.new(0.5, 1.5), Vector2.new(5, 5)
+	ring.EmissionDirection, ring.Parent = Enum.NormalId.Top, feet
 	f.Parent = root
 end
 task.spawn(function()
