@@ -195,8 +195,8 @@ C.MaxEquipped = 8 -- balls on the base table
 C.BallSize = 1.3 -- prize ball diameter on the table (Big / Huge variants scale it)
 C.MaxInventory = 150
 
--- Luck grows along the ball's path: every shot starts at 1 (2 with the x2 Luck pass), every table crossed adds a
--- little, sometimes a "lucky table" adds a lot. The final value L upgrades the rarity:
+-- Luck grows along the ball's path: every shot starts at the cue's luck (x2 with the Luck pass) and each table adds
+-- its own range (C.TableGain), linearly inside the table. The final value L upgrades the rarity:
 -- +1 with chance 1 - 1/L, +2 with 1 - 5/L (L >= 5), +3 with 1 - 20/L (L >= 20).
 function C.CueLuck(tier)
  local u=(math.clamp(tier,1,#C.Cues)-1)/(#C.Cues-1)
@@ -233,18 +233,37 @@ function C.StartLuck(d, passes)
  if passes and passes.DragonCue then luck=math.max(luck,C.CueLuck(8)) end
  return math.min(C.MaxLuck,luck*((passes and passes.Luck2x) and 2 or 1))
 end
-function C.LuckTrack(start, tables, rnd) -- rnd() -> [0, 1); returns luck after each table and the lucky tables
-	local track, lucky, L = {}, {}, start
-	for k = 1, tables do
-		L=math.min(C.MaxLuck,L*(1.03+rnd()*.09))
-		if rnd() < 0.06 then
-			L=math.min(C.MaxLuck,L*(1.5+rnd()*1.5))
-			lucky[k] = true
-		end
-		track[k] = L
-	end
-	return track, lucky
+-- Every table has its own luck range, growing along the hall: table 1 ×1.5 ... table 75 ×3. Inside a table luck grows
+-- linearly with the distance covered: stopping at 80 % of a ×2 table gives ×1.8, not ×2.
+function C.TableGain(k)
+	local n = #C.Rarities
+	return 1.5 + 1.5 * (math.clamp(k, 1, n) - 1) / math.max(1, n - 1)
 end
+function C.LuckAt(start, dist) -- luck at a distance along the long table (server and client use the same formula)
+	local seg = C.Table.SegmentLength
+	local L = start
+	local d = math.max(0, dist)
+	for k = 1, #C.Rarities do
+		local g = C.TableGain(k)
+		if d >= seg then
+			L *= g
+			d -= seg
+		else
+			L *= 1 + (g - 1) * d / seg
+			break
+		end
+		if L >= C.MaxLuck then break end
+	end
+	return math.min(C.MaxLuck, L)
+end
+function C.LuckTrack(start, tables) -- luck at the end of every table (no randomness, no lucky tables any more)
+	local track = {}
+	for k = 1, tables do track[k] = C.LuckAt(start, k * C.Table.SegmentLength) end
+	return track, {}
+end
+-- Each ball has its own fixed odds, independent of the shot's luck: rarity odds × variant odds.
+function C.RarityOneIn(r) return math.floor(2 * 10 ^ ((r - 1) * 0.4) + 0.5) end
+function C.BallOdds(it) return C.RarityOneIn(it.id) * ((C.Variants[it.v or 1] or C.Variants[1]).oneIn or 1) end
 function C.LuckBonus(L, r1, r2, r3)
 	if r1 >= 1 - 1 / L then return 0 end
 	if L < 5 or r2 >= 1 - 5 / L then return 1 end
@@ -25742,7 +25761,7 @@ return function(it, ctx)
 		local shake, last = 0, 0
 		local hit, thunder, shattered, captioned = false, {}, false, false
 		local stage, glitched, landedFx, auraFx = 1, false, false, false
-		local finalL = math.max(1, ctx.luck or 1)
+		local finalL = math.max(1, ctx.ballOdds or ctx.luck or 1) -- the "1 in N" shown: the ball's own odds
 		repeat
 			if ctx.skipped() then break end
 			local now = os.clock()
@@ -26646,8 +26665,8 @@ function actions.Throw(plr, s, power)
 	local zone = C.ZoneOf(dist)
 	-- luck grows along the path: the client shows the same track live while the ball rolls
 	local luck0 = C.StartLuck(s.d, s.passes)
-	local track, lucky = C.LuckTrack(luck0, zone, function() return rng:NextNumber() end)
-	local L = track[zone]
+	local track, lucky = C.LuckTrack(luck0, zone) -- end-of-table values for the client's banners
+	local L = C.LuckAt(luck0, dist) -- the luck exactly where the ball stops (linear inside the table)
 	local rarity = math.min(zone + C.LuckBonus(L, rng:NextNumber(), rng:NextNumber(), rng:NextNumber()), N)
 	local full = not s.d.settings.short and rarity >= C.FullCinematicRarity and rarity >= s.d.best - 2 -- the big show only for top pulls
 	s.d.best = math.max(s.d.best, rarity)
@@ -28577,6 +28596,7 @@ renderers.Inventory = function()
 		end
 		text(C.DesignName(it), 28, INK, { Size = UDim2.fromOffset(160, 30), Position = UDim2.fromOffset(114, 84), Parent = c, TextScaled = true, NoStroke = true, TextXAlignment = Enum.TextXAlignment.Left })
 		text("$" .. C.Short(inc) .. "/s", 26, MONEY, { Size = UDim2.fromOffset(160, 30), Position = UDim2.fromOffset(114, 114), Parent = c, NoStroke = true, TextXAlignment = Enum.TextXAlignment.Left })
+		text("1 in " .. C.FullNumber(C.BallOdds(it)), 20, MUTED, { Size = UDim2.fromOffset(165, 24), Position = UDim2.fromOffset(114, 146), Parent = c, TextScaled = true, NoStroke = true, TextXAlignment = Enum.TextXAlignment.Left }) -- the ball's own odds
 		button({ Size = UDim2.fromOffset(150, 52), Position = UDim2.fromOffset(9, 180), Parent = c, Radius = 18 }, it.eq and U.Red or GREEN, it.eq and "Remove" or "Place", 22, function()
 			if call("Equip", i) then renderers.Inventory() end
 		end)
@@ -29604,7 +29624,7 @@ local function revealCard(it, bonus)
 	tween(vpScale, 0.6, { Scale = 1 }, Enum.EasingStyle.Back)
 	local title, s1 = label(root, string.upper(r[1]) .. "!", UDim2.fromScale(0.8, 0.13), WHITE, UDim2.fromScale(0.5, 0.66))
 	local name, s2 = label(root, C.ItemName(it), UDim2.fromScale(0.7, 0.08), V.color or r[2], UDim2.fromScale(0.5, 0.77))
-	local _, s3 = label(root, "$" .. C.Short(C.ItemIncome(it)) .. "/s", UDim2.fromScale(0.4, 0.055), C.UI.Money, UDim2.fromScale(0.5, 0.84))
+	local _, s3 = label(root, "$" .. C.Short(C.ItemIncome(it)) .. "/s   ·   1 in " .. C.FullNumber(C.BallOdds(it)), UDim2.fromScale(0.8, 0.055), C.UI.Money, UDim2.fromScale(0.5, 0.84))
 	local tagText = V.name ~= "Normal" and (string.upper(V.name) .. "  x" .. V.mult) or bonus > 0 and ("LUCK BONUS +" .. bonus) or "NEW"
 	local newTag, s4 = label(root, tagText, UDim2.fromScale(0.3, 0.05), V.color or C.UI.Title, UDim2.fromScale(0.5, 0.58))
 	newTag.Rotation = -4
@@ -30144,11 +30164,7 @@ Fx.OnClientEvent:Connect(function(kind, p)
 			breakRack(math.max(power, 0.3))
 		end
 		if mine then -- live luck: grows smoothly between the server's per-table values as the ball moves
-			local zf = math.max(0, (z - T.StartZ) / zoneLen)
-			local k = math.min(math.floor(zf), zone)
-			local a = k == 0 and p.luck0 or p.track[k]
-			local nextL = p.track[math.min(k + 1, zone)] or a
-			luckTarget = math.max(luckTarget, k >= zone and p.track[zone] or a * (nextL / a) ^ (zf - k))
+			luckTarget = math.max(luckTarget, C.LuckAt(p.luck0, math.min(z - T.StartZ, dist))) -- same formula as the server
 			luckStep(skip and 99 or nil)
 		end
 		local zn = zoneAt(z)
@@ -30160,27 +30176,20 @@ Fx.OnClientEvent:Connect(function(kind, p)
             aura.SpreadAngle=Vector2.new(38+(zn%5)*22,45+(zn%4)*26)
             aura.Acceleration=Vector3.new(0,2+(zn%7)*1.5,0)
             trail.Lifetime=.28+zn*.006
-			if mine and p.track[crossed] then
-				showLuck(p.track[crossed], luckyAt[crossed])
-				if luckyAt[crossed] then
-					showBanner("LUCKY TABLE", C.UI.Title)
-					doFlash(C.UI.Title, 0.35, 0.35)
-					sfx("Reward")
-				end
-			end
+			if mine and p.track[crossed] then pop(luckScale, 1.25) end
 			if mine and (full or zn == zone) then -- the short version only announces the final table
 				hardShake(0.5 + zn * 0.03)
 				doFlash(tbl[2], 0.35, 0.35)
 				cam.FieldOfView = 90
 				tween(cam, 0.5, { FieldOfView = 80 }, Enum.EasingStyle.Quart)
 				tween(cc, 0.3, { TintColor = tbl[2]:Lerp(WHITE, 0.75) })
-				if not luckyAt[crossed] then showBanner("TABLE " .. zn .. "  " .. string.upper(tbl[1]), tbl[2]) end
+				showBanner("TABLE " .. zn .. "  " .. string.upper(tbl[1]) .. "  LUCK ×" .. string.format("%.2g", C.TableGain(zn)), tbl[2])
 				sfx("Click")
 			end
 		end
 		RunService.RenderStepped:Wait()
 	until t >= 1
-	local finalL = p.track[zone] or p.luck0
+	local finalL = C.LuckAt(p.luck0, dist)
 	if mine then -- finish the count (it accelerates), then the final pop
 		showLuck(finalL, luckyAt[zone])
 		local t0 = os.clock()
@@ -30219,7 +30228,8 @@ Fx.OnClientEvent:Connect(function(kind, p)
 	doFlash(rcol, 0.6, 0.3)
 	tween(blur, 0.3, { Size = 0 })
 	local bonus = math.max(0, ch.rarity - zone)
-	local closeOdds = it.section ~= #C.Tables and oddsCounter(finalL, full and 2.4 or 1.5) -- the finale counts on its own screen
+	local ballOdds = C.BallOdds(it) -- the ball's own "1 in N", independent of the shot's luck
+	local closeOdds = it.section ~= #C.Tables and oddsCounter(ballOdds, full and 2.4 or 1.5) -- the finale counts on its own screen
 	if it.section==#C.Tables then
   camFn=nil
   dim.BackgroundTransparency=1
@@ -30235,7 +30245,7 @@ Fx.OnClientEvent:Connect(function(kind, p)
   end
   local ok,shown=pcall(function()
    if skip then return false end
-   return require(RS.Shared.HeavenlyBreak)(it,{skipped=function()return skip end,sound=sfx,caption=showPrize,luck=finalL,odds=oddsCounter})
+   return require(RS.Shared.HeavenlyBreak)(it,{skipped=function()return skip end,sound=sfx,caption=showPrize,luck=finalL,ballOdds=ballOdds,odds=oddsCounter})
   end)
   if not ok or not shown or not caption then
    showPrize()

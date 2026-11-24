@@ -516,8 +516,8 @@ function actions.Throw(plr, s, power)
 	local zone = C.ZoneOf(dist)
 	-- luck grows along the path: the client shows the same track live while the ball rolls
 	local luck0 = C.StartLuck(s.d, s.passes)
-	local track, lucky = C.LuckTrack(luck0, zone, function() return rng:NextNumber() end)
-	local L = track[zone]
+	local track, lucky = C.LuckTrack(luck0, zone) -- end-of-table values for the client's banners
+	local L = C.LuckAt(luck0, dist) -- the luck exactly where the ball stops (linear inside the table)
 	local rarity = math.min(zone + C.LuckBonus(L, rng:NextNumber(), rng:NextNumber(), rng:NextNumber()), N)
 	local full = not s.d.settings.short and rarity >= C.FullCinematicRarity and rarity >= s.d.best - 2 -- the big show only for top pulls
 	s.d.best = math.max(s.d.best, rarity)

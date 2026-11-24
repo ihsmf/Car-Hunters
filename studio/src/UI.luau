@@ -642,6 +642,7 @@ renderers.Inventory = function()
 		end
 		text(C.DesignName(it), 28, INK, { Size = UDim2.fromOffset(160, 30), Position = UDim2.fromOffset(114, 84), Parent = c, TextScaled = true, NoStroke = true, TextXAlignment = Enum.TextXAlignment.Left })
 		text("$" .. C.Short(inc) .. "/s", 26, MONEY, { Size = UDim2.fromOffset(160, 30), Position = UDim2.fromOffset(114, 114), Parent = c, NoStroke = true, TextXAlignment = Enum.TextXAlignment.Left })
+		text("1 in " .. C.FullNumber(C.BallOdds(it)), 20, MUTED, { Size = UDim2.fromOffset(165, 24), Position = UDim2.fromOffset(114, 146), Parent = c, TextScaled = true, NoStroke = true, TextXAlignment = Enum.TextXAlignment.Left }) -- the ball's own odds
 		button({ Size = UDim2.fromOffset(150, 52), Position = UDim2.fromOffset(9, 180), Parent = c, Radius = 18 }, it.eq and U.Red or GREEN, it.eq and "Remove" or "Place", 22, function()
 			if call("Equip", i) then renderers.Inventory() end
 		end)

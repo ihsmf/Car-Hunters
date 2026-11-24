@@ -337,7 +337,7 @@ local function revealCard(it, bonus)
 	tween(vpScale, 0.6, { Scale = 1 }, Enum.EasingStyle.Back)
 	local title, s1 = label(root, string.upper(r[1]) .. "!", UDim2.fromScale(0.8, 0.13), WHITE, UDim2.fromScale(0.5, 0.66))
 	local name, s2 = label(root, C.ItemName(it), UDim2.fromScale(0.7, 0.08), V.color or r[2], UDim2.fromScale(0.5, 0.77))
-	local _, s3 = label(root, "$" .. C.Short(C.ItemIncome(it)) .. "/s", UDim2.fromScale(0.4, 0.055), C.UI.Money, UDim2.fromScale(0.5, 0.84))
+	local _, s3 = label(root, "$" .. C.Short(C.ItemIncome(it)) .. "/s   ·   1 in " .. C.FullNumber(C.BallOdds(it)), UDim2.fromScale(0.8, 0.055), C.UI.Money, UDim2.fromScale(0.5, 0.84))
 	local tagText = V.name ~= "Normal" and (string.upper(V.name) .. "  x" .. V.mult) or bonus > 0 and ("LUCK BONUS +" .. bonus) or "NEW"
 	local newTag, s4 = label(root, tagText, UDim2.fromScale(0.3, 0.05), V.color or C.UI.Title, UDim2.fromScale(0.5, 0.58))
 	newTag.Rotation = -4
@@ -877,11 +877,7 @@ Fx.OnClientEvent:Connect(function(kind, p)
 			breakRack(math.max(power, 0.3))
 		end
 		if mine then -- live luck: grows smoothly between the server's per-table values as the ball moves
-			local zf = math.max(0, (z - T.StartZ) / zoneLen)
-			local k = math.min(math.floor(zf), zone)
-			local a = k == 0 and p.luck0 or p.track[k]
-			local nextL = p.track[math.min(k + 1, zone)] or a
-			luckTarget = math.max(luckTarget, k >= zone and p.track[zone] or a * (nextL / a) ^ (zf - k))
+			luckTarget = math.max(luckTarget, C.LuckAt(p.luck0, math.min(z - T.StartZ, dist))) -- same formula as the server
 			luckStep(skip and 99 or nil)
 		end
 		local zn = zoneAt(z)
@@ -893,27 +889,20 @@ Fx.OnClientEvent:Connect(function(kind, p)
             aura.SpreadAngle=Vector2.new(38+(zn%5)*22,45+(zn%4)*26)
             aura.Acceleration=Vector3.new(0,2+(zn%7)*1.5,0)
             trail.Lifetime=.28+zn*.006
-			if mine and p.track[crossed] then
-				showLuck(p.track[crossed], luckyAt[crossed])
-				if luckyAt[crossed] then
-					showBanner("LUCKY TABLE", C.UI.Title)
-					doFlash(C.UI.Title, 0.35, 0.35)
-					sfx("Reward")
-				end
-			end
+			if mine and p.track[crossed] then pop(luckScale, 1.25) end
 			if mine and (full or zn == zone) then -- the short version only announces the final table
 				hardShake(0.5 + zn * 0.03)
 				doFlash(tbl[2], 0.35, 0.35)
 				cam.FieldOfView = 90
 				tween(cam, 0.5, { FieldOfView = 80 }, Enum.EasingStyle.Quart)
 				tween(cc, 0.3, { TintColor = tbl[2]:Lerp(WHITE, 0.75) })
-				if not luckyAt[crossed] then showBanner("TABLE " .. zn .. "  " .. string.upper(tbl[1]), tbl[2]) end
+				showBanner("TABLE " .. zn .. "  " .. string.upper(tbl[1]) .. "  LUCK ×" .. string.format("%.2g", C.TableGain(zn)), tbl[2])
 				sfx("Click")
 			end
 		end
 		RunService.RenderStepped:Wait()
 	until t >= 1
-	local finalL = p.track[zone] or p.luck0
+	local finalL = C.LuckAt(p.luck0, dist)
 	if mine then -- finish the count (it accelerates), then the final pop
 		showLuck(finalL, luckyAt[zone])
 		local t0 = os.clock()
@@ -952,7 +941,8 @@ Fx.OnClientEvent:Connect(function(kind, p)
 	doFlash(rcol, 0.6, 0.3)
 	tween(blur, 0.3, { Size = 0 })
 	local bonus = math.max(0, ch.rarity - zone)
-	local closeOdds = it.section ~= #C.Tables and oddsCounter(finalL, full and 2.4 or 1.5) -- the finale counts on its own screen
+	local ballOdds = C.BallOdds(it) -- the ball's own "1 in N", independent of the shot's luck
+	local closeOdds = it.section ~= #C.Tables and oddsCounter(ballOdds, full and 2.4 or 1.5) -- the finale counts on its own screen
 	if it.section==#C.Tables then
   camFn=nil
   dim.BackgroundTransparency=1
@@ -968,7 +958,7 @@ Fx.OnClientEvent:Connect(function(kind, p)
   end
   local ok,shown=pcall(function()
    if skip then return false end
-   return require(RS.Shared.HeavenlyBreak)(it,{skipped=function()return skip end,sound=sfx,caption=showPrize,luck=finalL,odds=oddsCounter})
+   return require(RS.Shared.HeavenlyBreak)(it,{skipped=function()return skip end,sound=sfx,caption=showPrize,luck=finalL,ballOdds=ballOdds,odds=oddsCounter})
   end)
   if not ok or not shown or not caption then
    showPrize()

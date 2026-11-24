@@ -367,7 +367,7 @@ return function(it, ctx)
 		local shake, last = 0, 0
 		local hit, thunder, shattered, captioned = false, {}, false, false
 		local stage, glitched, landedFx, auraFx = 1, false, false, false
-		local finalL = math.max(1, ctx.luck or 1)
+		local finalL = math.max(1, ctx.ballOdds or ctx.luck or 1) -- the "1 in N" shown: the ball's own odds
 		repeat
 			if ctx.skipped() then break end
 			local now = os.clock()

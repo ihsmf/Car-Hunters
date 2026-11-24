@@ -195,8 +195,8 @@ C.MaxEquipped = 8 -- balls on the base table
 C.BallSize = 1.3 -- prize ball diameter on the table (Big / Huge variants scale it)
 C.MaxInventory = 150
 
--- Luck grows along the ball's path: every shot starts at 1 (2 with the x2 Luck pass), every table crossed adds a
--- little, sometimes a "lucky table" adds a lot. The final value L upgrades the rarity:
+-- Luck grows along the ball's path: every shot starts at the cue's luck (x2 with the Luck pass) and each table adds
+-- its own range (C.TableGain), linearly inside the table. The final value L upgrades the rarity:
 -- +1 with chance 1 - 1/L, +2 with 1 - 5/L (L >= 5), +3 with 1 - 20/L (L >= 20).
 function C.CueLuck(tier)
  local u=(math.clamp(tier,1,#C.Cues)-1)/(#C.Cues-1)
@@ -233,18 +233,37 @@ function C.StartLuck(d, passes)
  if passes and passes.DragonCue then luck=math.max(luck,C.CueLuck(8)) end
  return math.min(C.MaxLuck,luck*((passes and passes.Luck2x) and 2 or 1))
 end
-function C.LuckTrack(start, tables, rnd) -- rnd() -> [0, 1); returns luck after each table and the lucky tables
-	local track, lucky, L = {}, {}, start
-	for k = 1, tables do
-		L=math.min(C.MaxLuck,L*(1.03+rnd()*.09))
-		if rnd() < 0.06 then
-			L=math.min(C.MaxLuck,L*(1.5+rnd()*1.5))
-			lucky[k] = true
-		end
-		track[k] = L
-	end
-	return track, lucky
+-- Every table has its own luck range, growing along the hall: table 1 ×1.5 ... table 75 ×3. Inside a table luck grows
+-- linearly with the distance covered: stopping at 80 % of a ×2 table gives ×1.8, not ×2.
+function C.TableGain(k)
+	local n = #C.Rarities
+	return 1.5 + 1.5 * (math.clamp(k, 1, n) - 1) / math.max(1, n - 1)
 end
+function C.LuckAt(start, dist) -- luck at a distance along the long table (server and client use the same formula)
+	local seg = C.Table.SegmentLength
+	local L = start
+	local d = math.max(0, dist)
+	for k = 1, #C.Rarities do
+		local g = C.TableGain(k)
+		if d >= seg then
+			L *= g
+			d -= seg
+		else
+			L *= 1 + (g - 1) * d / seg
+			break
+		end
+		if L >= C.MaxLuck then break end
+	end
+	return math.min(C.MaxLuck, L)
+end
+function C.LuckTrack(start, tables) -- luck at the end of every table (no randomness, no lucky tables any more)
+	local track = {}
+	for k = 1, tables do track[k] = C.LuckAt(start, k * C.Table.SegmentLength) end
+	return track, {}
+end
+-- Each ball has its own fixed odds, independent of the shot's luck: rarity odds × variant odds.
+function C.RarityOneIn(r) return math.floor(2 * 10 ^ ((r - 1) * 0.4) + 0.5) end
+function C.BallOdds(it) return C.RarityOneIn(it.id) * ((C.Variants[it.v or 1] or C.Variants[1]).oneIn or 1) end
 function C.LuckBonus(L, r1, r2, r3)
 	if r1 >= 1 - 1 / L then return 0 end
 	if L < 5 or r2 >= 1 - 5 / L then return 1 end
