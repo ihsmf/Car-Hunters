@@ -195,12 +195,12 @@ C.MaxEquipped = 8 -- balls on the base table
 C.BallSize = 1.3 -- prize ball diameter on the table (Big / Huge variants scale it)
 C.MaxInventory = 150
 
--- Luck grows along the ball's path: every shot starts at the cue's luck (x2 with the Luck pass) and each table adds
--- its own range (C.TableGain), linearly inside the table. The final value L upgrades the rarity:
+-- Luck: every table has a fixed range (C.TableGain), the shot starts at x1 and grows linearly inside each table;
+-- when the ball drops, the cue multiplies it (C.CueLuck, x2 with the Luck pass). The final value L upgrades the rarity:
 -- +1 with chance 1 - 1/L, +2 with 1 - 5/L (L >= 5), +3 with 1 - 20/L (L >= 20).
-function C.CueLuck(tier)
- local u=(math.clamp(tier,1,#C.Cues)-1)/(#C.Cues-1)
- return math.min(C.MaxLuck,10^(44*u^1.6))
+function C.CueLuck(tier) -- the cue's luck multiplier, applied when the ball drops (Wooden x1 ... Legend x100)
+ local c=C.Cues[math.clamp(tier,1,#C.Cues)]
+ return c and c[2] or 1
 end
 function C.FormatLuck(luck)
  if luck<10000 then return string.format("%.2f",luck) end
@@ -223,14 +223,12 @@ function C.LuckText(n)
  if n<1000 then return string.format("%.2f",math.floor(n*100)/100) end
  return C.FullNumber(n)
 end
--- Luck a cue adds over the previous tier (what the cue shop shows)
-function C.CueLuckGain(tier)
- if tier<=1 then return 1 end
- return C.CueLuck(tier)/C.CueLuck(tier-1)
+function C.CueLuckGain(tier) -- what the cue shop shows: the cue's own multiplier
+ return C.CueLuck(tier)
 end
 function C.StartLuck(d, passes)
  local luck=C.CueLuck(d.cue or 1)
- if passes and passes.DragonCue then luck=math.max(luck,C.CueLuck(8)) end
+ if passes and passes.DragonCue then luck=math.max(luck,C.DragonCue[2]) end
  return math.min(C.MaxLuck,luck*((passes and passes.Luck2x) and 2 or 1))
 end
 -- Every table has its own luck range, growing along the hall: table 1 ×1.5 ... table 75 ×3. Inside a table luck grows
@@ -381,7 +379,7 @@ for i, c in {
 } do
 	C.Cues[i] = { c[1], c[2], c[3], c[4], shaft = c[4], butt = c[5], inlay = c[6], wrap = c[7], joint = c[8] }
 end
-C.DragonCue = { -- game pass: x3 until you own a better cue
+C.DragonCue = { -- game pass: x3 luck until you own a better cue
 	"Dragon", 3, 0, rgb(80, 220, 120), tier = 9,
 	shaft = rgb(80, 220, 120), butt = rgb(20, 60, 30), inlay = rgb(255, 210, 60), wrap = rgb(10, 30, 15), joint = rgb(255, 210, 60),
 }
@@ -397,14 +395,14 @@ function C.CueMult(d, passes)
 	if passes and passes.DragonCue then base = math.max(base, C.DragonCue[2]) end
 	return base
 end
--- Shot power: strength has diminishing returns (cube root), the cue multiplies everything.
+-- Shot power: strength has diminishing returns (cube root). Cues do not change the distance, they multiply luck.
 -- Every next table needs a bit more power than the last: table k ends at 80 * k * (1 + (k - 1) / 9) power,
 -- so the first tables come fast and the last ones are a long-term goal (see tools/balance_sim.py).
 local function threshold(k) return 80 * k * (1 + (k - 1) / 9) end
 -- Full-power shot reaching the penultimate table with the starter cue.
 C.OwnerStrength = math.ceil(((threshold(#C.Rarities-1) / C.Cues[1][2] - 40) / 14)^3)
 function C.Distance(power, d, passes) -- studs along the long table
-	local raw = power * (40 + 14 * (d.strength or 0) ^ (1 / 3)) * C.CueMult(d, passes)
+	local raw = power * (40 + 14 * (d.strength or 0) ^ (1 / 3)) -- distance comes from strength only (the gym)
 	local zl, prev = C.Table.SegmentLength, 0
 	for k = 1, #C.Rarities do
 		local t = threshold(k)
@@ -417,16 +415,16 @@ function C.ZoneOf(dist) return math.clamp(math.ceil(dist / C.Table.SegmentLength
 
 -- Replace 0 with real IDs from the Creator Dashboard (Monetization → Passes / Developer Products)
 C.GamePasses = {
-	{ key = "Cash2x", id = 2099489194, price = 150, icon = 74725431217335, badge = "2X", name = "x2 Cash", desc = "Double income from every ball" },
-	{ key = "Luck2x", id = 2100329187, price = 200, icon = 133905656914705, badge = "2X", name = "x2 Luck", desc = "Every shot starts with double luck" },
-	{ key = "DragonCue", id = 2098835237, price = 149, icon = 109145037344576, badge = "3X", name = "Dragon Cue", desc = "x3 shot distance until you own a better cue" },
-	{ key = "GoldStick", id = 2099225218, price = 99, icon = 99663605548256, badge = "+50%", name = "Income Boost", desc = "+50% income from every ball" },
-	{ key = "GoldenBall", id = 2101996436, price = 49, icon = 101379168764855, badge = "GOLD", name = "Golden Ball", desc = "Your shot ball turns gold with a sparkle trail" },
+	{ key = "Cash2x", id = 2099489194, price = 150, icon = 73834916974697, badge = "2X", name = "x2 Cash", desc = "Double income from every ball" },
+	{ key = "Luck2x", id = 2100329187, price = 200, icon = 105136439212588, badge = "2X", name = "x2 Luck", desc = "Every shot starts with double luck" },
+	{ key = "DragonCue", id = 2098835237, price = 149, icon = 78679022790572, badge = "3X", name = "Dragon Cue", desc = "x3 luck on every ball until you own a better cue" },
+	{ key = "GoldStick", id = 2099225218, price = 99, icon = 88582773505440, badge = "+50%", name = "Income Boost", desc = "+50% income from every ball" },
+	{ key = "GoldenBall", id = 2101996436, price = 49, icon = 137810043142997, badge = "GOLD", name = "Golden Ball", desc = "Your shot ball turns gold with a sparkle trail" },
 }
 C.Products = {
-	{ id = 3735875943, cash = 5000, price = 5, icon = 88301982801043 },
-	{ id = 3735875963, cash = 50000, price = 20, icon = 138719939374729 },
-	{ id = 3735875983, cash = 500000, price = 80, icon = 106638642206997 },
+	{ id = 3735875943, cash = 5000, price = 5, icon = 132848070970156 },
+	{ id = 3735875963, cash = 50000, price = 20, icon = 115382938940343 },
+	{ id = 3735875983, cash = 500000, price = 80, icon = 101942019940621 },
 }
 
 C.Daily = { 100, 250, 500, 1000, 2500, 5000, 15000 }
@@ -26744,9 +26742,9 @@ function actions.Throw(plr, s, power)
 	local dist = C.Distance(math.clamp(power, 0, 1), playData(s), s.passes)
 	local zone = C.ZoneOf(dist)
 	-- luck grows along the path: the client shows the same track live while the ball rolls
-	local luck0 = C.StartLuck(s.d, s.passes)
-	local track, lucky = C.LuckTrack(luck0, zone) -- end-of-table values for the client's banners
-	local L = C.LuckAt(luck0, dist) -- the luck exactly where the ball stops (linear inside the table)
+	local luck0 = C.StartLuck(s.d, s.passes) -- the cue's multiplier (x2 with the Luck pass), applied when the ball drops
+	local track, lucky = C.LuckTrack(1, zone) -- table luck at the end of each table (fixed ranges, starts at x1)
+	local L = math.min(C.MaxLuck, C.LuckAt(1, dist) * luck0) -- table luck where the ball stops x the cue
 	local rarity = math.min(zone + C.LuckBonus(L, rng:NextNumber(), rng:NextNumber(), rng:NextNumber()), N)
 	local full = not s.d.settings.short and rarity >= C.FullCinematicRarity and rarity >= s.d.best - 2 -- the big show only for top pulls
 	s.d.best = math.max(s.d.best, rarity)
@@ -28921,7 +28919,7 @@ do
   local mult=def[2]%1==0 and string.format("%.1f",def[2]) or tostring(def[2])
   label(c,"×"..mult,4,226,210,44,38,hex("FFB63D"),true)
   -- only the luck this cue adds on top of the previous one (the pass compares with the starter cue)
-  local gain=isPass and C.CueLuck(8) or C.CueLuckGain(tier)
+  local gain=isPass and C.DragonCue[2] or C.CueLuckGain(tier)
   label(c,gain<=1 and "POWER   ·   NO LUCK BONUS" or "POWER   ·   LUCK +×"..C.FullNumber(gain),6,265,206,22,13,MUTED)
   if nextCue then
    activeBuy=control(c,12,296,194,39,"Buy · $"..C.Short(def[3]),"A7F86D","4BCF78",function()
@@ -28950,13 +28948,13 @@ do
    sizeCanvas()
    task.defer(function() if initial then focus() else scroll(position) end end)
   end
-  local mult=C.CueMult(d,state.passes)
-  power.Text="Shot power ×"..(mult%1==0 and string.format("%.1f",mult) or tostring(mult))
+  local mult=C.StartLuck(d,state.passes)
+  power.Text="Luck ×"..C.LuckText(mult).." on every ball"
   local nxt=C.Cues[d.cue+1]
   if activeBuy and nxt then
    activeBuy.UIGradient.Color= (state.ownerBoost or d.cash>=nxt[3]) and ColorSequence.new(hex("A7F86D"),hex("4BCF78")) or ColorSequence.new(hex("E5E1DC"),hex("CBC5CC"))
   end
-  note.Text=nxt and ((state.ownerBoost or d.cash>=nxt[3]) and ("Next: "..nxt[1].."  ·  ×"..nxt[2].." power") or ("Need $"..C.Short(nxt[3]-d.cash).." more for "..nxt[1])) or "You own the best cue"
+  note.Text=nxt and ((state.ownerBoost or d.cash>=nxt[3]) and ("Next: "..nxt[1].."  ·  luck ×"..nxt[2]) or ("Need $"..C.Short(nxt[3]-d.cash).." more for "..nxt[1])) or "You own the best cue"
  end
  holder:GetPropertyChangedSignal("Visible"):Connect(function()
   if holder.Visible then
@@ -30211,7 +30209,7 @@ Fx.OnClientEvent:Connect(function(kind, p)
 
 	if mine then
 		setCinema(true)
-		luckShown, luckTarget, luckClock = 1, p.luck0, os.clock() -- counts up from ×1 to the cue's luck, then on along the tables
+		luckShown, luckTarget, luckClock = 1, 1, os.clock() -- table luck: x1.00 at the start of the long table
 		setLuck(1)
 		pop(luckScale, 1.25)
 	end
@@ -30260,7 +30258,7 @@ Fx.OnClientEvent:Connect(function(kind, p)
 			breakRack(math.max(power, 0.3))
 		end
 		if mine then -- live luck: grows smoothly between the server's per-table values as the ball moves
-			luckTarget = math.max(luckTarget, C.LuckAt(p.luck0, math.min(z - T.StartZ, dist))) -- same formula as the server
+			luckTarget = math.max(luckTarget, C.LuckAt(1, math.min(z - T.StartZ, dist))) -- the tables' fixed ranges
 			luckStep(skip and 99 or nil)
 		end
 		local zn = zoneAt(z)
@@ -30285,11 +30283,21 @@ Fx.OnClientEvent:Connect(function(kind, p)
 		end
 		RunService.RenderStepped:Wait()
 	until t >= 1
-	local finalL = C.LuckAt(p.luck0, dist)
-	if mine then -- finish the count (it accelerates), then the final pop
-		showLuck(finalL, luckyAt[zone])
+	local tableL = C.LuckAt(1, dist)
+	local finalL = math.min(C.MaxLuck, tableL * (p.luck0 or 1)) -- the cue multiplies the table luck when the ball drops
+	if mine then -- finish the table count, then the cue multiplier kicks in
+		showLuck(tableL, luckyAt[zone])
 		local t0 = os.clock()
-		while not luckStep(skip and 99 or nil) and os.clock() - t0 < 4 do RunService.RenderStepped:Wait() end
+		while not luckStep(skip and 99 or nil) and os.clock() - t0 < 3 do RunService.RenderStepped:Wait() end
+		luckShown = tableL
+		setLuck(tableL)
+		if (p.luck0 or 1) > 1 then
+			showBanner("CUE BONUS  ×" .. C.LuckText(p.luck0), C.UI.Title)
+			sfx("Reward")
+			luckTarget = finalL
+			t0 = os.clock()
+			while not luckStep(skip and 99 or nil) and os.clock() - t0 < 2.5 do RunService.RenderStepped:Wait() end
+		end
 		luckShown = finalL
 		setLuck(finalL)
 		pop(luckScale, 1.6)
