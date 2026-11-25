@@ -153,11 +153,6 @@ for si, (a, b, speed, cap, fx) in enumerate(SEGMENTS):
             ci = ci.rotate(2.5 * math.sin(lt * 5), expand=True, resample=Image.BILINEAR)
             cy = 470 if fx.get("hook") else 1380
             im.alpha_composite(ci, ((W - ci.width) // 2, cy - ci.height // 2))
-        # progress bar (retention)
-        prog = (t_out + lt) / total
-        d = ImageDraw.Draw(im)
-        d.rounded_rectangle((40, 60, W - 40, 82), 11, fill=(0, 0, 0, 140))
-        d.rounded_rectangle((40, 60, 40 + int((W - 80) * prog), 82), 11, fill=(255, 200, 60, 255))
         enc.stdin.write(im.convert("RGB").tobytes())
         frame_no += 1
     t_out += n / FPS
