@@ -11,7 +11,7 @@ API = "https://apis.roblox.com"
 PASSES = [  # key, name, description, price (Robux)
     ("Cash2x", "x2 Cash", "Double income from every ball you own. Forever.", 150),
     ("Luck2x", "x2 Luck", "Every shot starts with double luck: rarer balls on every table.", 200),
-    ("DragonCue", "Dragon Cue", "A blazing dragon cue: x3 shot distance until you own a better cue.", 149),
+    ("DragonCue", "Dragon Cue", "A blazing dragon cue: x3 luck on every ball until you own a better cue.", 149),
     ("GoldStick", "Income Boost", "+50% income from every ball you own.", 99),
     ("GoldenBall", "Golden Ball", "Your cue ball turns gold with a sparkling trail.", 49),
 ]

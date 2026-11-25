@@ -85,46 +85,38 @@ def fit(o, size):
 
 
 # ---------- the offers ----------
-def cash2x():
+def cash2x():  # two big coin stacks = double money
     G, green, band = gold(), mat("Bill", (70, 190, 90), 0, 0.5), mat("Band", (240, 250, 230), 0, 0.5)
-    for k in range(9):  # coin stack + scattered coins
-        coin((-0.6, 0.2, -1.1 + k * 0.23), (0, 0, k * 0.3), 1.0, G)
-    for k, (x, y, z, rx) in enumerate(((0.9, -0.4, -1.0, 0.3), (1.3, 0.5, -0.9, -0.5), (0.2, -1.0, -0.95, 0.8))):
-        coin((x, y, z), (rx, 0.2, k), 0.8, G)
-    for k in range(3):
-        bill((0.8, 0.3 - k * 0.12, -0.2 + k * 0.25), (0.25, -0.35, 0.4 + k * 0.25), green, band)
-    sparkles(14, (0, 0, 0), 1.7, mat("Spark", (255, 250, 220), 0, 0.2, 8))
+    for sx, n in ((-0.85, 8), (0.85, 8)):
+        for k in range(n):
+            coin((sx, 0.1, -1.2 + k * 0.25), (0, 0, k * 0.3), 0.8, G)
+    for k in range(2):
+        bill((0, -0.6, -1.1 + k * 0.08), (0.1, 0, 0.3 + k * 0.4), green, band)
+    sparkles(12, (0, 0, 0.3), 1.8, mat("Spark", (255, 250, 220), 0, 0.2, 8))
 
 
-def luck2x():
-    leaf, stem = mat("Leaf", (20, 150, 55), 0, 0.25), mat("Stem", (20, 100, 40), 0, 0.4)
-    for k in range(4):  # four heart-shaped leaves
+def clover(leaf, stem, cx, cz, s):
+    for k in range(4):
         a = k * math.pi / 2 + math.pi / 4
-        for s in (-1, 1):
-            c = Vector((math.cos(a) * 0.75 + math.cos(a + s * 0.5) * 0.35, math.sin(a) * 0.75 + math.sin(a + s * 0.5) * 0.35, 0.25))
-            bpy.ops.mesh.primitive_uv_sphere_add(radius=0.55, segments=32, ring_count=16, location=c)
+        for sd in (-1, 1):
+            c = Vector((cx + (math.cos(a) * 0.75 + math.cos(a + sd * 0.5) * 0.35) * s, -0.2, cz + (math.sin(a) * 0.75 + math.sin(a + sd * 0.5) * 0.35) * s))
+            bpy.ops.mesh.primitive_uv_sphere_add(radius=0.55 * s, segments=32, ring_count=16, location=c)
             o = bpy.context.object
-            o.scale = (1, 1, 0.18)
+            o.scale = (1, 0.2, 1)
             obj_mat(o, leaf)
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.25, location=(0, 0, 0.3))
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.22 * s, location=(cx, -0.35, cz))
     obj_mat(bpy.context.object, stem)
-    bpy.ops.mesh.primitive_cylinder_add(radius=0.1, depth=1.6, location=(0.35, -0.75, -0.3), rotation=(0.9, 0.3, 0))
-    obj_mat(bpy.context.object, stem)
+
+
+def luck2x():  # two four-leaf clovers = double luck
+    leaf, stem = mat("Leaf", (25, 175, 70), 0, 0.25), mat("Stem", (20, 110, 45), 0, 0.4)
+    clover(leaf, stem, -0.85, 0.55, 0.85)
+    clover(leaf, stem, 0.85, -0.55, 0.85)
     rainbow = [(255, 80, 80), (255, 200, 60), (90, 230, 120), (80, 160, 255), (200, 100, 255)]
-    for k in range(20):
-        a = k * 2 * math.pi / 20
-        bpy.ops.mesh.primitive_ico_sphere_add(radius=0.08, subdivisions=2, location=(math.cos(a) * 1.85, math.sin(a) * 1.85, 0.3 + 0.3 * math.sin(a * 3)))
+    for k in range(14):
+        a = k * 2 * math.pi / 14
+        bpy.ops.mesh.primitive_ico_sphere_add(radius=0.08, subdivisions=2, location=(math.cos(a) * 2.0, -0.2, math.sin(a) * 1.8))
         obj_mat(bpy.context.object, mat(f"R{k}", rainbow[k % 5], 0, 0.2, 10))
-    clover = [o for o in bpy.context.scene.objects if o.type == "MESH"]
-    for o in clover:  # bigger and tilted up towards the camera
-        o.location = o.location * 1.45
-        o.scale = o.scale * 1.45
-        o.location.z += 0.2
-    piv = bpy.data.objects.new("Piv", None)
-    bpy.context.scene.collection.objects.link(piv)
-    for o in clover:
-        o.parent = piv
-    piv.rotation_euler = (math.radians(55), 0, 0)
 
 
 def dragon_cue():
@@ -141,16 +133,13 @@ def dragon_cue():
         obj_mat(bpy.context.object, flame if k % 3 else mat(f"F{k}", (255, 220, 80), 0, 0.3, 16))
 
 
-def gold_stick():
-    cue = import_fbx("Cue")
-    fit(cue, 4.4)
-    cue.rotation_euler = (0, math.radians(-50), math.radians(-20))
-    G = gold()
-    for s in cue.material_slots:
-        s.material = G
-    for k in range(7):  # coins rising
-        coin((0.6 + R.uniform(-0.8, 0.8), R.uniform(-0.3, 0.3), -0.6 + k * 0.35), (1.2, 0.3 * k, 0), 0.45, G)
-    sparkles(16, (0, 0, 0.4), 1.6, mat("Spark", (255, 245, 200), 0, 0.2, 9))
+def gold_stick():  # income boost: a big green up-arrow carrying coins
+    G, arrow = gold(), mat("Arrow", (60, 220, 90), 0, 0.3)
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, -0.2, -0.5)); o = bpy.context.object; o.scale = (0.9, 0.5, 2.0); obj_mat(o, arrow)
+    bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=1.6, depth=1.4, location=(0, -0.2, 1.1), rotation=(0, 0, math.pi / 4))
+    o = bpy.context.object; o.scale = (1, 0.35, 1); obj_mat(o, arrow)
+    for k, (x, z) in enumerate(((-1.5, -1.0), (1.5, -0.6), (-1.4, 0.4), (1.45, 0.9))):
+        coin((x, -0.4, z), (1.3, 0, k), 0.55, G)
 
 
 def golden_ball():
@@ -160,9 +149,6 @@ def golden_ball():
     white = mat("Spot", (255, 250, 235), 0, 0.3)
     for s in b.material_slots:
         s.material = white if "spot" in s.name.lower() else G
-    for k in range(3):
-        bpy.ops.mesh.primitive_torus_add(major_radius=1.9 + k * 0.25, minor_radius=0.03, location=(0, 0, 0), rotation=(1.2 + k * 0.3, 0.2 * k, 0))
-        obj_mat(bpy.context.object, mat(f"Orbit{k}", (255, 220, 120), 0, 0.2, 8))
     sparkles(18, (0, 0, 0), 1.9, mat("Spark", (255, 250, 220), 0, 0.2, 10))
 
 

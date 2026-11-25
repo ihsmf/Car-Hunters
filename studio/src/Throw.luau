@@ -828,7 +828,7 @@ Fx.OnClientEvent:Connect(function(kind, p)
 
 	if mine then
 		setCinema(true)
-		luckShown, luckTarget, luckClock = 1, p.luck0, os.clock() -- counts up from ×1 to the cue's luck, then on along the tables
+		luckShown, luckTarget, luckClock = 1, 1, os.clock() -- table luck: x1.00 at the start of the long table
 		setLuck(1)
 		pop(luckScale, 1.25)
 	end
@@ -877,7 +877,7 @@ Fx.OnClientEvent:Connect(function(kind, p)
 			breakRack(math.max(power, 0.3))
 		end
 		if mine then -- live luck: grows smoothly between the server's per-table values as the ball moves
-			luckTarget = math.max(luckTarget, C.LuckAt(p.luck0, math.min(z - T.StartZ, dist))) -- same formula as the server
+			luckTarget = math.max(luckTarget, C.LuckAt(1, math.min(z - T.StartZ, dist))) -- the tables' fixed ranges
 			luckStep(skip and 99 or nil)
 		end
 		local zn = zoneAt(z)
@@ -902,11 +902,21 @@ Fx.OnClientEvent:Connect(function(kind, p)
 		end
 		RunService.RenderStepped:Wait()
 	until t >= 1
-	local finalL = C.LuckAt(p.luck0, dist)
-	if mine then -- finish the count (it accelerates), then the final pop
-		showLuck(finalL, luckyAt[zone])
+	local tableL = C.LuckAt(1, dist)
+	local finalL = math.min(C.MaxLuck, tableL * (p.luck0 or 1)) -- the cue multiplies the table luck when the ball drops
+	if mine then -- finish the table count, then the cue multiplier kicks in
+		showLuck(tableL, luckyAt[zone])
 		local t0 = os.clock()
-		while not luckStep(skip and 99 or nil) and os.clock() - t0 < 4 do RunService.RenderStepped:Wait() end
+		while not luckStep(skip and 99 or nil) and os.clock() - t0 < 3 do RunService.RenderStepped:Wait() end
+		luckShown = tableL
+		setLuck(tableL)
+		if (p.luck0 or 1) > 1 then
+			showBanner("CUE BONUS  ×" .. C.LuckText(p.luck0), C.UI.Title)
+			sfx("Reward")
+			luckTarget = finalL
+			t0 = os.clock()
+			while not luckStep(skip and 99 or nil) and os.clock() - t0 < 2.5 do RunService.RenderStepped:Wait() end
+		end
 		luckShown = finalL
 		setLuck(finalL)
 		pop(luckScale, 1.6)

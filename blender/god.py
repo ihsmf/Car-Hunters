@@ -536,6 +536,13 @@ def finish(o, max_tris, pivot=(0, 0, 0)):
                  "-- Roblox axes, studs; vertices centred on bbox, `center` = offset from the model origin.\n" + text)
     bpy.ops.object.select_all(action="DESELECT")
     o.select_set(True)
+    bpy.context.view_layer.objects.active = o
+    o.scale = (-1, 1, 1)  # Roblox's glTF import mirrors X: pre-mirror so the god faces the right way in game
+    bpy.ops.object.transform_apply(scale=True)
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.mesh.flip_normals()
+    bpy.ops.object.mode_set(mode="OBJECT")
     bpy.ops.export_scene.gltf(filepath=os.path.join(OUT, o.name + ".glb"), use_selection=True, export_format="GLB",
                               export_yup=True, export_texcoords=True, export_normals=True, export_materials="NONE")
     print(f"{o.name}: {len(o.data.polygons)} triangles")

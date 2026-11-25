@@ -30,6 +30,9 @@ def glb(tris):
         n = [k / L for k in n]
         pos += [a, b, c, a, c, b]
         nor += [n] * 3 + [[-k for k in n]] * 3
+    # Roblox's glTF import mirrors the X axis: write X negated so the mesh comes out the right way round
+    pos = [(-p[0], p[1], p[2]) for p in pos]
+    nor = [(-n[0], n[1], n[2]) for n in nor]
     bp = b"".join(struct.pack("<3f", *p) for p in pos)
     bn = b"".join(struct.pack("<3f", *p) for p in nor)
     lo = [min(p[i] for p in pos) for i in range(3)]

@@ -45,6 +45,12 @@ def make(key):
     bg.alpha_composite(glow)
     obj = obj.resize((int(S * 0.92), int(S * 0.92)), Image.LANCZOS)
     bg.alpha_composite(obj, ((S - obj.width) // 2, int(S * 0.0)))
+    if os.environ.get("ICON_ONLY"):  # store icons: just the object, outlined, bigger
+        bg = radial(inner, outer).convert("RGBA")
+        raw = Image.open(os.path.join(D, key + "_ol.png")).convert("RGBA").resize((int(S * 1.05), int(S * 1.05)), Image.LANCZOS)
+        bg.alpha_composite(raw, ((S - raw.width) // 2, (S - raw.height) // 2))
+        bg.convert("RGB").save(os.path.join(D, key + ".png"))
+        return bg
     draw = ImageDraw.Draw(bg)
     size = 112 if len(label) <= 6 else 96
     font = ImageFont.truetype(FONT, size)

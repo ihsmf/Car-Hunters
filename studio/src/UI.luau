@@ -887,7 +887,7 @@ do
   local mult=def[2]%1==0 and string.format("%.1f",def[2]) or tostring(def[2])
   label(c,"×"..mult,4,226,210,44,38,hex("FFB63D"),true)
   -- only the luck this cue adds on top of the previous one (the pass compares with the starter cue)
-  local gain=isPass and C.CueLuck(8) or C.CueLuckGain(tier)
+  local gain=isPass and C.DragonCue[2] or C.CueLuckGain(tier)
   label(c,gain<=1 and "POWER   ·   NO LUCK BONUS" or "POWER   ·   LUCK +×"..C.FullNumber(gain),6,265,206,22,13,MUTED)
   if nextCue then
    activeBuy=control(c,12,296,194,39,"Buy · $"..C.Short(def[3]),"A7F86D","4BCF78",function()
@@ -916,13 +916,13 @@ do
    sizeCanvas()
    task.defer(function() if initial then focus() else scroll(position) end end)
   end
-  local mult=C.CueMult(d,state.passes)
-  power.Text="Shot power ×"..(mult%1==0 and string.format("%.1f",mult) or tostring(mult))
+  local mult=C.StartLuck(d,state.passes)
+  power.Text="Luck ×"..C.LuckText(mult).." on every ball"
   local nxt=C.Cues[d.cue+1]
   if activeBuy and nxt then
    activeBuy.UIGradient.Color= (state.ownerBoost or d.cash>=nxt[3]) and ColorSequence.new(hex("A7F86D"),hex("4BCF78")) or ColorSequence.new(hex("E5E1DC"),hex("CBC5CC"))
   end
-  note.Text=nxt and ((state.ownerBoost or d.cash>=nxt[3]) and ("Next: "..nxt[1].."  ·  ×"..nxt[2].." power") or ("Need $"..C.Short(nxt[3]-d.cash).." more for "..nxt[1])) or "You own the best cue"
+  note.Text=nxt and ((state.ownerBoost or d.cash>=nxt[3]) and ("Next: "..nxt[1].."  ·  luck ×"..nxt[2]) or ("Need $"..C.Short(nxt[3]-d.cash).." more for "..nxt[1])) or "You own the best cue"
  end
  holder:GetPropertyChangedSignal("Visible"):Connect(function()
   if holder.Visible then

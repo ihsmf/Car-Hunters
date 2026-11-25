@@ -195,12 +195,12 @@ C.MaxEquipped = 8 -- balls on the base table
 C.BallSize = 1.3 -- prize ball diameter on the table (Big / Huge variants scale it)
 C.MaxInventory = 150
 
--- Luck grows along the ball's path: every shot starts at the cue's luck (x2 with the Luck pass) and each table adds
--- its own range (C.TableGain), linearly inside the table. The final value L upgrades the rarity:
+-- Luck: every table has a fixed range (C.TableGain), the shot starts at x1 and grows linearly inside each table;
+-- when the ball drops, the cue multiplies it (C.CueLuck, x2 with the Luck pass). The final value L upgrades the rarity:
 -- +1 with chance 1 - 1/L, +2 with 1 - 5/L (L >= 5), +3 with 1 - 20/L (L >= 20).
-function C.CueLuck(tier)
- local u=(math.clamp(tier,1,#C.Cues)-1)/(#C.Cues-1)
- return math.min(C.MaxLuck,10^(44*u^1.6))
+function C.CueLuck(tier) -- the cue's luck multiplier, applied when the ball drops (Wooden x1 ... Legend x100)
+ local c=C.Cues[math.clamp(tier,1,#C.Cues)]
+ return c and c[2] or 1
 end
 function C.FormatLuck(luck)
  if luck<10000 then return string.format("%.2f",luck) end
@@ -223,14 +223,12 @@ function C.LuckText(n)
  if n<1000 then return string.format("%.2f",math.floor(n*100)/100) end
  return C.FullNumber(n)
 end
--- Luck a cue adds over the previous tier (what the cue shop shows)
-function C.CueLuckGain(tier)
- if tier<=1 then return 1 end
- return C.CueLuck(tier)/C.CueLuck(tier-1)
+function C.CueLuckGain(tier) -- what the cue shop shows: the cue's own multiplier
+ return C.CueLuck(tier)
 end
 function C.StartLuck(d, passes)
  local luck=C.CueLuck(d.cue or 1)
- if passes and passes.DragonCue then luck=math.max(luck,C.CueLuck(8)) end
+ if passes and passes.DragonCue then luck=math.max(luck,C.DragonCue[2]) end
  return math.min(C.MaxLuck,luck*((passes and passes.Luck2x) and 2 or 1))
 end
 -- Every table has its own luck range, growing along the hall: table 1 ×1.5 ... table 75 ×3. Inside a table luck grows
@@ -381,7 +379,7 @@ for i, c in {
 } do
 	C.Cues[i] = { c[1], c[2], c[3], c[4], shaft = c[4], butt = c[5], inlay = c[6], wrap = c[7], joint = c[8] }
 end
-C.DragonCue = { -- game pass: x3 until you own a better cue
+C.DragonCue = { -- game pass: x3 luck until you own a better cue
 	"Dragon", 3, 0, rgb(80, 220, 120), tier = 9,
 	shaft = rgb(80, 220, 120), butt = rgb(20, 60, 30), inlay = rgb(255, 210, 60), wrap = rgb(10, 30, 15), joint = rgb(255, 210, 60),
 }
@@ -397,14 +395,14 @@ function C.CueMult(d, passes)
 	if passes and passes.DragonCue then base = math.max(base, C.DragonCue[2]) end
 	return base
 end
--- Shot power: strength has diminishing returns (cube root), the cue multiplies everything.
+-- Shot power: strength has diminishing returns (cube root). Cues do not change the distance, they multiply luck.
 -- Every next table needs a bit more power than the last: table k ends at 80 * k * (1 + (k - 1) / 9) power,
 -- so the first tables come fast and the last ones are a long-term goal (see tools/balance_sim.py).
 local function threshold(k) return 80 * k * (1 + (k - 1) / 9) end
 -- Full-power shot reaching the penultimate table with the starter cue.
 C.OwnerStrength = math.ceil(((threshold(#C.Rarities-1) / C.Cues[1][2] - 40) / 14)^3)
 function C.Distance(power, d, passes) -- studs along the long table
-	local raw = power * (40 + 14 * (d.strength or 0) ^ (1 / 3)) * C.CueMult(d, passes)
+	local raw = power * (40 + 14 * (d.strength or 0) ^ (1 / 3)) -- distance comes from strength only (the gym)
 	local zl, prev = C.Table.SegmentLength, 0
 	for k = 1, #C.Rarities do
 		local t = threshold(k)
@@ -417,16 +415,16 @@ function C.ZoneOf(dist) return math.clamp(math.ceil(dist / C.Table.SegmentLength
 
 -- Replace 0 with real IDs from the Creator Dashboard (Monetization → Passes / Developer Products)
 C.GamePasses = {
-	{ key = "Cash2x", id = 2099489194, price = 150, icon = 74725431217335, badge = "2X", name = "x2 Cash", desc = "Double income from every ball" },
-	{ key = "Luck2x", id = 2100329187, price = 200, icon = 133905656914705, badge = "2X", name = "x2 Luck", desc = "Every shot starts with double luck" },
-	{ key = "DragonCue", id = 2098835237, price = 149, icon = 109145037344576, badge = "3X", name = "Dragon Cue", desc = "x3 shot distance until you own a better cue" },
-	{ key = "GoldStick", id = 2099225218, price = 99, icon = 99663605548256, badge = "+50%", name = "Income Boost", desc = "+50% income from every ball" },
-	{ key = "GoldenBall", id = 2101996436, price = 49, icon = 101379168764855, badge = "GOLD", name = "Golden Ball", desc = "Your shot ball turns gold with a sparkle trail" },
+	{ key = "Cash2x", id = 2099489194, price = 150, icon = 73834916974697, badge = "2X", name = "x2 Cash", desc = "Double income from every ball" },
+	{ key = "Luck2x", id = 2100329187, price = 200, icon = 105136439212588, badge = "2X", name = "x2 Luck", desc = "Every shot starts with double luck" },
+	{ key = "DragonCue", id = 2098835237, price = 149, icon = 78679022790572, badge = "3X", name = "Dragon Cue", desc = "x3 luck on every ball until you own a better cue" },
+	{ key = "GoldStick", id = 2099225218, price = 99, icon = 88582773505440, badge = "+50%", name = "Income Boost", desc = "+50% income from every ball" },
+	{ key = "GoldenBall", id = 2101996436, price = 49, icon = 137810043142997, badge = "GOLD", name = "Golden Ball", desc = "Your shot ball turns gold with a sparkle trail" },
 }
 C.Products = {
-	{ id = 3735875943, cash = 5000, price = 5, icon = 88301982801043 },
-	{ id = 3735875963, cash = 50000, price = 20, icon = 138719939374729 },
-	{ id = 3735875983, cash = 500000, price = 80, icon = 106638642206997 },
+	{ id = 3735875943, cash = 5000, price = 5, icon = 132848070970156 },
+	{ id = 3735875963, cash = 50000, price = 20, icon = 115382938940343 },
+	{ id = 3735875983, cash = 500000, price = 80, icon = 101942019940621 },
 }
 
 C.Daily = { 100, 250, 500, 1000, 2500, 5000, 15000 }
