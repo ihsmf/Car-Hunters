@@ -41,7 +41,7 @@ for _, gp in C.GamePasses do passByKey[gp.key] = gp end
 local DATA_VERSION = 7
 local function default()
 	return {
-		version = DATA_VERSION, cash = 0, totalEarned = 0, playedSeconds = 0, strength = 0, dumbLevel = 1, cue = 1,
+		version = DATA_VERSION, cash = 0, totalEarned = 0, playedSeconds = 0, strength = 0, dumbLevel = 1, cue = 1, tableLvl = 0,
 		decks = {}, inv = {}, found = {}, best = 0, daily = { day = 0, streak = 0 }, receipts = {}, tutorial = 1,
 		settings = { music = 0.5, sfx = 0.7, shake = true, short = false },
 	}
@@ -62,6 +62,7 @@ local function sanitize(saved)
  d.strength = num(saved.strength, 0, 1e300, 0)
 	d.dumbLevel = math.floor(num(saved.dumbLevel, 1, C.DumbbellMax, 1))
 	d.cue = math.floor(num(saved.cue, 1, #C.Cues, 1))
+	d.tableLvl = math.floor(num(saved.tableLvl, 0, #C.TableCost, 0))
 	d.best = math.floor(num(saved.best, 0, N, 0))
 	-- v5: prize balls (one per rarity). Older saves stored characters: 6 per rarity (v4) or 4 (v3 and older).
 	local version = tonumber(saved.version) or 0
@@ -118,7 +119,7 @@ local function sanitize(saved)
 		for _, it in saved.inv do
 			local b = type(it) == "table" and ballOf(it.id)
 			if b and #d.inv < C.MaxInventory then
-				local eq = it.eq == true and equipped < C.MaxEquipped
+				local eq = it.eq == true and equipped < C.Spots(d)
 				if eq then equipped += 1 end
 				local v = math.floor(num(it.v, 1, #C.Variants, 1))
 				local entry={id=b,v=v,eq=eq,section=math.floor(num(it.section,1,N,b)),design=math.floor(num(it.design,1,C.DesignCount,1))}
@@ -282,7 +283,7 @@ local function refreshBase(plr)
 	local base = Map.Bases[s.slot]
 	local items = {}
 	for _, it in s.d.inv do
-		if it.eq and #items < C.MaxEquipped then table.insert(items, it) end
+		if it.eq and #items < C.Spots(s.d) then table.insert(items, it) end
 	end
 	local bySlot = {}
 	for _, npc in base.chars:GetChildren() do
@@ -394,7 +395,7 @@ end
 
 -- ===== Player actions (Request:InvokeServer(action, arg)) =====
 local actions = {}
-local COOLDOWN = { GodMode=.5, GodGear=.2, GodCatalog=.2, OwnerBoost = .4, AssetsReady = .4, Settings = 0.2, Sync = 0.5, TrainStart = 0.5, TrainStop = 0.2, Equip = 0.15, Sell = 0.15, EquipBest = 0.5, SellRarity = 0.5, Cue = 0.3, UpDumb = 0.3, Daily = 1, Playtime = 0.5, Pass = 1, Product = 1, Tutorial = 0.2 }
+local COOLDOWN = { GodMode=.5, GodGear=.2, GodCatalog=.2, OwnerBoost = .4, AssetsReady = .4, Settings = 0.2, Sync = 0.5, TrainStart = 0.5, TrainStop = 0.2, Equip = 0.15, Sell = 0.15, EquipBest = 0.5, SellRarity = 0.5, Cue = 0.3, UpDumb = 0.3, UpTable = 0.5, Daily = 1, Playtime = 0.5, Pass = 1, Product = 1, Tutorial = 0.2 }
 
 function actions.OwnerBoost(plr,s,enabled)
  if not isOwner(plr) or type(enabled) ~= "boolean" then return false end
@@ -546,7 +547,7 @@ function actions.Throw(plr, s, power)
 	end)
 	local it = { id = rarity, section=zone, design=drawDesign(s.d,zone), v = C.RollVariant(rng:NextNumber(),L) }
 	throwCounter += 1
-	it.eq = equippedCount(s.d) < C.MaxEquipped
+	it.eq = equippedCount(s.d) < C.Spots(s.d)
 	it.tid = it.eq and throwCounter or nil
 	table.insert(s.d.inv, it)
 	s.d.found[C.DiscoveryKey(it)] = true
@@ -665,6 +666,17 @@ function actions.UpDumb(plr, s)
 	return true, "Dumbbell level " .. s.d.dumbLevel
 end
 
+-- Table capacity: +2 spots per level, the base table gets longer (Map.SetTable)
+function actions.UpTable(plr, s)
+	local lvl = s.d.tableLvl
+	if lvl >= #C.TableCost then return false, "Your table is at max size" end
+	if not pay(s, C.TableCost[lvl + 1]) then return false, "Not enough cash" end
+	s.d.tableLvl = lvl + 1
+	Map.SetTable(s.slot, s.d.tableLvl)
+	refreshBase(plr)
+	return true, "Table capacity " .. C.Spots(s.d) .. " spots"
+end
+
 -- Cues are an upgrade path: you can only buy the next tier, and the new cue replaces the old one
 function actions.Cue(plr, s)
  local char=plr.Character
@@ -684,7 +696,7 @@ end
 function actions.Equip(plr, s, i)
 	local it = type(i) == "number" and s.d.inv[i]
 	if not it then return false end
-	if not it.eq and equippedCount(s.d) >= C.MaxEquipped then return false, "All " .. C.MaxEquipped .. " spots are taken" end
+	if not it.eq and equippedCount(s.d) >= C.Spots(s.d) then return false, "All " .. C.Spots(s.d) .. " spots are taken" end
 	it.eq = not it.eq
 	refreshBase(plr)
 	return true
@@ -708,7 +720,7 @@ function actions.EquipBest(plr, s)
 		table.insert(order, i)
 	end
 	table.sort(order, function(a, b) return C.ItemIncome(s.d.inv[a]) > C.ItemIncome(s.d.inv[b]) end)
-	for k = 1, math.min(C.MaxEquipped, #order) do s.d.inv[order[k]].eq = true end
+	for k = 1, math.min(C.Spots(s.d), #order) do s.d.inv[order[k]].eq = true end
 	refreshBase(plr)
 	return true, "Best team placed"
 end
@@ -900,6 +912,7 @@ local function onPlayer(plr)
 	cash.Name, cash.Parent = "Cash", ls
 	ls.Parent = plr
 	Map.SetOwner(slot, plr)
+	Map.SetTable(slot, s.d.tableLvl)
 	plr.CharacterAdded:Connect(function(char) onCharacter(plr, slot, char) end)
 	if plr.Character then task.spawn(onCharacter, plr, slot, plr.Character) end
 	refreshBase(plr)
@@ -921,6 +934,7 @@ Players.PlayerRemoving:Connect(function(plr)
 	Map.Bases[s.slot].chars:ClearAllChildren()
 	clearDumbbell(s.slot)
 	Map.SetOwner(s.slot, nil)
+	Map.SetTable(s.slot, 0)
 	taken[s.slot] = nil
 	persist(plr, s, true)
 	departing[plr] = nil

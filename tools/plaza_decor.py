@@ -76,6 +76,12 @@ def apply(x):
         L = math.hypot(*d)
         f = (d[0] / L, d[1] / L)
         place("PlazaCueShop", (cp[0] - f[0] * 1.6, 0.25, cp[2] - f[1] * 1.6), yaw_to(*f))
+        # table capacity sign left of the table, facing the walkway; CapFace<n> carries the client's SurfaceGui
+        felt = next(i for i in table.iter("Item") if nm(i) == "Felt")
+        tp = pos(felt)
+        sx, sz = tp[0] - 10.5, 8.0
+        place("PlazaCapSign", (sx, 0.45, sz), yaw_to(0, 1))
+        hall.part(deco, (7.2, 4.4, 0.1), hall.cf(sx, 6.45, sz + 0.5), (20, 100, 70), transparency=1, name="CapFace" + nm(b)[4:])
         hide(kiosk)
         if shop is not None:
             hide(shop)
@@ -89,9 +95,12 @@ def apply(x):
             p = pos(i)
             place("PlazaClubSign", (p[0], p[1], p[2] + 0.1), face_plaza, 1.0)
             hide(i)
-        elif n in ("1", "2", "3", "4"):
+        elif n in ("1", "2", "3", "4"):  # one bay number per base: the winged plaque up high; the small one -> gem
             p = pos(i)
-            place("PlazaBay" + n, (p[0], p[1], p[2] + 0.05), face_plaza, 1.45 if p[1] > 15 else 1.0)
+            if p[1] > 15:
+                place("PlazaBay" + n, (p[0], p[1], p[2] + 0.05), face_plaza, 1.45)
+            else:
+                place("PlazaGem", (p[0], p[1], p[2] + 0.05), face_plaza, 0.9)
             hide(i)
         elif n == "•":
             p = pos(i)

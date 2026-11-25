@@ -40,6 +40,7 @@ local shot = { idx = 0, t0 = 0, list = nil }
 -- ===== overlay: letterbox, vignette, fade, toolbar =====
 local gui = Instance.new("ScreenGui")
 gui.Name, gui.IgnoreGuiInset, gui.ResetOnSpawn, gui.DisplayOrder, gui.Enabled = "CameraDirector", true, false, 50, false
+gui.ScreenInsets = Enum.ScreenInsets.None
 local function frame(props, parent)
 	local f = Instance.new("Frame")
 	f.BorderSizePixel, f.BackgroundColor3 = 0, Color3.new()

@@ -1,8 +1,8 @@
 """CUE HUNTERS plaza (player bases) decor: cue shop booth, gym corner, club sign, bay number plaques.
 Built through build_models.py ("plaza" set). Front of every model = +X (Roblox), origin on the floor / wall plane."""
 import math, os
-import bpy
-from build_models import box, cyl, sphere, torus, lathe
+import bpy, mathutils
+from build_models import box, cyl, sphere, torus, lathe, pool_table
 import themes
 from themes import mats, rot
 
@@ -63,10 +63,10 @@ def cue_shop():
     box((0.6, 3.2, 12.5), (-1.2, 12.3, 0), M["Accent"], 0.4)
     box((0.7, 2.6, 11.9), (-1.1, 12.3, 0), M["Red"], 0.35)
     text3d("CUE SHOP", (-0.65, 12.3, 0), 2.3, M["Gold"], 0.35, 0.08)
-    sphere(2.6, (-1.0, 15.5, 0), M["Accent"], 24, 16)
-    cyl(1.3, 0.3, (0.25, 15.5, 0), M["White"], axis="X", verts=20)
-    text3d("8", (0.45, 15.5, 0), 1.2, M["Accent"], 0.12, 0.02)
-    o = cyl(0.35, 13, (-0.3, 15.5, 0), M["Wood"], d2=0.2, verts=12)
+    sphere(2.6, (-1.0, 15.1, 0), M["Accent"], 24, 16)  # sits on the sign plate
+    cyl(1.3, 0.3, (0.25, 15.1, 0), M["White"], axis="X", verts=20)
+    text3d("8", (0.45, 15.1, 0), 1.2, M["Accent"], 0.12, 0.02)
+    o = cyl(0.35, 13, (-0.3, 15.1, 0), M["Wood"], d2=0.2, verts=12)
     rot(o, rx=70)
 
 
@@ -134,6 +134,35 @@ def gem_stud():
     o.scale = (0.6, 1, 1)
 
 
+def long_table(rows):
+    """Base table with `rows` rows of 2 ball spots (table capacity upgrade): the regular table, 3 studs of felt per
+    row, widened x1.3 like the placed table (WideScale) so it is used at scale 1."""
+    def build():
+        pool_table(3.0 * rows)
+        for o in bpy.context.scene.objects:
+            o.matrix_world = mathutils.Matrix.Diagonal((1.3, 1.3, 1.0, 1.0)) @ o.matrix_world  # Blender X/Y = Roblox X/Z
+    return build
+
+
+def cap_sign():
+    """Table capacity sign: two posts, a carved wooden board with a green face (the SurfaceGui sits on it), brass
+    corner caps and a little 8-ball on top. Faces +X; the face plane is x = 0.42, centre y = 6, 7.2 x 4.4."""
+    M = mats(Wood=(150, 95, 50), WoodDark=(95, 55, 28), Face=(20, 100, 70), Gold=(255, 200, 70), Accent=(30, 30, 40), White=(250, 248, 240))
+    for z in (-2.6, 2.6):
+        cyl(0.55, 4.2, (0, 2.1, z), M["WoodDark"], verts=12)
+        cyl(0.75, 0.3, (0, 0.15, z), M["Gold"], verts=12)
+    box((0.7, 5.2, 8.0), (0, 6.0, 0), M["Wood"], 0.3)
+    box((0.3, 4.4, 7.2), (0.3, 6.0, 0), M["Face"], 0.12)
+    for y in (3.6, 8.4):
+        for z in (-3.8, 3.8):
+            sphere(0.45, (0.3, y, z), M["Gold"], 10, 6)
+    box((0.8, 0.35, 8.4), (0, 8.75, 0), M["WoodDark"], 0.12)
+    sphere(2.0, (0, 9.85, 0), M["Accent"], 20, 12)
+    cyl(1.0, 0.2, (0.95, 9.85, 0), M["White"], axis="X", verts=16)
+    text3d("8", (1.08, 9.85, 0), 0.8, M["Accent"], 0.08, 0.01)
+
+
 def kit():
-    return [("PlazaCueShop", cue_shop), ("PlazaGym", gym_corner), ("PlazaClubSign", club_sign), ("PlazaGem", gem_stud)] + \
-           [(f"PlazaBay{n}", bay_number(n)) for n in range(1, 5)]
+    return [("PlazaCueShop", cue_shop), ("PlazaClubSign", club_sign), ("PlazaGem", gem_stud)] + \
+           [(f"PlazaBay{n}", bay_number(n)) for n in range(1, 5)] + [("PlazaCapSign", cap_sign)] + \
+           [(f"PlazaTable{r}", long_table(r)) for r in range(5, 11)]

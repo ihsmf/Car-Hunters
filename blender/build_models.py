@@ -96,12 +96,12 @@ def ball_mesh(d, c, body, white, striped, tilt):
     return o
 
 
-def pool_table():
-    """Real-proportion table at player scale: felt top at y=3, playing field 6 x 12, 15-ball rack + cue ball."""
+def pool_table(L=12.0):
+    """Real-proportion table at player scale: felt top at y=3, playing field 6 x L (12 = the 8-spot base table)."""
     M = {k: mat(k, v, 1 if k in ("Brass", "Chrome") else 0, 0.3 if k in ("Brass", "Pearl") else 0.55) for k, v in dict(
         Wood=(96, 48, 22), WoodDark=(62, 30, 14), Felt=(18, 120, 72), Cushion=(14, 100, 60), Brass=(225, 175, 80),
         Pocket=(16, 12, 12), Leather=(60, 36, 22), Pearl=(250, 246, 232)).items()}
-    W, L, top, cush, rail = 6.0, 12.0, 3.0, 0.3, 0.62
+    W, top, cush, rail = 6.0, 3.0, 0.3, 0.62
     box((W, 0.16, L), (0, top - 0.08, 0), M["Felt"], 0.01)
     box((W + 0.3, 0.3, L + 0.3), (0, top - 0.3, 0), M["WoodDark"], 0)
     gap = 0.34  # pocket mouths: corners and the middle of the long sides
@@ -123,9 +123,10 @@ def pool_table():
             torus(0.78, 0.1, (px, top + 0.21, pz), M["Brass"])
     box((W + 2 * rail + 0.1, 0.62, L + 2 * rail + 0.1), (0, top - 0.5, 0), M["Wood"], 0.14)  # apron
     box((W + 2 * rail + 0.16, 0.08, L + 2 * rail + 0.16), (0, top - 0.8, 0), M["Brass"], 0.02)
+    n = max(3, round(L / 6) + 1)  # turned legs: 6 on the regular table, more along a long one
     for s in (-1, 1):
-        for t in (-1, 0, 1):  # six turned legs
-            x, z = s * (W / 2 + 0.05), t * (L / 2 - 0.4) if t else 0
+        for t in range(n):
+            x, z = s * (W / 2 + 0.05), -(L / 2 - 0.4) + t * (L - 0.8) / (n - 1)
             cyl(0.7, 0.25, (x, 0.12, z), M["Brass"], verts=16)
             cyl(0.5, 1.4, (x, 0.95, z), M["WoodDark"], d2=0.72, verts=16)
             sphere(0.8, (x, 1.75, z), M["WoodDark"], 16, 8)

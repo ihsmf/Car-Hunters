@@ -183,6 +183,7 @@ end
 -- ===== Screen effects =====
 local fxGui = Instance.new("ScreenGui")
 fxGui.Name, fxGui.IgnoreGuiInset, fxGui.ResetOnSpawn, fxGui.DisplayOrder = "CinemaFx", true, false, 10
+fxGui.ScreenInsets = Enum.ScreenInsets.None -- bars and darkening cover the notch and the home-bar area too
 fxGui.Parent = plr:WaitForChild("PlayerGui")
 
 local function frame(props)
@@ -233,9 +234,19 @@ local function doFlash(color, strength, t)
 	flash.BackgroundColor3, flash.BackgroundTransparency = color, 1 - (strength or 0.8)
 	tween(flash, t or 0.5, { BackgroundTransparency = 1 })
 end
-local function letterbox(on)
-	for _, b in bars do tween(b, 0.4, { Size = UDim2.fromScale(1, on and 0.1 or 0) }) end
+local barsOn = false
+local function barHeight() -- a 2.35:1 cinema frame on any screen, at least 7 % per bar (wide phones), at most 22 % (portrait)
+	local v = fxGui.AbsoluteSize
+	if v.Y < 1 then return 0.1 end
+	return math.clamp((1 - (v.X / 2.35) / v.Y) / 2, 0.07, 0.22)
 end
+local function letterbox(on)
+	barsOn = on
+	for _, b in bars do tween(b, 0.4, { Size = UDim2.fromScale(1, on and barHeight() or 0) }) end
+end
+fxGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+	if barsOn then for _, b in bars do b.Size = UDim2.fromScale(1, barHeight()) end end
+end)
 local function pop(sc, from)
 	sc.Scale = from or 1.8
 	tween(sc, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)

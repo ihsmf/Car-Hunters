@@ -155,7 +155,31 @@ local ICONS = {
 	Shot = { {4,19,16,7}, {12,10,14,6,18,4,21,7,19,11,15,13}, {5,8,5,3}, {3,5,8,5} },
 	Train = { {3,8,3,16}, {6,6,6,18}, {6,12,18,12}, {18,6,18,18}, {21,8,21,16} },
 	Close = { {6,6,18,18}, {18,6,6,18} },
+	Place = { {12,3,12,17}, {6,11,12,17,18,11}, {5,21,19,21} },
+	Minus = { {6,12,18,12} },
+	Star = { {12,3,14.6,9,21,9.6,16,13.8,17.6,20.4,12,16.8,6.4,20.4,8,13.8,3,9.6,9.4,9,12,3} },
+	Sort = { {7,4,7,19}, {3.5,15.5,7,19,10.5,15.5}, {17,20,17,5}, {13.5,8.5,17,5,20.5,8.5} },
+	Up = { {12,20,12,5}, {5,11,12,4,19,11} },
+	Play = { {7,4,19,12,7,20,7,4} },
+	Stop = { {6,6,18,6,18,18,6,18,6,6} },
+	Check = { {5,12,10,17,19,7} },
 }
+-- the icon of an action button, picked from its label (one look for one action everywhere)
+local function iconFor(label)
+	local l = string.lower(label or "")
+	if l == "" or l == "x" then return nil end
+	if l:find("^sell") or l:find("^buy") or l:find("%$") and not l:find("upgrade") and not l:find("need") then return "Cash" end
+	if l:find("^place") or l:find("^put") then return "Place" end
+	if l:find("^remove") then return "Minus" end
+	if l:find("best") then return "Star" end
+	if l:find("income") or l:find("newest") then return "Sort" end
+	if l:find("upgrade") or l:find("need") or l:find("expand") then return "Up" end
+	if l:find("claim") then return "Bonus" end
+	if l:find("stop") then return "Stop" end
+	if l:find("train") or l:find("start") then return "Play" end
+	if l:find("max") or l:find("owned") or l:find("equipped") then return "Check" end
+	return nil
+end
 
 local function icon(parent, name, size, at, color)
 	local f = new("Frame", { Size = UDim2.fromOffset(size,size), Position = at, BackgroundTransparency = 1, Parent = parent })
@@ -189,7 +213,7 @@ local ICON_IMAGES = { Cash = 133706813365786, Strength = 97286671742329, Setting
 ICON_IMAGES.Gym = ICON_IMAGES.Strength
 local function hudIcon(parent, name, size, position)
  if ICON_IMAGES[name] then
-  local k = 1.35 -- the renders have transparent margins: draw them bigger than the slot
+  local k = 1.2 -- the renders have transparent margins: draw them a bit bigger than the slot
   return new("ImageLabel", { Name = name .. "Icon", BackgroundTransparency = 1, Image = "rbxassetid://" .. ICON_IMAGES[name],
    Size = UDim2.fromOffset(size * k, size * k), Position = position - UDim2.fromOffset(size * (k - 1) / 2, size * (k - 1) / 2), ZIndex = 3, Parent = parent })
  end
@@ -212,35 +236,45 @@ local function button(props, colors, label, size, onClick)
  local hit = new("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "",
 		Name = label ~= "" and (label or "Action") or "MenuAction", ZIndex = 5, AutoButtonColor = false, Parent = holder })
 	local scale = new("UIScale", { Parent = holder })
-	if not props.Hud and not props.Icon and label and label ~= "" then
-		props.Icon = label:find("Sell") and "Shop" or label:find("Claim") and "Bonus" or label:find("training") and "Train" or "Inventory"
-	end
-	local k = math.min(42,props.Size.Y.Offset*.5)
-	local inset = props.Icon and (k+16) or 10
-	if props.Icon and props.Icon ~= "Close" then
-		
-		local glyph = not props.Hud and hudArtwork[props.Icon] and hudIcon(body,props.Icon,k,UDim2.new(0,7,.5,0)) or props.Hud and hudIcon(body,"Shoot",54,UDim2.new(0,17,.5,0)) or icon(body, props.Icon, k, UDim2.new(0,7,.5,0), INK)
-		glyph.AnchorPoint = Vector2.new(0,.5)
-	elseif props.Icon == "Close" then
-		local glyph = icon(body, "Close", 34, UDim2.fromScale(.5,.5), INK)
-		glyph.AnchorPoint = Vector2.new(.5,.5)
+	local h = props.Size.Y.Offset
+	local iconName = props.Icon or (not props.Hud and iconFor(label)) or nil
+	local square = iconName ~= nil and props.Size.X.Offset > 0 and props.Size.X.Offset < h * 1.6 -- e.g. the close button: icon only
+	local inset = 12
+	if props.Hud and props.Icon == "Shot" then
+		local glyph = hudIcon(body, "Shoot", 54, UDim2.new(0, 17, .5, 0))
+		glyph.AnchorPoint = Vector2.new(0, .5)
+	elseif iconName then
+		-- the icon sits in a round badge INSIDE the button: it can never stick out, on any screen
+		local d = math.floor(h * (square and .78 or .72))
+		local badge = new("Frame", { Name = "Badge", Size = UDim2.fromOffset(d, d), AnchorPoint = Vector2.new(square and .5 or 0, .5),
+			Position = square and UDim2.fromScale(.5, .5) or UDim2.new(0, math.floor(h * .13), .5, 0), BackgroundColor3 = INK,
+			BackgroundTransparency = square and 1 or .72, ZIndex = 3, Parent = body }, { new("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+		if not square then new("UIStroke", { Color = INK, Transparency = .45, Thickness = math.max(2, h / 28), Parent = badge }) end
+		if ICON_IMAGES[iconName] then
+			new("ImageLabel", { Size = UDim2.fromScale(.96, .96), AnchorPoint = Vector2.new(.5, .5), Position = UDim2.fromScale(.5, .5),
+				BackgroundTransparency = 1, Image = "rbxassetid://" .. ICON_IMAGES[iconName], ScaleType = Enum.ScaleType.Fit, ZIndex = 4, Parent = badge })
+		elseif ICONS[iconName] then
+			local g = math.floor(d * (square and .8 or .62))
+			local glyph = icon(badge, iconName, g, UDim2.fromScale(.5, .5), WHITE)
+			glyph.AnchorPoint, glyph.ZIndex = Vector2.new(.5, .5), 4
+		end
+		inset = square and 0 or math.floor(h * .13) + d + math.floor(h * .14)
 	end
 	local big = math.floor((size or 24) * 1.32)
-	local lbl = text(props.Icon == "Close" and "" or label or "", big, INK, {
-		Size = UDim2.new(1, -inset - 10, 1, -8),
-		Position = UDim2.fromOffset(inset,4), Parent = body, TextScaled = true, NoStroke = true,
+	local lbl = text((square or label == "X") and "" or label or "", big, INK, {
+		Size = UDim2.new(1, -inset - 12, 1, -8),
+		Position = UDim2.fromOffset(inset, 4), Parent = body, TextScaled = true, NoStroke = true,
 	})
 	new("UITextSizeConstraint", { MaxTextSize = big, Parent = lbl })
-	if not props.Hud and label ~= "" and props.Icon ~= "Close" then
-  lbl.TextColor3=WHITE
-  new("UIStroke",{Color=INK,Thickness=math.clamp(big/12,2,4),Parent=lbl})
- end
- if props.Hud and label ~= "" then
-  lbl.Position=UDim2.fromOffset(86,4)
-  lbl.Size=UDim2.new(1,-100,1,-8)
-  lbl.TextColor3=WHITE
-  new("UIStroke",{Color=INK,Thickness=4,Parent=lbl})
- end
+	if not iconName and not props.Hud then lbl.Position, lbl.Size = UDim2.fromOffset(12, 4), UDim2.new(1, -24, 1, -8) end
+	if label ~= "" then
+		lbl.TextColor3 = WHITE
+		new("UIStroke", { Color = INK, Thickness = props.Hud and 4 or math.clamp(big / 12, 2, 4), Parent = lbl })
+	end
+	if props.Hud and props.Icon == "Shot" then
+		lbl.Position = UDim2.fromOffset(86, 4)
+		lbl.Size = UDim2.new(1, -100, 1, -8)
+	end
  local focus = stroke(5, WHITE)
 	focus.Transparency, focus.Parent = 1, holder
 	local enabled = true
@@ -419,7 +453,7 @@ local function call(action, arg)
 	return ok
 end
 
-button({Size=UDim2.fromOffset(350,82),Parent=trainingBar,Icon="Train",Radius=30},U.Red,"STOP TRAINING",37,function()
+button({Size=UDim2.fromOffset(350,82),Parent=trainingBar,Radius=30},U.Red,"STOP TRAINING",37,function()
  if state and state.training then call("TrainStop") end
 end)
 -- ===== HUD =====
@@ -498,7 +532,8 @@ local function panel(key, title, colors)
 	new("Frame", { Name = "Gloss", Size = UDim2.new(1, -28, 0, 30), Position = UDim2.fromOffset(14, 7), BackgroundColor3 = WHITE, BackgroundTransparency = .7, BorderSizePixel = 0, Parent = ribbon }, { corner(15) })
 	shimmer(ribbon, 34, 4)
 	local artKey=({Cues="Shop",Gym="Strength"})[key] or key
- hudIcon(ribbon,artKey,60,UDim2.fromOffset(28,16))
+ if ICON_IMAGES[artKey] or hudArtwork[artKey] then hudIcon(ribbon,artKey,60,UDim2.fromOffset(28,16))
+ else icon(ribbon,"Up",58,UDim2.fromOffset(30,18),WHITE) end
  text(title,58,WHITE,{Size=UDim2.new(1,-220,1,0),Position=UDim2.fromOffset(104,0),Parent=ribbon,TextXAlignment=Enum.TextXAlignment.Left})
  local sub = text("", 26, MUTED, { Size = UDim2.new(1, -80, 0, 30), Position = UDim2.fromOffset(40, 80), Parent = body, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
 	button({ Size = UDim2.fromOffset(74, 68), Position = UDim2.fromOffset(900, -16), Parent = body, Radius = 24, Icon = "Close" }, U.Red, "X", 34, function() holder.Visible = false end)
@@ -607,7 +642,7 @@ renderers.Inventory = function()
 		if it.eq then on += 1 end
 	end
 	for _ in d.found or {} do found += 1 end
-	p.sub.Text = string.format("%d / %d balls   %d / %d on the table   %d / %d found", #d.inv, C.MaxInventory, on, C.MaxEquipped, state.god and TOTAL or found, TOTAL)
+	p.sub.Text = string.format("%d / %d balls   %d / %d on the table   %d / %d found", #d.inv, C.MaxInventory, on, C.Spots(d), state.god and TOTAL or found, TOTAL)
 	local _, setCap = bar(p.content, UDim2.fromOffset(0, 4), UDim2.fromOffset(470, 14))
 	setCap(#d.inv / C.MaxInventory, #d.inv >= C.MaxInventory * 0.9 and U.Bad or GREEN[2])
 	button({ Size = UDim2.fromOffset(160, 46), Position = UDim2.fromOffset(478, -12), Parent = p.content }, GREEN, "Equip best", 22, function()
@@ -661,7 +696,7 @@ renderers.Inventory = function()
 		button({ Size = UDim2.fromOffset(104, 52), Position = UDim2.fromOffset(9, 184), Parent = c, Radius = 18 }, it.eq and U.Red or GREEN, it.eq and "Remove" or "Place", 22, function()
 			if call("Equip", i) then renderers.Inventory() end
 		end)
-		button({ Size = UDim2.fromOffset(152, 52), Position = UDim2.fromOffset(122, 184), Parent = c, Radius = 18, Icon = "Shop" }, U.Action, "Sell $" .. C.Short(inc * 30), 20, function()
+		button({ Size = UDim2.fromOffset(152, 52), Position = UDim2.fromOffset(122, 184), Parent = c, Radius = 18 }, U.Action, "Sell $" .. C.Short(inc * 30), 20, function()
 			if call("Sell", i) then renderers.Inventory() end
 		end)
 	end
@@ -974,6 +1009,63 @@ renderers.Gym = function()
 end
 
 -- --- Settings (saved to the account) ---
+-- --- Table capacity (the sign next to the base table) ---
+panel("Table", "Table capacity", { rgb(123, 216, 255), rgb(47, 134, 229) })
+renderers.Table = function()
+	local p = panels.Table
+	clear(p.content)
+	local d = state.d
+	local lvl = d.tableLvl or 0
+	local maxed = lvl >= #C.TableCost
+	local spots, nextSpots = C.Spots(d), C.TableCaps[math.min(lvl + 2, #C.TableCaps)]
+	local on = 0
+	for _, it in d.inv do if it.eq then on += 1 end end
+	p.sub.Text = "More spots on your base table: more balls earning at once"
+	-- top view of the table: placed balls, free spots and the 2 spots the upgrade adds (gold)
+	local rows = (maxed and spots or nextSpots) // 2
+	local frameH = 500
+	local felt = new("Frame", { Size = UDim2.fromOffset(250, frameH), BackgroundColor3 = INK, Parent = p.content }, { corner(18) })
+	local inner = new("Frame", { Size = UDim2.new(1, -20, 1, -20), Position = UDim2.fromOffset(10, 10), BackgroundColor3 = WHITE, Parent = felt },
+		{ corner(12), new("UIStroke", { Color = rgb(139, 74, 34), Thickness = 7 }), grad(rgb(60, 200, 115), rgb(25, 130, 70)) })
+	for _, pk in { { 0, 0 }, { 1, 0 }, { 0, .5 }, { 1, .5 }, { 0, 1 }, { 1, 1 } } do
+		new("Frame", { Size = UDim2.fromOffset(22, 22), AnchorPoint = Vector2.new(.5, .5), Position = UDim2.fromScale(pk[1], pk[2]), BackgroundColor3 = rgb(22, 9, 31), Parent = inner }, { corner(11) })
+	end
+	local pitch = (frameH - 80) / rows
+	local cell = math.floor(math.min(34, pitch - 6))
+	local colors = { rgb(255, 215, 42), rgb(42, 90, 230), rgb(235, 50, 50), rgb(140, 50, 200), rgb(255, 130, 20), rgb(30, 160, 70), rgb(140, 30, 40), rgb(58, 208, 255) }
+	for k = 1, rows * 2 do
+		local r, c = (k - 1) // 2, (k - 1) % 2
+		local added = k > spots
+		local placed = k <= on
+		local dot = new("Frame", { Size = UDim2.fromOffset(cell, cell), AnchorPoint = Vector2.new(.5, .5), Position = UDim2.new(.5, c == 0 and -40 or 40, 0, 30 + (r + .5) * pitch),
+			BackgroundColor3 = placed and colors[(k - 1) % 8 + 1] or WHITE, BackgroundTransparency = placed and 0 or added and .7 or .85, Parent = inner },
+			{ corner(cell // 2), new("UIStroke", { Color = added and rgb(255, 215, 90) or placed and INK or WHITE, Thickness = 3, Transparency = (placed or added) and 0 or .3 }) })
+		if added then text("+", cell, rgb(255, 215, 90), { Size = UDim2.fromScale(1, 1), Parent = dot, NoStroke = true }) end
+	end
+	local x = 300
+	text("SPOTS ON THE TABLE", 32, INK, { Size = UDim2.fromOffset(560, 40), Position = UDim2.fromOffset(x, 0), Parent = p.content, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
+	local big = text(maxed and (spots .. "  MAX") or (spots .. "  →  " .. nextSpots), 92, WHITE, { Size = UDim2.fromOffset(560, 110), Position = UDim2.fromOffset(x, 40), Parent = p.content, TextXAlignment = Enum.TextXAlignment.Left })
+	if maxed then big.TextColor3 = rgb(255, 215, 90) end
+	for k = 1, #C.TableCost do -- level pips
+		local done, nxt = k <= lvl, k == lvl + 1
+		new("Frame", { Size = UDim2.fromOffset(58, 26), Position = UDim2.fromOffset(x + (k - 1) * 68, 164), BackgroundColor3 = WHITE, Parent = p.content },
+			{ corner(13), stroke(4), grad(done and rgb(168, 255, 122) or nxt and rgb(255, 243, 160) or rgb(233, 220, 199), done and rgb(31, 168, 70) or nxt and rgb(240, 140, 0) or rgb(220, 205, 185)) })
+	end
+	text(string.format("LEVEL %d / %d   ·   MAX %d SPOTS", lvl, #C.TableCost, C.TableCaps[#C.TableCaps]), 24, MUTED, { Size = UDim2.fromOffset(560, 30), Position = UDim2.fromOffset(x, 202), Parent = p.content, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
+	text(maxed and "YOUR TABLE IS AS LONG AS IT GETS" or "+2 SPOTS  ·  THE TABLE GETS LONGER", 28, INK, { Size = UDim2.fromOffset(580, 34), Position = UDim2.fromOffset(x, 250), Parent = p.content, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
+	text(string.format("ON THE TABLE NOW: %d / %d   ·   INCOME $%s/S", on, spots, C.Short(state.income or 0)), 24, MUTED, { Size = UDim2.fromOffset(580, 30), Position = UDim2.fromOffset(x, 290), Parent = p.content, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
+	local cost = not maxed and C.TableCost[lvl + 1]
+	local can = cost and (state.ownerBoost or d.cash >= cost)
+	local _, _, _, setBtn = button({ Size = UDim2.fromOffset(440, 100), Position = UDim2.fromOffset(x, 370), Parent = p.content, Radius = 32 }, GREEN,
+		maxed and "Max size" or can and ("Upgrade  $" .. C.Short(cost)) or ("Need $" .. C.Short(cost - d.cash)), 40, function()
+			if call("UpTable") then
+				_G.PlaySfx("CuePurchase")
+				renderers.Table()
+			end
+		end)
+	setBtn(can and true or false)
+end
+
 panel("Settings", "Settings", { U.Menu[1][4], U.Menu[1][5] })
 local settings = { music = 0.5, sfx = 0.7, shake = true, short = false }
 local saveQueued = false
@@ -1059,7 +1151,10 @@ end
 -- menu buttons (Figma component "MenuButton": icon + label) with badges
 for i, m in U.Menu do
 	local holder, body = button({ Hud = true, Size = UDim2.fromOffset(132, 124), LayoutOrder = i, Parent = menu, Radius = 38 }, { m[4], m[5] }, "", 1, function() open(m[1]) end)
-	local glyph = hudIcon(body,m[1],72,UDim2.new(.5,0,0,2))
+	-- the icon fits inside the tile (no oversize, no negative offset): it can't leave the button on any screen
+	local glyph = ICON_IMAGES[m[1]] and new("ImageLabel", { Name = m[1] .. "Icon", BackgroundTransparency = 1, Image = "rbxassetid://" .. ICON_IMAGES[m[1]],
+		ScaleType = Enum.ScaleType.Fit, Size = UDim2.fromOffset(82, 74), Position = UDim2.new(.5, 0, 0, 4), ZIndex = 3, Parent = body })
+		or hudIcon(body, m[1], 64, UDim2.new(.5, 0, 0, 8))
 	glyph.AnchorPoint = Vector2.new(.5,0)
 	local caption=text(m[3],25,WHITE,{Size=UDim2.new(1,-14,0,35),Position=UDim2.fromOffset(7,74),TextScaled=true,Parent=body})
  new("UITextSizeConstraint",{MaxTextSize=25,Parent=caption})
@@ -1086,7 +1181,7 @@ local function updateBadges()
 	for _, it in d.inv do
 		if it.eq then on += 1 else free += 1 end
 	end
-	setBadge("Inventory", (#d.inv >= C.MaxInventory * 0.9 or (on < C.MaxEquipped and free > 0)) and "!" or nil)
+	setBadge("Inventory", (#d.inv >= C.MaxInventory * 0.9 or (on < C.Spots(d) and free > 0)) and "!" or nil)
 end
 
 -- ===== Onboarding: 3 steps, with an arrow above the gym / kiosk =====
@@ -1124,6 +1219,35 @@ end
 
 -- ===== Kiosk hint when the next cue is affordable =====
 local kioskTag
+-- the capacity sign next to your own base table: a SurfaceGui you can tap + a ProximityPrompt
+local capSign, capPrompt, capNum, capBtn
+local function updateCapSign()
+	if not state then return end
+	local decor = workspace:FindFirstChild("World") and workspace.World:FindFirstChild("PlazaDecor")
+	local face = decor and decor:FindFirstChild("CapFace" .. tostring(state.slot))
+	if not face then return end
+	if not capSign or capSign.Adornee ~= face then
+		if capSign then capSign:Destroy() end
+		if capPrompt then capPrompt:Destroy() end
+		capSign = new("SurfaceGui", { Name = "CapSign", Face = Enum.NormalId.Back, CanvasSize = Vector2.new(720, 440), LightInfluence = 0,
+			SizingMode = Enum.SurfaceGuiSizingMode.FixedSize, Adornee = face, ResetOnSpawn = false, Parent = gui.Parent })
+		local tap = new("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", Parent = capSign })
+		tap.Activated:Connect(function() _G.PlaySfx("Click"); open("Table", true) end)
+		text("TABLE CAPACITY", 64, rgb(255, 215, 90), { Size = UDim2.fromOffset(680, 90), Position = UDim2.fromOffset(20, 20), Parent = capSign })
+		capNum = text("", 150, WHITE, { Size = UDim2.fromOffset(680, 170), Position = UDim2.fromOffset(20, 110), Parent = capSign })
+		local holder
+		holder, _, capBtn = button({ Size = UDim2.fromOffset(460, 104), Position = UDim2.fromOffset(130, 300), Parent = capSign, Radius = 34 }, U.Action, "Upgrade", 44, function() open("Table", true) end)
+		holder.Name = "CapButton"
+		capPrompt = new("ProximityPrompt", { ActionText = "Table capacity", ObjectText = "Your table", HoldDuration = 0, MaxActivationDistance = 12, RequiresLineOfSight = false, Parent = face })
+		capPrompt.Triggered:Connect(function() open("Table", true) end)
+	end
+	local lvl = state.d.tableLvl or 0
+	local maxed = lvl >= #C.TableCost
+	capNum.Text = maxed and (C.Spots(state.d) .. " MAX") or (C.Spots(state.d) .. " → " .. C.TableCaps[lvl + 2])
+	capBtn.Text = maxed and "Max size" or ("Upgrade  $" .. C.Short(C.TableCost[lvl + 1]))
+	if panels.Table.holder.Visible then renderers.Table() end
+end
+
 local function updateKioskTag()
 	if not state then return end
 	local nxt = C.Cues[state.d.cue + 1]
@@ -1305,6 +1429,7 @@ Fx.OnClientEvent:Connect(function(kind, a, b, c)
 		updateBadges()
 		updateTutorial()
 		updateKioskTag()
+		updateCapSign()
 		
 		rerender()
         plr:SetAttribute("BHProfileUI",true)
@@ -1315,6 +1440,7 @@ Fx.OnClientEvent:Connect(function(kind, a, b, c)
 		renderStats()
 		updateBadges()
 		updateKioskTag()
+		updateCapSign()
 		if panels.Bonus.holder.Visible and bonusTick then bonusTick() end
 	elseif kind == "Train" then
         trainingBar.Visible=a==true

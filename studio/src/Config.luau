@@ -191,7 +191,12 @@ function C.LaneX(slot) return -C.Table.Width / 2 + (slot - 0.5) * C.Table.Width 
 C.Arena = { HallHalfWidth = 100.8, HallBack = -23.68, CorridorHalfWidth = 34 }
 C.ThrowCooldown = 1
 C.CueScale = .66
-C.MaxEquipped = 8 -- balls on the base table
+C.MaxEquipped = 8 -- balls on the base table at the start
+-- Table capacity upgrade (the sign next to the base table): every level adds a row of 2 spots, the table gets longer
+C.TableCaps = { 8, 10, 12, 14, 16, 18, 20 }
+C.TableCost = { 1e6, 1e8, 1e10, 1e12, 1e14, 1e16 } -- price of level k -> k + 1 (0-based level)
+C.TableRow = 3.9 -- studs between rows of spots (the felt grows by this much per level)
+function C.Spots(d) return C.TableCaps[math.clamp((d and d.tableLvl or 0) + 1, 1, #C.TableCaps)] end
 C.BallSize = 1.3 -- prize ball diameter on the table (Big / Huge variants scale it)
 C.MaxInventory = 150
 

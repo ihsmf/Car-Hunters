@@ -11,7 +11,7 @@ STUDIO = os.path.join(ROOT, "studio")
 PLACE = os.path.join(STUDIO, "CueHunters.rbxlx")
 SRC = os.path.join(STUDIO, "src")
 MESH_DIR = os.path.join(ROOT, "src", "shared", "Meshes")
-EDITED = ["Config", "UI", "Throw", "HeavenlyBreak", "MeshBuilder", "Visuals", "Main"]
+EDITED = ["Config", "UI", "Throw", "HeavenlyBreak", "MeshBuilder", "Visuals", "Main", "Training", "Map"]
 MESHES = ["FinaleComputer", "FinaleCity", "FinaleNature", "FinaleGod", "FinalePlanet", "FinaleRobloxPlanet", "HallWall", "HallCeiling", "DecoLantern", "DecoCrystal", "DecoGift",
           "DecoTree", "DecoSnowman", "DecoCandyCane", "DecoMushroom", "DecoCactus", "DecoShell", "DecoGear", "DecoPlanet",
           "DecoPalm", "DecoTorch", "DecoTrophy", "DecoLotus", "DecoGarland"]
