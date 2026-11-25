@@ -20,7 +20,7 @@ import landscape  # noqa: E402
 MESHES += [f[2] for f in landscape.FAMILIES]
 THEME_PARTS = ("Wall", "Backdrop", "Ceiling", "Hero", "Mid", "Rail", "Hang")  # blender/themes.py kits
 MESHES += sorted(f[:-5] for f in os.listdir(MESH_DIR) if f.endswith(".luau") and f.startswith(THEME_PARTS + ("Plaza",)) and f[:-5] not in MESHES)
-NEW = {"CameraDirector": ("LocalScript", "UI")}  # scripts we add: class, inserted next to this existing script
+NEW = {"CameraDirector": ("LocalScript", "UI"), "RevealScenes": ("ModuleScript", "HeavenlyBreak")}  # scripts we add: class, inserted next to this existing script
 
 
 def item_re(name):  # one script Item by its (unique) Name; group 2 = the Source payload

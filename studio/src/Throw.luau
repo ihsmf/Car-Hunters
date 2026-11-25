@@ -513,135 +513,6 @@ end
 
 -- Camera on the base table; a light beam hits the ball's spot, the ball drops in, bounces, bursts, the card follows.
 -- The table reached selects the ceremony, independently of the luck roll.
-local function milestoneReveal(it, section)
- local rank=math.floor(section/3)
- local finale=section==#C.Tables
- local duration=finale and 15 or 4.4+rank*.28
- if _G.ShortOnly then duration=math.min(duration,3) end
- local tint=C.Tables[section][2]
- local gold=Color3.fromRGB(255,211,114)
- local ice=Color3.fromRGB(126,229,255)
- local root=frame({Name="SectionReveal",ZIndex=3,BackgroundColor3=Color3.fromRGB(7,5,20)})
- local vp=Instance.new("ViewportFrame")
- vp.BackgroundTransparency=1
- vp.Size=UDim2.fromScale(1,.84)
- vp.Ambient=Color3.fromRGB(182,173,208)
- vp.LightColor=Color3.fromRGB(255,241,216)
- vp.LightDirection=Vector3.new(-1,-.4,-.7)
- vp.Parent=root
- local camera=Instance.new("Camera")
- camera.FieldOfView=42
- camera.Parent=vp
- vp.CurrentCamera=camera
- local world=Instance.new("WorldModel")
- world.Parent=vp
- local prize=BallArt.Make(it,3)
- prize.Parent=world
- local function gem(parent,color,shape,size,cf)
-  local p=Instance.new("Part")
-  p.Anchored,p.CanCollide,p.CanQuery,p.CanTouch=true,false,false,false
-  p.Material,p.Color,p.Shape=Enum.Material.Neon,color,shape
-  p.Size,p.CFrame,p.Parent=size,cf,parent
-  return p
- end
- local function line(parent,a,b,width,color)
-  return gem(parent,color,Enum.PartType.Block,Vector3.new(width,width,(b-a).Magnitude),CFrame.lookAt((a+b)*.5,b))
- end
- local orbitCount=math.min(5,1+math.floor(rank/6))
- local tracks={}
- for i=1,orbitCount do
-  local ring=Instance.new("Model")
-  ring.WorldPivot=CFrame.identity
-  ring.Parent=world
-  local radius=2.1+i*.35
-  local function point(angle) return Vector3.new(radius*math.cos(angle),radius*math.sin(angle),0) end
-  for k=0,23 do
-   line(ring,point(k*math.pi/12),point((k+1)*math.pi/12),.035+.004*i,i%2==0 and ice or tint)
-  end
-  local bead=gem(world,gold,Enum.PartType.Ball,Vector3.one*(.20+i*.035),CFrame.identity)
-  tracks[i]={ring=ring,bead=bead,radius=radius}
- end
- local shards={}
- for i=1,5+rank do
-  shards[i]=gem(world,i%3==0 and gold or tint,Enum.PartType.Block,Vector3.new(.08,.25+i%4*.12,.08),CFrame.identity)
- end
- local bolts={}
- if rank>=6 then
-  for i=1,math.min(6,math.floor(rank/4)) do
-   local chain=Instance.new("Model")
-   chain.WorldPivot=CFrame.identity
-   chain.Parent=world
-   local p=Vector3.new(1.45,0,0)
-   for k=1,6 do
-    local q=Vector3.new(1.45+k*.65,((k+i)%2-.5)*.66,math.sin(k+i)*.38)
-    line(chain,p,q,.07,i%2==0 and ice or gold)
-    p=q
-   end
-   bolts[i]=chain
-  end
- end
- local glyphs={}
- local symbols={"H","He","C","N","O","Ne","Si","Ar","Xe","Au","Ω","Δ"}
- if rank>=10 then
-  for i=1,math.min(#symbols,math.floor(rank/2)) do
-   local glyph=label(root,symbols[i],UDim2.fromScale(.058,.045),i%2==0 and ice or gold,UDim2.fromScale(.5,.4))
-   glyphs[i]=glyph
-  end
- end
- local title=label(root,C.ItemName(it),UDim2.fromScale(.8,.10),WHITE,UDim2.fromScale(.5,.77))
- local detail=label(root,C.Rarities[C.Balls[it.id].rarity][1].."   ·   $"..C.Short(C.ItemIncome(it)).."/s",UDim2.fromScale(.72,.055),gold,UDim2.fromScale(.5,.87))
- local curtain=frame({Parent=root,BackgroundColor3=Color3.new(),ZIndex=4})
- skipBtn.Visible=true
- luckLabel.Visible=false
- local start=os.clock()
- local struck=false
- repeat
-  local elapsed=os.clock()-start
-  local u=math.min(1,elapsed/duration)
-  local orbit=elapsed*(.61+rank*.018)
-  local charge=math.clamp(u/.55,0,1)
-  local fall=math.clamp((u-.51)/.18,0,1)
-  local y=(1-fall*fall)*1.15+math.sin(math.pi*math.clamp((u-.69)/.15,0,1))*.28
-  local focus=Vector3.new(0,y,0)
-  prize:PivotTo(CFrame.new(focus)*CFrame.Angles(.2,orbit*1.3,0))
-  for i,row in tracks do
-   local spin=CFrame.new(focus)*CFrame.Angles(.55+i*.68,orbit*.32+i,.3+i*.92+orbit*.16)
-   row.ring:PivotTo(spin)
-   local a=orbit*(1+i*.35)+i
-   row.bead.Position=spin*Vector3.new(row.radius*math.cos(a),row.radius*math.sin(a),0)
-  end
-  for i,p in shards do
-   local a=orbit*.48+i*2.39996
-   local rad=2.8+(1-charge)*4+(i%5)*.24+1.8*math.sin(fall*math.pi)
-   p.CFrame=CFrame.new(math.cos(a)*rad,y+math.sin(a*1.7+i)*2,math.sin(a)*rad)*CFrame.Angles(a,i,a*.4)
-  end
-  for i,chain in bolts do
-   local opening=math.clamp((u-.25-i*.018)*8,0,1)
-   chain:PivotTo(CFrame.new(0,y,opening>0 and 0 or -1000)*CFrame.Angles(0,orbit*.45+i*.9,i*2.4+math.sin(orbit*.6)*.18))
-  end
-  for i,glyph in glyphs do
-   local a=i*2*math.pi/#glyphs+orbit*.17
-   glyph.Visible=u>.23 and u<.84
-   glyph.Position=UDim2.fromScale(.5+.36*math.cos(a),.41+.25*math.sin(a))
-   glyph.Rotation=math.sin(a)*12
-  end
-  local distance=13-charge*3+math.sin(fall*math.pi)*2
-  camera.CFrame=CFrame.lookAt(Vector3.new(math.sin(orbit*.25)*distance,2+.6*math.cos(orbit),math.cos(orbit*.25)*distance),focus)
-  -- Two broad eclipse cuts, followed by the impact and the identifying card.
-  local eclipse=.25*math.max(0,1-u/.085)
-  if finale then
-   eclipse=math.max(eclipse,.94*math.max(0,1-math.abs(u-.31)/.045),.98*math.max(0,1-math.abs(u-.53)/.055))
-  end
-  curtain.BackgroundTransparency=1-eclipse
-  title.Visible,detail.Visible=u>=.69,u>=.73
-  if u>=.69 and not struck then struck=true;sfx("Reward");hardShake(.35+rank*.035) end
-  if u>=1 or skip then break end
-  RunService.RenderStepped:Wait()
- until false
- root:Destroy()
-end
-
-
 local function revealOnBase(slot, tid, it, bonus, quick)
 	local ch = C.Balls[it.id]
 	local r = C.Rarities[ch.rarity]
@@ -952,35 +823,20 @@ Fx.OnClientEvent:Connect(function(kind, p)
 	tween(blur, 0.3, { Size = 0 })
 	local bonus = math.max(0, ch.rarity - zone)
 	local ballOdds = C.BallOdds(it) -- the ball's own "1 in N", independent of the shot's luck
-	local closeOdds = it.section ~= #C.Tables and oddsCounter(ballOdds, full and 2.4 or 1.5) -- the finale counts on its own screen
-	if it.section==#C.Tables then
-  camFn=nil
-  dim.BackgroundTransparency=1
-  flash.BackgroundTransparency=1
-  blur.Size=0
-  cc.Brightness,cc.Contrast,cc.TintColor=0,0,WHITE
-  luckLabel.Visible,banner.Visible=false,false
-  local caption
-  local function showPrize()
-   if caption then return end
-   caption=label(fxGui,C.ItemName(it).."   ·   $"..C.Short(C.ItemIncome(it)).."/s",UDim2.fromScale(.84,.085),WHITE,UDim2.fromScale(.5,.82))
-   caption.ZIndex=7
-  end
-  local ok,shown=pcall(function()
-   if skip then return false end
-   return require(RS.Shared.HeavenlyBreak)(it,{skipped=function()return skip end,sound=sfx,caption=showPrize,luck=finalL,ballOdds=ballOdds,odds=oddsCounter})
-  end)
-  if not ok or not shown or not caption then
-   showPrize()
-   if _G.Toast then _G.Toast(C.ItemName(it),rcol) end
-   local okCard,close=pcall(revealCard,it,bonus)
-   task.wait(1.25)
-   if okCard then pcall(close) end
-  end
-  caption:Destroy()
- elseif not skip and (it.section or 1)>=3 then
-  milestoneReveal(it,it.section)
- elseif not skip then -- every pull lands on your table; the short version is just quicker
+	local closeOdds = oddsCounter(ballOdds, full and 2.4 or 1.5)
+	if not skip then -- a themed scene (the last table: the birth of a star), then the same close-up for every ball
+		local final = it.section == #C.Tables
+		camFn = nil
+		dim.BackgroundTransparency, flash.BackgroundTransparency, blur.Size = 1, 1, 0
+		cc.Brightness, cc.Contrast, cc.TintColor = 0, 0, WHITE
+		banner.Visible = false
+		local Scenes = require(RS.Shared.RevealScenes)
+		local ctx = { skipped = function() return skip end, sound = sfx, shake = hardShake, flash = doFlash, ballOdds = ballOdds }
+		local ok, err = pcall(final and Scenes.Finale or Scenes.Play, it, ctx)
+		if not ok then warn("Reveal scene failed:", err) end
+		cam.CameraType = Enum.CameraType.Custom
+		skip = false
+		if final and _G.Toast then _G.Toast(C.ItemName(it) .. "  ·  $" .. C.Short(C.ItemIncome(it)) .. "/s", rcol) end
 		tween(dim, full and 0.35 or 0.2, { BackgroundTransparency = 0 }).Completed:Wait()
 		revealOnBase(slot, tid, it, bonus, not full)
 	else -- skipped: just the card, the ball appears on the base by itself
