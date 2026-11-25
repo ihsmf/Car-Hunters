@@ -16,14 +16,38 @@ def inventory():  # open backpack with billiard balls
         I.obj_mat(bpy.context.object, I.mat(f"B{k}", c, 0, 0.15))
     bpy.ops.mesh.primitive_cylinder_add(radius=0.12, depth=0.1, location=(0, -0.9, -0.5), rotation=(math.pi / 2, 0, 0)); I.obj_mat(bpy.context.object, G)
 
-def cues():  # two crossed cues + cue ball
-    wood, tip, wrap, white = I.mat("Wood", (235, 195, 130), 0, 0.4), I.mat("Tip", (60, 120, 240)), I.mat("Wrap", (200, 30, 50)), I.mat("W", (250, 250, 245), 0, 0.1)
-    for s in (-1, 1):
-        for part, (r1, r2, d, z, m) in enumerate(((0.16, 0.09, 3.6, 0.2, wood), (0.19, 0.16, 1.4, -2.3, wrap), (0.09, 0.09, 0.15, 2.07, tip))):
-            bpy.ops.mesh.primitive_cone_add(radius1=r1, radius2=r2, depth=d, location=(0, 0, 0), vertices=24)
-            o = bpy.context.object; o.location = (math.sin(s * 0.6) * z, 0, math.cos(s * 0.6) * z); o.rotation_euler = (0, s * 0.6, 0); I.obj_mat(o, m)
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.7, segments=32, ring_count=16, location=(0, -0.4, -1.2)); I.obj_mat(bpy.context.object, white)
-    I.sparkles(12, (0, 0, 0), 1.8, I.mat("S", (255, 250, 220), 0, 0.2, 10))
+def cues():  # one big cue striking a cue ball, with motion streaks
+    wood, tip, wrap, white, gold = I.mat("Wood", (240, 200, 135), 0, 0.35), I.mat("Tip", (50, 120, 255), 0, 0.3), I.mat("Wrap", (210, 30, 50), 0, 0.3), I.mat("W", (252, 252, 248), 0, 0.08), I.gold()
+    ang = math.radians(38)
+    def seg(r1, r2, d, c, m):  # along the cue axis, c = distance of the centre from the tip
+        bpy.ops.mesh.primitive_cone_add(radius1=r1, radius2=r2, depth=d, vertices=32)
+        o = bpy.context.object
+        o.rotation_euler = (0, math.pi / 2 + ang, 0)
+        o.location = (-0.35 - math.cos(ang) * c, -0.2, 0.05 + math.sin(ang) * c)
+        I.obj_mat(o, m)
+    seg(0.2, 0.2, 0.2, 0.1, tip)
+    seg(0.38, 0.2, 1.7, 1.05, wood)
+    seg(0.42, 0.38, 0.2, 1.95, gold)
+    seg(0.46, 0.42, 0.9, 2.5, wrap)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.85, segments=48, ring_count=24, location=(0.85, -0.2, -0.75)); I.obj_mat(bpy.context.object, white)
+    for k in range(3):  # motion streaks behind the ball
+        bpy.ops.mesh.primitive_cylinder_add(radius=0.06, depth=1.1 - k * 0.2, location=(1.95 + k * 0.1, -0.2, -0.35 - k * 0.35), rotation=(0, math.pi / 2 + ang, 0))
+        I.obj_mat(bpy.context.object, I.mat(f"St{k}", (255, 255, 255), 0, 0.2, 6))
+    bpy.ops.mesh.primitive_ico_sphere_add(radius=0.25, subdivisions=2, location=(0.15, -0.5, -0.25)); I.obj_mat(bpy.context.object, I.mat("Hit", (255, 240, 150), 0, 0.2, 15))
+
+
+def cash():  # one big gold coin with "$" + a banknote behind
+    G, note, band = I.gold(), I.mat("Note", (60, 190, 90), 0, 0.5), I.mat("Band", (230, 250, 220), 0, 0.5)
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0.6, 0.3, 0.55), rotation=(0, -0.3, 0)); o = bpy.context.object; o.scale = (2.6, 0.05, 1.3); I.obj_mat(o, note)
+    bpy.ops.mesh.primitive_cylinder_add(radius=0.38, depth=0.1, location=(0.85, 0.25, 0.62), rotation=(math.pi / 2, 0, 0)); I.obj_mat(bpy.context.object, band)
+    bpy.ops.mesh.primitive_cylinder_add(radius=1.55, depth=0.38, vertices=64, location=(-0.25, -0.2, -0.25), rotation=(math.pi / 2, 0, 0))
+    o = bpy.context.object; b = o.modifiers.new("b", "BEVEL"); b.width, b.segments = 0.08, 3; I.obj_mat(o, G)
+    bpy.ops.mesh.primitive_torus_add(major_radius=1.25, minor_radius=0.07, location=(-0.25, -0.4, -0.25), rotation=(math.pi / 2, 0, 0)); I.obj_mat(bpy.context.object, G)
+    bpy.ops.object.text_add(location=(-0.25, -0.42, -0.25), rotation=(math.pi / 2, 0, 0))
+    t = bpy.context.object; t.data.body = "$"; t.data.size = 2.0; t.data.extrude = 0.08; t.data.align_x = "CENTER"; t.data.align_y = "CENTER"
+    t.data.materials.append(I.mat("Dollar", (255, 235, 140), 1.0, 0.2))
+    I.sparkles(10, (0, 0, 0), 1.9, I.mat("S", (255, 250, 220), 0, 0.2, 10))
+
 
 def bonus():  # gift box with bow
     box, rib = I.mat("Box", (240, 60, 90), 0, 0.35), I.gold()
@@ -64,6 +88,6 @@ def settings():  # gear
         o = bpy.context.object; o.scale = (0.5, 0.5, 0.5); I.obj_mat(o, m)
     bpy.ops.mesh.primitive_cylinder_add(radius=0.5, depth=0.7, vertices=32, rotation=(math.pi / 2, 0, 0)); I.obj_mat(bpy.context.object, I.mat("H", (60, 60, 80)))
 
-I.ICONS = {"MenuInventory": inventory, "MenuCues": cues, "MenuBonus": bonus, "MenuShop": shop, "MenuGym": gym, "MenuSettings": settings}
-for k in I.ICONS:
+I.ICONS = {"MenuCash": cash, "MenuCues": cues, "MenuBonus": bonus, "MenuShop": shop, "MenuInventory": inventory, "MenuGym": gym, "MenuSettings": settings}
+for k in (sys.argv[1:] or I.ICONS):
     I.render(k); print("icon", k)
