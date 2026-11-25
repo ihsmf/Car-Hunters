@@ -1483,9 +1483,12 @@ def main():
     if "theme" in sys.argv:  # themed hall kits (blender/themes.py); optional theme names after "theme"
         import themes
         sets = themes.kit(set(sys.argv[sys.argv.index("theme") + 1:]) or None)
+    elif "plaza" in sys.argv:
+        import plaza
+        sets = plaza.kit()
     elif "finale" in sys.argv or "hall" in sys.argv or "land" in sys.argv:
         sets = FINALE if "finale" in sys.argv else HALL if "hall" in sys.argv else LAND
-    if "theme" in sys.argv or "finale" in sys.argv or "hall" in sys.argv or "land" in sys.argv:  # only these sets, next to the existing meshes
+    if "theme" in sys.argv or "plaza" in sys.argv or "finale" in sys.argv or "hall" in sys.argv or "land" in sys.argv:  # only these sets, next to the existing meshes
         for name, fn in sets:
             reset()
             fn()

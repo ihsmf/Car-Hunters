@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.join(ROOT, "tools"))
 import landscape  # noqa: E402
 MESHES += [f[2] for f in landscape.FAMILIES]
 THEME_PARTS = ("Wall", "Backdrop", "Ceiling", "Hero", "Mid", "Rail", "Hang")  # blender/themes.py kits
-MESHES += sorted(f[:-5] for f in os.listdir(MESH_DIR) if f.endswith(".luau") and f.startswith(THEME_PARTS) and f[:-5] not in MESHES)
+MESHES += sorted(f[:-5] for f in os.listdir(MESH_DIR) if f.endswith(".luau") and f.startswith(THEME_PARTS + ("Plaza",)) and f[:-5] not in MESHES)
 NEW = {"CameraDirector": ("LocalScript", "UI")}  # scripts we add: class, inserted next to this existing script
 
 
@@ -104,6 +104,8 @@ def pack():
     x = x.replace("BILLIARD HUNTERS", "CUE HUNTERS").replace("Billiard Hunters", "Cue Hunters")  # the game is CUE HUNTERS
     x = inject_hall(x)
     x = landscape.apply(x)
+    import plaza_decor
+    x = plaza_decor.apply(x)  # player-base decor (blender/plaza.py)
     import bake
     x = bake.apply(x)  # uploaded meshes -> real MeshParts
     ET.fromstring(x)  # the place must still be valid XML
