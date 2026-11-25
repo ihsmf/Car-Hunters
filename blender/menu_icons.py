@@ -23,17 +23,13 @@ def cues():  # one big cue striking a cue ball, with motion streaks
         bpy.ops.mesh.primitive_cone_add(radius1=r1, radius2=r2, depth=d, vertices=32)
         o = bpy.context.object
         o.rotation_euler = (0, math.pi / 2 + ang, 0)
-        o.location = (-0.35 - math.cos(ang) * c, -0.2, 0.05 + math.sin(ang) * c)
+        o.location = (1.75 - math.cos(ang) * c, -0.2, -1.35 + math.sin(ang) * c)
         I.obj_mat(o, m)
-    seg(0.2, 0.2, 0.2, 0.1, tip)
-    seg(0.38, 0.2, 1.7, 1.05, wood)
-    seg(0.42, 0.38, 0.2, 1.95, gold)
-    seg(0.46, 0.42, 0.9, 2.5, wrap)
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.85, segments=48, ring_count=24, location=(0.85, -0.2, -0.75)); I.obj_mat(bpy.context.object, white)
-    for k in range(3):  # motion streaks behind the ball
-        bpy.ops.mesh.primitive_cylinder_add(radius=0.06, depth=1.1 - k * 0.2, location=(1.95 + k * 0.1, -0.2, -0.35 - k * 0.35), rotation=(0, math.pi / 2 + ang, 0))
-        I.obj_mat(bpy.context.object, I.mat(f"St{k}", (255, 255, 255), 0, 0.2, 6))
-    bpy.ops.mesh.primitive_ico_sphere_add(radius=0.25, subdivisions=2, location=(0.15, -0.5, -0.25)); I.obj_mat(bpy.context.object, I.mat("Hit", (255, 240, 150), 0, 0.2, 15))
+    seg(0.17, 0.17, 0.2, 0.1, tip)
+    seg(0.3, 0.17, 2.6, 1.5, wood)
+    seg(0.34, 0.3, 0.25, 2.9, gold)
+    seg(0.38, 0.34, 1.4, 3.7, wrap)
+    seg(0.4, 0.4, 0.2, 4.5, I.mat("Butt", (30, 25, 30), 0, 0.4))
 
 
 def cash():  # one big gold coin with "$" + a banknote behind
