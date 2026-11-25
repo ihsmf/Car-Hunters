@@ -1,0 +1,49 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:L;src:url(LuckiestGuy.ttf)}
+body{margin:0;width:1920px;height:1080px;font-family:L;background:radial-gradient(circle at 50% 40%,#5a3fb8,#1b0f3d 70%);overflow:hidden;color:#fff}
+h2{position:absolute;font-size:30px;letter-spacing:2px;color:#ffd75a;-webkit-text-stroke:2px #2a1450;margin:0}
+.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:14px;border-radius:28px;padding:0 34px;height:96px;font-size:44px;
+ -webkit-text-stroke:3px #2a1450;paint-order:stroke fill;border:5px solid #2a1450;box-shadow:0 10px 0 #2a1450,0 18px 30px rgba(0,0,0,.45);margin:0 18px 36px 0}
+.btn:before{content:"";position:absolute;left:14px;right:14px;top:8px;height:34%;border-radius:20px;background:linear-gradient(rgba(255,255,255,.75),rgba(255,255,255,.08))}
+.btn:after{content:"";position:absolute;inset:0;border-radius:23px;box-shadow:inset 0 -10px 0 rgba(0,0,0,.18)}
+.red{background:linear-gradient(#ff7a6b,#ff2d55 55%,#d1103c)}.green{background:linear-gradient(#a8ff7a,#3fd65a 55%,#1fa846)}
+.gold{background:linear-gradient(#fff3a0,#ffc531 55%,#f08c00)}.blue{background:linear-gradient(#8fe7ff,#2fa8ff 55%,#1a6ff0)}
+.purple{background:linear-gradient(#e7a8ff,#b25cff 55%,#7a2ee0)}.grey{background:linear-gradient(#ddd6e8,#a99fbd);color:#eee}
+.pressed{transform:translateY(8px);box-shadow:0 2px 0 #2a1450}
+.shoot{height:170px;font-size:92px;border-radius:52px;padding:0 70px;border-width:7px;box-shadow:0 14px 0 #2a1450,0 0 60px 18px rgba(255,190,60,.75)}
+.shoot .rim{position:absolute;inset:-16px;border-radius:66px;border:6px solid #ffd75a;box-shadow:0 0 30px #ffd75a}
+.tile{position:relative;width:150px;height:150px;border-radius:38px;display:inline-flex;flex-direction:column;align-items:center;justify-content:flex-end;
+ border:5px solid #2a1450;box-shadow:0 9px 0 #2a1450,0 16px 26px rgba(0,0,0,.4);margin:0 16px 26px 0;font-size:24px;-webkit-text-stroke:2px #2a1450;paint-order:stroke fill;padding-bottom:10px;box-sizing:border-box}
+.tile img{position:absolute;top:-14px;width:128px;filter:drop-shadow(0 6px 4px rgba(0,0,0,.4))}
+.tile:before{content:"";position:absolute;left:12px;right:12px;top:7px;height:30%;border-radius:26px;background:linear-gradient(rgba(255,255,255,.6),rgba(255,255,255,0))}
+.badge{position:absolute;top:-12px;right:-12px;background:linear-gradient(#ff6a6a,#e3122f);border:4px solid #2a1450;border-radius:30px;font-size:26px;padding:2px 12px}
+.pill{display:inline-flex;align-items:center;height:96px;border-radius:50px;border:5px solid #2a1450;padding:0 34px 0 10px;font-size:52px;margin-right:24px;
+ -webkit-text-stroke:3px #2a1450;paint-order:stroke fill;box-shadow:0 9px 0 #2a1450;position:relative}
+.pill .ic{width:84px;height:84px;border-radius:50%;background:#fff;border:4px solid #2a1450;margin-right:18px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pill .ic img{width:110px}.pill small{font-size:28px;margin-left:16px;color:#c9ffb8}
+.x{width:84px;height:84px;padding:0;font-size:52px;border-radius:26px}
+.chip{display:inline-block;padding:14px 30px;border-radius:30px;border:4px solid #2a1450;font-size:30px;margin-right:14px;-webkit-text-stroke:2px #2a1450;paint-order:stroke fill}
+.on{background:linear-gradient(#fff3a0,#ffb800);box-shadow:0 6px 0 #2a1450}.off{background:rgba(255,255,255,.15);color:#d8ccff;-webkit-text-stroke:0}
+</style></head><body>
+<h2 style="left:60px;top:40px">CUE HUNTERS — UI v6 (BUTTONS)</h2>
+<div style="position:absolute;left:60px;top:100px">
+ <div class="pill green"><div class="ic"><img src="../blender/export/icons/Cash2x_raw.png"></div>$1.25M<small>+$4.2K/s</small></div>
+ <div class="pill gold"><div class="ic"><img src="../blender/export/icons/GoldStick_raw.png"></div>842</div>
+ <div class="pill purple"><div class="ic"><img src="../blender/export/icons/Luck2x_raw.png"></div>LUCK x1,000,000</div>
+</div>
+<div style="position:absolute;left:60px;top:270px;width:520px">
+ <div class="tile blue"><img src="../blender/export/icons/Pack3_raw.png">INVENTORY<div class="badge">3</div></div>
+ <div class="tile red"><img src="../blender/export/icons/DragonCue_raw.png">CUES</div>
+ <div class="tile gold"><img src="../blender/export/icons/GoldenBall_raw.png">BONUS<div class="badge">!</div></div>
+ <div class="tile green"><img src="../blender/export/icons/Pack2_raw.png">SHOP</div>
+ <div class="tile purple"><img src="../blender/export/icons/Luck2x_raw.png">GYM</div>
+ <div class="tile grey" style="color:#fff"><img src="../blender/export/icons/Pack1_raw.png">SETTINGS</div>
+</div>
+<div style="position:absolute;left:760px;top:830px"><div class="btn red shoot"><div class="rim"></div>🎱 SHOOT!</div></div>
+<div style="position:absolute;left:700px;top:290px;width:1180px">
+ <div class="btn green">BUY</div><div class="btn green pressed">BUY</div><div class="btn grey">OWNED</div><div class="btn gold">R$ 150</div>
+ <br><div class="btn blue">PLACE</div><div class="btn red">REMOVE</div><div class="btn purple">SELL</div><div class="btn red x">X</div>
+ <br><div class="btn gold">CLAIM</div><div class="btn green">START TRAINING</div>
+ <br><span class="chip on">BALLS</span><span class="chip off">CUES</span><span class="chip off">AURAS</span>
+</div>
+</body></html>
