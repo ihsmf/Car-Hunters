@@ -28641,6 +28641,7 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
 local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
 local RunService = game:GetService("RunService")
 local RS = game:GetService("ReplicatedStorage")
 local C = require(RS.Shared.Config)
@@ -29003,11 +29004,16 @@ local function rescale()
 		leftBar.Position = UDim2.new(0,10,.48,0)
 		cornerBar.Position = UDim2.new(1,-12,1,-190)
 	else
-		local k = math.clamp(math.min(v.X / 1920, v.Y / 1080), .36, 1.4)
+		local phone = UserInputService.TouchEnabled and v.Y < 600
+		local k = math.clamp(math.min(v.X / 1920, v.Y / 1080) * (phone and 1.3 or 1), .36, 1.4)
 		for _, sc in scales do sc.Scale = k end
 		leftBar.Position = UDim2.new(0,12,.5,0)
 		cornerBar.Position = UDim2.new(1,-12,1,-12)
 	end
+	-- menus fill the phone screen but never leave it: at most 92 % of the width and 86 % of the height
+	local inset = GuiService:GetGuiInset().Y
+	scales[5].Scale = math.clamp(math.min(v.X * 0.92 / 980, (v.Y - inset) * 0.86 / 690), 0.3, 1.4)
+	center.Position = UDim2.new(0.5, 0, 0.5, inset / 2)
 end
 workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale)
 rescale()
@@ -29287,15 +29293,15 @@ renderers.Inventory = function()
 			text(string.upper(V.name) .. " x" .. V.mult, 20, nil, { Size = UDim2.fromScale(1, 1), Parent = vb })
 		end
 		text(C.DesignName(it), 28, INK, { Size = UDim2.fromOffset(160, 30), Position = UDim2.fromOffset(114, 84), Parent = c, TextScaled = true, NoStroke = true, TextXAlignment = Enum.TextXAlignment.Left })
-		text("$" .. C.Short(inc) .. "/s", 26, MONEY, { Size = UDim2.fromOffset(160, 30), Position = UDim2.fromOffset(114, 114), Parent = c, NoStroke = true, TextXAlignment = Enum.TextXAlignment.Left })
-		text("1 in " .. C.FullNumber(C.BallOdds(it)), 20, MUTED, { Size = UDim2.fromOffset(165, 24), Position = UDim2.fromOffset(114, 146), Parent = c, TextScaled = true, NoStroke = true, TextXAlignment = Enum.TextXAlignment.Left }) -- the ball's own odds
-		button({ Size = UDim2.fromOffset(150, 52), Position = UDim2.fromOffset(9, 180), Parent = c, Radius = 18 }, it.eq and U.Red or GREEN, it.eq and "Remove" or "Place", 22, function()
+		text("$" .. C.Short(inc) .. "/s", 30, MONEY, { Size = UDim2.fromOffset(160, 32), Position = UDim2.fromOffset(114, 112), Parent = c, NoStroke = true, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Left })
+		local chip = new("Frame", { Size = UDim2.fromOffset(150, 26), Position = UDim2.fromOffset(114, 148), BackgroundColor3 = rgb(225, 250, 225), Parent = c }, { corner(13), stroke(2, GREEN[2]) })
+		text((it.eq and "ON TABLE  ·  " or "") .. "1 IN " .. C.FullNumber(C.BallOdds(it)), 18, MONEY, { Size = UDim2.new(1, -12, 1, -4), Position = UDim2.fromOffset(6, 2), Parent = chip, TextScaled = true, NoStroke = true }) -- the ball's own odds
+		button({ Size = UDim2.fromOffset(104, 52), Position = UDim2.fromOffset(9, 184), Parent = c, Radius = 18 }, it.eq and U.Red or GREEN, it.eq and "Remove" or "Place", 22, function()
 			if call("Equip", i) then renderers.Inventory() end
 		end)
-		button({ Size = UDim2.fromOffset(98, 52), Position = UDim2.fromOffset(176, 180), Parent = c, Radius = 18 }, U.Action, "Sell", 22, function()
+		button({ Size = UDim2.fromOffset(152, 52), Position = UDim2.fromOffset(122, 184), Parent = c, Radius = 18, Icon = "Shop" }, U.Action, "Sell $" .. C.Short(inc * 30), 20, function()
 			if call("Sell", i) then renderers.Inventory() end
 		end)
-		if it.eq then text("ON TABLE", 18, MONEY, { Size = UDim2.fromOffset(160, 24), Position = UDim2.fromOffset(114, 146), Parent = c, NoStroke = true, TextXAlignment = Enum.TextXAlignment.Left }) end
 	end
 end
 
