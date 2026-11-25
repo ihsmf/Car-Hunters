@@ -236,44 +236,49 @@ local function button(props, colors, label, size, onClick)
  local hit = new("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "",
 		Name = label ~= "" and (label or "Action") or "MenuAction", ZIndex = 5, AutoButtonColor = false, Parent = holder })
 	local scale = new("UIScale", { Parent = holder })
+	-- Buttons v8 (Figma "CUE HUNTERS — Buttons v8"): content = [Badge 0.72H] gap 0.15H [LABEL], padding L 0.12H / R 0.3H,
+	-- laid out by a UIListLayout inside the button. The badge has a fixed size, the label takes exactly the width that is
+	-- left and shrinks its text to fit, so nothing can stick out or drift, whatever the screen or the label length.
 	local h = props.Size.Y.Offset
 	local iconName = props.Icon or (not props.Hud and iconFor(label)) or nil
-	local square = iconName ~= nil and props.Size.X.Offset > 0 and props.Size.X.Offset < h * 1.6 -- e.g. the close button: icon only
-	local inset = 12
+	local square = iconName ~= nil and props.Size.X.Offset > 0 and props.Size.X.Offset < h * 1.6 -- e.g. close: icon only
+	local content = new("Frame", { Name = "Content", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 3, Parent = body }, {
+		new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center,
+			HorizontalAlignment = (square or not iconName) and Enum.HorizontalAlignment.Center or Enum.HorizontalAlignment.Left,
+			Padding = UDim.new(0, math.floor(h * .15)), SortOrder = Enum.SortOrder.LayoutOrder }),
+		new("UIPadding", { PaddingLeft = UDim.new(0, (square or not iconName) and 10 or math.floor(h * .12)),
+			PaddingRight = UDim.new(0, (square or not iconName) and 10 or math.floor(h * .3)) }),
+	})
+	local d = 0
 	if props.Hud and props.Icon == "Shot" then
-		local glyph = hudIcon(body, "Shoot", 54, UDim2.new(0, 17, .5, 0))
-		glyph.AnchorPoint = Vector2.new(0, .5)
+		d = 64
+		local slot = new("Frame", { Name = "Badge", Size = UDim2.fromOffset(d, d), BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = 3, Parent = content })
+		local glyph = hudIcon(slot, "Shoot", 54, UDim2.fromScale(.5, .5))
+		glyph.AnchorPoint = Vector2.new(.5, .5)
 	elseif iconName then
-		-- the icon sits in a round badge INSIDE the button: it can never stick out, on any screen
-		local d = math.floor(h * (square and .78 or .72))
-		local badge = new("Frame", { Name = "Badge", Size = UDim2.fromOffset(d, d), AnchorPoint = Vector2.new(square and .5 or 0, .5),
-			Position = square and UDim2.fromScale(.5, .5) or UDim2.new(0, math.floor(h * .13), .5, 0), BackgroundColor3 = INK,
-			BackgroundTransparency = square and 1 or .72, ZIndex = 3, Parent = body }, { new("UICorner", { CornerRadius = UDim.new(1, 0) }) })
-		if not square then new("UIStroke", { Color = INK, Transparency = .45, Thickness = math.max(2, h / 28), Parent = badge }) end
+		d = math.floor(h * (square and .62 or .72))
+		local badge = new("Frame", { Name = "Badge", Size = UDim2.fromOffset(d, d), BackgroundColor3 = INK, BackgroundTransparency = square and 1 or .72,
+			LayoutOrder = 1, ZIndex = 3, Parent = content }, { new("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+		if not square then new("UIStroke", { Color = INK, Transparency = .45, Thickness = math.max(2, math.floor(h / 28)), Parent = badge }) end
 		if ICON_IMAGES[iconName] then
-			new("ImageLabel", { Size = UDim2.fromScale(.96, .96), AnchorPoint = Vector2.new(.5, .5), Position = UDim2.fromScale(.5, .5),
+			new("ImageLabel", { Size = UDim2.fromScale(.92, .92), AnchorPoint = Vector2.new(.5, .5), Position = UDim2.fromScale(.5, .5),
 				BackgroundTransparency = 1, Image = "rbxassetid://" .. ICON_IMAGES[iconName], ScaleType = Enum.ScaleType.Fit, ZIndex = 4, Parent = badge })
 		elseif ICONS[iconName] then
-			local g = math.floor(d * (square and .8 or .62))
+			local g = math.floor(d * (square and 1 or .62))
 			local glyph = icon(badge, iconName, g, UDim2.fromScale(.5, .5), WHITE)
 			glyph.AnchorPoint, glyph.ZIndex = Vector2.new(.5, .5), 4
 		end
-		inset = square and 0 or math.floor(h * .13) + d + math.floor(h * .14)
 	end
 	local big = math.floor((size or 24) * 1.32)
+	local gap = d > 0 and math.floor(h * .15) or 0
 	local lbl = text((square or label == "X") and "" or label or "", big, INK, {
-		Size = UDim2.new(1, -inset - 12, 1, -8),
-		Position = UDim2.fromOffset(inset, 4), Parent = body, TextScaled = true, NoStroke = true,
+		Name = "Label", Size = UDim2.new(1, -(d + gap), 1, -8), LayoutOrder = 2, Parent = content, TextScaled = true, NoStroke = true,
 	})
 	new("UITextSizeConstraint", { MaxTextSize = big, Parent = lbl })
-	if not iconName and not props.Hud then lbl.Position, lbl.Size = UDim2.fromOffset(12, 4), UDim2.new(1, -24, 1, -8) end
+	if square or label == "" then lbl.Visible = false end
 	if label ~= "" then
 		lbl.TextColor3 = WHITE
 		new("UIStroke", { Color = INK, Thickness = props.Hud and 4 or math.clamp(big / 12, 2, 4), Parent = lbl })
-	end
-	if props.Hud and props.Icon == "Shot" then
-		lbl.Position = UDim2.fromOffset(86, 4)
-		lbl.Size = UDim2.new(1, -100, 1, -8)
 	end
  local focus = stroke(5, WHITE)
 	focus.Transparency, focus.Parent = 1, holder
@@ -1151,13 +1156,22 @@ end
 -- menu buttons (Figma component "MenuButton": icon + label) with badges
 for i, m in U.Menu do
 	local holder, body = button({ Hud = true, Size = UDim2.fromOffset(132, 124), LayoutOrder = i, Parent = menu, Radius = 38 }, { m[4], m[5] }, "", 1, function() open(m[1]) end)
-	-- the icon fits inside the tile (no oversize, no negative offset): it can't leave the button on any screen
-	local glyph = ICON_IMAGES[m[1]] and new("ImageLabel", { Name = m[1] .. "Icon", BackgroundTransparency = 1, Image = "rbxassetid://" .. ICON_IMAGES[m[1]],
-		ScaleType = Enum.ScaleType.Fit, Size = UDim2.fromOffset(82, 74), Position = UDim2.new(.5, 0, 0, 4), ZIndex = 3, Parent = body })
-		or hudIcon(body, m[1], 64, UDim2.new(.5, 0, 0, 8))
-	glyph.AnchorPoint = Vector2.new(.5,0)
-	local caption=text(m[3],25,WHITE,{Size=UDim2.new(1,-14,0,35),Position=UDim2.fromOffset(7,74),TextScaled=true,Parent=body})
- new("UITextSizeConstraint",{MaxTextSize=25,Parent=caption})
+	-- Figma MenuTile: 3D icon in a 76x76 slot (Fit) on top, label under it, centred by a vertical list layout
+	local tileBox = new("Frame", { Name = "Content", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 3, Parent = body }, {
+		new("UIListLayout", { FillDirection = Enum.FillDirection.Vertical, HorizontalAlignment = Enum.HorizontalAlignment.Center,
+			VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder }),
+		new("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 8) }),
+	})
+	local slot = new("Frame", { Name = m[1] .. "IconSlot", Size = UDim2.fromOffset(76, 76), BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = 3, Parent = tileBox })
+	if ICON_IMAGES[m[1]] then
+		new("ImageLabel", { Name = m[1] .. "Icon", BackgroundTransparency = 1, Image = "rbxassetid://" .. ICON_IMAGES[m[1]], ScaleType = Enum.ScaleType.Fit,
+			Size = UDim2.fromScale(1, 1), ZIndex = 3, Parent = slot })
+	else
+		local g = hudIcon(slot, m[1], 64, UDim2.fromScale(.5, .5))
+		g.AnchorPoint = Vector2.new(.5, .5)
+	end
+	local caption=text(m[3],22,WHITE,{Size=UDim2.new(1,-14,0,28),LayoutOrder=2,TextScaled=true,ZIndex=3,Parent=tileBox})
+ new("UITextSizeConstraint",{MaxTextSize=22,Parent=caption})
  holder.Name = m[1]
 	local bHolder, bBody = box({ Size = UDim2.fromOffset(24, 24), Position = UDim2.fromOffset(100, 8), Parent = holder, ZIndex = 6 }, rgb(255, 59, 59), rgb(255, 59, 59), 20, 4)
 	badges[m[1]] = { holder = bHolder, label = text("!", 17, nil, { Size = UDim2.fromScale(1, 1), Parent = bBody }) }

@@ -850,13 +850,14 @@ Fx.OnClientEvent:Connect(function(kind, p)
 			tween(dim, 0.35, { BackgroundTransparency = 1 })
 		end)
 		local Scenes = require(RS.Shared.RevealScenes)
-		local ctx = { skipped = function() return skip end, sound = sfx, shake = hardShake, flash = doFlash, ballOdds = ballOdds }
+		local ctx = { skipped = function() return skip end, sound = sfx, shake = hardShake, flash = doFlash, ballOdds = ballOdds,
+			fade = function(t) tween(dim, t, { BackgroundTransparency = 0 }) end }
 		local ok, err = pcall(final and Scenes.Finale or Scenes.Play, it, ctx)
 		if not ok then warn("Reveal scene failed:", err) end
 		cam.CameraType = Enum.CameraType.Custom
 		skip = false
 		if final and _G.Toast then _G.Toast(C.ItemName(it) .. "  ·  $" .. C.Short(C.ItemIncome(it)) .. "/s", rcol) end
-		tween(dim, full and 0.35 or 0.2, { BackgroundTransparency = 0 }).Completed:Wait()
+		tween(dim, 0.12, { BackgroundTransparency = 0 }).Completed:Wait() -- the scene already faded out (or was skipped)
 		revealOnBase(slot, tid, it, bonus, not full)
 	else -- skipped: just the card, the ball appears on the base by itself
 		tween(dim, 0.25, { BackgroundTransparency = 0.55 })

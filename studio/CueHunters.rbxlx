@@ -25554,7 +25554,6 @@ return BallArt
 local RS = game:GetService("ReplicatedStorage")
 local Run = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
-local Players = game:GetService("Players")
 local C = require(RS.Shared.Config)
 local BallArt = require(RS.Shared.BallArt)
 local MeshBuilder = require(RS.Shared.MeshBuilder)
@@ -26052,6 +26051,7 @@ function M.Play(it, ctx)
 			local eye, at = step(u, dt)
 			cam.CFrame = CFrame.lookAt(eye, at)
 			cam.FieldOfView = 55 - 10 * u
+			if ctx.fade and not S.faded and (now - t0) >= duration - 0.3 then S.faded = true; ctx.fade(0.3) end -- to black, then the close-up
 			if u >= 1 or ctx.skipped() then break end
 			Run.RenderStepped:Wait()
 		until false
@@ -26061,93 +26061,159 @@ function M.Play(it, ctx)
 end
 
 -- ===== the very last ball: the birth of a star =====
+-- Played on its own stage far from the map (the real long table runs inside a hall with a ceiling): a copy of the first
+-- six tables under an open starry sky. Everything freezes, the balls rise from the felt, swirl into a galaxy above the
+-- table, collapse into a supernova; the legendary ball is born in the flash and flies to the camera. The close-up card
+-- (Throw's revealOnBase) follows.
 function M.Finale(it, ctx)
 	local cam = workspace.CurrentCamera
-	local plr = Players.LocalPlayer
-	local root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-	local base = root and root.Position or V(0, 5, C.Table.StartZ - 10)
-	local S = stage(V(0, 0, 0))
-	local center = V(0, 70, C.Table.StartZ + 260) -- over the long table
-	local balls = {}
-	local n = #C.Rarities
-	for i = 1, n do -- one ball rises from every table
-		local col = C.Rarities[C.Balls[i].rarity][2]
-		local start = V((i % 2 == 0 and 1 or -1) * 6, C.Table.FeltY + 2, C.Table.StartZ + (i - 0.5) * C.Table.SegmentLength)
-		local b = S.ball(3, start, col, Enum.Material.Neon)
-		balls[i] = { p = b, from = start, a = i * 2.39996, r = 30 + (i % 15) * 4, h = (i % 7 - 3) * 2 }
+	local O = V(-12000, 600, 0)
+	local S = stage(O)
+	local felt = O.Y + C.Table.FeltY + 0.9
+	-- the table: clones of the first segments of the long table, moved onto the stage
+	local long = workspace:FindFirstChild("World") and workspace.World:FindFirstChild("LongTable")
+	local first = long and long:FindFirstChild("Table1")
+	local LEN = C.Table.SegmentLength * 6
+	if first then
+		local delta = O - first:GetPivot().Position + V(0, 0, C.Table.SegmentLength / 2)
+		for k = 1, 6 do
+			local seg = long:FindFirstChild("Table" .. k)
+			if seg then
+				local ok, copy = pcall(function() return seg:Clone() end)
+				if ok and copy then
+					copy:PivotTo(copy:GetPivot() + delta)
+					copy.Parent = S.folder
+				end
+			end
+		end
+	else
+		S.part(V(C.Table.Width, 1, LEN), CFrame.new(O + V(0, C.Table.FeltY - 0.5, LEN / 2)), rgb(30, 130, 70), Enum.Material.Fabric)
 	end
-	local star = S.ball(1, center, rgb(255, 240, 200), Enum.Material.Neon)
-	S.light(star, rgb(255, 230, 180), 10, 120)
-	local ring = S.part(V(1, 1, 1), CFrame.new(center) * CFrame.Angles(0, 0, math.pi / 2), rgb(255, 220, 160), Enum.Material.Neon, Enum.PartType.Cylinder)
+	-- deep-space backdrop: a few huge glowing nebula clouds far behind the galaxy
+	for i, c in { rgb(120, 60, 200), rgb(40, 90, 220), rgb(220, 70, 160), rgb(60, 160, 220) } do
+		local n = S.ball(160 + i * 30, O + V((i % 2 == 0 and 1 or -1) * (120 + i * 40), 80 + i * 25, 520 + i * 60), c, Enum.Material.Neon)
+		n.Transparency = 0.88
+	end
+	local G = O + V(0, 48, LEN * 0.45) -- galaxy centre, above the table
+	-- one ball for every table
+	local balls = {}
+	local n = math.min(#C.Rarities, 75)
+	local rng = Random.new(7)
+	for i = 1, n do
+		local col = C.Rarities[C.Balls[i].rarity][2]
+		local start = V(rng:NextNumber(-11, 11), felt, rng:NextNumber(6, LEN - 6))
+		local b = S.ball(1.8, O + start, col, Enum.Material.Neon)
+		if i % 6 == 0 then S.light(b, col, 1.5, 10) end
+		balls[i] = { p = b, from = O + start, a = rng:NextNumber(0, math.pi * 2), r = rng:NextNumber(14, 62), h = rng:NextNumber(-3, 3),
+			delay = (start.Z / LEN) * 0.9 + rng:NextNumber(0, 0.3) }
+	end
+	local core = S.ball(1, G, rgb(255, 244, 210), Enum.Material.Neon)
+	local coreLight = S.light(core, rgb(255, 225, 170), 0, 140)
+	local tilt = CFrame.Angles(math.rad(-22), 0, math.rad(10)) -- the galaxy disc is tilted towards the camera
+	local ring = S.part(V(0.2, 1, 1), CFrame.new(G) * tilt * CFrame.Angles(0, 0, math.pi / 2), rgb(255, 220, 150), Enum.Material.Neon, Enum.PartType.Cylinder)
 	ring.Transparency = 1
-	local sparks = S.emit(star, { Color = ColorSequence.new(rgb(255, 250, 220), rgb(255, 120, 60)), Rate = 0, Lifetime = NumberRange.new(1.5, 3),
-		Speed = NumberRange.new(40, 120), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new(3, 0) })
+	local sparks = S.emit(core, { Color = ColorSequence.new(rgb(255, 250, 220), rgb(255, 120, 60)), Lifetime = NumberRange.new(1.5, 3),
+		Speed = NumberRange.new(40, 120), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new(2.5, 0), Drag = 1.5 })
+	local dust = S.emit(core, { Color = ColorSequence.new(rgb(200, 170, 255), rgb(120, 200, 255)), Rate = 0, Lifetime = NumberRange.new(2, 3),
+		Speed = NumberRange.new(4, 10), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new(1.2, 0), Transparency = NumberSequence.new(0.3, 1) })
 	local prize = BallArt.Make(it, 4)
 	prize.Parent = S.folder
 	prize:ScaleTo(0.01)
-	local D = _G.ShortOnly and 7 or 13
+	prize:PivotTo(CFrame.new(G))
+	local halo = S.emit(prize.PrimaryPart, { Color = ColorSequence.new(rgb(255, 230, 140), WHITE), Rate = 0, Lifetime = NumberRange.new(0.6, 1.2),
+		Speed = NumberRange.new(2, 6), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new(0.8, 0) })
+	local D = _G.ShortOnly and 8 or 13
+	local sky = Lighting:FindFirstChildOfClass("Sky")
+	local stars = sky and sky.StarCount
+	if sky then sky.StarCount = 5000 end
 	local prevType = cam.CameraType
-	return withLighting({ ClockTime = 0, Brightness = 1.6, Ambient = rgb(140, 120, 190), OutdoorAmbient = rgb(130, 120, 180), ExposureCompensation = 0.3 }, function()
+	local ok = withLighting({ ClockTime = 0, Brightness = 1.4, Ambient = rgb(120, 105, 170), OutdoorAmbient = rgb(110, 100, 160),
+		ExposureCompensation = 0.25, FogEnd = 100000 }, function()
 		S.folder.Parent = workspace
 		cam.CameraType = Enum.CameraType.Scriptable
-		local t0 = os.clock()
+		local t0, last = os.clock(), os.clock()
+		local view
 		local boomed, born = false, false
 		repeat
-			local t = (os.clock() - t0) * (13 / D)
-			local u = math.min(1, t / 13)
-			for i, b in balls do
-				local rise = smooth(seg(t, 0.5 + i * 0.02, 3.2 + i * 0.01)) -- everything freezes, then rises
-				local swirl = smooth(seg(t, 3, 6.5))
-				local collapse = smooth(seg(t, 6.5, 8.6))
-				local a = b.a + t * (0.6 + collapse * 3)
-				local r = b.r * (1 - collapse * 0.98)
-				local galaxy = center + V(math.cos(a) * r, b.h * (1 - collapse) + math.sin(a * 2) * 2 * (1 - collapse), math.sin(a) * r * 0.6)
-				local up = b.from + V(0, rise * 40, 0)
-				b.p.Position = up:Lerp(galaxy, swirl)
-				b.p.Transparency = t > 8.6 and 1 or 0
+			local now = os.clock()
+			local dt = math.min(0.05, now - last)
+			last = now
+			local t = (now - t0) * (13 / D) -- the timeline is written for 13 s
+			-- 1) freeze, then the balls rise from the felt (back tables first) and 2) swirl into the galaxy, 3) collapse
+			local swirl = smooth(seg(t, 3.6, 7))
+			local collapse = smooth(seg(t, 7.2, 9.2))
+			local spin = t * (0.35 + collapse * 2.5)
+			for _, b in balls do
+				local rise = smooth(seg(t, 1.1 + b.delay, 3.4 + b.delay))
+				local up = b.from + V(0, rise * 14 + math.sin(t * 3 + b.a) * 0.3 * rise, 0)
+				local r = b.r * (1 - collapse * 0.97)
+				local orbit = G + (tilt * CFrame.Angles(0, b.a + spin * (70 / b.r) * 0.6, 0)).LookVector * r + V(0, b.h * (1 - collapse), 0)
+				b.p.Position = up:Lerp(orbit, swirl)
+				b.p.Transparency = boomed and 1 or 0
 			end
-			star.Size = V(1, 1, 1) * (1 + 14 * smooth(seg(t, 6.8, 8.6)) * (1 + 0.08 * math.sin(t * 30)))
-			if t > 8.6 and not boomed then -- supernova
+			dust.Rate = (t > 4 and t < 9.2) and 60 or 0
+			-- the core of the new star heats up while the galaxy collapses
+			local heat = smooth(seg(t, 6.5, 9.2))
+			core.Size = V(1, 1, 1) * (1 + 13 * heat) * (1 + 0.06 * math.sin(t * 40) * heat)
+			coreLight.Brightness = 12 * heat
+			if t >= 9.2 and not boomed then -- 4) supernova
 				boomed = true
-				sparks:Emit(400)
+				sparks:Emit(500)
 				ctx.sound("Break"); ctx.sound("Hit")
-				ctx.shake(2.5)
-				ctx.flash(WHITE, 1, 0.9)
-				ring.Transparency = 0.2
+				ctx.shake(2.4)
+				ctx.flash(WHITE, 1, 1)
+				ring.Transparency = 0.15
 			end
 			if boomed then
-				local e = seg(t, 8.6, 10.2)
-				ring.Size = V(1, 20 + 500 * e, 20 + 500 * e)
-				ring.Transparency = 0.2 + 0.8 * e
-				star.Size = V(1, 1, 1) * math.max(0.1, 15 * (1 - smooth(seg(t, 8.8, 10))))
+				local e = seg(t, 9.2, 10.8)
+				ring.Size = V(0.2, 12 + 420 * e, 12 + 420 * e)
+				ring.Transparency = 0.15 + 0.85 * e
+				core.Size = V(1, 1, 1) * math.max(0.05, 14 * (1 - smooth(seg(t, 9.25, 10))))
+				coreLight.Brightness = 12 * (1 - e)
 			end
-			if t > 10 then -- the legendary ball is born from the light and flies down to the player
-				if not born then born = true; ctx.sound("Reward") end
-				local f = smooth(seg(t, 10, 12))
-				prize:ScaleTo(math.max(0.01, smooth(seg(t, 10, 10.6))))
-				local goal = base + V(0, 3, 9)
-				prize:PivotTo(CFrame.new(center:Lerp(goal, f)) * CFrame.Angles(0, t * 2, 0))
+			-- 5) the legendary ball is born in the light and flies to the camera
+			local eyeEnd = G + V(0, 4, -34)
+			if t >= 9.6 then
+				if not born then born = true; ctx.sound("Reward"); halo.Rate = 40 end
+				prize:ScaleTo(math.max(0.01, smooth(seg(t, 9.6, 10.4)) * 1.6))
+				local f = smooth(seg(t, 10.6, 12.4))
+				prize:PivotTo(CFrame.new(G:Lerp(eyeEnd + V(0, -1, 9), f)) * CFrame.Angles(0, t * 2.2, 0))
 			end
+			-- camera keys
 			local eye, at
-			if t < 3.2 then
-				eye, at = base + V(-6, 6, -10), center:Lerp(base + V(0, 10, 60), 0.4)
-			elseif t < 8.6 then
-				local o = smooth(seg(t, 3.2, 8.6))
-				eye, at = base + V(-10 + 4 * o, 12 + 20 * o, -18 + 120 * o), center
-			elseif t < 10 then
-				eye, at = base + V(-6, 30, 102), center
-			else
-				local p = prize:GetPivot().Position
-				eye, at = base + V(-5, 7, -6), p
+			if t < 1.1 then -- frozen: low behind the first table, down the felt
+				eye, at = O + V(-4, 7, -12), O + V(0, 3, 70)
+			elseif t < 3.8 then -- crane up and back while the balls rise
+				local u = smooth(seg(t, 1.1, 3.8))
+				eye = (O + V(-4, 7, -12)):Lerp(O + V(-18, 26, -40), u)
+				at = (O + V(0, 3, 70)):Lerp(G, u)
+			elseif t < 7.2 then -- wide on the galaxy, slow orbit
+				local u = smooth(seg(t, 3.8, 7.2))
+				local a = -0.35 + 0.5 * u
+				eye = G + V(math.sin(a) * 120, 22 - 6 * u, -math.cos(a) * 120)
+				at = G
+			elseif t < 9.6 then -- push in to the collapsing core
+				local u = smooth(seg(t, 7.2, 9.4))
+				local from = G + V(math.sin(0.15) * 120, 16, -math.cos(0.15) * 120)
+				eye, at = from:Lerp(G + V(4, 8, -60), u), G
+			else -- the new ball comes to us
+				local u = smooth(seg(t, 9.6, 10.6))
+				eye = (G + V(4, 8, -60)):Lerp(eyeEnd, u)
+				at = prize:GetPivot().Position
 			end
-			cam.CFrame = CFrame.lookAt(eye, at)
-			cam.FieldOfView = 70
+			local goal = CFrame.lookAt(eye, at)
+			view = view and view:Lerp(goal, 1 - math.exp(-7 * dt)) or goal
+			cam.CFrame = view
+			cam.FieldOfView = 62
+			if ctx.fade and not S.faded and t >= 12.55 then S.faded = true; ctx.fade(0.35 * D / 13) end
 			if t >= 13 or ctx.skipped() then break end
 			Run.RenderStepped:Wait()
 		until false
-		S.folder:Destroy()
-		cam.CameraType = prevType
 	end)
+	if sky then sky.StarCount = stars end
+	S.folder:Destroy()
+	cam.CameraType = prevType
+	return ok
 end
 
 return M
@@ -29012,44 +29078,49 @@ local function button(props, colors, label, size, onClick)
  local hit = new("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "",
 		Name = label ~= "" and (label or "Action") or "MenuAction", ZIndex = 5, AutoButtonColor = false, Parent = holder })
 	local scale = new("UIScale", { Parent = holder })
+	-- Buttons v8 (Figma "CUE HUNTERS — Buttons v8"): content = [Badge 0.72H] gap 0.15H [LABEL], padding L 0.12H / R 0.3H,
+	-- laid out by a UIListLayout inside the button. The badge has a fixed size, the label takes exactly the width that is
+	-- left and shrinks its text to fit, so nothing can stick out or drift, whatever the screen or the label length.
 	local h = props.Size.Y.Offset
 	local iconName = props.Icon or (not props.Hud and iconFor(label)) or nil
-	local square = iconName ~= nil and props.Size.X.Offset > 0 and props.Size.X.Offset < h * 1.6 -- e.g. the close button: icon only
-	local inset = 12
+	local square = iconName ~= nil and props.Size.X.Offset > 0 and props.Size.X.Offset < h * 1.6 -- e.g. close: icon only
+	local content = new("Frame", { Name = "Content", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 3, Parent = body }, {
+		new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center,
+			HorizontalAlignment = (square or not iconName) and Enum.HorizontalAlignment.Center or Enum.HorizontalAlignment.Left,
+			Padding = UDim.new(0, math.floor(h * .15)), SortOrder = Enum.SortOrder.LayoutOrder }),
+		new("UIPadding", { PaddingLeft = UDim.new(0, (square or not iconName) and 10 or math.floor(h * .12)),
+			PaddingRight = UDim.new(0, (square or not iconName) and 10 or math.floor(h * .3)) }),
+	})
+	local d = 0
 	if props.Hud and props.Icon == "Shot" then
-		local glyph = hudIcon(body, "Shoot", 54, UDim2.new(0, 17, .5, 0))
-		glyph.AnchorPoint = Vector2.new(0, .5)
+		d = 64
+		local slot = new("Frame", { Name = "Badge", Size = UDim2.fromOffset(d, d), BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = 3, Parent = content })
+		local glyph = hudIcon(slot, "Shoot", 54, UDim2.fromScale(.5, .5))
+		glyph.AnchorPoint = Vector2.new(.5, .5)
 	elseif iconName then
-		-- the icon sits in a round badge INSIDE the button: it can never stick out, on any screen
-		local d = math.floor(h * (square and .78 or .72))
-		local badge = new("Frame", { Name = "Badge", Size = UDim2.fromOffset(d, d), AnchorPoint = Vector2.new(square and .5 or 0, .5),
-			Position = square and UDim2.fromScale(.5, .5) or UDim2.new(0, math.floor(h * .13), .5, 0), BackgroundColor3 = INK,
-			BackgroundTransparency = square and 1 or .72, ZIndex = 3, Parent = body }, { new("UICorner", { CornerRadius = UDim.new(1, 0) }) })
-		if not square then new("UIStroke", { Color = INK, Transparency = .45, Thickness = math.max(2, h / 28), Parent = badge }) end
+		d = math.floor(h * (square and .62 or .72))
+		local badge = new("Frame", { Name = "Badge", Size = UDim2.fromOffset(d, d), BackgroundColor3 = INK, BackgroundTransparency = square and 1 or .72,
+			LayoutOrder = 1, ZIndex = 3, Parent = content }, { new("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+		if not square then new("UIStroke", { Color = INK, Transparency = .45, Thickness = math.max(2, math.floor(h / 28)), Parent = badge }) end
 		if ICON_IMAGES[iconName] then
-			new("ImageLabel", { Size = UDim2.fromScale(.96, .96), AnchorPoint = Vector2.new(.5, .5), Position = UDim2.fromScale(.5, .5),
+			new("ImageLabel", { Size = UDim2.fromScale(.92, .92), AnchorPoint = Vector2.new(.5, .5), Position = UDim2.fromScale(.5, .5),
 				BackgroundTransparency = 1, Image = "rbxassetid://" .. ICON_IMAGES[iconName], ScaleType = Enum.ScaleType.Fit, ZIndex = 4, Parent = badge })
 		elseif ICONS[iconName] then
-			local g = math.floor(d * (square and .8 or .62))
+			local g = math.floor(d * (square and 1 or .62))
 			local glyph = icon(badge, iconName, g, UDim2.fromScale(.5, .5), WHITE)
 			glyph.AnchorPoint, glyph.ZIndex = Vector2.new(.5, .5), 4
 		end
-		inset = square and 0 or math.floor(h * .13) + d + math.floor(h * .14)
 	end
 	local big = math.floor((size or 24) * 1.32)
+	local gap = d > 0 and math.floor(h * .15) or 0
 	local lbl = text((square or label == "X") and "" or label or "", big, INK, {
-		Size = UDim2.new(1, -inset - 12, 1, -8),
-		Position = UDim2.fromOffset(inset, 4), Parent = body, TextScaled = true, NoStroke = true,
+		Name = "Label", Size = UDim2.new(1, -(d + gap), 1, -8), LayoutOrder = 2, Parent = content, TextScaled = true, NoStroke = true,
 	})
 	new("UITextSizeConstraint", { MaxTextSize = big, Parent = lbl })
-	if not iconName and not props.Hud then lbl.Position, lbl.Size = UDim2.fromOffset(12, 4), UDim2.new(1, -24, 1, -8) end
+	if square or label == "" then lbl.Visible = false end
 	if label ~= "" then
 		lbl.TextColor3 = WHITE
 		new("UIStroke", { Color = INK, Thickness = props.Hud and 4 or math.clamp(big / 12, 2, 4), Parent = lbl })
-	end
-	if props.Hud and props.Icon == "Shot" then
-		lbl.Position = UDim2.fromOffset(86, 4)
-		lbl.Size = UDim2.new(1, -100, 1, -8)
 	end
  local focus = stroke(5, WHITE)
 	focus.Transparency, focus.Parent = 1, holder
@@ -29927,13 +29998,22 @@ end
 -- menu buttons (Figma component "MenuButton": icon + label) with badges
 for i, m in U.Menu do
 	local holder, body = button({ Hud = true, Size = UDim2.fromOffset(132, 124), LayoutOrder = i, Parent = menu, Radius = 38 }, { m[4], m[5] }, "", 1, function() open(m[1]) end)
-	-- the icon fits inside the tile (no oversize, no negative offset): it can't leave the button on any screen
-	local glyph = ICON_IMAGES[m[1]] and new("ImageLabel", { Name = m[1] .. "Icon", BackgroundTransparency = 1, Image = "rbxassetid://" .. ICON_IMAGES[m[1]],
-		ScaleType = Enum.ScaleType.Fit, Size = UDim2.fromOffset(82, 74), Position = UDim2.new(.5, 0, 0, 4), ZIndex = 3, Parent = body })
-		or hudIcon(body, m[1], 64, UDim2.new(.5, 0, 0, 8))
-	glyph.AnchorPoint = Vector2.new(.5,0)
-	local caption=text(m[3],25,WHITE,{Size=UDim2.new(1,-14,0,35),Position=UDim2.fromOffset(7,74),TextScaled=true,Parent=body})
- new("UITextSizeConstraint",{MaxTextSize=25,Parent=caption})
+	-- Figma MenuTile: 3D icon in a 76x76 slot (Fit) on top, label under it, centred by a vertical list layout
+	local tileBox = new("Frame", { Name = "Content", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 3, Parent = body }, {
+		new("UIListLayout", { FillDirection = Enum.FillDirection.Vertical, HorizontalAlignment = Enum.HorizontalAlignment.Center,
+			VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder }),
+		new("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 8) }),
+	})
+	local slot = new("Frame", { Name = m[1] .. "IconSlot", Size = UDim2.fromOffset(76, 76), BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = 3, Parent = tileBox })
+	if ICON_IMAGES[m[1]] then
+		new("ImageLabel", { Name = m[1] .. "Icon", BackgroundTransparency = 1, Image = "rbxassetid://" .. ICON_IMAGES[m[1]], ScaleType = Enum.ScaleType.Fit,
+			Size = UDim2.fromScale(1, 1), ZIndex = 3, Parent = slot })
+	else
+		local g = hudIcon(slot, m[1], 64, UDim2.fromScale(.5, .5))
+		g.AnchorPoint = Vector2.new(.5, .5)
+	end
+	local caption=text(m[3],22,WHITE,{Size=UDim2.new(1,-14,0,28),LayoutOrder=2,TextScaled=true,ZIndex=3,Parent=tileBox})
+ new("UITextSizeConstraint",{MaxTextSize=22,Parent=caption})
  holder.Name = m[1]
 	local bHolder, bBody = box({ Size = UDim2.fromOffset(24, 24), Position = UDim2.fromOffset(100, 8), Parent = holder, ZIndex = 6 }, rgb(255, 59, 59), rgb(255, 59, 59), 20, 4)
 	badges[m[1]] = { holder = bHolder, label = text("!", 17, nil, { Size = UDim2.fromScale(1, 1), Parent = bBody }) }
@@ -31107,13 +31187,14 @@ Fx.OnClientEvent:Connect(function(kind, p)
 			tween(dim, 0.35, { BackgroundTransparency = 1 })
 		end)
 		local Scenes = require(RS.Shared.RevealScenes)
-		local ctx = { skipped = function() return skip end, sound = sfx, shake = hardShake, flash = doFlash, ballOdds = ballOdds }
+		local ctx = { skipped = function() return skip end, sound = sfx, shake = hardShake, flash = doFlash, ballOdds = ballOdds,
+			fade = function(t) tween(dim, t, { BackgroundTransparency = 0 }) end }
 		local ok, err = pcall(final and Scenes.Finale or Scenes.Play, it, ctx)
 		if not ok then warn("Reveal scene failed:", err) end
 		cam.CameraType = Enum.CameraType.Custom
 		skip = false
 		if final and _G.Toast then _G.Toast(C.ItemName(it) .. "  ·  $" .. C.Short(C.ItemIncome(it)) .. "/s", rcol) end
-		tween(dim, full and 0.35 or 0.2, { BackgroundTransparency = 0 }).Completed:Wait()
+		tween(dim, 0.12, { BackgroundTransparency = 0 }).Completed:Wait() -- the scene already faded out (or was skipped)
 		revealOnBase(slot, tid, it, bonus, not full)
 	else -- skipped: just the card, the ball appears on the base by itself
 		tween(dim, 0.25, { BackgroundTransparency = 0.55 })
