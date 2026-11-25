@@ -53,7 +53,6 @@ def bonus():  # gift box with bow
         bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, -0.1)); o = bpy.context.object; o.scale = (sx, sy, 2.4); I.obj_mat(o, rib)
     for s in (-1, 1):
         bpy.ops.mesh.primitive_torus_add(major_radius=0.55, minor_radius=0.18, location=(s * 0.5, 0, 1.25), rotation=(math.pi / 2, s * 0.5, 0)); I.obj_mat(bpy.context.object, rib)
-    I.sparkles(14, (0, 0, 0), 1.9, I.mat("S", (255, 250, 220), 0, 0.2, 10))
 
 def shop():  # shopping cart full of coins
     metal, G, wheel = I.mat("M", (90, 220, 120), 0.2, 0.3), I.gold(), I.mat("Wh", (40, 40, 50))

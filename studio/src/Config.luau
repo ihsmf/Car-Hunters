@@ -3,8 +3,8 @@ local C = {}
 local rgb = Color3.fromRGB
 
 C.UI = {
-	Font = Font.fromEnum(Enum.Font.FredokaOne), -- rounded cartoon type, same family as the Figma v4 frames
-	Ink = rgb(40, 20, 60),
+	Font = Font.new("rbxasset://fonts/families/LuckiestGuy.json"), -- UI v6: chunky cartoon type
+	Ink = rgb(42, 20, 80),
 	Panel = rgb(27, 21, 48), -- dark panel background (#1B1530)
 	Card = rgb(42, 34, 69), -- cards / rows inside panels (#2A2245)
 	Line = rgb(78, 64, 120), -- thin borders on dark surfaces
@@ -15,14 +15,14 @@ C.UI = {
 	Bad = rgb(255, 90, 90),
 	-- key = { icon, label, gradient top, gradient bottom }
 	Menu = {
-		{ "Settings", "Settings", "Settings", rgb(169, 183, 255), rgb(111, 130, 255) },
-		{ "Inventory", "Inventory", "Inventory", rgb(142, 227, 166), rgb(63, 191, 106) },
-		{ "Bonus", "Bonus", "Bonus", rgb(255, 158, 200), rgb(255, 92, 158) },
-		{ "Shop", "Shop", "Shop", rgb(255, 216, 107), rgb(255, 174, 31) },
+		{ "Settings", "Settings", "Settings", rgb(221, 214, 232), rgb(150, 140, 175) },
+		{ "Inventory", "Inventory", "Inventory", rgb(143, 231, 255), rgb(26, 111, 240) },
+		{ "Bonus", "Bonus", "Bonus", rgb(255, 243, 160), rgb(240, 140, 0) },
+		{ "Shop", "Shop", "Shop", rgb(168, 255, 122), rgb(31, 168, 70) },
 	},
-	Cues = { rgb(143, 223, 255), rgb(56, 174, 234) },
-	Action = { rgb(255, 216, 107), rgb(255, 174, 31) },
-	Red = { rgb(255, 138, 138), rgb(255, 71, 71) },
+	Cues = { rgb(143, 231, 255), rgb(26, 111, 240) },
+	Action = { rgb(255, 243, 160), rgb(240, 140, 0) },
+	Red = { rgb(255, 122, 107), rgb(209, 16, 60) },
 }
 
 C.Sounds = { -- Roblox library audio; swap for your own IDs if any are unavailable

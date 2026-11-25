@@ -3,8 +3,8 @@ local C = {}
 local rgb = Color3.fromRGB
 
 C.UI = {
-	Font = Font.fromEnum(Enum.Font.FredokaOne), -- rounded cartoon type, same family as the Figma v4 frames
-	Ink = rgb(40, 20, 60),
+	Font = Font.new("rbxasset://fonts/families/LuckiestGuy.json"), -- UI v6: chunky cartoon type
+	Ink = rgb(42, 20, 80),
 	Panel = rgb(27, 21, 48), -- dark panel background (#1B1530)
 	Card = rgb(42, 34, 69), -- cards / rows inside panels (#2A2245)
 	Line = rgb(78, 64, 120), -- thin borders on dark surfaces
@@ -15,14 +15,14 @@ C.UI = {
 	Bad = rgb(255, 90, 90),
 	-- key = { icon, label, gradient top, gradient bottom }
 	Menu = {
-		{ "Settings", "Settings", "Settings", rgb(169, 183, 255), rgb(111, 130, 255) },
-		{ "Inventory", "Inventory", "Inventory", rgb(142, 227, 166), rgb(63, 191, 106) },
-		{ "Bonus", "Bonus", "Bonus", rgb(255, 158, 200), rgb(255, 92, 158) },
-		{ "Shop", "Shop", "Shop", rgb(255, 216, 107), rgb(255, 174, 31) },
+		{ "Settings", "Settings", "Settings", rgb(221, 214, 232), rgb(150, 140, 175) },
+		{ "Inventory", "Inventory", "Inventory", rgb(143, 231, 255), rgb(26, 111, 240) },
+		{ "Bonus", "Bonus", "Bonus", rgb(255, 243, 160), rgb(240, 140, 0) },
+		{ "Shop", "Shop", "Shop", rgb(168, 255, 122), rgb(31, 168, 70) },
 	},
-	Cues = { rgb(143, 223, 255), rgb(56, 174, 234) },
-	Action = { rgb(255, 216, 107), rgb(255, 174, 31) },
-	Red = { rgb(255, 138, 138), rgb(255, 71, 71) },
+	Cues = { rgb(143, 231, 255), rgb(26, 111, 240) },
+	Action = { rgb(255, 243, 160), rgb(240, 140, 0) },
+	Red = { rgb(255, 122, 107), rgb(209, 16, 60) },
 }
 
 C.Sounds = { -- Roblox library audio; swap for your own IDs if any are unavailable
@@ -28049,7 +28049,7 @@ end
 -- cartoon box: gradient body, outline, hard shadow 6 px below
 local function box(props, top, bottom, radius, strokeW, strokeColor)
 	local holder = new("Frame", { Size = props.Size, Position = props.Position or UDim2.new(), AnchorPoint = props.AnchorPoint or Vector2.zero, BackgroundTransparency = 1, LayoutOrder = props.LayoutOrder or 0, Name = props.Name or "Box", ZIndex = props.ZIndex or 1, Parent = props.Parent })
-	new("Frame", { Name = "Shadow", Size = UDim2.fromScale(1, 1), Position = UDim2.fromOffset(0, strokeW == 0 and 0 or 7), BackgroundColor3 = INK, BackgroundTransparency = strokeW == 0 and 1 or 0, Parent = holder }, { corner(radius) })
+	new("Frame", { Name = "Shadow", Size = UDim2.fromScale(1, 1), Position = UDim2.fromOffset(0, strokeW == 0 and 0 or 10), BackgroundColor3 = INK, BackgroundTransparency = strokeW == 0 and 1 or 0, Parent = holder }, { corner(radius) })
 	local body = new("Frame", { Name = "Body", Size = UDim2.fromScale(1, 1), BackgroundColor3 = WHITE, Parent = holder }, { corner(radius), grad(top, bottom) })
 	if strokeW ~= 0 then stroke(strokeW or 4, strokeColor).Parent = body end
 	return holder, body
@@ -28137,7 +28137,15 @@ Shop = {colors={Color3.fromHex("402040"),Color3.fromHex("2080c0"),Color3.fromHex
 Shoot = {colors={Color3.fromHex("402040"),Color3.fromHex("202040"),Color3.fromHex("806080"),Color3.fromHex("c0a0a0"),Color3.fromHex("c0c0c0"),Color3.fromHex("e0e0e0"),Color3.fromHex("ffffe0"),Color3.fromHex("a08080"),Color3.fromHex("606060"),Color3.fromHex("e0e0c0"),Color3.fromHex("404040"),Color3.fromHex("e0c0c0"),Color3.fromHex("808080"),Color3.fromHex("ffe0e0"),Color3.fromHex("202020"),Color3.fromHex("604060"),Color3.fromHex("c0c0a0"),Color3.fromHex("a0a0a0")}, rects={13,1,10,1,1,10,2,1,1,1,11,2,1,1,2,12,2,14,1,1,9,3,18,1,1,7,4,1,1,2,8,4,21,1,1,6,5,24,1,1,5,6,26,1,1,4,7,1,1,2,5,7,8,1,1,13,7,1,1,3,14,7,1,1,4,15,7,2,1,5,17,7,1,1,4,18,7,1,1,3,19,7,13,1,1,4,8,7,1,1,11,8,1,1,3,12,8,1,1,6,13,8,6,1,7,19,8,1,1,6,20,8,1,1,3,21,8,11,1,1,3,9,7,1,1,10,9,1,1,8,11,9,3,1,7,14,9,1,1,4,15,9,2,1,9,17,9,1,1,4,18,9,3,1,7,21,9,1,1,8,22,9,11,1,1,2,10,7,1,1,9,10,1,1,3,10,10,3,2,7,13,10,1,1,8,14,10,4,1,1,18,10,1,1,8,19,10,3,2,7,22,10,1,1,3,23,10,10,1,1,2,11,1,1,2,3,11,6,1,1,9,11,1,1,6,13,11,2,1,1,15,11,2,1,4,17,11,2,1,1,22,11,1,1,6,23,11,11,1,1,2,12,6,2,1,8,12,1,1,3,9,12,3,1,7,12,12,1,1,10,13,12,1,1,1,14,12,1,1,11,15,12,2,1,7,17,12,1,1,11,18,12,1,1,1,19,12,1,1,10,20,12,3,1,7,23,12,1,1,3,24,12,10,1,1,1,13,1,1,2,8,13,1,1,4,9,13,4,2,7,13,13,2,1,1,15,13,2,1,3,17,13,2,1,1,19,13,4,2,7,23,13,1,1,4,24,13,11,3,1,1,14,7,4,1,8,14,1,2,5,13,14,1,1,8,14,14,4,1,1,18,14,1,1,8,23,14,1,2,5,9,15,3,3,7,12,15,1,1,12,13,15,6,1,1,19,15,1,1,12,20,15,3,3,7,8,16,1,1,4,12,16,1,1,9,13,16,1,1,1,14,16,1,1,13,15,16,2,3,7,17,16,1,1,13,18,16,1,1,1,19,16,1,1,9,23,16,1,1,4,24,16,7,2,1,31,16,1,1,2,32,16,3,5,1,8,17,1,1,3,12,17,2,1,1,14,17,1,1,14,17,17,1,1,14,18,17,2,1,1,23,17,1,1,3,31,17,1,1,15,1,18,8,2,1,9,18,1,1,6,10,18,2,2,7,12,18,1,1,11,13,18,1,2,1,14,18,1,1,12,17,18,1,1,12,18,18,1,2,1,19,18,1,1,11,20,18,2,2,7,22,18,1,1,6,23,18,7,1,1,30,18,2,1,15,9,19,1,1,3,12,19,1,1,13,14,19,1,1,16,15,19,2,1,17,17,19,1,1,16,19,19,1,1,13,22,19,1,1,3,23,19,6,1,1,29,19,1,1,2,30,19,1,1,15,31,19,1,2,2,1,20,9,1,1,10,20,1,1,8,11,20,1,1,7,12,20,1,1,14,13,20,1,1,16,14,20,4,1,1,18,20,1,1,16,19,20,1,1,14,20,20,1,1,7,21,20,1,1,8,22,20,6,1,1,28,20,1,1,2,29,20,2,1,15,1,21,5,2,1,6,21,1,1,2,7,21,4,1,1,11,21,1,1,3,12,21,1,1,6,13,21,1,1,7,14,21,1,1,18,15,21,2,1,9,17,21,1,1,18,18,21,1,1,7,19,21,1,1,6,20,21,1,1,3,21,21,7,1,1,28,21,3,1,15,31,21,4,2,1,6,22,2,1,2,8,22,5,1,1,13,22,1,1,3,14,22,1,1,4,15,22,2,1,5,17,22,1,1,4,18,22,1,1,3,19,22,8,1,1,27,22,4,1,15,2,23,4,1,1,6,23,1,1,2,7,23,1,1,15,8,23,1,1,2,9,23,17,1,1,26,23,4,1,15,30,23,1,1,2,31,23,3,1,1,2,24,5,1,1,7,24,2,1,15,9,24,1,1,2,10,24,15,1,1,25,24,5,1,15,30,24,4,2,1,2,25,1,1,2,3,25,4,1,1,7,25,1,1,2,8,25,3,1,15,11,25,12,1,1,23,25,1,1,2,24,25,5,1,15,29,25,1,1,2,3,26,5,1,1,8,26,4,1,15,12,26,1,1,2,13,26,9,1,1,22,26,7,1,15,29,26,4,1,1,4,27,5,2,1,9,27,5,1,15,14,27,2,1,2,16,27,2,1,1,18,27,2,1,2,20,27,8,1,15,28,27,4,1,1,9,28,1,1,2,10,28,17,1,15,27,28,4,1,1,31,28,1,1,2,5,29,5,1,1,10,29,1,1,2,11,29,15,1,15,26,29,4,1,1,30,29,1,1,2,6,30,6,1,1,12,30,12,1,15,24,30,1,1,2,25,30,5,1,1,7,31,7,1,1,14,31,1,1,2,15,31,6,1,15,21,31,1,1,2,22,31,7,1,1,9,32,18,1,1,11,33,15,1,1,13,34,10,1,1}},
 Tutorial = {colors={Color3.fromHex("202040"),Color3.fromHex("402040"),Color3.fromHex("604040"),Color3.fromHex("a08040"),Color3.fromHex("ffc040"),Color3.fromHex("c0a040"),Color3.fromHex("804040"),Color3.fromHex("806040"),Color3.fromHex("a06040"),Color3.fromHex("c08040"),Color3.fromHex("e0c040"),Color3.fromHex("e0a040")}, rects={13,5,1,1,1,14,5,3,1,2,12,6,8,1,2,23,6,9,1,2,10,7,1,1,1,11,7,3,1,2,14,7,1,1,3,15,7,1,1,4,16,7,18,1,2,9,8,4,1,2,13,8,1,1,4,14,8,3,1,5,17,8,1,1,6,18,8,1,1,7,19,8,5,1,2,24,8,2,1,3,26,8,1,1,8,27,8,1,1,9,28,8,1,1,4,29,8,1,1,10,30,8,1,1,6,31,8,1,1,3,32,8,2,1,2,7,9,1,1,1,8,9,3,1,2,11,9,1,1,3,12,9,1,1,11,13,9,6,1,5,19,9,1,1,11,20,9,1,1,12,21,9,11,1,5,32,9,3,2,2,6,10,4,1,2,10,10,1,1,4,11,10,19,1,5,30,10,1,1,11,31,10,1,1,8,4,11,1,1,1,5,11,3,1,2,8,11,1,1,3,9,11,1,1,11,10,11,15,1,5,25,11,1,1,11,26,11,1,1,6,27,11,1,1,9,28,11,1,1,3,29,11,5,1,2,3,12,4,1,2,7,12,1,1,4,8,12,12,1,5,20,12,1,1,11,21,12,1,1,6,22,12,1,1,9,23,12,1,1,3,24,12,8,1,2,32,12,1,1,1,2,13,3,1,2,5,13,1,1,3,6,13,1,1,11,7,13,12,1,5,19,13,1,2,11,20,13,10,1,2,2,14,2,11,2,4,14,1,1,4,5,14,14,1,5,20,14,5,1,2,4,15,1,9,12,5,15,15,1,5,20,15,1,1,10,21,15,3,1,2,5,16,16,1,5,21,16,1,1,8,22,16,2,1,2,5,17,17,2,5,22,17,3,1,2,22,18,1,1,10,23,18,2,1,2,5,19,18,4,5,23,19,3,1,2,23,20,1,2,3,24,20,1,1,2,25,20,1,1,1,24,21,2,1,2,23,22,2,2,2,25,22,1,1,1,5,23,17,1,5,22,23,1,1,10,4,24,1,1,8,5,24,1,1,11,6,24,15,1,5,21,24,1,1,12,22,24,3,1,2,2,25,4,1,2,6,25,1,1,8,7,25,1,1,11,8,25,12,1,5,20,25,1,1,6,21,25,2,1,2,23,25,1,1,1,3,26,1,1,1,4,26,4,1,2,8,26,1,1,8,9,26,9,1,12,18,26,1,1,6,19,26,1,1,7,20,26,3,1,2,5,27,1,1,1,6,27,16,1,2,7,28,2,1,1,9,28,12,1,2}},
 }
+-- UI v6: rendered 3D icons with a black outline (blender/menu_icons.py, uploaded by tools/ui_icons.py)
+local ICON_IMAGES = { Cash = 133706813365786, Strength = 97286671742329, Settings = 79235757380021, Inventory = 85575666955193, Bonus = 93153771458319, Shop = 72364074152855, Cues = 73091093999085, Luck = 101120856479974 }
+ICON_IMAGES.Gym = ICON_IMAGES.Strength
 local function hudIcon(parent, name, size, position)
+ if ICON_IMAGES[name] then
+  local k = 1.35 -- the renders have transparent margins: draw them bigger than the slot
+  return new("ImageLabel", { Name = name .. "Icon", BackgroundTransparency = 1, Image = "rbxassetid://" .. ICON_IMAGES[name],
+   Size = UDim2.fromOffset(size * k, size * k), Position = position - UDim2.fromOffset(size * (k - 1) / 2, size * (k - 1) / 2), ZIndex = 3, Parent = parent })
+ end
  local artwork = hudArtwork[name]
  local frame = new("Frame", {Name=name.."Icon", BackgroundTransparency=1, Position=position, Size=UDim2.fromOffset(size,size), Parent=parent})
  local rects = artwork.rects
@@ -28148,7 +28156,7 @@ local function hudIcon(parent, name, size, position)
 end
 
 local function button(props, colors, label, size, onClick)
-	local holder, body = box(props, colors[1], colors[2], props.Radius or 18, 3)
+	local holder, body = box(props, colors[1], colors[2], props.Radius or 18, 5)
 	local shine = new("Frame", { Name = "CandyGloss", Size = UDim2.new(1,-20,.38,0),
 		Position = UDim2.fromOffset(10,5), BackgroundColor3 = WHITE, BackgroundTransparency = .62,
 		BorderSizePixel = 0, Parent = body }, { corner(math.max(6,(props.Radius or 18)-6)) })
@@ -28999,7 +29007,7 @@ end
 -- menu buttons (Figma component "MenuButton": icon + label) with badges
 for i, m in U.Menu do
 	local holder, body = button({ Hud = true, Size = UDim2.fromOffset(132, 124), LayoutOrder = i, Parent = menu, Radius = 38 }, { m[4], m[5] }, "", 1, function() open(m[1]) end)
-	local glyph = hudIcon(body,m[1],61,UDim2.new(.5,0,0,12))
+	local glyph = hudIcon(body,m[1],72,UDim2.new(.5,0,0,2))
 	glyph.AnchorPoint = Vector2.new(.5,0)
 	local caption=text(m[3],25,WHITE,{Size=UDim2.new(1,-14,0,35),Position=UDim2.fromOffset(7,74),TextScaled=true,Parent=body})
  new("UITextSizeConstraint",{MaxTextSize=25,Parent=caption})
