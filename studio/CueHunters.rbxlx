@@ -31094,10 +31094,18 @@ Fx.OnClientEvent:Connect(function(kind, p)
 	local closeOdds = oddsCounter(ballOdds, full and 2.4 or 1.5)
 	if not skip then -- a themed scene (the last table: the birth of a star), then the same close-up for every ball
 		local final = it.section == #C.Tables
+		-- stay on the pocket: the ball sinks in with its burst, shockwave and flash, then a short fade to black
+		waitOrSkip(full and 1.0 or 0.6)
+		tween(dim, 0.25, { BackgroundTransparency = 0 }).Completed:Wait()
 		camFn = nil
-		dim.BackgroundTransparency, flash.BackgroundTransparency, blur.Size = 1, 1, 0
+		flash.BackgroundTransparency, blur.Size = 1, 0
 		cc.Brightness, cc.Contrast, cc.TintColor = 0, 0, WHITE
 		banner.Visible = false
+		task.defer(function() -- the scene's camera is in place after a frame: fade in from black
+			RunService.RenderStepped:Wait()
+			RunService.RenderStepped:Wait()
+			tween(dim, 0.35, { BackgroundTransparency = 1 })
+		end)
 		local Scenes = require(RS.Shared.RevealScenes)
 		local ctx = { skipped = function() return skip end, sound = sfx, shake = hardShake, flash = doFlash, ballOdds = ballOdds }
 		local ok, err = pcall(final and Scenes.Finale or Scenes.Play, it, ctx)
