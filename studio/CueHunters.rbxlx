@@ -29010,16 +29010,17 @@ local ICONS = {
 local function iconFor(label)
 	local l = string.lower(label or "")
 	if l == "" or l == "x" then return nil end
-	if l:find("^sell") or l:find("^buy") or l:find("%$") and not l:find("upgrade") and not l:find("need") then return "Cash" end
-	if l:find("^place") or l:find("^put") then return "Place" end
-	if l:find("^remove") then return "Minus" end
-	if l:find("best") then return "Star" end
-	if l:find("income") or l:find("newest") then return "Sort" end
-	if l:find("upgrade") or l:find("need") or l:find("expand") then return "Up" end
+	if l:find("need") then return "BtnLock" end
+	if l:find("upgrade") or l:find("expand") then return "BtnUp" end
+	if l:find("^sell") or l:find("^buy") or l:find("r%$") or l:find("%$") then return "Cash" end
+	if l:find("^place") or l:find("^put") then return "BtnPlace" end
+	if l:find("^remove") then return "BtnRemove" end
+	if l:find("best") then return "BtnStar" end
+	if l:find("income") or l:find("newest") then return "BtnSort" end
 	if l:find("claim") then return "Bonus" end
-	if l:find("stop") then return "Stop" end
-	if l:find("train") or l:find("start") then return "Play" end
-	if l:find("max") or l:find("owned") or l:find("equipped") then return "Check" end
+	if l:find("stop") then return "BtnStop" end
+	if l:find("train") or l:find("start") then return "BtnPlay" end
+	if l:find("max") or l:find("owned") or l:find("equipped") or l:find("claimed") then return "BtnCheck" end
 	return nil
 end
 
@@ -29053,6 +29054,17 @@ Tutorial = {colors={Color3.fromHex("202040"),Color3.fromHex("402040"),Color3.fro
 -- UI v6: rendered 3D icons with a black outline (blender/menu_icons.py, uploaded by tools/ui_icons.py)
 local ICON_IMAGES = { Cash = 133706813365786, Strength = 97286671742329, Settings = 79235757380021, Inventory = 85575666955193, Bonus = 93153771458319, Shop = 72364074152855, Cues = 73091093999085, Luck = 101120856479974 }
 ICON_IMAGES.Gym = ICON_IMAGES.Strength
+-- UI v8 button icons: glossy 3D symbols with a black outline (blender/button_icons.py, tools/ui_icons.py)
+ICON_IMAGES.BtnPlace = 72531441610642
+ICON_IMAGES.BtnRemove = 123766085746803
+ICON_IMAGES.BtnStar = 99089483541209
+ICON_IMAGES.BtnSort = 101273135939533
+ICON_IMAGES.BtnUp = 117397263871472
+ICON_IMAGES.BtnPlay = 118093162418134
+ICON_IMAGES.BtnStop = 93691283973497
+ICON_IMAGES.BtnCheck = 73883208571222
+ICON_IMAGES.BtnClose = 124740137962839
+ICON_IMAGES.BtnLock = 85193622587419
 local function hudIcon(parent, name, size, position)
  if ICON_IMAGES[name] then
   local k = 1.2 -- the renders have transparent margins: draw them a bit bigger than the slot
@@ -29074,7 +29086,7 @@ local function button(props, colors, label, size, onClick)
 		Position = UDim2.fromOffset(10,5), BackgroundColor3 = WHITE, BackgroundTransparency = .62,
 		BorderSizePixel = 0, Parent = body }, { corner(math.max(6,(props.Radius or 18)-6)) })
 	shine.Visible = true -- candy gloss on every button (Figma v4)
-	local sweep = props.Icon ~= "Close" and shimmer(body, props.Radius or 18, props.Hud and 2.2 or 3.4)
+	local sweep = props.Icon ~= "BtnClose" and shimmer(body, props.Radius or 18, props.Hud and 2.2 or 3.4)
  local hit = new("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "",
 		Name = label ~= "" and (label or "Action") or "MenuAction", ZIndex = 5, AutoButtonColor = false, Parent = holder })
 	local scale = new("UIScale", { Parent = holder })
@@ -29098,12 +29110,13 @@ local function button(props, colors, label, size, onClick)
 		local glyph = hudIcon(slot, "Shoot", 54, UDim2.fromScale(.5, .5))
 		glyph.AnchorPoint = Vector2.new(.5, .5)
 	elseif iconName then
-		d = math.floor(h * (square and .62 or .72))
-		local badge = new("Frame", { Name = "Badge", Size = UDim2.fromOffset(d, d), BackgroundColor3 = INK, BackgroundTransparency = square and 1 or .72,
+		local image = ICON_IMAGES[iconName] ~= nil
+		d = math.floor(h * (square and (image and .8 or .62) or (image and .86 or .72)))
+		local badge = new("Frame", { Name = "Badge", Size = UDim2.fromOffset(d, d), BackgroundColor3 = INK, BackgroundTransparency = (square or image) and 1 or .72,
 			LayoutOrder = 1, ZIndex = 3, Parent = content }, { new("UICorner", { CornerRadius = UDim.new(1, 0) }) })
-		if not square then new("UIStroke", { Color = INK, Transparency = .45, Thickness = math.max(2, math.floor(h / 28)), Parent = badge }) end
+		if not square and not image then new("UIStroke", { Color = INK, Transparency = .45, Thickness = math.max(2, math.floor(h / 28)), Parent = badge }) end
 		if ICON_IMAGES[iconName] then
-			new("ImageLabel", { Size = UDim2.fromScale(.92, .92), AnchorPoint = Vector2.new(.5, .5), Position = UDim2.fromScale(.5, .5),
+			new("ImageLabel", { Size = UDim2.fromScale(1, 1), AnchorPoint = Vector2.new(.5, .5), Position = UDim2.fromScale(.5, .5),
 				BackgroundTransparency = 1, Image = "rbxassetid://" .. ICON_IMAGES[iconName], ScaleType = Enum.ScaleType.Fit, ZIndex = 4, Parent = badge })
 		elseif ICONS[iconName] then
 			local g = math.floor(d * (square and 1 or .62))
@@ -29383,7 +29396,7 @@ local function panel(key, title, colors)
  else icon(ribbon,"Up",58,UDim2.fromOffset(30,18),WHITE) end
  text(title,58,WHITE,{Size=UDim2.new(1,-220,1,0),Position=UDim2.fromOffset(104,0),Parent=ribbon,TextXAlignment=Enum.TextXAlignment.Left})
  local sub = text("", 26, MUTED, { Size = UDim2.new(1, -80, 0, 30), Position = UDim2.fromOffset(40, 80), Parent = body, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
-	button({ Size = UDim2.fromOffset(74, 68), Position = UDim2.fromOffset(900, -16), Parent = body, Radius = 24, Icon = "Close" }, U.Red, "X", 34, function() holder.Visible = false end)
+	button({ Size = UDim2.fromOffset(74, 68), Position = UDim2.fromOffset(900, -16), Parent = body, Radius = 24, Icon = "BtnClose" }, U.Red, "X", 34, function() holder.Visible = false end)
 	local content = new("Frame", { Size = UDim2.fromOffset(900, 530), Position = UDim2.fromOffset(40, 130), BackgroundTransparency = 1, Parent = body })
 	panels[key] = { holder = holder, content = content, sub = sub }
 end
@@ -29456,7 +29469,7 @@ local function sellDialog()
 	local holder, body = box({ Size = UDim2.fromOffset(580, 500), Position = UDim2.fromOffset(450, 260), AnchorPoint = Vector2.new(0.5, 0.5), Parent = p.content, ZIndex = 20 }, CREAM[1], CREAM[2], 30, 5)
 	text("Sell unequipped", 36, INK, { Size = UDim2.new(1, -100, 0, 50), Position = UDim2.fromOffset(24, 12), Parent = body, TextXAlignment = Enum.TextXAlignment.Left })
 	text("Gold, Diamond, Galaxy and Rainbow are kept", 20, MUTED, { Size = UDim2.new(1, -100, 0, 24), Position = UDim2.fromOffset(26, 60), Parent = body, TextXAlignment = Enum.TextXAlignment.Left, NoStroke = true })
-	button({ Size = UDim2.fromOffset(56, 50), Position = UDim2.fromOffset(498, 16), Parent = body, Radius = 18, Icon = "Close" }, U.Red, "X", 26, function() holder:Destroy() end)
+	button({ Size = UDim2.fromOffset(56, 50), Position = UDim2.fromOffset(498, 16), Parent = body, Radius = 18, Icon = "BtnClose" }, U.Red, "X", 26, function() holder:Destroy() end)
 	local list = new("ScrollingFrame", { Size = UDim2.fromOffset(540, 390), Position = UDim2.fromOffset(20, 96), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8, ScrollBarImageColor3 = INK, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Parent = body }, {
 		new("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
 		new("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingRight = UDim.new(0, 10) }),
