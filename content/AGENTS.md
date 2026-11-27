@@ -9,6 +9,8 @@ The name is always **CUE HUNTERS**. Never "Billiard Hunters", "Car Hunters" or a
 
 ---
 
+Full game description: **[GAME.md](GAME.md)** — read it first.
+
 ## 1. The game (facts you can rely on)
 
 - **Link:** https://www.roblox.com/games/103508491994866 — title on Roblox: `[ NEW! ] CUE HUNTERS`.
